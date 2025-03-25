@@ -1,0 +1,25 @@
+
+from typing import List
+from datetime import datetime
+from sqlalchemy import Column, ARRAY, Integer, BigInteger, String
+from sqlmodel import SQLModel, Field, Relationship
+    
+class StatusTopic(SQLModel, table=True):
+    __tablename__ = 'statuses_topics'
+
+    status_id: str = Field(nullable=False, primary_key=True, foreign_key="statuses.id")
+    topic_id: int = Field(nullable=False, primary_key=True, foreign_key="topics.id")
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+class Topic(SQLModel, table=True):
+    __tablename__ = 'topics'
+
+    id: int = Field(primary_key=True)
+    name: str = Field(nullable=False)
+    display_name: str = Field(nullable=False)
+    language: str = Field(nullable=False)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    reviewed_at: datetime | None = Field(nullable=False)
+
+    statuses: list["Status"] = Relationship(back_populates="topics", link_model=StatusTopic)
