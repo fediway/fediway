@@ -2,3 +2,4 @@ alembic==1.15.1
 psycopg2-binary==2.9.10
 fastapi[standard]==0.115.11
 maxminddb==2.6.3
+typer==0.15.2

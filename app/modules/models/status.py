@@ -8,6 +8,7 @@ from .account import Account
 from .media_attachment import MediaAttachment
 from .preview_card import PreviewCard, PreviewCardStatus
 from .topic import Topic, StatusTopic
+from .favourite import Favourite
 
 class StatusStats(SQLModel, table=True):
     __tablename__ = 'status_stats'
@@ -25,7 +26,6 @@ class Status(SQLModel, table=True):
     __tablename__ = 'statuses'
 
     id: int = Field(primary_key=True)
-    domain: str = Field(nullable=False)
     uri: int | None = Field()
     url: int | None = Field()
     sensitive: bool = Field(default=False)
@@ -34,7 +34,7 @@ class Status(SQLModel, table=True):
     spoiler_text: str = Field()
     created_at: datetime | None = Field()
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    last_processed_at: datetime | None = Field(nullable=True)
+    # last_processed_at: datetime | None = Field(nullable=True)
     in_reply_to_id: int | None = Field()
     reblog_of_id: int | None = Field(foreign_key='statuses.id')
     language: str | None = Field()
@@ -42,6 +42,7 @@ class Status(SQLModel, table=True):
     in_reply_to_account_id: int | None = Field()
     ordered_media_attachment_ids: List[int] = Field(sa_column=Column(ARRAY(Integer)))
 
+    favourites: list[Favourite] = Relationship(back_populates='status')
     account: Account | None = Relationship(back_populates='statuses')
     stats: StatusStats = Relationship(back_populates='status', sa_relationship_kwargs={"uselist": False})
     media_attachments: list[MediaAttachment] = Relationship(back_populates='status')

@@ -13,13 +13,8 @@ class MediaAttachment(SQLModel, table=True):
     status_id: int = Field(foreign_key="statuses.id")
     account_id: int = Field(foreign_key="accounts.id")
     description: str = Field()
-    preview_url: str | None = Field()
-    text_url: str | None = Field()
     remote_url: str | None = Field()
     blurhash: str | None = Field()
-    aspect_ratio: float | None = Field()
-    duration_seconds: int | None = Field()
-    fps: int | None = Field()
 
     # file_name: str | None = Field()
     # file_content_type: str | None = Field()

@@ -8,7 +8,7 @@ from app.settings import settings, AppEnvTypes
 
 engine = create_engine(
     str(settings.database_url), 
-    echo=settings.app_env == AppEnvTypes.dev
+    # echo=settings.app_env == AppEnvTypes.dev
 )
 
 def get_db_session():

@@ -3,7 +3,7 @@ from typing import Annotated, Union
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
-from .instance import Instance, InstanceAccount
+from .favourite import Favourite
 
 class AccountStats(SQLModel, table=True):
     __tablename__ = 'account_stats'
@@ -31,15 +31,12 @@ class Account(SQLModel, table=True):
     uri: str = Field(nullable=False)
     url: str | None = Field()
     avatar_remote_url: str | None = Field()
-    avatar_static_remote_url: str | None = Field()
     header_remote_url: str | None = Field()
-    header_static_remote_url: str | None = Field()
     discoverable: bool = Field(default=False)
     indexable: bool = Field(default=False)
     moved_to_account_id: int | None = Field(foreign_key='accounts.id')
     actor_type: str = Field(default='')
 
+    favourites: list[Favourite] = Relationship(back_populates='account')
     statuses: list["Status"] = Relationship(back_populates='account')
     stats: AccountStats = Relationship(back_populates='account', sa_relationship_kwargs={"uselist": False})
-    instances: list[Instance] = Relationship(back_populates="accounts", link_model=InstanceAccount)
-    instance_accounts: list[InstanceAccount] = Relationship()

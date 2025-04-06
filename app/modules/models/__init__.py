@@ -4,3 +4,6 @@ from .media_attachment import MediaAttachment
 from .status import Status, StatusStats
 from .preview_card import PreviewCard, PreviewCardStatus
 from .feed import Feed, FeedRecommendation
+from .favourite import Favourite
+from .mention import Mention
+from .tag import Tag, StatusTag

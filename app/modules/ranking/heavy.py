@@ -12,7 +12,7 @@ scored_tweets_model_weight_good_click_v2: The probability the user will click in
 scored_tweets_model_weight_negative_feedback_v2: The probability the user will react negatively (requesting "show less often" on the Tweet or author, block or mute the Tweet author).
 scored_tweets_model_weight_report: The probability the user will click Report Tweet.
 
-Feature candidates forw fediway (whether the user has seen the post is known):
+Label candidates for fediway (whether the user has seen the post is known):
 
 - user_favs: The probability the user will favorite the status
 - user_reblogs: The probability the user will reblog the status
@@ -20,7 +20,7 @@ Feature candidates forw fediway (whether the user has seen the post is known):
 - user_engages_reply: The probability the user will engage with a reply of the status
 - reply_engaged_by_author: The probability the user replies to the status and this reply is engaged by the status author
 
-Feature candidates for unkown information about whether the user has seen the post:
+Label candidates for unkown information about whether the user has seen the post:
 
 - status_sim: The similarity between the last 100 statuses the user liked and the status
 - liked_user_sim: The similarity between the user and the average of all the users the status liked

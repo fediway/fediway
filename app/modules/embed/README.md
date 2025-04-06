@@ -11,6 +11,12 @@ Multimodal Embeddings Models:
 - [jinaai/jina-embeddings-v3](https://huggingface.co/jinaai/jina-embeddings-v3)
     - 572M params
     - Multilingual
+- [M-CLIP/XLM-Roberta-Large-Vit-L-14](https://huggingface.co/M-CLIP/XLM-Roberta-Large-Vit-L-14)
+    - 344M params
+    - Multilingual
+- [M-CLIP/LABSE-Vit-L-14](https://huggingface.co/M-CLIP/LABSE-Vit-L-14)
+    - 1104M params
+    - Multilingual
 
 ## TODO
 
