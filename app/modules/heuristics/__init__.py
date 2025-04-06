@@ -4,7 +4,6 @@ import numpy as np
 from ..feed import Candidate
 
 class Heuristic():
-
     def update(self, candidate: Candidate):
         raise NotImplemented
 

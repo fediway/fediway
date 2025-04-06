@@ -25,7 +25,7 @@ class AppSettings(BaseAppSettings):
     openapi_prefix: str = ""
     openapi_url: str = "/openapi.json"
     redoc_url: str = "/redoc"
-    title: str = "FastAPI example application"
+    title: str = "Algorithmic Feeds for the Fediverse"
     version: str = "0.0.0"
 
     session_max_size: int = 10_000

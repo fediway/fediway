@@ -6,6 +6,8 @@ from ..models import Status
 class Candidate():
     candidate_id: int
     account_id: int
+    content_embed: float | None = None
+    fav_embed: float | None = None
     source: str
     score: float | None = None
 
