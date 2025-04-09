@@ -38,7 +38,7 @@ class AppSettings(BaseAppSettings):
     feed_max_heavy_candidates: int = 100
     feed_samples_page_size: int = 10
 
-    broker_url: RedisDsn
+    broker_url: RedisDsn = "redis://localhost:6379/0"
     
     db_host: str = "localhost"
     db_port: int = 5432
