@@ -36,10 +36,15 @@ class AppSettings(BaseAppSettings):
     feed_max_light_candidates: int = 1000
     feed_max_heavy_candidates: int = 100
     feed_samples_page_size: int = 10
-    
 
     broker_url: RedisDsn
-    database_url: PostgresDsn
+    
+    db_host: str = "localhost"
+    db_port: int = 5432
+    db_user: str = "mastodon"
+    db_pass: str = ""
+    db_name: str = "mastodon_development"
+
     app_secret: SecretStr
     app_host: str
 
