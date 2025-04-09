@@ -9,8 +9,8 @@ from pydantic_settings import BaseSettings
 from pydantic import PostgresDsn, SecretStr, HttpUrl, RedisDsn
 
 class AppEnvTypes(Enum):
-    prod: str = "prod"
-    dev: str = "dev"
+    prod: str = "production"
+    dev: str = "development"
     test: str = "test"
 
 class BaseAppSettings(BaseSettings):
