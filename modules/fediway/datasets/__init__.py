@@ -1,8 +1,8 @@
 
 from .statuses_dataset import StatusesDataset
-from .light_ranker_dataset import LightRankerDataset
+from .interaction_graph_dataset import InteractionGraphDataset
 
 DATASETS = {
     # 'statuses': StatusesDataset,
-    'light-ranker': LightRankerDataset,
+    'interaction-graph': InteractionGraphDataset,
 }

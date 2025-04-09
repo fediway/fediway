@@ -7,7 +7,6 @@ from enum import Enum
 from app.modules.models.media_attachment import MediaAttachment
 from app.modules.models.status import Status, StatusStats
 from app.modules.models.account import Account, AccountStats
-from app.modules.models.instance import Instance, InstanceAccount
 from app.modules.models.preview_card import PreviewCard
 from app.modules.models.topic import Topic
 
@@ -52,9 +51,9 @@ class AccountItem(Item):
             display_name=account.display_name,
             note=account.note,
             avatar=account.avatar_remote_url,
-            avatar_static=account.avatar_static_remote_url,
+            avatar_static="",
             header=account.header_remote_url,
-            header_static=account.header_static_remote_url,
+            header_static="",
             statuses_count=account.stats.statuses_count,
             followers_count=account.stats.followers_count,
             following_count=account.stats.following_count,
@@ -74,7 +73,6 @@ class MediaAttachmentItem(Item):
     type: str
     url: str
     meta: dict
-    aspect_ratio: float | None
 
     @classmethod
     def from_model(cls, media_attachment: MediaAttachment):
@@ -89,7 +87,6 @@ class MediaAttachmentItem(Item):
             }[media_attachment.type],
             url=media_attachment.remote_url,
             meta=media_attachment.file_meta,
-            aspect_ratio=media_attachment.aspect_ratio
         )
 
 class MentionItem(Item):

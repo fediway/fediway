@@ -74,8 +74,26 @@ def load_status_items(status_ids: list[str], db: DBSession, load_reblogs: bool =
 async def test() -> str:
     return "Hello World!"
 
-@router.get('/feeds/home')
-async def feeds_home(
+@router.get('/timelines/public')
+async def public_timeline(
+    request: Request,
+    tasks: BackgroundTasks,
+    feed: FeedService = Depends(get_feed_service(name='home')),
+    db: Session = Depends(get_db_session),
+) -> list[StatusItem]:
+    
+    feed.load_or_create()
+    feed.set_sources(get_sources(request.state.session, db))
+    recommendations = feed.get_recommendations(settings.feed_samples_page_size)
+
+    items = load_status_items(recommendations, db)
+
+    print("seen", feed.feed.seen_ids)
+
+    return items
+
+@router.get('/timelines/home')
+async def home_timeline(
     request: Request,
     tasks: BackgroundTasks,
     feed: FeedService = Depends(get_feed_service(name='home')),

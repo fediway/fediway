@@ -80,6 +80,11 @@ class LightRankerDataset(Dataset):
                     .where(Favourite.status_id == row.Status.id)
                     .where(Favourite.account_id == Account.id)
                 ))
+                .where((
+                    exists()
+                    .where(Status.account_id == Account.id)
+                    .where(Status.language == row.Status.language)
+                ))
                 .order_by(func.random())
                 .limit(len(fav_accounts))
             )).all()
