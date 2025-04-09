@@ -2,6 +2,7 @@
 import sys
 from enum import Enum
 from loguru import logger
+from sqlalchemy import URL
 import logging
 
 from pydantic_settings import BaseSettings
@@ -62,6 +63,15 @@ class AppSettings(BaseAppSettings):
 
     class Config:
         validate_assignment = True
+
+    def get_database_url(self):
+        return URL.create(
+            "postgresql",
+            username=self.db_user,
+            password=self.db_pass,
+            host=self.db_host,
+            database=self.db_name,
+        )
 
     @property
     def fastapi_kwargs(self) -> dict[str, any]:
