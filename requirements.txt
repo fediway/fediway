@@ -4,3 +4,5 @@ fastapi[standard]==0.115.11
 maxminddb==2.6.3
 typer==0.15.2
 loguru==0.7.3
+pydantic_settings==2.8.1
+sqlmodel==0.0.24
