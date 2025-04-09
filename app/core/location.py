@@ -18,6 +18,9 @@ def estimate_user_agent_location(user_agent: str):
     return None
 
 def get_location(ipv4_address: str, user_agent = None, fallback = 'DE') -> str | None:
+    if ipv4_reader is None:
+        return
+        
     result = ipv4_reader.get(ipv4_address)
 
     if result is not None:
