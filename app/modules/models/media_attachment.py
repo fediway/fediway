@@ -16,18 +16,19 @@ class MediaAttachment(SQLModel, table=True):
     remote_url: str | None = Field()
     blurhash: str | None = Field()
 
-    # file_name: str | None = Field()
-    # file_content_type: str | None = Field()
-    # file_size: str | None = Field()
+    file_file_name: str | None = Field()
     file_meta: dict = Field(sa_column=Column(JSON()))
-
-    # thumbnail_file_name: str = Field()
-    # thumbnail_content_type: str = Field()
-    # thumbnail_file_size: str = Field()
-    # thumbnail_content_type: str = Field()
-    # thumbnail_remote_url: str = Field()
 
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
     status: "Status" = Relationship(back_populates='media_attachments')
+
+    @property
+    def file_url(self):
+        return config.files.build_file_url(
+            self.__tablename__,
+            attachment='file',
+            instance_id=self.id,
+            file_name=self.file_file_name,
+        )

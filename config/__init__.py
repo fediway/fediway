@@ -4,6 +4,7 @@ from .app import AppConfig
 from .cors import CorsConfig
 from .db import DBConfig
 from .feed import FeedConfig
+from .files import FilesConfig
 from .geo import GeoLocationConfig
 from .logging import LoggingConfig
 from .session import SessionConfig
@@ -18,6 +19,7 @@ class config:
     cors = CorsConfig()
     db = DBConfig()
     feed = FeedConfig()
+    files = FilesConfig()
     geo = GeoLocationConfig()
     logging = LoggingConfig()
     session = SessionConfig()
