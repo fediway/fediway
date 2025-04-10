@@ -64,6 +64,8 @@ class HotStatuses(DatabaseSource):
         return (
             select(Status.id)
             .join(StatusStats, Status.id == StatusStats.status_id)
+            .where(Status.reblog_of_id.is_(None))
+            .where(Status.in_reply_to_id.is_(None))
             .where(Status.created_at > datetime.now() - self.max_age)
             .order_by(priority)
             .limit(limit)
@@ -81,6 +83,8 @@ class HotStatusesByLanguage(HotStatuses):
         self.language = language
 
     def base_query(self, limit: int):
+        from app.utils import sql_string
+        print(sql_string(super().base_query(limit).where(Status.language == self.language)))
         return super().base_query(limit).where(Status.language == self.language)
 
     def __str__(self):

@@ -1,5 +1,5 @@
 
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from sqlalchemy import Column, ARRAY, Integer
 from sqlmodel import SQLModel, Field, Relationship
@@ -36,7 +36,7 @@ class Status(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     # last_processed_at: datetime | None = Field(nullable=True)
     in_reply_to_id: int | None = Field()
-    reblog_of_id: int | None = Field(foreign_key='statuses.id')
+    reblog_of_id: int | None = Field(default=None, foreign_key='statuses.id')
     language: str | None = Field()
     account_id: int = Field(nullable=False, foreign_key="accounts.id")
     in_reply_to_account_id: int | None = Field()
@@ -48,7 +48,12 @@ class Status(SQLModel, table=True):
     media_attachments: list[MediaAttachment] = Relationship(back_populates='status')
     preview_card: PreviewCard = Relationship(back_populates="statuses", link_model=PreviewCardStatus)
     topics: list[Topic] = Relationship(back_populates="statuses", link_model=StatusTopic)
-    reblog: "Status" = Relationship()
+    # reblogs: list["Status"] = Relationship(back_populates="reblog")
+    reblog: Optional["Status"] = Relationship(sa_relationship_kwargs={
+        "remote_side": "Status.id",
+        "foreign_keys": "Status.reblog_of_id",
+        "uselist": False
+    })
     recommendations: list["FeedRecommendation"] = Relationship(back_populates='status')
 
     @classmethod
