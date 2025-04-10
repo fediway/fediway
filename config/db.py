@@ -19,4 +19,5 @@ class DBConfig(BaseConfig):
             password=self.db_pass.get_secret_value(),
             host=self.db_host,
             database=self.db_name,
+            port=self.db_port
         )
