@@ -148,13 +148,13 @@ class PreviewCardItem(Item):
 
 class StatusItem(Item):
     id: int
-    uri: str
-    url: str
+    uri: str | None
+    url: str | None
     created_at: datetime
-    content: str
+    content: str | None
     visibility: StatusVisibility
     sensitive: bool
-    spoiler_text: str
+    spoiler_text: str | None
     account: AccountItem
     media_attachments: list[MediaAttachmentItem] = []
     mentions: list[MentionItem] = []
