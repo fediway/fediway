@@ -64,8 +64,6 @@ class HotStatuses(DatabaseSource):
         return (
             select(Status.id)
             .join(StatusStats, Status.id == StatusStats.status_id)
-            .where(Status.reblog_of_id.is_(None))
-            .where(Status.in_reply_to_id.is_(None))
             .where(Status.created_at > datetime.now() - self.max_age)
             .order_by(priority)
             .limit(limit)

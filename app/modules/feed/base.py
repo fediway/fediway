@@ -1,5 +1,4 @@
 
-
 import numpy as np
 from enum import Enum
 
@@ -72,6 +71,10 @@ class Feed():
         for i in range(n):
             while True:
                 adjusted_scores = self.get_adjusted_scores(queue_name)
+
+                if len(adjusted_scores) == 0:
+                    break
+
                 idx = strategy.sample(adjusted_scores)
                 candidate = self.candidate_queues[queue_name][idx][-1]
 
