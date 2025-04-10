@@ -1,9 +1,10 @@
+
 from fastapi import Request, Response
 from uuid import uuid4
 
-from app.modules.session import Session
+from app.modules.sessions import Session
 from app.modules.feed import Feed
-from app.core.session import session_manager, init_session
+from app.core.sessions import session_manager, init_session
 from app.settings import settings
 
 class SessionMiddleware():

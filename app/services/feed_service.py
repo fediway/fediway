@@ -4,7 +4,7 @@ from fastapi import Request, BackgroundTasks, Depends
 
 from app.settings import settings
 from app.core.db import get_db_session
-from app.modules.session import Session
+from app.modules.sessions import Session
 from app.modules.heuristics import DiversifyAccountsHeuristic
 from app.modules.sources import Source
 from app.modules.feed import Feed, Candidate

@@ -1,7 +1,7 @@
 
 from fastapi import Request
 
-from app.modules.session import SessionManager, Session
+from app.modules.sessions import SessionManager, Session
 from app.modules.feed import Feed
 from app.settings import settings
 

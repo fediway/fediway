@@ -16,7 +16,7 @@ from app.settings import settings
 from app.core.db import get_db_session
 from app.core.lang import get_languages
 from app.core.feed import get_samples
-from app.modules.session import Session
+from app.modules.sessions import Session
 from app.modules.feed import Feed
 from app.modules.models import (
     Account,

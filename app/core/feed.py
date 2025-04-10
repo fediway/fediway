@@ -7,7 +7,7 @@ from app.modules.feed import Feed
 from app.modules.sources import Source
 from app.modules.ranking import LightStatsRanker
 from app.modules.models import Feed as FeedModel
-from app.modules.session import Session
+from app.modules.sessions import Session
 from app.settings import settings
 
 light_ranker = LightStatsRanker()
