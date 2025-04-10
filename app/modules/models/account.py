@@ -52,6 +52,10 @@ class Account(SQLModel, table=True):
         )
 
     @property
+    def header_static_url(self):
+        return self.header_url
+
+    @property
     def avatar_url(self):
         return config.files.build_file_url(
             self.__tablename__,
@@ -59,3 +63,7 @@ class Account(SQLModel, table=True):
             instance_id=self.id,
             file_name=self.avatar_file_name,
         )
+
+    @property
+    def avatar_static_url(self):
+        return self.avatar_url
