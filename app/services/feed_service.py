@@ -2,7 +2,7 @@
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, BackgroundTasks, Depends
 
-from app.settings import settings
+from config import config
 from app.core.db import get_db_session
 from app.modules.sessions import Session
 from app.modules.heuristics import DiversifyAccountsHeuristic
@@ -47,7 +47,7 @@ class FeedService():
         self.feed = Feed(
             id=feed_model.id,
             name=self.name,
-            max_queue_size=settings.feed_max_heavy_candidates,
+            max_queue_size=config.feed.feed_max_heavy_candidates,
             heuristics=[
                 DiversifyAccountsHeuristic(penalty=0.01)
             ]
@@ -60,7 +60,7 @@ class FeedService():
 
     def fetch_sources(self):
         candidates = []
-        max_n_per_source = settings.feed_max_light_candidates // len(self.sources)
+        max_n_per_source = config.feed.feed_max_light_candidates // len(self.sources)
 
         for source in self.sources:
             candidate_ids = source.collect(max_n_per_source)

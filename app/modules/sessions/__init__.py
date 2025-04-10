@@ -28,7 +28,11 @@ class Session():
         self.data[key] = value
 
 class SessionManager():
-    def __init__(self, maxsize: int = 10000, max_age_in_seconds: int = 600):
+    def __init__(
+        self, 
+        maxsize: int = 10_000, 
+        max_age_in_seconds: int = 600
+    ):
         self.cache = TLRUCache(
             maxsize=maxsize,
             ttu=lambda key, value, now: now + max_age_in_seconds,

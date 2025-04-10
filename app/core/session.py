@@ -3,13 +3,13 @@ from fastapi import Request
 
 from app.modules.sessions import SessionManager, Session
 from app.modules.feed import Feed
-from app.settings import settings
+from config import config
 
 from .location import get_location
 
 session_manager = SessionManager(
-    maxsize=settings.session_max_size,
-    max_age_in_seconds=settings.session_max_age_in_seconds
+    maxsize=config.session.session_max_size,
+    max_age_in_seconds=config.session.session_max_age_in_seconds
 )
 
 def init_session(request: Request):

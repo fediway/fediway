@@ -4,9 +4,9 @@ from datetime import datetime
 from sqlalchemy import URL
 from sqlmodel import Session, create_engine
 
-from app.settings import settings, AppEnvTypes
+from config import config
 
-engine = create_engine(settings.get_database_url())
+engine = create_engine(config.db.url)
 
 def get_db_session():
     with Session(engine) as session:

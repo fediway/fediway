@@ -12,7 +12,7 @@ from datetime import timedelta
 
 from app.services.feed_service import FeedService, get_feed_service
 
-from app.settings import settings
+from config import config
 from app.core.db import get_db_session
 from app.core.lang import get_languages
 from app.core.feed import get_samples
@@ -46,7 +46,7 @@ def get_sources(session: Session, db: DBSession) -> list[Source]:
     for lang in get_languages(session):
         source = HotStatusesInALanguageSource(
             language=lang,
-            max_age=timedelta(days=settings.feed_max_age_in_days),
+            max_age=timedelta(days=config.feed.feed_max_age_in_days),
             db=db
         )
         sources.append(source)
@@ -84,7 +84,7 @@ async def public_timeline(
     
     feed.load_or_create()
     feed.set_sources(get_sources(request.state.session, db))
-    recommendations = feed.get_recommendations(settings.feed_samples_page_size)
+    recommendations = feed.get_recommendations(config.feed.feed_samples_page_size)
 
     items = load_status_items(recommendations, db)
 
@@ -102,7 +102,7 @@ async def home_timeline(
     
     feed.load_or_create()
     feed.set_sources(get_sources(request.state.session, db))
-    recommendations = feed.get_recommendations(settings.feed_samples_page_size)
+    recommendations = feed.get_recommendations(config.feed.feed_samples_page_size)
 
     items = load_status_items(recommendations, db)
 
@@ -138,7 +138,7 @@ async def feeds_images(
         ))
 
     feed.set_sources(sources)
-    recommendations = feed.get_recommendations(settings.feed_samples_page_size)
+    recommendations = feed.get_recommendations(config.feed.feed_samples_page_size)
 
     items = load_status_items(recommendations, db)
 

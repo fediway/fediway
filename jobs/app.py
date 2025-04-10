@@ -1,11 +1,11 @@
 
 from celery import Celery
 
-from app.settings import settings
+from config import config
 
 app = Celery(
     'tasks', 
-    broker=str(settings.broker_url),
+    broker=str(config.jobs.broker_url),
     backend='rpc://',
 )
 

@@ -10,6 +10,12 @@ class AppEnvTypes(Enum):
     test: str = "test"
 
 class AppConfig(BaseConfig):
+    debug: bool = False
+
     app_env: AppEnvTypes = AppEnvTypes.prod
+    app_version: str = 'v0.0.1'
+
     app_secret: SecretStr
     app_host: str
+
+    app_title: str = "Fediway - Algorithmic Feeds for Mastodon ✨"

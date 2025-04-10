@@ -4,8 +4,6 @@ from .base import BaseConfig
 from pydantic import SecretStr
 
 class SessionConfig(BaseConfig):
-    db_host: str       = "localhost"
-    db_port: int       = 5432
-    db_user: str       = "mastodon"
-    db_pass: SecretStr = ""
-    db_name: str       = "mastodon_development"
+    session_max_size: int           = 10_000
+    session_max_age_in_seconds: int = 6_000
+    session_cookie_name: str        = 'fediway_session_id'

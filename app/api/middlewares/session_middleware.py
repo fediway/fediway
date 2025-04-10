@@ -4,13 +4,13 @@ from uuid import uuid4
 
 from app.modules.sessions import Session
 from app.modules.feed import Feed
-from app.core.sessions import session_manager, init_session
-from app.settings import settings
+from app.core.session import session_manager, init_session
+from config import config
 
 class SessionMiddleware():
 
     async def __call__(self, request: Request, call_next: callable):
-        session_id = request.cookies.get(settings.session_cookie_name)
+        session_id = request.cookies.get(config.session.session_cookie_name)
         session = None
 
         if session_id is not None:
@@ -28,7 +28,7 @@ class SessionMiddleware():
         session_manager.update(session.id, session)
 
         response.set_cookie(
-            key=settings.session_cookie_name,
+            key=config.session.session_cookie_name,
             value=request.state.session_id,
             httponly=True,
             secure=True,
