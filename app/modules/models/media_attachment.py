@@ -1,9 +1,10 @@
 
 from typing import Annotated, Union
 from datetime import datetime
-
 from sqlalchemy import JSON, Column
 from sqlmodel import SQLModel, Field, Relationship
+
+from config import config
 
 class MediaAttachment(SQLModel, table=True):
     __tablename__ = 'media_attachments'

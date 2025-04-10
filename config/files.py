@@ -20,14 +20,14 @@ class FilesConfig(BaseConfig):
                        attachment: str,
                        instance_id: int, 
                        file_name: str, 
-                       style: str = "original") -> str | None:
+                       style: str = "original") -> str:
         """
         Given the file name and attachment details, build the complete URL.
         Adjusts based on whether S3 is enabled.
         """
 
         if not file_name:
-            return None
+            return ""
 
         # Get the interpolated path, e.g.
         # "cache/accounts/avatar/000/000/123/original/my_avatar.png" or without prefix for local.
@@ -56,13 +56,11 @@ class FilesConfig(BaseConfig):
                               instance_id: int, 
                               style: str = "original") -> str:
         """
-        Interpolate a file path matching the Paperclip config:
+        Interpolate a file path matching the Mastodon Paperclip config:
         ':prefix_url:class/:attachment/:id_partition/:style/:filename'
-        - :class is assumed to be 'accounts'
         """
 
         prefix_url = self.prefix_url()
         partition = paperclip.id_partition(instance_id)
-        # For style "original", we assume the stored file_name is the original filename.
-        # For other styles, you might need to modify the filename (e.g. add a suffix)
+
         return f"{prefix_url}{class_name}/{attachment}/{partition}/{style}/{file_name}"
