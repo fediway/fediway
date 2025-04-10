@@ -29,7 +29,7 @@ class MediaAttachment(SQLModel, table=True):
     def file_url(self):
         return config.files.build_file_url(
             self.__tablename__,
-            attachment='file',
+            attachment='files',
             instance_id=self.id,
             file_name=self.file_file_name,
         )

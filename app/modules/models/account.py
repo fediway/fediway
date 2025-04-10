@@ -46,7 +46,7 @@ class Account(SQLModel, table=True):
     def header_url(self):
         return config.files.build_file_url(
             self.__tablename__,
-            attachment='header',
+            attachment='headers',
             instance_id=self.id,
             file_name=self.header_file_name,
         )
@@ -55,7 +55,7 @@ class Account(SQLModel, table=True):
     def avatar_url(self):
         return config.files.build_file_url(
             self.__tablename__,
-            attachment='avatar',
+            attachment='avatars',
             instance_id=self.id,
             file_name=self.avatar_file_name,
         )

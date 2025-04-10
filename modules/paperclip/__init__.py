@@ -7,5 +7,5 @@ def id_partition(instance_id: int) -> str:
     For example, 123 becomes "000/000/123".
     """
 
-    padded = f"{instance_id:09d}"
-    return f"{padded[0:3]}/{padded[3:6]}/{padded[6:9]}"
+    id_str = str(instance_id)
+    return "/".join([id_str[i:i+3] for i in range(0, 18, 3)])
