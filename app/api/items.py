@@ -85,7 +85,7 @@ class MediaAttachmentItem(Item):
                 3: 'unknown',
                 4: 'video',
             }[media_attachment.type],
-            url=media_attachment.remote_url,
+            url=media_attachment.file_url,
             meta=media_attachment.file_meta,
         )
 
