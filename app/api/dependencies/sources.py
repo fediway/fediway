@@ -5,11 +5,17 @@ from sqlmodel import Session as DBSession
 from modules.fediway.sources import Source
 from app.core.db import get_db_session
 from app.modules.sources import (
-    NewStatuses, 
-    NewStatusesByLanguage
+    HotStatusesByLanguage, 
+    NewStatusesByLanguage,
 )
 
 from .lang import get_languages
+
+def get_hot_statuses_by_language_source(
+    languages: list[str] = Depends(get_languages), 
+    db: DBSession = Depends(get_db_session)) -> Source:
+
+    return [HotStatusesByLanguage(lang, db=db) for lang in languages]
 
 def get_new_statuses_by_language_source(
     languages: list[str] = Depends(get_languages), 

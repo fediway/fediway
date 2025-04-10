@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request, BackgroundTasks
 
 from modules.fediway.sources import Source
 from app.core.db import get_db_session
-from app.api.dependencies import get_new_statuses_by_language_source
+from app.api.dependencies import get_hot_statuses_by_language_source
 from app.api.items import StatusItem
 from app.services.feed_service import FeedService, get_feed_service
 from app.modules.models import Status
@@ -14,9 +14,9 @@ from config import config
 router = APIRouter()
 
 def get_public_sources(
-    new_statuses_by_language: list[Source] = Depends(get_new_statuses_by_language_source)
+    hot_statuses_by_language: list[Source] = Depends(get_hot_statuses_by_language_source)
 ):
-    return new_statuses_by_language
+    return hot_statuses_by_language
 
 @router.get('/public')
 async def public_timeline(
