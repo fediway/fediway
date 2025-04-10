@@ -3,7 +3,7 @@ from .api import ApiConfig
 from .app import AppConfig
 from .cors import CorsConfig
 from .db import DBConfig
-from .feed import FeedConfig
+from .fediway import FediwayConfig
 from .files import FilesConfig
 from .geo import GeoLocationConfig
 from .logging import LoggingConfig
@@ -18,7 +18,7 @@ class config:
     app = AppConfig()
     cors = CorsConfig()
     db = DBConfig()
-    feed = FeedConfig()
+    fediway = FediwayConfig()
     files = FilesConfig()
     geo = GeoLocationConfig()
     logging = LoggingConfig()

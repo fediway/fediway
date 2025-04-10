@@ -50,3 +50,22 @@ class Status(SQLModel, table=True):
     topics: list[Topic] = Relationship(back_populates="statuses", link_model=StatusTopic)
     reblog: "Status" = Relationship()
     recommendations: list["FeedRecommendation"] = Relationship(back_populates='status')
+
+    @classmethod
+    def select_by_ids(cls, ids):
+        from sqlmodel import select
+        from sqlalchemy.orm import selectinload
+
+        return (
+            select(cls)
+            .options(selectinload(cls.account).subqueryload(Account.stats))
+            .options(selectinload(cls.preview_card))
+            .options(selectinload(cls.stats))
+            .options((
+                selectinload(cls.reblog)
+                .options(selectinload(cls.media_attachments))
+                .options(selectinload(cls.stats))
+                .options(selectinload(cls.preview_card))))
+            .options(selectinload(cls.media_attachments))
+            .where(cls.id.in_(ids))
+        )

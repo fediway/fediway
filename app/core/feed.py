@@ -3,8 +3,8 @@ import numpy as np
 from fastapi import BackgroundTasks
 from sqlmodel import Session as DBSession
 
+from modules.fediway.sources import Source
 from app.modules.feed import Feed
-from app.modules.sources import Source
 from app.modules.ranking import LightStatsRanker
 from app.modules.models import Feed as FeedModel
 from app.modules.sessions import Session
@@ -16,7 +16,7 @@ heavy_ranker = lambda x: 1.0
 def gather_sources(feed: Feed, sources: list[Source], db: Session) -> tuple[list[str], list[float]]:
     candidates = []
     scores = []
-    max_n_per_source = config.feed.feed_max_light_candidates // len(sources)
+    max_n_per_source = config.fediway.feed_max_light_candidates // len(sources)
 
     for source in sources:
         candidates += source.collect(max_n_per_source)
@@ -36,4 +36,4 @@ def get_samples(feed: Feed,
     if is_new:
         feed.add_candidates('light', *gather_sources(feed, sources, db))
 
-    return feed.sample('light', config.feed.feed_samples_page_size)
+    return feed.sample('light', config.fediway.feed_samples_page_size)

@@ -1,7 +1,8 @@
 
-from .base import Source
 from .db import (
     DatabaseSource, 
-    HotStatusesSource, 
-    HotStatusesInALanguageSource
+    HotStatuses, 
+    HotStatusesByLanguage,
+    NewStatuses,
+    NewStatusesByLanguage
 )

@@ -1,9 +1,9 @@
 
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select, func, desc
 from datetime import datetime, timedelta
 
-from ..models.status import Status, StatusStats
-from .base import Source
+from ..models import Status, StatusStats
+from modules.fediway.sources import Source
 
 class DatabaseSource(Source):
     def __init__(self, db: Session, query_callbacks: list[callable] = []):
@@ -19,7 +19,6 @@ class DatabaseSource(Source):
     def query(self, limit: int):
         query = self.base_query(limit)
 
-        print("foo", self.query_callbacks)
         for cb in self.query_callbacks:
             query = cb(query)
 
@@ -28,7 +27,7 @@ class DatabaseSource(Source):
     def collect(self, max_n: int):
         return self.db.exec(self.query(max_n)).all()
 
-class HotStatusesSource(DatabaseSource):
+class HotStatuses(DatabaseSource):
     def __init__(self, 
                  decay_lambda: float = 2.0, 
                  max_age: timedelta = timedelta(days=7), 
@@ -73,7 +72,7 @@ class HotStatusesSource(DatabaseSource):
     def __str__(self):
         return f'hot_statuses'
 
-class HotStatusesInALanguageSource(HotStatusesSource):
+class HotStatusesByLanguage(HotStatuses):
     def __init__(self, 
                  language: str = 'en',
                  *pargs, **kwargs):
@@ -86,3 +85,27 @@ class HotStatusesInALanguageSource(HotStatusesSource):
 
     def __str__(self):
         return f'hot_statuses_in_a_language[{self.language}]'
+
+class NewStatuses(DatabaseSource):
+    def base_query(self, limit: int):
+        return (
+            select(Status.id)
+            .order_by(desc(Status.created_at))
+            .limit(limit)
+        )
+
+class NewStatusesByLanguage(NewStatuses):
+    def __init__(self, 
+                 language: str | list = 'en',
+                 *pargs, **kwargs):
+        super().__init__(*pargs, **kwargs)
+
+        self.language = language
+
+    def base_query(self, limit: int):
+        q = super().base_query(limit)
+        
+        if type(self.language) is list:
+            return q.where(Status.language._in( self.language))
+        else:
+            return q.where(Status.language == self.language)

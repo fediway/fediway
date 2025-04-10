@@ -31,4 +31,4 @@ class LightStatsRanker(Ranker):
         scores = (stats * self.alpha.T).sum(axis=1)
         scores_map = {row.status_id: score for row, score in zip(rows, scores)}
 
-        return [scores_map[id] for id in candidate_ids]
+        return [scores_map.get(id, 0.0) for id in candidate_ids]
