@@ -3,19 +3,23 @@ from sqlmodel import Session, select
 from fastapi import Depends
 import numpy as np
 import polars as pl
+from loguru import logger
+import time
 
 from app.core.db import get_db_session
 from app.modules.models import Status, StatusStats
 from modules.fediway.feed.features import Features
 
 class StatusFeaturesService(Features):
-    cache: pl.DataFrame
+    cache: dict
 
     def __init__(self, db: Session = Depends(get_db_session)):
         self.db = db
-        self.cache = None
+        self.cache = {}
 
     def _fetch(self, candidates) -> pl.DataFrame:
+        start = time.time()
+
         rows = self.db.exec(
             select(
                 Status.id, 
@@ -28,44 +32,35 @@ class StatusFeaturesService(Features):
             .where(Status.id == StatusStats.status_id)
         ).all()
 
-        df = pl.DataFrame({
-            'candidate': [row.id for row in rows],
-            'account_id': [row.account_id for row in rows],
-            'favourites_count': [row.favourites_count for row in rows],
-            'reblogs_count': [row.reblogs_count for row in rows],
-            'replies_count': [row.replies_count for row in rows],
-        })
+        for row in rows:
+            self.cache[row.id] = {
+                'candidate': row.id,
+                'account_id': row.account_id,
+                'favourites_count': row.favourites_count,
+                'reblogs_count': row.reblogs_count,
+                'replies_count': row.replies_count
+            }
 
-        if self.cache is None:
-            self.cache = df 
-        else:
-            self.cache = self.cache.join(df, on='candidate')
+        logger.debug(f"Fetched features for {len(candidates)} statuses in {int((time.time() - start) * 1000)} milliseconds.")
 
     def get(self, candidates: list[str | int], features: list[str] = 'account_id') -> np.ndarray | None:
         if len(features) == 0:
             return None
 
         if self.cache is not None:
-            missing = pl.DataFrame({
-                'candidate': candidates
-            }).join(self.cache, on='candidate', how='anti')
+            missing = [c for c in candidates if c not in self.cache]
         else:
             missing = candidates
 
         if len(missing) > 0:
             self._fetch(missing)
-
-        feats = {
-            row['candidate']: np.array([row[f] for f in features]) for row in (
-                self.cache
-                .filter(pl.col('candidate').is_in(candidates))
-                .select(features + ['candidate'])
-                .iter_rows(named=True)
-            )
-        }
-
+        
+        feats = []
         zeros = np.zeros(len(features))
+        for c in candidates:
+            if c in self.cache:
+                feats.append(np.array([self.cache[c][f] for f in features]))
+            else:
+                feats.append(zeros)
 
-        return np.stack([
-            feats.get(c, zeros) for c in candidates
-        ])
+        return np.stack(feats)
