@@ -25,7 +25,8 @@ class DatabaseSource(Source):
         return query
 
     def collect(self, max_n: int):
-        return self.db.exec(self.query(max_n)).all()
+        for candidate in self.db.exec(self.query(max_n)).all():
+            yield candidate
 
 class HotStatuses(DatabaseSource):
     def __init__(self, 

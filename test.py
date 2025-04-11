@@ -12,10 +12,30 @@
 # print(ipv4_reader.get(ipv4_address), ipv4_address)
 # print(ipv6_reader.get(ipv6_address), ipv6_address)
 
-from mastodon import Mastodon
+# from mastodon import Mastodon
 
-Mastodon.create_app(
-    'web',
-    api_base_url = 'https://fediway.com',
-    to_file = 'pytooter_clientcred.secret'
-)
+# Mastodon.create_app(
+#     'web',
+#     api_base_url = 'https://fediway.com',
+#     to_file = 'pytooter_clientcred.secret'
+# )
+
+import matplotlib.pyplot as plt
+from lifelines import KaplanMeierFitter
+import numpy as np
+
+durations = np.array([1739, 3468, 2705, 1439])
+durations = (durations / 364.25)
+
+event_observed = [
+    0, 1, 0, 1
+]
+
+kmf = KaplanMeierFitter()
+kmf.fit(durations, event_observed=event_observed)
+kmf.plot_survival_function()
+
+plt.title('Survival after OSCC Diagnosis')
+plt.xlabel('Years')
+plt.ylabel('Survival Probability')
+plt.savefig('surv_p2=1.png', dpi=300)

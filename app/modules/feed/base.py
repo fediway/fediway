@@ -19,7 +19,7 @@ class Feed():
     user: None = None
     seen_ids = set()
     candidate_queues: dict[str, TopKPriorityQueue] = {}
-    Heuristic: list[Heuristic] = []
+    heuristics: list[Heuristic] = []
 
     def __init__(self, 
                  id: int,

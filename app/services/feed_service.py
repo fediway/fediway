@@ -1,40 +1,42 @@
-    
+
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, BackgroundTasks, Depends
 
+from modules.fediway.feed import Feed
 from modules.fediway.sources import Source
-from app.core.db import get_db_session
 from app.modules.sessions import Session
-from app.modules.heuristics import DiversifyAccountsHeuristic
-from app.modules.feed import Feed, Candidate
 from app.modules.ranking import Ranker
 from app.modules.models import Feed as FeedModel, Status, FeedRecommendation
 from config import config
 
 class FeedService():
-    feed: Feed | None = None
-
     def __init__(self, 
                  name: str,
-                 light_ranker: Ranker,
-                 heavy_ranker: Ranker,
-                 session: Session, 
                  db: DBSession,
-                 tasks: BackgroundTasks,):
+                 tasks: BackgroundTasks,
+                 session: Session, 
+                 sources: list[Source],
+                 feed: Feed):
         self.name = name
-        self.light_ranker = light_ranker
-        self.heavy_ranker = heavy_ranker
-        self.session = session
         self.db = db
         self.tasks = tasks
-        self.sources = []
+        self.session = session
+        self.sources = sources
+        self.feed = feed
 
-    def load_or_create(self):
-        self.feed = self.session.get(self.name)
+    def init(self):
+        '''
+        Initialize feed.
+        '''
 
-        if self.feed is not None:
+        feed = self.session.get(self.name)
+
+        if feed is not None:
+            # self.feed = feed
             return
         
+        self.collect_sources_async()
+
         feed_model = FeedModel(
             session_id=self.session.id,
             ip=self.session.ipv4_address,
@@ -44,81 +46,46 @@ class FeedService():
         self.db.add(feed_model)
         self.db.commit()
 
-        self.feed = Feed(
-            id=feed_model.id,
-            name=self.name,
-            max_queue_size=config.fediway.feed_max_heavy_candidates,
-            heuristics=[
-                DiversifyAccountsHeuristic(penalty=0.01)
-            ]
-        )
-
+        # store feed in session
+        self.feed.id = feed_model.id
         self.session[self.name] = self.feed
 
-    def set_sources(self, sources: list[Source]):
-        self.sources = sources
+        # wait until at least n candidates are collected from the sources
+        # or timout
+        self.feed.wait_for_candidates(self.max_n_per_source())
 
-    def fetch_sources(self):
+        # start ranking
+        self.feed.rank_async()
+
+        # wait until the ranker has finished
+        self.feed.wait_for_ranker()
+
+    def max_n_per_source(self):
+        return config.fediway.feed_max_light_candidates // len(self.sources)
+
+    def collect_sources_async(self):
         candidates = []
-        max_n_per_source = config.fediway.feed_max_light_candidates // len(self.sources)
+        max_n_per_source = self.max_n_per_source()
 
+        # collect candidates from sources
         for source in self.sources:
-            candidate_ids = source.collect(max_n_per_source)
+            self.feed.collect_async(source, args=(max_n_per_source,))
 
-            # load account_ids for all candidates
-            rows = self.db.exec(
-                select(Status.id, Status.account_id).where(Status.id.in_(candidate_ids))
-            ).all()
-            rows = {row.id: row for row in rows}
-
-            candidates += [Candidate(
-                status_id=status_id,
-                account_id=rows[status_id].account_id,
-                source=str(source),
-            ) for status_id in candidate_ids]
-
-        # compute scores 
-        scores = self.light_ranker.scores(candidates, self.db)
-
-        for i, score in enumerate(scores):
-            candidates[i].score = score
-
-        self.feed.add_candidates('light', candidates)
-
-    def get_recommendations(self, n) -> list[int | str]:
-        assert len(self.sources) > 0, "Cannot propose recommendations without sources."
-
-        is_new = self.feed.is_empty()
-
-        if is_new:
-            self.fetch_sources()
-
-        samples = self.feed.samples('light', n)
-
-        # save recommendations
+    def _save_recommendations(self, recommendations):
         self.db.bulk_save_objects([FeedRecommendation(
             feed_id=self.feed.id,
-            status_id=candidate.status_id,
-            source=candidate.source,
-            score=float(candidate.score),
-            adjusted_score=float(adjusted_score),
-        ) for candidate, adjusted_score in samples])
+            status_id=recommendation.item,
+            source=recommendation.sources[0],
+            score=float(recommendation.score),
+            adjusted_score=float(recommendation.adjusted_score),
+        ) for recommendation in recommendations])
+
         self.db.commit()
 
-        return [candidate.status_id for candidate, _ in samples]
+    def get_recommendations(self, n) -> list[int | str]:
+        recommendations = self.feed.get_batch(n)
 
-def get_feed_service(name: str):
-    def _inject(request: Request, 
-                tasks: BackgroundTasks,
-                db: Session = Depends(get_db_session)):
-        from app.core.feed import light_ranker, heavy_ranker
+        # save recommendations
+        self.tasks.add_task(self._save_recommendations, recommendations)
 
-        return FeedService(
-            name=name, 
-            light_ranker=light_ranker,
-            heavy_ranker=heavy_ranker,
-            session=request.state.session, 
-            db=db, 
-            tasks=tasks)
-        
-    return _inject
+        return recommendations

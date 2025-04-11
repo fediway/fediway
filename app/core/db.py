@@ -11,3 +11,6 @@ engine = create_engine(config.db.url)
 def get_db_session():
     with Session(engine) as session:
         yield session
+
+def get_long_living_db_session():
+    return Session(engine)

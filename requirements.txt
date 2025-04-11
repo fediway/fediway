@@ -8,3 +8,4 @@ pydantic_settings==2.8.1
 sqlmodel==0.0.24
 cachetools==5.5.2
 numpy==2.2.3
+polars==1.27.1

@@ -4,16 +4,16 @@ from fastapi import APIRouter, Depends, Request, BackgroundTasks
 
 from modules.fediway.sources import Source
 from app.core.db import get_db_session
-from app.api.dependencies import get_hot_statuses_by_language_source
+from app.api.dependencies import get_hot_statuses_by_language_source, get_status_feed
 from app.api.items import StatusItem
-from app.services.feed_service import FeedService, get_feed_service
+from app.services.feed_service import FeedService
 from app.modules.models import Status
 from app.api.items import StatusItem
 from config import config
 
 router = APIRouter()
 
-def get_public_sources(
+def public_timeline_sources(
     hot_statuses_by_language: list[Source] = Depends(get_hot_statuses_by_language_source)
 ):
     return hot_statuses_by_language
@@ -21,16 +21,16 @@ def get_public_sources(
 @router.get('/public')
 async def public_timeline(
     request: Request,
-    tasks: BackgroundTasks,
-    feed: FeedService = Depends(get_feed_service(name='home')),
-    sources: list[Source] = Depends(get_public_sources),
+    feed: FeedService = Depends(get_status_feed(
+        name='public',
+        heuristics=config.fediway.feed_heuristics,
+        sources=public_timeline_sources
+    )),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
+    feed.init()
 
-    feed.load_or_create()
-    feed.set_sources(sources)
-    recommendations = feed.get_recommendations(config.fediway.feed_samples_page_size)
-
-    statuses = db.exec(Status.select_by_ids(recommendations)).all()
+    recommendations = feed.get_recommendations(config.fediway.feed_batch_size)
+    statuses = db.exec(Status.select_by_ids([r.item for r in recommendations])).all()
 
     return [StatusItem.from_model(status) for status in statuses]
