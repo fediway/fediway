@@ -9,3 +9,4 @@ sqlmodel==0.0.24
 cachetools==5.5.2
 numpy==2.2.3
 datasets==3.5.0
+scikit-learn==1.6.1
