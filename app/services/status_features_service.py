@@ -2,7 +2,6 @@
 from sqlmodel import Session, select
 from fastapi import Depends
 import numpy as np
-import polars as pl
 from loguru import logger
 import time
 
@@ -17,7 +16,7 @@ class StatusFeaturesService(Features):
         self.db = db
         self.cache = {}
 
-    def _fetch(self, candidates) -> pl.DataFrame:
+    def _fetch(self, candidates):
         start = time.time()
 
         rows = self.db.exec(
