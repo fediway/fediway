@@ -27,17 +27,18 @@ def train_kirby(
         callback=validate_kirby_model
     ),
     features: list[str] = [
-        'status_age_in_seconds',
-        'favourites_count',
-        'reblogs_count',
-        'replies_count',
-        'num_images',
-        'num_videos',
-        'num_gifs',
-        'num_tags',
-        'num_mentions',
+        'feat.status.age_in_seconds',
+        'feat.status.num_images',
+        'feat.status.num_videos',
+        'feat.status.num_gifs',
+        'feat.status.num_tags',
+        'feat.status.num_mentions',
+
+        'feat.interactions.a_replied_b',
+        'feat.interactions.b_replied_a',
+        # 'feat.interactions.num_favourites_a2b',
     ],
-    label: str = 'is_favourited',
+    label: str = 'label.is_favourited',
     dataset_path: str = 'data/datasets',
     seed: int = 42
 ) -> int:
