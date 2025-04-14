@@ -10,41 +10,54 @@ from app.modules.models import Status, StatusTag, Account, Favourite
 from .base import Feature
 from .utils import is_joined
 
-class ARepliedB(Feature):
-    __featname__ = 'a_replied_b'
+class InteractionFeature(Feature):
+    @property
+    def label(self):
+        return f"{self.a_label}.{self.__featname__}.{self.b_label}"
 
-    def query(q, a_label, b_label):
+    def __init__(self, a_label, b_label):
+        self.a_label = a_label
+        self.b_label = b_label
+
+    def get(self, **kwargs):
+        return int(kwargs.get(self.label))
+
+class HasReplied(InteractionFeature):
+    __featname__ = 'has_replied'
+
+    def query(self, q):
         StatusAlias = aliased(Status)
 
-        q = q.add_columns(
-            exists(StatusAlias.id)
-            .where(StatusAlias.account_id == a_label)
-            .where(StatusAlias.in_reply_to_account_id == b_label)
-            .label('a_replied_b')
+        q = (
+            q.add_columns(
+                func.count(StatusAlias.id).label(self.label)
+            )
+            .outerjoin(StatusAlias, and_(
+                StatusAlias.account_id == self.a_label,
+                StatusAlias.in_reply_to_account_id == self.b_label
+            ))
         )
 
         return q
 
-    def get(a_replied_b, **kwargs):
-        return int(a_replied_b)
+class HasFavourited(InteractionFeature):
+    __featname__ = 'has_favourited'
 
-class BRepliedA(Feature):
-    __featname__ = 'b_replied_a'
-
-    def query(q, a_label, b_label):
+    def query(self, q):
         StatusAlias = aliased(Status)
+        FavouriteAlias = aliased(Favourite)
 
         q = q.add_columns(
-            exists(StatusAlias.id)
-            .where(StatusAlias.account_id == b_label)
-            .where(StatusAlias.in_reply_to_account_id == a_label)
-            .label('b_replied_a')
-        )
+            func.count(StatusAlias.id)
+            .filter(
+                exists()
+                .where(FavouriteAlias.status_id == StatusAlias.id)
+                .where(FavouriteAlias.account_id == self.a_label)
+            )
+            .label(self.label)
+        ).outerjoin(StatusAlias, StatusAlias.account_id == self.b_label)
 
         return q
-
-    def get(b_replied_a, **kwargs):
-        return int(b_replied_a)
 
 class NumFavouritesA2B(Feature):
     __featname__ = 'num_favourites_a2b'
@@ -98,3 +111,4 @@ class NumFavouritesB2A(Feature):
 
     def get(num_favourites_a2b, **kwargs):
         return int(num_favourites_a2b)
+

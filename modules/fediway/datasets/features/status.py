@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlmodel import Session, func, select, exists, case
 from sqlalchemy.orm import selectinload
 
-from app.modules.models import Status, StatusTag, Mention, MediaAttachment
+from app.modules.models import Status, StatusStats, StatusTag, Mention, MediaAttachment
 
 from .base import Feature
 from .utils import is_joined
@@ -79,6 +79,48 @@ class NumMentions(Feature):
 
     def get(num_mentions, **kwargs):
         return num_mentions
+
+class NumFavourites(Feature):
+    __featname__ = 'num_favourites'
+
+    def query(q):
+        q = q.add_columns(func.max(StatusStats.favourites_count).label("num_favourites"))
+
+        if not is_joined(q, StatusStats):
+            q = q.join(StatusStats, Status.id == StatusStats.status_id)
+
+        return q
+
+    def get(num_favourites, **kwargs):
+        return num_favourites
+
+class NumReblogs(Feature):
+    __featname__ = 'num_reblogs'
+
+    def query(q):
+        q = q.add_columns(func.max(StatusStats.reblogs_count).label("num_reblogs"))
+
+        if not is_joined(q, StatusStats):
+            q = q.join(StatusStats, Status.id == StatusStats.status_id)
+
+        return q
+
+    def get(num_reblogs, **kwargs):
+        return num_reblogs
+
+class NumReplies(Feature):
+    __featname__ = 'num_replies'
+
+    def query(q):
+        q = q.add_columns(func.max(StatusStats.favourites_count).label("num_replies"))
+
+        if not is_joined(q, StatusStats):
+            q = q.join(StatusStats, Status.id == StatusStats.status_id)
+
+        return q
+
+    def get(num_replies, **kwargs):
+        return num_replies
 
 class AgeInSeconds(Feature):
     __featname__ = 'age_in_seconds'

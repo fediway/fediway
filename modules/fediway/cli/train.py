@@ -34,8 +34,8 @@ def train_kirby(
         'feat.status.num_tags',
         'feat.status.num_mentions',
 
-        'feat.interactions.a_replied_b',
-        'feat.interactions.b_replied_a',
+        'feat.interactions.a2b.has_favourited',
+        'feat.interactions.b2a.has_favourited',
         # 'feat.interactions.num_favourites_a2b',
     ],
     label: str = 'label.is_favourited',

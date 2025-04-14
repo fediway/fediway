@@ -5,12 +5,15 @@ from .status import (
     NumVideos,
     NumTags,
     NumMentions,
-    AgeInSeconds
+    NumFavourites,
+    NumReblogs,
+    NumReplies,
+    AgeInSeconds,
 )
 
 from .interactions import (
-    ARepliedB,
-    BRepliedA,
+    HasReplied,
+    HasFavourited,
     NumFavouritesA2B,
     NumFavouritesB2A,
 )
@@ -22,12 +25,15 @@ FEATURES = {
         NumVideos,
         NumTags,
         NumMentions,
-        AgeInSeconds
+        NumFavourites,
+        NumReblogs,
+        NumReplies,
+        AgeInSeconds,
     ]
 } | {
     f'interactions.{f.__featname__}': f for f in [
-        ARepliedB,
-        BRepliedA,
+        HasReplied,
+        HasFavourited,
         NumFavouritesA2B,
         NumFavouritesB2A
     ]
