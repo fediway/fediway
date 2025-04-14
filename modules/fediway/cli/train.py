@@ -34,9 +34,13 @@ def train_kirby(
         'feat.status.num_tags',
         'feat.status.num_mentions',
 
-        'feat.interactions.a2b.num_favourites',
-        'feat.interactions.b2a.num_favourites',
-        # 'feat.interactions.num_favourites_a2b',
+        # 'feat.interactions.a2b.num_favourites',
+        'feat.interactions.a2b.num_mentions',
+        'feat.interactions.a2b.is_following',
+
+        # 'feat.interactions.b2a.num_favourites',
+        'feat.interactions.b2a.num_mentions',
+        'feat.interactions.b2a.is_following',
     ],
     label: str = 'label.is_favourited',
     dataset_path: str = 'data/datasets',

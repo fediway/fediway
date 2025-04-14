@@ -14,6 +14,9 @@ from .status import (
 from .interactions import (
     HasReplied,
     NumFavourites as InteractionsNumFavourites,
+    # NumReblogs as InteractionsNumReblogs,
+    NumMentions as InteractionsNumMentions,
+    IsFollowing
 )
 
 FEATURES = {
@@ -32,5 +35,8 @@ FEATURES = {
     f'interactions.{f.__featname__}': f for f in [
         HasReplied,
         InteractionsNumFavourites,
+        # InteractionsNumReblogs,
+        InteractionsNumMentions,
+        IsFollowing,
     ]
 }

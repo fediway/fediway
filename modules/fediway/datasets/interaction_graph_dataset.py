@@ -29,13 +29,14 @@ class InteractionGraphDataset(Dataset):
                     'status.num_replies',
 
                     'interactions.a2b.has_replied',
-                    'interactions.a2b.num_favourites',
+                    # 'interactions.a2b.num_favourites',
+                    'interactions.a2b.num_mentions',
+                    'interactions.a2b.is_following',
 
                     'interactions.b2a.has_replied',
-                    'interactions.b2a.num_favourites',
-
-                    # 'interactions.num_favourites_a2b',
-                    # 'interactions.num_favourites_b2a',
+                    # 'interactions.b2a.num_favourites',
+                    'interactions.b2a.num_mentions',
+                    'interactions.b2a.is_following',
                 ]):
         
         query = (
@@ -158,7 +159,7 @@ class InteractionGraphDataset(Dataset):
             
             bar.update(1)
 
-        # feat = 'interactions.a2b.has_replied'
+        # feat = 'interactions.b2a.has_replied'
         # print(dataset_dict[f'feat.{feat}'])
         # print(sum(dataset_dict[f'feat.{feat}']))
         # exit()
