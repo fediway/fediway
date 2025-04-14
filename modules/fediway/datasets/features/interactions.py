@@ -40,8 +40,8 @@ class HasReplied(InteractionFeature):
 
         return q
 
-class HasFavourited(InteractionFeature):
-    __featname__ = 'has_favourited'
+class NumFavourites(InteractionFeature):
+    __featname__ = 'num_favourites'
 
     def query(self, q):
         StatusAlias = aliased(Status)
@@ -58,57 +58,3 @@ class HasFavourited(InteractionFeature):
         ).outerjoin(StatusAlias, StatusAlias.account_id == self.b_label)
 
         return q
-
-class NumFavouritesA2B(Feature):
-    __featname__ = 'num_favourites_a2b'
-
-    def query(q, a_label, b_label):
-        FavouriteAlias = aliased(Favourite)
-        StatusAlias = aliased(Status)
-
-        q = (
-            q.add_columns(
-                func.count(FavouriteAlias.id)
-                .filter(
-                    exists(StatusAlias.id)
-                    .where(StatusAlias.id == FavouriteAlias.status_id)
-                    .where(StatusAlias.account_id == b_label)
-                )
-                .label('num_favourites_a2b')
-            )
-            .outerjoin(FavouriteAlias, and_(
-                FavouriteAlias.account_id == a_label,
-                FavouriteAlias.status_id == Status.id
-            ))
-        )
-
-        return q
-
-    def get(num_favourites_a2b, **kwargs):
-        return int(num_favourites_a2b)
-
-class NumFavouritesB2A(Feature):
-    __featname__ = 'num_favourites_b2a'
-
-    def query(q, a_label, b_label):
-        FavouriteAlias = aliased(Favourite)
-        StatusAlias = aliased(Status)
-
-        q = (
-            q.add_columns(
-                func.count(FavouriteAlias.id)
-                .filter(
-                    exists(StatusAlias.id)
-                    .where(StatusAlias.id == FavouriteAlias.id)
-                    .where(StatusAlias.account_id == a_label)
-                )
-                .label('num_favourites_b2a')
-            )
-            .outerjoin(FavouriteAlias, FavouriteAlias.account_id == b_label)
-        )
-
-        return q
-
-    def get(num_favourites_a2b, **kwargs):
-        return int(num_favourites_a2b)
-

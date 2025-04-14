@@ -29,10 +29,10 @@ class InteractionGraphDataset(Dataset):
                     'status.num_replies',
 
                     'interactions.a2b.has_replied',
-                    'interactions.a2b.has_favourited',
+                    'interactions.a2b.num_favourites',
 
                     'interactions.b2a.has_replied',
-                    'interactions.b2a.has_favourited',
+                    'interactions.b2a.num_favourites',
 
                     # 'interactions.num_favourites_a2b',
                     # 'interactions.num_favourites_b2a',

@@ -13,9 +13,7 @@ from .status import (
 
 from .interactions import (
     HasReplied,
-    HasFavourited,
-    NumFavouritesA2B,
-    NumFavouritesB2A,
+    NumFavourites as InteractionsNumFavourites,
 )
 
 FEATURES = {
@@ -33,8 +31,6 @@ FEATURES = {
 } | {
     f'interactions.{f.__featname__}': f for f in [
         HasReplied,
-        HasFavourited,
-        NumFavouritesA2B,
-        NumFavouritesB2A
+        InteractionsNumFavourites,
     ]
 }
