@@ -50,9 +50,9 @@ def query(language: str = 'en'):
 
 @app.command("seed")
 def seed():
-    from sqlmodel import select, exists, func
+    from sqlmodel import select, exists, func, union_all
     from sqlalchemy.orm import selectinload
-    from sqlalchemy import or_
+    from sqlalchemy import or_, and_
     from app.modules.models import Account, Status, Follow, Favourite
     from tqdm import tqdm
     db = next(get_db_session())
@@ -65,25 +65,9 @@ def seed():
         herde.setup()
         typer.echo("Done setting up memgraph.")
 
-        accounts = db.exec(
-            select(Account)
-            .options(
-                selectinload(Account.statuses)
-                .options(selectinload(Status.stats))
-            )
-            .where(or_(
-                exists(Status.id).where(Status.account_id == Account.id),
-                exists(Favourite.id).where(Favourite.account_id == Account.id),
-            ))
-            .execution_options(yield_per=100)
-        ).all()
-        total = db.scalar((
-            select(func.count(Account.id))
-            .where(or_(
-                exists(Status.id).where(Status.account_id == Account.id),
-                exists(Favourite.id).where(Favourite.account_id == Account.id),
-            ))
-        ))
+        start = time.time()
+        total = db.scalar(select(func.count(Account.id)))
+        typer.echo(f"Total accounts to insert: {total} (computed in {float(time.time() - start)} seconds).")
 
         bar = tqdm(
             desc="Accounts",
@@ -92,15 +76,29 @@ def seed():
 
         max_age = datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)
 
-        for account in accounts:
-            herde.add_account(account)
-            for status in account.statuses:
-                if status.created_at < max_age:
-                    continue
-                if status.stats is None:
-                    continue
-                herde.add_status(status)
-            bar.update(1)
+        batch_size = 100
+        offset = 0
+        while True:
+            accounts = db.exec(
+                select(Account)
+                .options(selectinload(Account.statuses).options(selectinload(Status.stats)))
+                .offset(offset)
+                .limit(batch_size)
+            ).all()
+            
+            if not accounts:
+                break
+
+            offset += batch_size
+            for account in accounts:
+                herde.add_account(account)
+                for status in account.statuses:
+                    if status.created_at < max_age:
+                        continue
+                    if status.stats is None:
+                        continue
+                    herde.add_status(status)
+                bar.update(1)
 
         bar.close()
 
@@ -120,20 +118,18 @@ def seed():
 
         favourites = db.exec(
             select(Favourite)
-            .where(
-                exists(Status.id)
-                .where(Status.id == Favourite.status_id)
-                .where(Status.created_at < max_age)
-            )
+            .join(Status, and_(
+                Status.id == Favourite.status_id,
+                Status.created_at < max_age
+            ), isouter=False)
             .execution_options(yield_per=100)
         ).all()
         total = db.scalar(
             select(func.count(Favourite.id))
-            .where(
-                exists(Status.id)
-                .where(Status.id == Favourite.status_id)
-                .where(Status.created_at < max_age)
-            )
+            .join(Status, and_(
+                Status.id == Favourite.status_id,
+                Status.created_at < max_age
+            ), isouter=False)
         )
 
         bar = tqdm(
