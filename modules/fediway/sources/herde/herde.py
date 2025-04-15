@@ -48,7 +48,7 @@ class Herde():
         if len(favs) > 0:
             avg_reblogs = float(np.mean(reblogs))
 
-        self.driver.execute_query(
+        self.session.run(
             query, 
             id=account.id,
             avg_favs=avg_favs,
@@ -63,7 +63,7 @@ class Herde():
         MERGE (a)-[:FOLLOWS]->(s)
         """
 
-        self.driver.execute_query(
+        self.session.run(
             query, 
             source_id=source_id,
             target_id=target_id,
@@ -82,7 +82,7 @@ class Herde():
         CREATE (a)-[:CREATED_BY]->(s)
         """
 
-        self.driver.execute_query(
+        self.session.run(
             query, 
             id=status.id,
             account_id=status.account_id,
@@ -100,7 +100,7 @@ class Herde():
         MERGE (a)-[:FAVOURITES]->(s)
         """
 
-        self.driver.execute_query(
+        self.session.run(
             query, 
             account_id=account_id,
             status_id=status_id,
@@ -137,13 +137,13 @@ class Herde():
         WITH a, s, (now - s.created_at) / 86400 AS age_days
         RETURN s.id AS status_id,
             // Content virality (60% weight)
-            0.6  * (s.num_favs + 2 * s.num_reblogs) * 10 / (a.avg_favs + 2 * a.avg_reblogs) + 
+            // 0.6  * (s.num_favs + 2 * s.num_reblogs) * 10 / (a.avg_favs + 2 * a.avg_reblogs) + 
             // Cross-community appeal (25% weight)
-            //0.25 * COALESCE(s.diversity_score, 0) 
+            // 0.25 * COALESCE(s.diversity_score, 0) 
             // Author authority (15% weight)
-            0.15 * a.rank
-            AS score
-            // a.rank * (s.num_favs + 2 * s.num_reblogs) / (a.avg_favs + 2 * a.avg_reblogs) AS score
+            // 0.15 * a.rank
+            // AS score
+            a.rank * (s.num_favs + 2 * s.num_reblogs) / (a.avg_favs + 2 * a.avg_reblogs) AS score
         ORDER BY score DESC
         LIMIT $limit
         """
@@ -177,7 +177,7 @@ class Herde():
         MATCH (a:Account {id: node.id})
         SET a.rank = rank
         """
-        self.driver.execute_query(query)
+        self.session.run(query)
 
     # def compute_engagement_baselines(self):
     #     query = """

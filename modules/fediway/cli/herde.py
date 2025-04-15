@@ -1,6 +1,8 @@
 
 from neo4j import GraphDatabase, AsyncGraphDatabase
+from datetime import datetime, timedelta
 import typer
+import time
 
 from config import config
 from modules.fediway.sources.herde import Herde
@@ -59,67 +61,90 @@ def seed():
 
         herde.setup()
 
-        # accounts = db.exec(
-        #     select(Account)
-        #     .options(
-        #         selectinload(Account.statuses)
-        #         .options(selectinload(Status.stats))
-        #     )
-        #     .where(or_(
-        #         exists(Status.id).where(Status.account_id == Account.id),
-        #         exists(Favourite.id).where(Favourite.account_id == Account.id),
-        #     ))
-        #     .execution_options(yield_per=100)
-        # ).all()
-        # total = db.scalar((
-        #     select(func.count(Account.id))
-        #     .where(or_(
-        #         exists(Status.id).where(Status.account_id == Account.id),
-        #         exists(Favourite.id).where(Favourite.account_id == Account.id),
-        #     ))
-        # ))
+        accounts = db.exec(
+            select(Account)
+            .options(
+                selectinload(Account.statuses)
+                .options(selectinload(Status.stats))
+            )
+            .where(or_(
+                exists(Status.id).where(Status.account_id == Account.id),
+                exists(Favourite.id).where(Favourite.account_id == Account.id),
+            ))
+            .execution_options(yield_per=100)
+        ).all()
+        total = db.scalar((
+            select(func.count(Account.id))
+            .where(or_(
+                exists(Status.id).where(Status.account_id == Account.id),
+                exists(Favourite.id).where(Favourite.account_id == Account.id),
+            ))
+        ))
 
-        # bar = tqdm(
-        #     desc="Accounts",
-        #     total=total
-        # )
+        bar = tqdm(
+            desc="Accounts",
+            total=total
+        )
 
-        # for account in accounts:
-        #     herde.add_account(account)
-        #     for status in account.statuses:
-        #         if status.stats is None:
-        #             continue
-        #         herde.add_status(status)
-        #     bar.update(1)
+        max_age = datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)
 
-        # bar.close()
+        for account in accounts:
+            herde.add_account(account)
+            for status in account.statuses:
+                if status.created_at < max_age:
+                    continue
+                if status.stats is None:
+                    continue
+                herde.add_status(status)
+            bar.update(1)
 
-        # follows = db.exec(select(Follow).execution_options(yield_per=100)).all()
-        # total = db.scalar(select(func.count(Follow.id)))
+        bar.close()
 
-        # bar = tqdm(
-        #     desc="Follows",
-        #     total=total
-        # )
+        follows = db.exec(select(Follow).execution_options(yield_per=100)).all()
+        total = db.scalar(select(func.count(Follow.id)))
 
-        # for follow in follows:
-        #     herde.add_follow(follow.account_id, follow.target_account_id)
-        #     bar.update(1)
+        bar = tqdm(
+            desc="Follows",
+            total=total
+        )
+
+        for follow in follows:
+            herde.add_follow(follow.account_id, follow.target_account_id)
+            bar.update(1)
         
-        # bar.close()
+        bar.close()
 
-        # favourites = db.exec(select(Favourite).execution_options(yield_per=100)).all()
-        # total = db.scalar(select(func.count(Favourite.id)))
+        favourites = db.exec(
+            select(Favourite)
+            .where(
+                exists(Status.id)
+                .where(Status.id == Favourite.status_id)
+                .where(Status.created_at < max_age)
+            )
+            .execution_options(yield_per=100)
+        ).all()
+        total = db.scalar(
+            select(func.count(Favourite.id))
+            .where(
+                exists(Status.id)
+                .where(Status.id == Favourite.status_id)
+                .where(Status.created_at < max_age)
+            )
+        )
 
-        # bar = tqdm(
-        #     desc="Favourites",
-        #     total=total
-        # )
+        bar = tqdm(
+            desc="Favourites",
+            total=total
+        )
 
-        # for favourite in favourites:
-        #     herde.add_favourite(favourite.account_id, favourite.status_id)
-        #     bar.update(1)
+        for favourite in favourites:
+            herde.add_favourite(favourite.account_id, favourite.status_id)
+            bar.update(1)
         
-        # bar.close()
+        bar.close()
 
-        herde.compute_diversity_scores()
+        typer.echo("Start computing account ranks...")
+
+        start = time.time()
+        herde.compute_account_rank()
+        typer.echo(f"Computed account ranks in {int(time.time() - start)} seconds.")
