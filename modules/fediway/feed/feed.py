@@ -143,7 +143,7 @@ class Feed():
             self._active_sources.append(thread)
         thread.start()
 
-    def wait_for_candidates(self, n: int, max_t: timedelta = timedelta(seconds=1)) -> bool:
+    def wait_for_candidates(self, n: int, max_t: timedelta = timedelta(seconds=5)) -> bool:
         """Block until specified number of candidates are collected or timeout occurs.
         
         Args:

@@ -3,9 +3,7 @@ from sqlalchemy import event
 from sqlmodel import SQLModel
 
 class ReadOnlyModel(SQLModel):
-
-    class Config:
-        allow_mutation = False
+    pass
 
 # def block_writes(mapper, connection, target):
 #     raise RuntimeError("Write operations are disabled for this model!")

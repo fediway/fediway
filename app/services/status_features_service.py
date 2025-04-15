@@ -1,5 +1,6 @@
 
 from sqlmodel import Session, select
+from datetime import datetime
 from fastapi import Depends
 import numpy as np
 from loguru import logger
@@ -23,6 +24,7 @@ class StatusFeaturesService(Features):
             select(
                 Status.id, 
                 Status.account_id,
+                Status.created_at,
                 StatusStats.favourites_count,
                 StatusStats.reblogs_count,
                 StatusStats.replies_count,
@@ -37,13 +39,17 @@ class StatusFeaturesService(Features):
                 'account_id': row.account_id,
                 'favourites_count': row.favourites_count,
                 'reblogs_count': row.reblogs_count,
-                'replies_count': row.replies_count
+                'replies_count': row.replies_count,
+                'age_in_seconds': (datetime.now() - row.created_at).total_seconds()
             }
 
         logger.debug(f"Fetched features for {len(candidates)} statuses in {int((time.time() - start) * 1000)} milliseconds.")
 
     def get(self, candidates: list[str | int], features: list[str] = 'account_id') -> np.ndarray | None:
         if len(features) == 0:
+            return None
+
+        if len(candidates) == 0:
             return None
 
         if self.cache is not None:

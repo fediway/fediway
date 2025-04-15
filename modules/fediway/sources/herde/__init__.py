@@ -1,40 +1,10 @@
 
-from gqlalchemy import Memgraph, Node, Relationship, Field
+from .herde import Herde
+from .sources import TrendingStatusesByInfluentialUsers
+
 from datetime import datetime
 import math
 
-# Connect to Memgraph
-memgraph = Memgraph()
-
-class Account(Node):
-    id: int = Field(unique=True, index=True)
-    community: int = Field(index=True)
-
-class Status(Node):
-    id: int = Field(unique=True, index=True)
-    cluster: int = Field(index=True)
-
-class Favourites(Relationship):
-    pass
-
-class SimilarTo(Relationship):
-    similarity: float
-
-memgraph.ensure_indexes()
-
-def load_interactions(account_ids: list[int]):
-    for account_id in account_ids:
-        account = Account(id=account_id).save(memgraph)
-        for status_id in range(user_id*100, user_id*100 + statuses_per_user):
-            status = Status(id=status_id, cluster=-1).save(memgraph)
-
-            Favourites(
-                _start_node_id=account._id,
-                _end_node_id=status._id,
-                timestamp=datetime.now()
-            ).save(memgraph)
-
-@memgraph.query
 def compute_similarities(batch_size=1000):
     """
     Memgraph query for similarity computation based on jaccard similarity
@@ -57,7 +27,6 @@ def compute_similarities(batch_size=1000):
         RETURN COUNT(*) AS edges_created
     """))
 
-@memgraph.query
 def detect_communities():
     """
     Louvain community detection with post-processing

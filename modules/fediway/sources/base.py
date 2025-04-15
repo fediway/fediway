@@ -2,6 +2,5 @@
 import typing
 
 class Source():
-    
-    def collect(self, max_n: int):
+    def collect(self, limit: int):
         raise NotImplemented

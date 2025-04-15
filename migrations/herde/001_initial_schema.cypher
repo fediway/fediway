@@ -1,0 +1,5 @@
+CREATE INDEX ON :Status(language);
+CREATE INDEX ON :Status(timestamp);
+
+CREATE CONSTRAINT ON (a:Account) ASSERT a.id IS UNIQUE;
+CREATE CONSTRAINT ON (s:Status) ASSERT s.id IS UNIQUE;
