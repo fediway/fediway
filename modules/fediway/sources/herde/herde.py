@@ -60,7 +60,7 @@ class Herde():
         query = """
         MATCH (a:Account {id: $source_id})
         MATCH (b:Account {id: $target_id})
-        MERGE (a)-[:FOLLOWS]->(s)
+        MERGE (a)-[:FOLLOWS]->(b)
         """
 
         self.session.run(
