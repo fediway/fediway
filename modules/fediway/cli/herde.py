@@ -57,9 +57,13 @@ def seed():
     from tqdm import tqdm
     db = next(get_db_session())
     with get_driver().session() as session:
+        typer.echo("Connected to memgraph.")
+
         herde = Herde(session)
 
+        typer.echo("Setting up memgraph.")
         herde.setup()
+        typer.echo("Done setting up memgraph.")
 
         accounts = db.exec(
             select(Account)
@@ -144,7 +148,6 @@ def seed():
         bar.close()
 
         typer.echo("Start computing account ranks...")
-
         start = time.time()
         herde.compute_account_rank()
         typer.echo(f"Computed account ranks in {int(time.time() - start)} seconds.")
