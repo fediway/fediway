@@ -14,21 +14,21 @@ class FediwayConfig(BaseConfig):
     feed_max_heavy_candidates: int  = 100
     feed_batch_size: int            = 10
 
-    graph_host: str       = 'localhost'
-    graph_port: int       = 7687
-    graph_user: str       = ''
-    graph_pass: SecretStr = ''
-    graph_name: str       = 'fediway_development'
+    memgraph_host: str       = 'localhost'
+    memgraph_port: int       = 7687
+    memgraph_user: str       = ''
+    memgraph_pass: SecretStr = ''
+    memgraph_name: str       = 'fediway_development'
 
     herde_migrations_path: str = 'migrations/herde'
 
     @property
     def graph_url(self):
-        return f"bolt://{self.graph_host}:{self.graph_port}"
+        return f"bolt://{self.memgraph_host}:{self.memgraph_port}"
 
     @property
     def graph_auth(self) -> tuple[str, str]:
-        return (self.graph_user, self.graph_pass.get_secret_value())
+        return (self.memgraph_user, self.memgraph_pass.get_secret_value())
 
     @property
     def feed_heuristics(self) -> list[Heuristic]:
