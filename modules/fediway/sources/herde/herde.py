@@ -18,6 +18,7 @@ class Herde():
         queries = """
         CREATE INDEX ON :Account(id);
         CREATE INDEX ON :Account(rank);
+        CREATE INDEX ON :Status(id);
         CREATE INDEX ON :Status(language);
         CREATE INDEX ON :Status(created_at);
         CREATE CONSTRAINT ON (a:Account) ASSERT a.id IS UNIQUE;
