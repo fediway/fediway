@@ -71,6 +71,7 @@ class SeedHerdeService:
 
     def seed_files(self, path):
         files = sorted(path.glob("*.cypher"))
+        logger.info(f"{len(files)} chunks.")
         for file in files:
             with open(file) as f:
                 queries = [q.strip() for q in f.read().split(';') if q.strip()]
