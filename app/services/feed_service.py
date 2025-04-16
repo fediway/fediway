@@ -93,6 +93,9 @@ class FeedService():
 
         # save recommendations
         self.tasks.add_task(self._save_recommendations, recommendations)
+
+        # load new candidates
+        self.collect_sources_async()
         
         # save feed state in session
         self.session[self.session_key] = self.feed.to_dict()

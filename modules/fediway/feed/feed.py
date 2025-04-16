@@ -50,6 +50,9 @@ class Feed():
         self._active_sources = []
         self._active_sources_lock = threading.Lock()
 
+    def __len__(self) -> int:
+        return sum([len(q) for q in self.candidate_queues])
+
     def merge_dict(self, data):
         self.id = data['id']
         self.heuristics = [h.from_dict(data) for h, data in zip(self.heuristics, data['heuristics'])]
