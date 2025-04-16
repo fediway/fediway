@@ -165,10 +165,12 @@ class Herde():
     #     )
 
     def get_relevant_statuses(self, language, limit=10):
-
         query = """
+        WITH timestamp() / 1000000 AS now
         MATCH (a:Account)-[:CREATED_BY]->(s:Status {language: $language})
-        WITH a, s, 
+        WHERE a.rank IS NOT NULL
+        WITH a, s, (now - s.created_at) / 86400 AS age_days
+        WITH a, s, age_days,
             a.rank * (s.num_favs + 2 * s.num_reblogs) / (a.avg_favs + 2 * a.avg_reblogs) AS score
         ORDER BY a.id, score DESC
         WITH a.id AS account_id, collect([s.id, score])[0] AS top_status
@@ -176,6 +178,7 @@ class Herde():
         ORDER BY score DESC
         LIMIT $limit;
         """
+
         # query = """
         # WITH timestamp() AS now
         # MATCH (a:Account)-[:CREATED_BY]->(s:Status {language: $language})

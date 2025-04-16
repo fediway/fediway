@@ -41,12 +41,11 @@ def migrate():
 
 @app.command("query")
 def query(language: str = 'en'):
-    with get_driver().session() as session:
-        herde = Herde(session)
+    herde = Herde(get_driver())
 
-        print("start")
-        for record in herde.get_relevant_statuses(language=language):
-            print(record)
+    print("start")
+    for record in herde.get_relevant_statuses(language=language):
+        print(record)
 
 @app.command("seed")
 def seed():
