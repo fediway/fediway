@@ -28,7 +28,8 @@ def iter_db_batches(db: Session, query: Select | SelectOfScalar, batch_size: int
     with batch_cursor(db, query) as cursor:
         while True:
             rows = db.exec(text(f"FETCH FORWARD {batch_size} FROM {cursor}")).mappings().fetchall()
+            db.commit()
             if not rows:
                 break
             yield rows
-            db.commit()
+            
