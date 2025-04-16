@@ -246,7 +246,7 @@ class SeedHerdeService:
                 )))
             
                 if len(queries) > self.chunk_size:
-                    with open(path / f'chunk_{chunk}.cypher') as f:
+                    with open(path / f'chunk_{chunk}.cypher', 'w') as f:
                         f.writelines(queries)
                     chunk += 1
                     queries = []
@@ -254,14 +254,3 @@ class SeedHerdeService:
         if len(queries) > 0:
             with open(path / f'chunk_{chunk}.cypher', 'w') as f:
                 f.writelines(queries)
-
-    def seed_follows(self, batch_size: int = 100):
-        total = self.db.scalar(select(func.count(Follow.id)))
-        bar = tqdm(desc="Follows", total=total)
-
-        query = select(Follow)
-        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-            for follow in bach:
-                herde.add_follow(follow.account_id, follow.target_account_id)
-
-            bar.update(len(batch))
