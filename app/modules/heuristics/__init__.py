@@ -7,9 +7,16 @@ class DiversifyAccountsHeuristic(Heuristic):
     features = ['account_id']
 
     def __init__(self, 
-                 penalty: float = 0.5):
+                 penalty: float = 0.5,
+                 account_ids = set()):
         self.penalty = penalty
-        self.account_ids = set()
+        self.account_ids = set(account_ids)
+
+    def to_dict(self):
+        return {
+            'penalty': self.penalty,
+            'account_ids': list(self.account_ids),
+        }
 
     def update_seen(self, candidate, features):
         self.account_ids.add(features[0])

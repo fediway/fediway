@@ -26,7 +26,21 @@ class TopKPriorityQueue:
     def __init__(self, k=20):
         self.k = k
         self.heap = []
-        self.counter = count() 
+        self.counter = count()
+
+    def to_dict(self):
+        return {
+            'k': self.k,
+            'heap': self.heap,
+            'counter': next(self.counter),
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        queue = cls(data['k'])
+        queue.heap = data['heap']
+        queue.counter = count(data['counter'])
+        return queue
 
     def add(self, item, score):
         """

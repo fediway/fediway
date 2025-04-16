@@ -50,12 +50,28 @@ class Feed():
         self._active_sources = []
         self._active_sources_lock = threading.Lock()
 
+    def merge_dict(self, data):
+        self.id = data['id']
+        self.heuristics = [h.from_dict(data) for h, data in zip(self.heuristics, data['heuristics'])]
+        self.seen_candidates = set(data['seen_candidates'])
+        self.candidate_queues = [TopKPriorityQueue.from_dict(q) for q in data['candidate_queues']]
+        self.candidate_sources = data['candidate_sources']
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'heuristics': [h.to_dict() for h in self.heuristics],
+            'seen_candidates': list(self.seen_candidates),
+            'candidate_queues': [q.to_dict() for q in self.candidate_queues],
+            'candidate_sources': self.candidate_sources,
+        }
+
     def push(self, candidate, source_name: str):
         with self._sourced_candidates_condition:
             self._sourced_candidates.append(candidate)
             if candidate not in self.candidate_sources:
-                self.candidate_sources[candidate] = []
-            self.candidate_sources[candidate].append(source_name)
+                self.candidate_sources[str(candidate)] = []
+            self.candidate_sources[str(candidate)].append(source_name)
             self._sourced_candidates_condition.notify_all()
 
     def collect_async(self, source, args, rank_after_completion: bool = True, callback=None):
@@ -252,5 +268,5 @@ class Feed():
                 item=candidate,
                 score=scores[idx],
                 adjusted_score=adjusted_scores[idx],
-                sources=self.candidate_sources[candidate]
+                sources=self.candidate_sources[str(candidate)]
             )

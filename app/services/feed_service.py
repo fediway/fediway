@@ -19,6 +19,7 @@ class FeedService():
                  session: Session, 
                  sources: list[Source],
                  feed: Feed):
+        self.session_key = f"feed.{name}.state"
         self.name = name
         self.db = db
         self.tasks = tasks
@@ -31,10 +32,10 @@ class FeedService():
         Initialize feed.
         '''
 
-        feed = self.session.get(self.name)
+        state = self.session.get(self.session_key)
 
-        if feed is not None:
-            # self.feed = feed
+        if state is not None:
+            self.feed.merge_dict(state)
             return
         
         self.collect_sources_async()
@@ -48,9 +49,7 @@ class FeedService():
         self.db.add(feed_model)
         self.db.commit()
 
-        # store feed in session
         self.feed.id = feed_model.id
-        self.session[self.name] = self.feed
 
         # wait until at least n candidates are collected from the sources
         # or timout
@@ -92,5 +91,8 @@ class FeedService():
 
         # save recommendations
         self.tasks.add_task(self._save_recommendations, recommendations)
+        
+        # save feed state in session
+        self.session[self.session_key] = self.feed.to_dict()
 
         return recommendations
