@@ -1,5 +1,5 @@
 
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -14,6 +14,11 @@ ENV DB_PORT=5432
 ENV DB_USER=mastodon
 ENV DB_PASS=
 ENV DB_NAME=mastodon_production
+
+ENV REDIS_HOST=localhost
+ENV REDIS_PORT=6379
+ENV REDIS_USER=postgres
+ENV REDIS_PASS=
 
 ENV IPV4_LOCATION_FILE=data/geo-whois-asn-country-ipv4.mmdb
 ENV IPV6_LOCATION_FILE=data/geo-whois-asn-country-ipv6.mmdb
