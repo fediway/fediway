@@ -19,3 +19,5 @@ class AppConfig(BaseConfig):
     app_host: str
 
     app_title: str = "Fediway - Algorithmic Feeds for Mastodon ✨"
+
+    data_path: str = 'data'

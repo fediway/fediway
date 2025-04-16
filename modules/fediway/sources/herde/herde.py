@@ -62,7 +62,7 @@ class Herde():
         query = """
         MATCH (a:Account {id: $source_id})
         MATCH (b:Account {id: $target_id})
-        MERGE (a)-[:FOLLOWS]->(b)
+        MERGE (a)-[:FOLLOWS]->(b);
         """
 
         self.session.run(
@@ -81,7 +81,7 @@ class Herde():
             s.num_favs = $num_favs,
             s.num_replies = $num_replies,
             s.num_reblogs = $num_reblogs
-        CREATE (a)-[:CREATED_BY]->(s)
+        CREATE (a)-[:CREATED_BY]->(s);
         """
 
         self.session.run(
