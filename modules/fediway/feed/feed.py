@@ -72,7 +72,7 @@ class Feed():
     def push(self, candidate, source_name: str):
         with self._sourced_candidates_condition:
             if candidate in self.candidate_sources:
-                continue
+                return
             
             self._sourced_candidates.append(candidate)
             self.candidate_sources[str(candidate)] = []
