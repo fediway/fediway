@@ -10,6 +10,7 @@ from app.modules.sessions import Session
 from app.modules.ranking import Ranker
 from app.modules.models import Feed as FeedModel, Status, FeedRecommendation
 from config import config
+import app.utils as utils
 
 class FeedService():
     def __init__(self, 
@@ -87,7 +88,8 @@ class FeedService():
         self.db.commit()
 
     def get_recommendations(self, n) -> list[int | str]:
-        recommendations = self.feed.get_batch(n)
+        with utils.duration("Fetched "+str(n)+" recommendations in {:.3f} seconds."):
+            recommendations = self.feed.get_batch(n)
 
         # save recommendations
         self.tasks.add_task(self._save_recommendations, recommendations)

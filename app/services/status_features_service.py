@@ -29,8 +29,8 @@ class StatusFeaturesService(Features):
                 StatusStats.reblogs_count,
                 StatusStats.replies_count,
             )
+            .join(StatusStats, StatusStats.status_id == Status.id)
             .where(Status.id.in_(candidates))
-            .where(Status.id == StatusStats.status_id)
         ).all()
 
         for row in rows:
@@ -43,7 +43,7 @@ class StatusFeaturesService(Features):
                 'age_in_seconds': (datetime.now() - row.created_at).total_seconds()
             }
 
-        logger.debug(f"Fetched features for {len(candidates)} statuses in {int((time.time() - start) * 1000)} milliseconds.")
+        logger.info(f"Fetched features for {len(candidates)} statuses in {int((time.time() - start) * 1000)} milliseconds.")
 
     def get(self, candidates: list[str | int], features: list[str] = 'account_id') -> np.ndarray | None:        
         if len(features) == 0:
