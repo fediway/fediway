@@ -5,7 +5,6 @@ from sqlalchemy import Select
 from datasets import Dataset
 
 from modules.utils import string
-from app.utils import sql_string
 
 class StatusesDataset(Dataset):
     @classmethod

@@ -1,11 +1,4 @@
 
-def sql_string(query):
-    '''
-    Converts a query builder instance into a sql string.
-    '''
-    from .core.db import engine
-    return str(query.compile(engine, compile_kwargs={"literal_binds": True}))
-
 def parse_accept_language(accept_language: str) -> str | None:
     """
     Parse the Accept-Language header and return the highest-priority language code.

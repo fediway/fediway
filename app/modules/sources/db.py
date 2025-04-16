@@ -82,8 +82,6 @@ class HotStatusesByLanguage(HotStatuses):
         self.language = language
 
     def base_query(self, limit: int):
-        from app.utils import sql_string
-        print(sql_string(super().base_query(limit).where(Status.language == self.language)))
         return super().base_query(limit).where(Status.language == self.language)
 
     def __str__(self):

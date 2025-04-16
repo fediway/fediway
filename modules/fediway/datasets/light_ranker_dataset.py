@@ -7,7 +7,6 @@ from datasets import Dataset
 
 from modules.utils import string
 from app.modules.models import Favourite, Account, Status, StatusStats, MediaAttachment, Mention, Tag, StatusTag
-from app.utils import sql_string
 
 class LightRankerDataset(Dataset):
     @classmethod

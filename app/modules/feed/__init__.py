@@ -13,7 +13,7 @@ from app.modules.models.media_attachment import MediaAttachment
 from app.modules.models.preview_card import PreviewCard, PreviewCardStatus
 from app.modules.models.topic import Topic, StatusTopic
 
-from app.utils import sql_string
+import app.utils as utils
 
 def home_feed(session: Session, max_age_days: int = 3, limit: int = 10) -> list[Row]:
     priority = get_priority_query()
@@ -102,7 +102,7 @@ def topic_feed(session: Session, topic: str, max_age_days: int = 3, limit: int =
         .limit(limit)
     )
 
-    print(sql_string(query))
+    print(utils.db.compile_sql(query))
 
     rows = session.exec(query).all()
     rows = merge_relationships(rows, session)

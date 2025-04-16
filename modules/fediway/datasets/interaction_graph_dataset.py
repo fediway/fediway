@@ -10,7 +10,6 @@ from datasets import Dataset
 from .features import FEATURES
 from modules.utils import string
 from app.modules.models import Favourite, Account, Status, StatusStats, MediaAttachment, Mention, Tag, StatusTag
-from app.utils import sql_string
 
 class InteractionGraphDataset(Dataset):
     @classmethod

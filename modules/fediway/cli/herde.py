@@ -54,9 +54,13 @@ def seed():
     from sqlalchemy.orm import selectinload
     from sqlalchemy import or_, and_
     from app.modules.models import Account, Status, Follow, Favourite
+    from app.services.seed_herde_service import SeedHerdeService
     from tqdm import tqdm
     db = next(get_db_session())
-    with get_driver().session() as session:
+    with get_driver().session() as graph:
+        SeedHerdeService(db, graph).seed()
+
+        return
         typer.echo("Connected to memgraph.")
 
         herde = Herde(session)

@@ -45,7 +45,7 @@ class StatusFeaturesService(Features):
 
         logger.debug(f"Fetched features for {len(candidates)} statuses in {int((time.time() - start) * 1000)} milliseconds.")
 
-    def get(self, candidates: list[str | int], features: list[str] = 'account_id') -> np.ndarray | None:
+    def get(self, candidates: list[str | int], features: list[str] = 'account_id') -> np.ndarray | None:        
         if len(features) == 0:
             return None
 

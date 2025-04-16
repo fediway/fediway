@@ -2,6 +2,7 @@
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, BackgroundTasks, Depends
 from loguru import logger
+import time
 
 from modules.fediway.feed import Feed
 from modules.fediway.sources import Source
@@ -24,7 +25,7 @@ class FeedService():
         self.session = session
         self.sources = sources
         self.feed = feed
-
+    
     def init(self):
         '''
         Initialize feed.
@@ -71,7 +72,9 @@ class FeedService():
         # collect candidates from sources
         for source in self.sources:
             logger.debug(f"Started collecting candidates from {source}.")
-            self.feed.collect_async(source, args=(max_n_per_source,))
+            start = time.time()
+            callback = lambda n: logger.debug(f"Collected {n} candidates from {source} in {int((time.time() - start) * 1000)} milliseconds.")
+            self.feed.collect_async(source, args=(max_n_per_source, ), callback=callback)
 
     def _save_recommendations(self, recommendations):
         self.db.bulk_save_objects([FeedRecommendation(

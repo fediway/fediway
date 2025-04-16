@@ -58,7 +58,7 @@ class Feed():
             self.candidate_sources[candidate].append(source_name)
             self._sourced_candidates_condition.notify_all()
 
-    def collect_async(self, source, args, rank_after_completion: bool = True):
+    def collect_async(self, source, args, rank_after_completion: bool = True, callback=None):
         """Asynchronously collect candidates from a source using a background thread.
         
         Launches a daemon thread to consume items from the source's collect() generator
@@ -71,10 +71,14 @@ class Feed():
         """
 
         def _consume_source(source, source_args, rank_after_completion):
+            n = 0
             for candidate in source.collect(*source_args):
                 if candidate in self.seen_candidates:
                     continue
                 self.push(candidate, str(source))
+                n += 1
+            if callback is not None:
+                callback(n)
             if rank_after_completion:
                 self._handle_source_completion()
 
