@@ -24,25 +24,25 @@ ENV IPV4_LOCATION_FILE=data/geo-whois-asn-country-ipv4.mmdb
 ENV IPV6_LOCATION_FILE=data/geo-whois-asn-country-ipv6.mmdb
 
 # Create non-root user and set up directories
-RUN addgroup --system --gid 1001 crawler && \
-    adduser --system --uid 1001 --gid 1001 --no-create-home crawler && \
+RUN addgroup --system --gid 1001 fediway && \
+    adduser --system --uid 1001 --gid 1001 --no-create-home fediway && \
     mkdir -p /app && \
-    chown -R crawler:crawler /app
+    chown -R fediway:fediway /app
 
 # Set work directory
 WORKDIR /app
 
 # copy requirements.txt
-COPY --chown=crawler:crawler requirements.txt .
+COPY --chown=fediway:fediway requirements.txt .
 
 # install requirements
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # Copy application code
-COPY --chown=crawler:crawler . .
+COPY --chown=fediway:fediway . .
 
-# Switch to crawler user
-USER crawler
+# Switch to fediway user
+USER fediway
 
 # run api
 CMD ["fastapi", "run", "api/main.py"]
