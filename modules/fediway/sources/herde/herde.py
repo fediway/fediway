@@ -1,14 +1,18 @@
 
-from neo4j import Session
+from neo4j import Driver
 import numpy as np
 
 from app.modules.models import Status, Account
 
 class Herde():
-    session: Session
+    driver: Driver
 
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, driver: Driver):
+        self.driver = driver
+
+    def _run_query(self, query, **kwargs):
+        with self.driver.session() as session:
+            session.run(query.strip(), **kwargs)
 
     def setup(self):
         queries = """
@@ -24,7 +28,7 @@ class Herde():
         for query in queries.split(";"):
             if not query.strip():
                 continue
-            self.session.run(query.strip())
+            self._run_query(query)
 
     def add_account(self, account: Account):
         query = """
@@ -50,7 +54,7 @@ class Herde():
         if len(favs) > 0:
             avg_reblogs = float(np.mean(reblogs))
 
-        self.session.run(
+        self._run_query(
             query, 
             id=account.id,
             avg_favs=avg_favs,
@@ -65,7 +69,7 @@ class Herde():
         MERGE (a)-[:FOLLOWS]->(b);
         """
 
-        self.session.run(
+        self._run_query(
             query, 
             source_id=source_id,
             target_id=target_id,
@@ -84,7 +88,7 @@ class Herde():
         CREATE (a)-[:CREATED_BY]->(s);
         """
 
-        self.session.run(
+        self._run_query(
             query, 
             id=status.id,
             account_id=status.account_id,
@@ -109,7 +113,7 @@ class Herde():
         CREATE (a)-[:CREATED_BY]->(s)
         """
 
-        self.session.run(
+        self._run_query(
             query, 
             batch = [{
                 'id': status.id,
@@ -129,7 +133,7 @@ class Herde():
         MERGE (a)-[:FAVOURITES]->(s)
         """
 
-        self.session.run(
+        self._run_query(
             query, 
             account_id=account_id,
             status_id=status_id,
@@ -192,7 +196,7 @@ class Herde():
         # LIMIT $limit
         # """
 
-        return self.session.run(
+        return self._run_query(
             query, 
             language=language, 
             limit=limit
@@ -221,7 +225,7 @@ class Herde():
         MATCH (a:Account {id: node.id})
         SET a.rank = rank
         """
-        self.session.run(query)
+        self._run_query(query)
 
     # def compute_engagement_baselines(self):
     #     query = """
@@ -248,7 +252,7 @@ class Herde():
         SET s.diversity_score = entropy
         """
 
-        self.session.run(query)
+        self._run_query(query)
 
     def detect_communities(self):
         query = """
@@ -259,4 +263,4 @@ class Herde():
         SET a.community_id = community_id
         """
 
-        self.session.run(query)
+        self._run_query(query)

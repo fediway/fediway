@@ -2,7 +2,7 @@
 from sqlmodel import Session as DBSession, select, func, exists
 from sqlalchemy.orm import selectinload, aliased
 from sqlalchemy import or_, and_
-from neo4j import Session as GraphSession
+from neo4j import Driver
 from datetime import datetime, timedelta
 from pathlib import Path
 from loguru import logger
@@ -18,10 +18,10 @@ def query_line(query):
     return query.strip().replace('  ', '').replace('\n', ' ') + "\n"
 
 class SeedHerdeService:
-    def __init__(self, db: DBSession, graph: GraphSession, chunk_size: int = 10_000):
+    def __init__(self, db: DBSession, driver: Driver, chunk_size: int = 10_000):
         self.db = db
-        self.graph = graph
-        self.herde = Herde(self.graph)
+        self.driver = driver
+        self.herde = Herde(self.driver)
         self.chunk_size = chunk_size
         self.max_age = datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)
         self.path = Path(f'{config.app.data_path}/herde')
@@ -65,6 +65,10 @@ class SeedHerdeService:
         # clear files
         shutil.rmtree(self.path)
 
+        logger.info("Start computing account ranks...")
+        with utils.duration("Computed account ranks in {:.4f} seconds"):
+            self.herde.compute_account_rank()
+
     def seed_files(self, path):
         files = sorted(path.glob("*.cypher"))
         for file in files:
@@ -72,7 +76,8 @@ class SeedHerdeService:
                 queries = [q.strip() for q in f.read().split(';') if q.strip()]
 
                 for query in tqdm(queries, desc=file.stem):
-                    self.graph.run(query)
+                    with self.driver.session() as graph:
+                        graph.run(query)
 
     def create_favourite_seeds(self, batch_size: int = 100):
         path = self.path / 'favourites'
