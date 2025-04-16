@@ -62,6 +62,9 @@ class SeedHerdeService:
         with utils.duration("Seeded favourites in {:.4f} seconds"):
             self.seed_files(self.path / 'favourites')
 
+        # clear files
+        shutil.rmtree(self.path)
+
     def seed_files(self, path):
         files = sorted(path.glob("*.cypher"))
         for file in files:
