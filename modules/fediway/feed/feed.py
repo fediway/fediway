@@ -71,9 +71,11 @@ class Feed():
 
     def push(self, candidate, source_name: str):
         with self._sourced_candidates_condition:
+            if candidate in self.candidate_sources:
+                continue
+            
             self._sourced_candidates.append(candidate)
-            if candidate not in self.candidate_sources:
-                self.candidate_sources[str(candidate)] = []
+            self.candidate_sources[str(candidate)] = []
             self.candidate_sources[str(candidate)].append(source_name)
             self._sourced_candidates_condition.notify_all()
 
