@@ -168,7 +168,12 @@ class Herde():
         query = """
         WITH timestamp() / 1000000 AS now
         MATCH (a:Account)-[:CREATED_BY]->(s:Status {language: $language})
-        WHERE a.rank IS NOT NULL
+        WHERE 
+            a.rank IS NOT NULL 
+        AND a.avg_favs > 1 
+        AND a.avg_reblogs > 1 
+        AND s.num_favs > 0 
+        AND s.num_reblogs > 0
         WITH a, s, (now - s.created_at) / 86400 AS age_days
         WITH a, s, age_days,
             a.rank * (s.num_favs + 2 * s.num_reblogs) / (a.avg_favs + 2 * a.avg_reblogs) AS score
