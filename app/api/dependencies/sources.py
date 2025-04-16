@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from modules.fediway.sources import Source
 from modules.fediway.sources.herde import Herde, TrendingStatusesByInfluentialUsers
-from app.core.herde import get_herde_session
+from app.core.herde import driver
 from app.core.db import get_long_living_db_session
 from app.modules.sources import (
     HotStatusesByLanguage, 
@@ -38,7 +38,6 @@ def get_new_statuses_by_language_source(
     ) for lang in languages]
 
 def get_trending_statuses_by_influential_accounts_source(
-    languages: list[str] = Depends(get_languages), 
-    driver: AsyncSession = Depends(get_herde_session)):
+    languages: list[str] = Depends(get_languages)):
 
     return [TrendingStatusesByInfluentialUsers(driver, lang) for lang in languages]

@@ -12,7 +12,7 @@ class Herde():
 
     def _run_query(self, query, **kwargs):
         with self.driver.session() as session:
-            session.run(query.strip(), **kwargs)
+            return session.run(query.strip(), **kwargs)
 
     def setup(self):
         queries = """
@@ -195,12 +195,14 @@ class Herde():
         # RETURN account_id, top_status[0] AS status_id, top_status[1] AS score
         # LIMIT $limit
         # """
-
-        return self._run_query(
-            query, 
-            language=language, 
-            limit=limit
-        )
+        with self.driver.session() as session:
+            results = session.run(
+                query, 
+                language=language, 
+                limit=limit
+            )
+            for result in results:
+                yield result
 
     def get_authorities(self):
         query = """

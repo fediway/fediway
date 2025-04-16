@@ -71,9 +71,9 @@ class FeedService():
 
         # collect candidates from sources
         for source in self.sources:
-            logger.debug(f"Started collecting candidates from {source}.")
+            logger.info(f"Started collecting candidates from {source}.")
             start = time.time()
-            callback = lambda n: logger.debug(f"Collected {n} candidates from {source} in {int((time.time() - start) * 1000)} milliseconds.")
+            callback = lambda n: logger.info(f"Collected {n} candidates from {source} in {int((time.time() - start) * 1000)} milliseconds.")
             self.feed.collect_async(source, args=(max_n_per_source, ), callback=callback)
 
     def _save_recommendations(self, recommendations):
