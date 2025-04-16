@@ -37,7 +37,7 @@ class SeedHerdeService:
             statuses = self.db.exec(
                 select(Status)
                 .where(Status.account_id.in_(account_ids))
-                # .where(Status.created_at < self.max_age)
+                .where(Status.created_at < self.max_age)
                 .options(selectinload(Status.stats))
             ).all()
             statuses_map = {account_id: [] for account_id in account_ids}

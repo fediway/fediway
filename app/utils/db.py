@@ -25,6 +25,17 @@ def batch_cursor(db: Session, query: Select | SelectOfScalar):
         db.execute(text(f"CLOSE {cursor_name}"))
 
 def iter_db_batches(db: Session, query: Select | SelectOfScalar, batch_size: int = 100):
+    batch = []
+    for row in db.exec(query).mappings().yield_per(batch_size):
+        batch.append(row)
+        if len(batch) >= batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+    return
+
+
     with batch_cursor(db, query) as cursor:
         while True:
             rows = db.exec(text(f"FETCH FORWARD {batch_size} FROM {cursor}")).mappings().fetchall()
