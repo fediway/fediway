@@ -34,15 +34,15 @@ def migrate():
 
     typer.echo("✅ Migration completed!")
 
-@app.command("flush")
-def flush():
+@app.command("purge")
+def purge():
     with get_driver().session() as session:
         session.run("""
         MATCH (n)
         DETACH DELETE n;
         """)
 
-    typer.echo("✅ Flushed memgraph!")
+    typer.echo("✅ Purged memgraph!")
 
 @app.command("query")
 def query(language: str = 'en'):
