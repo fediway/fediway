@@ -58,3 +58,38 @@ class HerdeInteractionFeatures():
         results_map = {result['target_id']: result['following_friends'] for result in results}
 
         return [results_map[target_id] for target_id in target_ids]
+
+class HerdeTwoHopFeatures():
+    driver: Driver
+
+    def __init__(self, driver: Driver):
+        self.driver = driver
+
+    def _run_query(self, query, **kwargs):
+        with self.driver.session() as session:
+            return session.run(query.strip(), **kwargs)
+
+    def get_num_favourites(self, source_id: int, target_ids: list[int]) -> list[int]:
+        query = '''
+        MATCH (source:Account {id: source_id})-[:FAVORITED]->(s1:Status)-[:CREATED_BY]->(middle:Account),
+              (middle)-[:FAVORITED]->(s2:Status)-[:CREATED_BY]->(target:Account)
+        WHERE target.id IN $target_ids
+        RETURN target.id AS target_id, COUNT(*) AS two_hop_favourites
+        '''
+
+        results = self._run_query(query, source_id=source_id, target_ids=target_ids)
+        results_map = {result['target_id']: result['two_hop_favourites'] for result in results}
+
+        return [results_map[target_id] for target_id in target_ids]
+
+    def get_num_follows(self, source_id: int, target_ids: list[int]) -> list[int]:
+        query = '''
+        MATCH (source:Account {id: source_id})-[:FOLLOWS]->(middle:Account)-[:FOLLOWS]->(target:Account)
+        WHERE target.id IN $target_ids
+        RETURN target.id AS target_id, COUNT(*) AS two_hop_follows
+        '''
+
+        results = self._run_query(query, source_id=source_id, target_ids=target_ids)
+        results_map = {result['target_id']: result['two_hop_follows'] for result in results}
+
+        return [results_map[target_id] for target_id in target_ids]

@@ -57,6 +57,8 @@ async def process_debezium_event(event: DebeziumEvent, handler):
 
     await getattr(handler(**get_dependencies()), method)(*args)
 
+# Herde consumer (responsible for pushing to memgraph)
+
 @broker.subscriber("postgres.public.accounts", conumser_group="herde")
 async def on_status(event: DebeziumEvent):
     await process_debezium_event(event, HerdeStatusEventHandler)
@@ -84,3 +86,17 @@ async def on_status(event: DebeziumEvent):
 @broker.subscriber("postgres.public.tags", conumser_group="herde")
 async def on_status(event: DebeziumEvent):
     await process_debezium_event(event, HerdeTagEventHandler)
+
+# Feature consumer (responsible for pushing to feature store)
+
+@broker.subscriber("postgres.public.statuses", conumser_group="features")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, FeaturesStatusEventHandler)
+
+@broker.subscriber("postgres.public.favourites", conumser_group="features")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, FavouritesStatusEventHandler)
+
+@broker.subscriber("postgres.public.follows", conumser_group="features")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, FavouritesStatusEventHandler)

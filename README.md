@@ -16,17 +16,23 @@ faststream run app.consumer:app
 
 ## Job Scheduling
 
-Start scheduler worker
+Start task beat scheduler
 
 ```sh
-celery -A jobs.main worker --queues=local --loglevel=info
+celery -A app.worker beat --loglevel=info
 ```
 
-Start worker to process topics
+Start task worker scheduler
+
+```sh
+celery -A app.worker worker --loglevel=info
+```
+
+<!-- Start worker to process topics
 
 ```sh
 celery -A jobs.main worker --queues=topics --loglevel=info
-```
+``` -->
 
 ## DB
 

@@ -175,7 +175,7 @@ class Herde():
             account_id=mention.account_id,
             status_id=mention.status_id,
         )
-
+        
     def remove_status(self, status: Status):
         query = """
         MATCH (s:Status {id: $id})

@@ -15,3 +15,4 @@ tqdm==4.67.1
 aioredis==2.0.1
 faststream==0.5.39
 feast==0.48.1
+celery==5.4.0

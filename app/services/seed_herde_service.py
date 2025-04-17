@@ -26,42 +26,42 @@ class SeedHerdeService:
 
     def seed(self):
 
-        with utils.duration("Set up memgraph in {:.4f} seconds"):
+        with utils.duration("Set up memgraph in {:.3f} seconds"):
             self.herde.setup()
 
-        with utils.duration("Created favourite seeds in {:.4f} seconds"):
+        with utils.duration("Created favourite seeds in {:.3f} seconds"):
             self.seed_tags()
 
-        with utils.duration("Seeded accounts in {:.4f} seconds"):
+        with utils.duration("Seeded accounts in {:.3f} seconds"):
             self.seed_accounts()
 
-        with utils.duration("Seeded statuses in {:.4f} seconds"):
+        with utils.duration("Seeded statuses in {:.3f} seconds"):
             self.seed_statuses()
 
-        with utils.duration("Seeded status stats in {:.4f} seconds"):
+        with utils.duration("Seeded status stats in {:.3f} seconds"):
             self.seed_status_stats()
 
-        with utils.duration("Seeded reblogs in {:.4f} seconds"):
+        with utils.duration("Seeded reblogs in {:.3f} seconds"):
             self.seed_reblogs()
 
-        with utils.duration("Seeded follows in {:.4f} seconds"):
+        with utils.duration("Seeded follows in {:.3f} seconds"):
             self.seed_follows()
 
-        with utils.duration("Created favourite seeds in {:.4f} seconds"):
+        with utils.duration("Created favourite seeds in {:.3f} seconds"):
             self.seed_favourites()
 
-        with utils.duration("Created status tag seeds in {:.4f} seconds"):
+        with utils.duration("Created status tag seeds in {:.3f} seconds"):
             self.seed_statuses_tags()
 
-        with utils.duration("Created mention seeds in {:.4f} seconds"):
+        with utils.duration("Created mention seeds in {:.3f} seconds"):
             self.seed_mentions()
 
         logger.info("Start computing account ranks...")
-        with utils.duration("Computed account ranks in {:.4f} seconds"):
+        with utils.duration("Computed account ranks in {:.3f} seconds"):
             self.herde.compute_account_rank()
 
         logger.info("Start computing tag ranks...")
-        with utils.duration("Computed tag ranks in {:.4f} seconds"):
+        with utils.duration("Computed tag ranks in {:.3f} seconds"):
             self.herde.compute_tag_rank()
         
     def seed_files(self, path):
