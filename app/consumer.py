@@ -6,6 +6,7 @@ from loguru import logger
 
 from modules.fediway.sources.herde import Herde
 from .events import (
+    AccountEventHandler,
     StatusEventHandler,
     FavouriteEventHandler,
     FollowEventHandler,
@@ -57,8 +58,8 @@ async def process_debezium_event(event: DebeziumEvent, handler):
     await getattr(handler(**get_dependencies()), method)(*args)
 
 @broker.subscriber("postgres.public.accounts")
-async def on_status(event):
-    print(event, "accounts")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, StatusEventHandler)
 
 @broker.subscriber("postgres.public.statuses")
 async def on_status(event: DebeziumEvent):

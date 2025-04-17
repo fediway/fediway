@@ -2,7 +2,16 @@
 from neo4j import Driver
 import numpy as np
 
-from app.modules.models import Status, StatusStats, Account, Tag, StatusTag, Mention
+from app.modules.models import (
+    Status, 
+    StatusStats, 
+    Account, 
+    Tag, 
+    StatusTag, 
+    Mention, 
+    Follow, 
+    Favourite
+)
 
 class Herde():
     driver: Driver
@@ -18,6 +27,7 @@ class Herde():
         queries = """
         CREATE INDEX ON :Account(id);
         CREATE INDEX ON :Account(rank);
+        CREATE INDEX ON :Account(indexable);
         CREATE INDEX ON :Status(id);
         CREATE INDEX ON :Status(language);
         CREATE INDEX ON :Status(created_at);
@@ -39,7 +49,7 @@ class Herde():
         query = """
         MERGE (t:Tag {id: $id})
         ON CREATE SET
-            s.name = $name
+            t.name = $name
         """
 
         self._run_query(query, id=tag.id, name=tag.name)
@@ -55,26 +65,36 @@ class Herde():
     def add_account(self, account: Account):
         query = """
         MERGE (a:Account {id: $id})
+        ON MERGE SET
+            s.indexable = $indexable
+        """
+
+        self._run_query(query, id=account.id, indexable=account.indexable)
+
+    def remove_account(self, account: Account):
+        query = """
+        MATCH (a:Account {id: $id})
+        DELETE a;
         """
 
         self._run_query(query, id=account.id)
 
-    def add_follow(self, source_id:int, target_id: int):
+    def add_follow(self, follow: Follow):
         query = """
         MATCH (a:Account {id: $source_id})
         MATCH (b:Account {id: $target_id})
         MERGE (a)-[:FOLLOWS]->(b);
         """
 
-        self._run_query(query, source_id=source_id, target_id=target_id)
+        self._run_query(query, source_id=follow.account_id, target_id=follow.target_account_id)
 
-    def remove_follow(self, source_id:int, target_id: int):
+    def remove_follow(self, follow: Follow):
         query = """
         MATCH (a:Account {id: $source_id})-[r:FOLLOWS]->(b:Account {id: $target_id})
         DELETE r;
         """
 
-        self._run_query(query, source_id=source_id, target_id=target_id)
+        self._run_query(query, source_id=follow.account_id, target_id=follow.target_account_id)
 
     def add_status_stats(self, stats: StatusStats):
         query = """
@@ -219,22 +239,22 @@ class Herde():
             } for status in statuses]
         )
 
-    def add_favourite(self, account_id: int, status_id: int):
+    def add_favourite(self, favourite: Favourite):
         query = """
         MATCH (a:Account {id: $account_id})
         MATCH (s:Status {id: $status_id})
         MERGE (a)-[:FAVOURITES]->(s)
         """
 
-        self._run_query(query, account_id=account_id, status_id=status_id,)
+        self._run_query(query, account_id=favourite.account_id, status_id=favourite.status_id)
 
-    def remove_favourite(self, account_id: int, status_id: int):
+    def remove_favourite(self, favourite: Favourite):
         query = """
         MATCH (a:Account {id: $account_id})-[r:FAVOURITES]->(s:Status {id: $status_id})
         DELETE r;
         """
 
-        self._run_query(query, account_id=account_id, status_id=status_id,)
+        self._run_query(query, account_id=favourite.account_id, status_id=favourite.status_id)
 
     # def get_relevant_statuses(self, language, limit=10):
     #     query = """

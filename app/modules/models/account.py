@@ -27,6 +27,9 @@ class Account(SQLModel, table=True):
     domain: str = Field()
     created_at: datetime | None = Field()
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    silenced_at: datetime | None = Field()
+    suspendet_at: datetime | None = Field()
+    sensitized_at: datetime | None = Field()
     display_name: str = Field(nullable=False)
     note: str = Field(nullable=False)
     uri: str = Field(nullable=False)
@@ -41,6 +44,12 @@ class Account(SQLModel, table=True):
     favourites: list[Favourite] = Relationship(back_populates='account')
     statuses: list["Status"] = Relationship(back_populates='account')
     stats: AccountStats = Relationship(back_populates='account', sa_relationship_kwargs={"uselist": False})
+
+    @property
+    def acct(self):
+        if self.domain is None:
+            return self.username
+        return f"{self.username}@{self.domain}"
 
     @property
     def header_url(self):
