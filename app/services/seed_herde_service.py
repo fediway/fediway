@@ -10,7 +10,7 @@ from tqdm import tqdm
 import shutil
 
 from config import config
-from app.modules.models import Account, Status, StatusStats, Follow, Favourite
+from app.modules.models import Account, Status, StatusStats, Follow, Favourite, Tag, StatusTag, Mention
 from modules.fediway.sources.herde import Herde
 import app.utils as utils
 
@@ -18,57 +18,52 @@ def query_line(query):
     return query.strip().replace('  ', '').replace('\n', ' ') + "\n"
 
 class SeedHerdeService:
-    def __init__(self, db: DBSession, driver: Driver, chunk_size: int = 10_000):
+    def __init__(self, db: DBSession, driver: Driver):
         self.db = db
         self.driver = driver
         self.herde = Herde(self.driver)
-        self.chunk_size = chunk_size
         self.max_age = datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)
-        self.path = Path(f'{config.app.data_path}/herde')
 
     def seed(self):
-        if self.path.exists():
-            shutil.rmtree(self.path)
-        self.path.mkdir(exist_ok=True, parents=True)
 
         with utils.duration("Set up memgraph in {:.4f} seconds"):
             self.herde.setup()
 
-        with utils.duration("Created account seeds in {:.4f} seconds"):
-            self.create_account_seeds()
+        with utils.duration("Created favourite seeds in {:.4f} seconds"):
+            self.seed_tags()
 
-        with utils.duration("Created status seeds in {:.4f} seconds"):
-            self.create_status_seeds()
+        with utils.duration("Seeded accounts in {:.4f} seconds"):
+            self.seed_accounts()
 
-        with utils.duration("Created follow seeds in {:.4f} seconds"):
-            self.create_follow_seeds()
+        with utils.duration("Seeded statuses in {:.4f} seconds"):
+            self.seed_statuses()
+
+        with utils.duration("Seeded status stats in {:.4f} seconds"):
+            self.seed_status_stats()
+
+        with utils.duration("Seeded reblogs in {:.4f} seconds"):
+            self.seed_reblogs()
+
+        with utils.duration("Seeded follows in {:.4f} seconds"):
+            self.seed_follows()
 
         with utils.duration("Created favourite seeds in {:.4f} seconds"):
-            self.create_favourite_seeds()
+            self.seed_favourites()
 
-        logger.info("Start seeding accounts...")
-        with utils.duration("Seeded accounts in {:.4f} seconds"):
-            self.seed_files(self.path / 'accounts')
+        with utils.duration("Created status tag seeds in {:.4f} seconds"):
+            self.seed_statuses_tags()
 
-        logger.info("Start seeding statuses...")
-        with utils.duration("Seeded statuses in {:.4f} seconds"):
-            self.seed_files(self.path / 'statuses')
-
-        logger.info("Start seeding follows...")
-        with utils.duration("Seeded follows in {:.4f} seconds"):
-            self.seed_files(self.path / 'follows')
-
-        logger.info("Start seeding favourites...")
-        with utils.duration("Seeded favourites in {:.4f} seconds"):
-            self.seed_files(self.path / 'favourites')
-
-        # clear files
-        shutil.rmtree(self.path)
+        with utils.duration("Created mention seeds in {:.4f} seconds"):
+            self.seed_mentions()
 
         logger.info("Start computing account ranks...")
         with utils.duration("Computed account ranks in {:.4f} seconds"):
             self.herde.compute_account_rank()
 
+        logger.info("Start computing tag ranks...")
+        with utils.duration("Computed tag ranks in {:.4f} seconds"):
+            self.herde.compute_tag_rank()
+        
     def seed_files(self, path):
         files = sorted(path.glob("*.cypher"))
         logger.info(f"{len(files)} chunks.")
@@ -142,116 +137,151 @@ class SeedHerdeService:
             with open(path / f'chunk_{chunk}.cypher', 'w') as f:
                 f.writelines(queries)
 
-    def create_status_seeds(self, batch_size: int = 100):
-        path = self.path / 'statuses'
-        path.mkdir(exist_ok=True, parents=True)
-
+    def seed_statuses(self, batch_size: int = 100):
         query = (
             select(
                 Status.id, 
                 Status.account_id, 
                 Status.language, 
                 Status.created_at, 
-                StatusStats.favourites_count,
-                StatusStats.replies_count,
-                StatusStats.reblogs_count,
             )
-            .join(StatusStats, StatusStats.status_id == Status.id, isouter=False)
             .where(Status.created_at > self.max_age)
+            .where(Status.reblog_of_id.is_(None))
+        )
+        total = self.db.scalar(
+            select(func.count(Status.id))
+            .where(Status.created_at > self.max_age)
+            .where(Status.reblog_of_id.is_(None))
         )
 
-        chunk = 0
-        queries = []
+        bar = tqdm(desc="Statuses", total=total, unit="statuses")
+        
         for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
             for row in batch:
-                row = dict(zip(row.keys(), row.values()))
-                row['created_at'] = row['created_at'].timestamp()
-                queries.append(query_line("""
-                MATCH (a:Account {{id: {account_id}}})
-                MERGE (s:Status {{id: {id}}})
-                ON CREATE SET 
-                    s.language = '{language}', 
-                    s.created_at = {created_at},
-                    s.num_favs = {favourites_count},
-                    s.num_replies = {replies_count},
-                    s.num_reblogs = {reblogs_count}
-                CREATE (a)-[:CREATED_BY]->(s);
-                """.format(**row)))
+                self.herde.add_status(Status(**row))
+                bar.update(1)
 
-                if len(queries) > self.chunk_size:
-                    with open(path / f'chunk_{chunk}.cypher', 'w') as f:
-                        f.writelines(queries)
-                    chunk += 1
-                    queries = []
-        
-        if len(queries) > 0:
-            with open(path / f'chunk_{chunk}.cypher', 'w') as f:
-                f.writelines(queries)
-
-    def create_account_seeds(self, batch_size: int = 100):
-        path = self.path / 'accounts'
-        path.mkdir(exist_ok=True, parents=True)
-
-        StatusAlias = aliased(Status)
-        StatusAlias2 = aliased(Status)
-
+    def seed_reblogs(self, batch_size: int = 100):
         query = (
             select(
-                Account.id, 
-                exists(Status.id).where(
-                    Status.account_id == Account.id,
-                    Status.created_at > self.max_age,
-                ).label("has_status"),
-                exists(Favourite.id)
-                .where(Favourite.account_id == Account.id)
-                .where(
-                    exists(StatusAlias.id)
-                    .where(
-                        StatusAlias.id == Favourite.status_id,
-                        StatusAlias.created_at > self.max_age,
-                    )
-                ).label("has_favourite"),
-                exists(Follow.id)
-                .where(or_(
-                    Follow.account_id == Account.id,
-                    Follow.account_id == Account.id,
-                ))
-                .label("has_follow"),
-                func.avg(StatusStats.favourites_count).label('avg_favs'),
-                func.avg(StatusStats.reblogs_count).label('avg_reblogs'),
-                func.avg(StatusStats.replies_count).label('avg_replies'),
+                Status.id, 
+                Status.account_id, 
+                Status.language, 
+                Status.created_at, 
             )
-            .outerjoin(StatusAlias2, StatusAlias2.account_id == Account.id)
-            .outerjoin(StatusStats, StatusStats.status_id == StatusAlias2.id)
-            .group_by(Account.id)
+            .where(Status.created_at > self.max_age)
+            .where(~Status.reblog_of_id.is_(None))
+        )
+        total = self.db.scalar(
+            select(func.count(Status.id))
+            .where(Status.created_at > self.max_age)
+            .where(~Status.reblog_of_id.is_(None))
         )
 
-        chunk = 0
-        queries = []
-        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-            account_ids = []
-            for row in batch:
-                if not (row['has_status'] or row['has_favourite'] or row['has_follow']):
-                    continue
-                queries.append(query_line("""
-                MERGE (a:Account {{id: {id}}})
-                ON CREATE SET
-                    a.avg_favs = {avg_favs},
-                    a.avg_replies = {avg_replies},
-                    a.avg_reblogs = {avg_reblogs};
-                """.format(
-                    id=row['id'],
-                    avg_favs=float(row['avg_favs'] or 0.0),
-                    avg_reblogs=float(row['avg_reblogs'] or 0.0),
-                    avg_replies=float(row['avg_replies'] or 0.0),
-                )))
-            
-                if len(queries) > self.chunk_size:
-                    with open(path / f'chunk_{chunk}.cypher', 'w') as f:
-                        f.writelines(queries)
-                    chunk += 1
-                    queries = []
+        bar = tqdm(desc="Statuses", total=total, unit="statuses")
         
-        if len(queries) > 0:
-            with open(path / f'chunk_{chunk}.cypher', 'w') as f:
-                f.writelines(queries)
+        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
+            for row in batch:
+                self.herde.add_reblog(Status(**row))
+                bar.update(1)
+
+    def seed_favourites(self, batch_size: int = 100):
+        query = (
+            select(Favourite)
+            .join(Status, and_(
+                Status.id == Favourite.status_id,
+                Status.created_at > self.max_age
+            ))
+        )
+        total = self.db.scalar(
+            select(func.count(Favourite.id))
+            .join(Status, and_(
+                Status.id == Favourite.status_id,
+                Status.created_at > self.max_age
+            ))
+        )
+
+        bar = tqdm(desc="Favourites", total=total, unit="favourites")
+        
+        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
+            for row in batch:
+                self.herde.add_favourite(row)
+                bar.update(1)
+
+    def seed_status_stats(self, batch_size: int = 100):
+        query = (
+            select(StatusStats)
+            .join(Status, and_(
+                Status.id == StatusStats.status_id,
+                Status.created_at > self.max_age
+            ))
+        )
+        total = self.db.scalar(
+            select(func.count(StatusStats.status_id))
+            .join(Status, and_(
+                Status.id == StatusStats.status_id,
+                Status.created_at > self.max_age
+            ))
+        )
+
+        bar = tqdm(desc="Status Stats", total=total, unit="status_stats")
+
+        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
+            for row in batch:
+                self.herde.add_status_stats(row)
+                bar.update(1)
+
+    def seed_follows(self, batch_size: int = 100):
+        query = select(Follow)
+        total = self.db.scalar(select(func.count(Follow.id)))
+
+        bar = tqdm(desc="Follows", total=total, unit="follows")
+
+        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
+            for row in batch:
+                self.herde.add_follow(Account(**row))
+                bar.update(1)
+
+    def seed_accounts(self, batch_size: int = 100):
+        query = select(Account.id, Account.indexable)
+        total = self.db.scalar(select(func.count(Account.id)))
+
+        bar = tqdm(desc="Accounts", total=total, unit="accounts")
+
+        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
+            for row in batch:
+                self.herde.add_account(Account(**row))
+                bar.update(1)
+
+    def seed_tags(self, batch_size: int = 100):
+        query = select(Tag)
+        total = self.db.scalar(select(func.count(Tag.id)))
+
+        bar = tqdm(desc="Tags", total=total, unit="tags")
+
+        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
+            for row in batch:
+                self.herde.add_tag(row)
+                bar.update(1)
+
+    def seed_statuses_tags(self, batch_size: int = 100):
+        query = select(StatusTag)
+        total = self.db.scalar(select(func.count(StatusTag.status_id)))
+
+        bar = tqdm(desc="Status Tags", total=total, unit="statuses_tags")
+
+        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
+            for row in batch:
+                self.herde.add_status_tag(row)
+                bar.update(1)
+
+    def seed_mentions(self, batch_size: int = 100):
+        query = select(Mention)
+        total = self.db.scalar(select(func.count(Mention.id)))
+
+        bar = tqdm(desc="Mentions", total=total, unit="mentions")
+
+        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
+            for row in batch:
+                self.herde.add_mention(row)
+                bar.update(1)

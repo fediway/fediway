@@ -30,14 +30,19 @@ def verify_connection():
 
 @app.command("migrate")
 def migrate():
-    from modules.graph.memgraph import MemgraphMigrator
+    Herde(get_driver()).setup()
 
-    migrator = MemgraphMigrator(
-        driver=get_driver(), 
-        migrations_path=config.fediway.herde_migrations_path
-    )
-            
-    migrator.migrate()
+    typer.echo("✅ Migration completed!")
+
+@app.command("flush")
+def flush():
+    with get_driver().session() as session:
+        session.run("""
+        MATCH (n)
+        DETACH DELETE n;
+        """)
+
+    typer.echo("✅ Flushed memgraph!")
 
 @app.command("query")
 def query(language: str = 'en'):
@@ -58,3 +63,5 @@ def seed():
     db = next(get_db_session())
     SeedHerdeService(db, get_driver()).seed()
     db.close()
+
+    typer.echo("✅ Seeding completed!")

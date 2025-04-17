@@ -65,8 +65,8 @@ class Herde():
     def add_account(self, account: Account):
         query = """
         MERGE (a:Account {id: $id})
-        ON MERGE SET
-            s.indexable = $indexable
+        ON CREATE SET a.indexable = $indexable
+        ON MATCH SET a.indexable = $indexable
         """
 
         self._run_query(query, id=account.id, indexable=account.indexable)
@@ -99,7 +99,7 @@ class Herde():
     def add_status_stats(self, stats: StatusStats):
         query = """
         MERGE (s:Status {id: $id})
-        ON MERGE SET 
+        ON MATCH SET 
             s.num_favs = $num_favs,
             s.num_replies = $num_replies,
             s.num_reblogs = $num_reblogs;
@@ -107,10 +107,10 @@ class Herde():
 
         self._run_query(
             query, 
-            id=status.id,
-            num_favs=status.stats.favourites_count,
-            num_replies=status.stats.replies_count,
-            num_reblogs=status.stats.reblogs_count,
+            id=stats.status_id,
+            num_favs=stats.favourites_count,
+            num_replies=stats.replies_count,
+            num_reblogs=stats.reblogs_count,
         )
 
     def add_status(self, status: Status):
@@ -320,6 +320,7 @@ class Herde():
         # RETURN account_id, top_status[0] AS status_id, top_status[1] AS score
         # LIMIT $limit
         # """
+        
         with self.driver.session() as session:
             results = session.run(
                 query, 
@@ -352,6 +353,17 @@ class Herde():
         MATCH (a:Account {id: node.id})
         SET a.rank = rank
         """
+
+        self._run_query(query)
+
+    def compute_tag_rank(self):
+        query = """
+        CALL pagerank.get()
+        YIELD node, rank
+        MATCH (t:Tag {id: node.id})
+        SET t.rank = rank
+        """
+
         self._run_query(query)
 
     # def compute_engagement_baselines(self):

@@ -26,7 +26,10 @@ def batch_cursor(db: Session, query: Select | SelectOfScalar):
 
 def iter_db_batches(db: Session, query: Select | SelectOfScalar, batch_size: int = 100):
     batch = []
-    for row in db.exec(query).mappings().yield_per(batch_size):
+    result = db.exec(query)
+    if not isinstance(query, SelectOfScalar):
+        result = result.mappings()
+    for row in result.yield_per(batch_size):
         batch.append(row)
         if len(batch) >= batch_size:
             yield batch
@@ -34,7 +37,6 @@ def iter_db_batches(db: Session, query: Select | SelectOfScalar, batch_size: int
     if batch:
         yield batch
     return
-
 
     with batch_cursor(db, query) as cursor:
         while True:
