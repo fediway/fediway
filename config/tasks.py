@@ -13,8 +13,9 @@ class TasksConfig(BaseConfig):
     worker_port: int = 6379
     worker_password: str = ''
 
-    compute_account_ranks_every_n_seconds: int = 10
-    compute_tag_ranks_every_n_seconds: int = 10
+    compute_account_ranks_every_n_seconds: int = 10 * 60
+    compute_tag_ranks_every_n_seconds: int = 10 * 60
+    clean_memgraph_every_n_seconds: int = 10 * 60
 
     @property
     def worker_url(self):

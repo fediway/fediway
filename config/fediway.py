@@ -14,6 +14,8 @@ class FediwayConfig(BaseConfig):
     feed_max_heavy_candidates: int  = 100
     feed_batch_size: int            = 10
 
+    herde_max_status_age_in_days: int = 7
+
     memgraph_host: str       = 'localhost'
     memgraph_port: int       = 7687
     memgraph_user: str       = ''
@@ -38,3 +40,6 @@ class FediwayConfig(BaseConfig):
             DiversifyAccountsHeuristic(penalty=0.1)
         ]
 
+    @property
+    def herde_max_status_age(self) -> timedelta:
+        return timedelta(days=self.herde_max_status_age_in_days)

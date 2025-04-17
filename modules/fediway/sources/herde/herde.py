@@ -1,6 +1,8 @@
 
+from datetime import timedelta
 from neo4j import Driver
 import numpy as np
+import time
 
 from app.modules.models import (
     Status, 
@@ -78,6 +80,15 @@ class Herde():
         """
 
         self._run_query(query, id=account.id)
+
+    def purge_old_statuses(self, max_age: timedelta):
+        query = """
+        MATCH (s:Status)
+        WHERE s.created_at < $max_age
+        DELETE s;
+        """
+        
+        self._run_query(query, max_age=int(time.time()) - max_age.total_seconds())
 
     def add_follow(self, follow: Follow):
         query = """
