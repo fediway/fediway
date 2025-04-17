@@ -8,6 +8,12 @@ Start server
 uvicorn app.main:app --reload
 ```
 
+## Kafka Consumer
+
+```sh
+faststream run app.consumer:app
+```
+
 ## Job Scheduling
 
 Start scheduler worker

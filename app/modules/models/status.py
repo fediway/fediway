@@ -34,6 +34,7 @@ class Status(SQLModel, table=True):
     spoiler_text: str = Field()
     created_at: datetime | None = Field()
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    deleted_at: datetime | None = Field()
     # last_processed_at: datetime | None = Field(nullable=True)
     in_reply_to_id: int | None = Field()
     reblog_of_id: int | None = Field(default=None, foreign_key='statuses.id')

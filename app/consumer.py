@@ -1,79 +1,85 @@
 
 from faststream import FastStream
 from faststream.confluent import KafkaBroker
+from pydantic import BaseModel
+from loguru import logger
 
+from modules.fediway.sources.herde import Herde
+from .events import (
+    StatusEventHandler,
+    FavouriteEventHandler,
+    FollowEventHandler,
+    MentionEventHandler,
+    StatusTagEventHandler,
+    TagEventHandler,
+)
+from .core.herde import driver
+import app.utils as utils
 from config import config
 
-print(config.db.kafka_url)
 broker = KafkaBroker(config.db.kafka_url)
-
 app = FastStream(broker)
 
-@broker.subscriber("postgres.public.statuses")
-async def on_status(event):
-    print(event)
+class DebeziumPayload(BaseModel):
+    op: str  # 'c', 'u', 'd', etc.
+    before: dict | None
+    after: dict | None
+    source: dict
 
-# import sys
-# from confluent_kafka import Consumer, KafkaError
-# import json
+class DebeziumEvent(BaseModel):
+    payload: DebeziumPayload
 
-# # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+def get_dependencies():
+    return {
+        'herde': Herde(driver)
+    }
 
-# def process_debezium_event(msg):
-#     try:
-#         # Deserialize the byte string to a Python dictionary
-#         event = json.loads(msg.value().decode('utf-8'))
-#     except Exception as e:
-#         print(f"Error parsing message: {e}")
-#         return
+async def process_debezium_event(event: DebeziumEvent, handler):
+    method = {
+        'c': 'created',
+        'u': 'updated',
+        'd': 'deleted',
+    }.get(event.payload.op)
 
-#     # Debezium event structure example:
-#     # {
-#     #   "before": { ... },  # Data before change (for updates/deletes)
-#     #   "after": { ... },   # Data after change (for inserts/updates)
-#     #   "op": "c",          # Operation: 'c' (create), 'u' (update), 'd' (delete)
-#     #   "ts_ms": 1620000000,
-#     #   "source": { ... }
-#     # }
-
-#     payload = event.get('payload', event)
+    if method is None:
+        logger.debug(f"Unhandled operation '{op}'.")
+        return
     
-#     op = payload.get('op')
+    if not hasattr(handler, method):
+        logger.debug(f"Handler {handler} does not handle '{method}'.")
+        return
 
-#     if op == 'c':
-#         print(f"New record inserted: {payload['after']}")
-#     elif op == 'u':
-#         print(f"Record updated. New data: {payload['after']}")
-#     elif op == 'd':
-#         print(f"Record deleted: {payload['before']}")
-#     else:
-#         print(f"Unhandled operation: {op}")
+    if event.payload.op == 'u':
+        args = (handler.parse(event.payload.before), handler.parse(event.payload.after))
+    elif event.payload.op in ['c', 'd']:
+        args = (handler.parse(event.payload.after), )
 
-# conf = {
-#     'bootstrap.servers': 'localhost:29092',
-#     'group.id': 'debezium-consumer-group',
-#     'auto.offset.reset': 'earliest'
-# }
+    await getattr(handler(**get_dependencies()), method)(*args)
 
-# consumer = Consumer(conf)
+@broker.subscriber("postgres.public.accounts")
+async def on_status(event):
+    print(event, "accounts")
 
-# consumer.subscribe([
-#     'postgres.public.statuses'
-# ])
+@broker.subscriber("postgres.public.statuses")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, StatusEventHandler)
 
-# try:
-#     while True:
-#         msg = consumer.poll(timeout=1.0)
-#         if msg is None:
-#             continue
-#         if msg.error():
-#             if msg.error().code() == KafkaError._PARTITION_EOF:
-#                 continue
-#             else:
-#                 print(f"Error: {msg.error()}")
-#                 break
-#         process_debezium_event(msg)
-# except KeyboardInterrupt:
-#     pass
-# finally:
-#     consumer.close()
+@broker.subscriber("postgres.public.mentions")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, MentionEventHandler)
+
+@broker.subscriber("postgres.public.follows")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, FollowEventHandler)
+
+@broker.subscriber("postgres.public.favourites")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, FavouriteEventHandler)
+
+@broker.subscriber("postgres.public.statuses_tags")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, StatusTagEventHandler)
+
+@broker.subscriber("postgres.public.tags")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(event, TagEventHandler)

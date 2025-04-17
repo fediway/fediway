@@ -2,7 +2,7 @@
 from neo4j import Driver
 import numpy as np
 
-from app.modules.models import Status, Account
+from app.modules.models import Status, StatusStats, Account, Tag, StatusTag, Mention
 
 class Herde():
     driver: Driver
@@ -21,9 +21,13 @@ class Herde():
         CREATE INDEX ON :Status(id);
         CREATE INDEX ON :Status(language);
         CREATE INDEX ON :Status(created_at);
+        CREATE INDEX ON :Tag(id);
+        CREATE INDEX ON :Tag(rank);
         CREATE CONSTRAINT ON (a:Account) ASSERT a.id IS UNIQUE;
         CREATE CONSTRAINT ON (s:Status) ASSERT s.id IS UNIQUE;
+        CREATE CONSTRAINT ON (t:Tag) ASSERT t.id IS UNIQUE;
         CREATE EDGE INDEX ON :FOLLOWS;
+        CREATE EDGE INDEX ON :REBLOGS;
         """
 
         for query in queries.split(";"):
@@ -31,37 +35,29 @@ class Herde():
                 continue
             self._run_query(query)
 
+    def add_tag(self, tag: Tag):
+        query = """
+        MERGE (t:Tag {id: $id})
+        ON CREATE SET
+            s.name = $name
+        """
+
+        self._run_query(query, id=tag.id, name=tag.name)
+
+    def remove_tag(self, tag: Tag):
+        query = """
+        MATCH (t:Tag {id: $id})
+        DELETE t;
+        """
+
+        self._run_query(query, id=tag.id)
+
     def add_account(self, account: Account):
         query = """
         MERGE (a:Account {id: $id})
-        ON CREATE SET 
-            a.avg_favs = $avg_favs,
-            a.avg_replies = $avg_replies,
-            a.avg_reblogs = $avg_reblogs
         """
 
-        favs = [s.stats.favourites_count for s in account.statuses if s.stats is not None]
-        avg_favs = 0.
-        if len(favs) > 0:
-            avg_favs = float(np.mean(favs))
-
-        replies = [s.stats.replies_count for s in account.statuses if s.stats is not None]
-        avg_replies = 0.
-        if len(favs) > 0:
-            avg_replies = float(np.mean(replies))
-
-        reblogs = [s.stats.reblogs_count for s in account.statuses if s.stats is not None]
-        avg_reblogs = 0.
-        if len(favs) > 0:
-            avg_reblogs = float(np.mean(reblogs))
-
-        self._run_query(
-            query, 
-            id=account.id,
-            avg_favs=avg_favs,
-            avg_replies=avg_replies,
-            avg_reblogs=avg_reblogs,
-        )
+        self._run_query(query, id=account.id)
 
     def add_follow(self, source_id:int, target_id: int):
         query = """
@@ -70,10 +66,31 @@ class Herde():
         MERGE (a)-[:FOLLOWS]->(b);
         """
 
+        self._run_query(query, source_id=source_id, target_id=target_id)
+
+    def remove_follow(self, source_id:int, target_id: int):
+        query = """
+        MATCH (a:Account {id: $source_id})-[r:FOLLOWS]->(b:Account {id: $target_id})
+        DELETE r;
+        """
+
+        self._run_query(query, source_id=source_id, target_id=target_id)
+
+    def add_status_stats(self, stats: StatusStats):
+        query = """
+        MERGE (s:Status {id: $id})
+        ON MERGE SET 
+            s.num_favs = $num_favs,
+            s.num_replies = $num_replies,
+            s.num_reblogs = $num_reblogs;
+        """
+
         self._run_query(
             query, 
-            source_id=source_id,
-            target_id=target_id,
+            id=status.id,
+            num_favs=status.stats.favourites_count,
+            num_replies=status.stats.replies_count,
+            num_reblogs=status.stats.reblogs_count,
         )
 
     def add_status(self, status: Status):
@@ -82,22 +99,97 @@ class Herde():
         MERGE (s:Status {id: $id})
         ON CREATE SET 
             s.language = $language, 
-            s.created_at = $created_at,
-            s.num_favs = $num_favs,
-            s.num_replies = $num_replies,
-            s.num_reblogs = $num_reblogs
-        CREATE (a)-[:CREATED_BY]->(s);
+            s.created_at = $created_at
+            // s.num_favs = $num_favs,
+            // s.num_replies = $num_replies,
+            // s.num_reblogs = $num_reblogs
+        CREATE (a)-[:CREATED_BY]->(s)
+        """
+
+        created_at = status.created_at if type(status.created_at) == int else (status.created_at.timestamp())
+
+        params = {
+            'id': status.id,
+            'account_id': status.account_id,
+            'language': status.language,
+            'created_at': created_at,
+        }
+
+        self._run_query(query, **params)
+
+    def add_status_tag(self, status_tag: StatusTag):
+        query = """
+        MERGE (s:Status {id: $status_id})
+        MERGE (t:Tag {id: $tag_id})
+        CREATE (s)-[:TAGS]->(t)
+        """
+
+        self._run_query(query, status_id=status_tag.status_id, tag_id=status_tag.tag_id)
+
+    def remove_status_tag(self, stats: StatusStats):
+        query = """
+        MATCH (s:Status {id: $status_id})-[r:TAGS]->(t:Tag {id: $tag_id})
+        DELETE r;
+        """
+
+        self._run_query(query, status_id=status_tag.status_id, tag_id=status_tag.tag_id)
+
+    def add_mention(self, mention: Mention):
+        query = """
+        MATCH (a:Account {id: $account_id})
+        MATCH (s:Status {id: $status_id})
+        MERGE (s)-[:MENTIONS]->(a);
         """
 
         self._run_query(
             query, 
-            id=status.id,
+            account_id=mention.account_id,
+            status_id=mention.status_id,
+        )
+
+    def remove_mention(self, mention: Mention):
+        query = """
+        MATCH (s:Status {id: $status_id})-[r:MENTIONS]->(a:Account {id: $account_id});
+        DELETE r;
+        """
+
+        self._run_query(
+            query, 
+            account_id=mention.account_id,
+            status_id=mention.status_id,
+        )
+
+    def remove_status(self, status: Status):
+        query = """
+        MATCH (s:Status {id: $id})
+        DELETE s;
+        """
+
+        self._run_query(query, id=status.id)
+    
+    def add_reblog(self, status: Status):
+        query = """
+        MATCH (a:Account {id: $account_id})
+        MATCH (s:Status {id: $reblog_of_id})
+        CREATE (a)-[:REBLOGS]->(s);
+        """
+
+        self._run_query(
+            query, 
             account_id=status.account_id,
-            language=status.language,
-            created_at=status.created_at.timestamp(),
-            num_favs=status.stats.favourites_count,
-            num_replies=status.stats.replies_count,
-            num_reblogs=status.stats.reblogs_count,
+            reblog_of_id=status.reblog_of_id,
+        )
+
+    def remove_reblog(self, status: Status):
+        query = """
+        MATCH (a:Account {id: $account_id})-[r:REBLOGS]->(s:Status {id: $reblog_of_id})
+        DELETE r;
+        """
+
+        self._run_query(
+            query, 
+            account_id=status.account_id,
+            reblog_of_id=status.reblog_of_id,
         )
 
     def add_statuses(self, statuses: list[Status]):
@@ -134,11 +226,15 @@ class Herde():
         MERGE (a)-[:FAVOURITES]->(s)
         """
 
-        self._run_query(
-            query, 
-            account_id=account_id,
-            status_id=status_id,
-        )
+        self._run_query(query, account_id=account_id, status_id=status_id,)
+
+    def remove_favourite(self, account_id: int, status_id: int):
+        query = """
+        MATCH (a:Account {id: $account_id})-[r:FAVOURITES]->(s:Status {id: $status_id})
+        DELETE r;
+        """
+
+        self._run_query(query, account_id=account_id, status_id=status_id,)
 
     # def get_relevant_statuses(self, language, limit=10):
     #     query = """

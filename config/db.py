@@ -12,10 +12,11 @@ class DBConfig(BaseConfig):
     db_name: str       = "mastodon_production"
 
     kafka_host: str       = "localhost"
-    kafka_port: int       = 9092
+    kafka_port: int       = 29092
     kafka_user: str       = ""
     kafka_pass: SecretStr = ""
 
+    debezium_db_host: str = 'postgres'
     debezium_host: str = 'localhost'
     debezium_port: int = 8083
     debezium_connector_name: str = "postgres-connector"
@@ -24,8 +25,11 @@ class DBConfig(BaseConfig):
     debezium_tables: list[str] = [
         'accounts', 
         'statuses',
+        'status_stats',
         'follows',
+        'mentions',
         'favourites',
+        'tags',
         'statuses_tags',
     ]
 
