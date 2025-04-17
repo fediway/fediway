@@ -5,14 +5,14 @@ from pydantic import BaseModel
 from loguru import logger
 
 from modules.fediway.sources.herde import Herde
-from .events import (
-    AccountEventHandler,
-    StatusEventHandler,
-    FavouriteEventHandler,
-    FollowEventHandler,
-    MentionEventHandler,
-    StatusTagEventHandler,
-    TagEventHandler,
+from .events.herde import (
+    AccountEventHandler as HerdeAccountEventHandler,
+    StatusEventHandler as HerdeStatusEventHandler,
+    FavouriteEventHandler as HerdeFavouriteEventHandler,
+    FollowEventHandler as HerdeFollowEventHandler,
+    MentionEventHandler as HerdeMentionEventHandler,
+    StatusTagEventHandler as HerdeStatusTagEventHandler,
+    TagEventHandler as HerdeTagEventHandler,
 )
 from .core.herde import driver
 import app.utils as utils
@@ -57,30 +57,30 @@ async def process_debezium_event(event: DebeziumEvent, handler):
 
     await getattr(handler(**get_dependencies()), method)(*args)
 
-@broker.subscriber("postgres.public.accounts")
+@broker.subscriber("postgres.public.accounts", conumser_group="herde")
 async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, StatusEventHandler)
+    await process_debezium_event(event, HerdeStatusEventHandler)
 
-@broker.subscriber("postgres.public.statuses")
+@broker.subscriber("postgres.public.statuses", conumser_group="herde")
 async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, StatusEventHandler)
+    await process_debezium_event(event, HerdeStatusEventHandler)
 
-@broker.subscriber("postgres.public.mentions")
+@broker.subscriber("postgres.public.mentions", conumser_group="herde")
 async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, MentionEventHandler)
+    await process_debezium_event(event, HerdeMentionEventHandler)
 
-@broker.subscriber("postgres.public.follows")
+@broker.subscriber("postgres.public.follows", conumser_group="herde")
 async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, FollowEventHandler)
+    await process_debezium_event(event, HerdeFollowEventHandler)
 
-@broker.subscriber("postgres.public.favourites")
+@broker.subscriber("postgres.public.favourites", conumser_group="herde")
 async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, FavouriteEventHandler)
+    await process_debezium_event(event, HerdeFavouriteEventHandler)
 
-@broker.subscriber("postgres.public.statuses_tags")
+@broker.subscriber("postgres.public.statuses_tags", conumser_group="herde")
 async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, StatusTagEventHandler)
+    await process_debezium_event(event, HerdeStatusTagEventHandler)
 
-@broker.subscriber("postgres.public.tags")
+@broker.subscriber("postgres.public.tags", conumser_group="herde")
 async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, TagEventHandler)
+    await process_debezium_event(event, HerdeTagEventHandler)

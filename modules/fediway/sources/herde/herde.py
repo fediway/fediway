@@ -120,9 +120,6 @@ class Herde():
         ON CREATE SET 
             s.language = $language, 
             s.created_at = $created_at
-            // s.num_favs = $num_favs,
-            // s.num_replies = $num_replies,
-            // s.num_reblogs = $num_reblogs
         CREATE (a)-[:CREATED_BY]->(s)
         """
 

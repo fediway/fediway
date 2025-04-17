@@ -14,3 +14,4 @@ neo4j==5.28.1
 tqdm==4.67.1
 aioredis==2.0.1
 faststream==0.5.39
+feast==0.48.1
