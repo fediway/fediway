@@ -31,7 +31,8 @@ class TrendingStatusesByInfluentialUsers(Herde, Source):
         LIMIT $limit;
         """
 
-        results = self._run_query(query, language=self.language, limit=limit)
+        with self.driver.session() as session:
+            results = session.run(query, language=self.language, limit=limit)
 
-        for result in results:
-            yield result['status_id']
+            for result in list(results):
+                yield result['status_id']
