@@ -20,22 +20,36 @@
 #     to_file = 'pytooter_clientcred.secret'
 # )
 
-import matplotlib.pyplot as plt
-from lifelines import KaplanMeierFitter
-import numpy as np
+# import matplotlib.pyplot as plt
+# from lifelines import KaplanMeierFitter
+# import numpy as np
 
-durations = np.array([1739, 3468, 2705, 1439])
-durations = (durations / 364.25)
+# durations = np.array([1739, 3468, 2705, 1439])
+# durations = (durations / 364.25)
 
-event_observed = [
-    0, 1, 0, 1
-]
+# event_observed = [
+#     0, 1, 0, 1
+# ]
 
-kmf = KaplanMeierFitter()
-kmf.fit(durations, event_observed=event_observed)
-kmf.plot_survival_function()
+# kmf = KaplanMeierFitter()
+# kmf.fit(durations, event_observed=event_observed)
+# kmf.plot_survival_function()
 
-plt.title('Survival after OSCC Diagnosis')
-plt.xlabel('Years')
-plt.ylabel('Survival Probability')
-plt.savefig('surv_p2=1.png', dpi=300)
+# plt.title('Survival after OSCC Diagnosis')
+# plt.xlabel('Years')
+# plt.ylabel('Survival Probability')
+# plt.savefig('surv_p2=1.png', dpi=300)
+
+from confluent_kafka.admin import AdminClient
+
+conf = {
+    'bootstrap.servers': 'localhost:29092'  # Use this if running outside Docker
+    # 'bootstrap.servers': 'kafka:9092'     # Use this if running inside Docker
+}
+
+admin_client = AdminClient(conf)
+topics = admin_client.list_topics().topics
+
+print("Available topics:", list(topics.keys()))
+
+

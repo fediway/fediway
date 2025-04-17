@@ -2,6 +2,7 @@
 import typer
 
 from .dataset import app as dataset_app
+from .debezium import app as debezium_app
 from .train import app as train_app
 from .herde import app as herde_app
 
@@ -11,6 +12,12 @@ app.add_typer(
     dataset_app,
     name="dataset",
     help="Manage datasets (create, preprocess, etc.)"
+)
+
+app.add_typer(
+    debezium_app,
+    name="debezium",
+    help="Usefull commands for debezium (postgres stream)"
 )
 
 app.add_typer(
