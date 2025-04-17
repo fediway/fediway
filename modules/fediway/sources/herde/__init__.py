@@ -1,6 +1,6 @@
 
 from .herde import Herde
-from .sources import TrendingStatusesByInfluentialUsers
+from .sources import TrendingStatusesByInfluentialUsers, TrendingTagsSource
 
 from datetime import datetime
 import math

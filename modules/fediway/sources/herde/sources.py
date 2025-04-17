@@ -62,7 +62,7 @@ class TrendingTagsSource(Herde, Source):
         """
 
         with self.driver.session() as session:
-            results = session.run(query, language=self.language, limit=limit, max_age=self.max_age)
+            results = session.run(query, language=self.language, limit=limit, max_age=self.max_age.total_seconds())
 
             for result in list(results):
-                yield result['status_id']
+                yield result['tag_id']
