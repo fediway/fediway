@@ -1,7 +1,9 @@
 _test.py
 /old
+/postgres*
 
 celerybeat-schedule.*
+docker-compose.yaml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,7 +1,6 @@
 
 from faststream import FastStream
 from faststream.confluent import KafkaBroker
-from pydantic import BaseModel
 from loguru import logger
 
 from modules.fediway.sources.herde import Herde
@@ -15,20 +14,12 @@ from .events.herde import (
     TagEventHandler as HerdeTagEventHandler,
 )
 from .core.herde import driver
+from .modules.debezium import DebeziumEvent
 import app.utils as utils
 from config import config
 
 broker = KafkaBroker(config.db.kafka_url)
 app = FastStream(broker)
-
-class DebeziumPayload(BaseModel):
-    op: str  # 'c', 'u', 'd', etc.
-    before: dict | None
-    after: dict | None
-    source: dict
-
-class DebeziumEvent(BaseModel):
-    payload: DebeziumPayload
 
 def get_dependencies():
     return {
@@ -59,44 +50,30 @@ async def process_debezium_event(event: DebeziumEvent, handler):
 
 # Herde consumer (responsible for pushing to memgraph)
 
-@broker.subscriber("postgres.public.accounts", conumser_group="herde")
+@broker.subscriber(config.db.debezium_topic("accounts"), conumser_group="herde")
+async def on_accounts(event: DebeziumEvent):
+    await process_debezium_event(event, HerdeAccountEventHandler)
+
+@broker.subscriber(config.db.debezium_topic("statuses"), conumser_group="herde")
 async def on_status(event: DebeziumEvent):
     await process_debezium_event(event, HerdeStatusEventHandler)
 
-@broker.subscriber("postgres.public.statuses", conumser_group="herde")
-async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeStatusEventHandler)
-
-@broker.subscriber("postgres.public.mentions", conumser_group="herde")
-async def on_status(event: DebeziumEvent):
+@broker.subscriber(config.db.debezium_topic("mentions"), conumser_group="herde")
+async def on_mentions(event: DebeziumEvent):
     await process_debezium_event(event, HerdeMentionEventHandler)
 
-@broker.subscriber("postgres.public.follows", conumser_group="herde")
-async def on_status(event: DebeziumEvent):
+@broker.subscriber(config.db.debezium_topic("follows"), conumser_group="herde")
+async def on_follows(event: DebeziumEvent):
     await process_debezium_event(event, HerdeFollowEventHandler)
 
-@broker.subscriber("postgres.public.favourites", conumser_group="herde")
-async def on_status(event: DebeziumEvent):
+@broker.subscriber(config.db.debezium_topic("favourites"), conumser_group="herde")
+async def on_favourites(event: DebeziumEvent):
     await process_debezium_event(event, HerdeFavouriteEventHandler)
 
-@broker.subscriber("postgres.public.statuses_tags", conumser_group="herde")
-async def on_status(event: DebeziumEvent):
+@broker.subscriber(config.db.debezium_topic("statuses_tags"), conumser_group="herde")
+async def on_statuses_tags(event: DebeziumEvent):
     await process_debezium_event(event, HerdeStatusTagEventHandler)
 
-@broker.subscriber("postgres.public.tags", conumser_group="herde")
-async def on_status(event: DebeziumEvent):
+@broker.subscriber(config.db.debezium_topic("tags"), conumser_group="herde")
+async def on_tags(event: DebeziumEvent):
     await process_debezium_event(event, HerdeTagEventHandler)
-
-# Feature consumer (responsible for pushing to feature store)
-
-@broker.subscriber("postgres.public.statuses", conumser_group="features")
-async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, FeaturesStatusEventHandler)
-
-@broker.subscriber("postgres.public.favourites", conumser_group="features")
-async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, FavouritesStatusEventHandler)
-
-@broker.subscriber("postgres.public.follows", conumser_group="features")
-async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, FavouritesStatusEventHandler)

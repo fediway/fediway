@@ -34,7 +34,25 @@ celery -A app.worker worker --loglevel=info
 celery -A jobs.main worker --queues=topics --loglevel=info
 ``` -->
 
-## DB
+## Setup
+
+### RisingWave
+
+Create a new postgres user with CDC privileges.
+
+```sql
+-- psql -U postgres
+
+-- Grand CDC privileges
+CREATE USER risingwave REPLICATION LOGIN CREATEDB;
+ALTER USER risingwave WITH PASSWORD 'password';
+GRANT CONNECT ON DATABASE mastodon_development TO risingwave;
+GRANT USAGE ON SCHEMA public TO risingwave;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO risingwave;
+GRANT CREATE ON DATABASE mastodon_development TO risingwave;
+```
+
+### Postgres
 
 Run migrations:
 

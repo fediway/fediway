@@ -1,0 +1,105 @@
+
+import psycopg2
+from pathlib import Path
+import typer
+import re
+
+from config import config
+
+app = typer.Typer(help="RisingWave commands.")
+
+def get_context():
+    return {
+        "db_host": config.db.rw_pg_host or db_host,
+        "db_port": config.db.db_port,
+        "db_user": config.db.rw_pg_user,
+        "db_pass": config.db.rw_pg_pass.get_secret_value(),
+        "db_name": config.db.db_name,
+    }
+
+def env_substitute(sql: str, context: dict):
+    return re.sub(r"\$\{(\w+)\}", lambda m: str(context.get(m.group(1), m.group(0))), sql)
+
+def parse_migration(sql):
+    up_sql = re.search(r'--\s*:up(.*?)(--\s*:down|$)', sql, re.DOTALL)
+    down_sql = re.search(r'--\s*:down(.*)', sql, re.DOTALL)
+
+    return up_sql.group(1).strip(), down_sql.group(1).strip() if down_sql else None
+
+def ensure_migration_table(conn):
+    with conn.cursor() as cur:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS _migrations (
+            version VARCHAR PRIMARY KEY,
+            applied_at TIMESTAMP
+        );
+        """)
+        conn.commit()
+
+def get_applied_migrations(conn):
+    with conn.cursor() as cur:
+        cur.execute("SELECT version FROM _migrations;")
+        return {row[0] for row in cur.fetchall()}
+
+def get_connection():
+    return psycopg2.connect(
+        dbname=config.db.rw_name,
+        user=config.db.rw_user,
+        password=config.db.rw_pass,
+        host=config.db.rw_host,
+        port=config.db.rw_port,
+    )
+
+@app.command("migrate")
+def migrate():
+    conn = get_connection()
+    ensure_migration_table(conn)
+    applied = get_applied_migrations(conn)
+
+    migration_dir = Path(config.db.rw_migrations_path)
+    context = get_context()
+
+    for file in sorted(migration_dir.glob("*.sql")):
+        version = file.stem
+
+        if version in applied:
+            continue
+        
+        with open(file, 'r') as f:
+            sql = env_substitute(f.read(), context)
+
+        up_sql, _ = parse_migration(sql)
+
+        with conn.cursor() as cur:
+            cur.execute(up_sql)
+            cur.execute("INSERT INTO _migrations (version) VALUES (%s);", (version,))
+            conn.commit()
+
+        typer.echo(f"Applied migration {version}")
+
+@app.command("rollback")
+def rollback():
+    conn = get_connection()
+    ensure_migration_table(conn)
+    applied = get_applied_migrations(conn)
+
+    migration_dir = Path(config.db.rw_migrations_path)
+    context = get_context()
+
+    for file in reversed(sorted(migration_dir.glob("*.sql"))):
+        version = file.stem
+        
+        if version not in applied:
+            continue
+        
+        with open(file, 'r') as f:
+            sql = env_substitute(f.read(), context)
+
+        _, down_sql = parse_migration(sql)
+
+        with conn.cursor() as cur:
+            cur.execute(down_sql)
+            cur.execute("DELETE FROM _migrations WHERE version = %s;", (version,))
+            conn.commit()
+
+        typer.echo(f"Rolled back migration {version}")
