@@ -13,4 +13,4 @@ CREATE TABLE follows (
 ) FROM pg_source TABLE 'public.follows';
 
 -- :down
-DROP TABLE IF EXISTS follows;
+DROP TABLE IF EXISTS follows CASCADE;

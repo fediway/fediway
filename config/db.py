@@ -21,7 +21,10 @@ class DBConfig(BaseConfig):
     rw_user: str       = "root"
     rw_pass: SecretStr = ""
     rw_name: str       = "dev"
-    rw_migrations_path: str = 'migrations/risingwave'
+    rw_migrations_paths: list[str] = [
+        'migrations/risingwave',
+        'features/definitions/account_author',
+    ]
     rw_migrations_table: str = "migrations"
 
     rw_pg_host: str | None = None

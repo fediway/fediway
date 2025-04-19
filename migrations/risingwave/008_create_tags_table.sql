@@ -12,4 +12,4 @@ CREATE TABLE tags (
 ) FROM pg_source TABLE 'public.tags';
 
 -- :down
-DROP TABLE IF EXISTS tags;
+DROP TABLE IF EXISTS tags CASCADE;

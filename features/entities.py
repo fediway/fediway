@@ -9,6 +9,12 @@ account = Entity(
     description="Account identifier"
 )
 
+author = Entity(
+    name="author_id",
+    value_type=ValueType.INT64,
+    description="Author identifier"
+)
+
 status = Entity(
     name="status_id",
     value_type=ValueType.INT64,
@@ -17,9 +23,15 @@ status = Entity(
 
 # --- composite entitites ---
 
-account_status = Entity(
-    name="account_status",
-    value_type=ValueType.STRING,
-    join_keys=["account_id", "status_id"]
-)
+# account_status = Entity(
+#     name="account_status",
+#     value_type=ValueType.STRING,
+#     join_keys=["account_id", "status_id"]
+# )
+
+# account_author = Entity(
+#     name="account_author",
+#     value_type=ValueType.STRING,
+#     join_keys=["account_id", "author_id"]
+# )
 

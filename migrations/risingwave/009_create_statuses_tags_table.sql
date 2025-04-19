@@ -7,4 +7,4 @@ CREATE TABLE statuses_tags (
 ) FROM pg_source TABLE 'public.statuses_tags';
 
 -- :down
-DROP TABLE IF EXISTS statuses_tags;
+DROP TABLE IF EXISTS statuses_tags CASCADE;

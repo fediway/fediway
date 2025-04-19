@@ -9,4 +9,4 @@ CREATE TABLE favourites (
 ) FROM pg_source TABLE 'public.favourites';
 
 -- :down
-DROP TABLE IF EXISTS favourites;
+DROP TABLE IF EXISTS favourites CASCADE;

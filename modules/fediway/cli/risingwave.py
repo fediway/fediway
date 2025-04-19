@@ -15,6 +15,7 @@ def get_context():
         "db_user": config.db.rw_pg_user,
         "db_pass": config.db.rw_pg_pass.get_secret_value(),
         "db_name": config.db.db_name,
+        "bootstrap_server": config.db.kafka_url
     }
 
 def env_substitute(sql: str, context: dict):
@@ -56,26 +57,28 @@ def migrate():
     ensure_migration_table(conn)
     applied = get_applied_migrations(conn)
 
-    migration_dir = Path(config.db.rw_migrations_path)
     context = get_context()
 
-    for file in sorted(migration_dir.glob("*.sql")):
-        version = file.stem
+    for path in config.db.rw_migrations_paths:
+        migration_dir = Path(path)
 
-        if version in applied:
-            continue
-        
-        with open(file, 'r') as f:
-            sql = env_substitute(f.read(), context)
+        for file in sorted(migration_dir.glob("*.sql")):
+            version = file.stem
 
-        up_sql, _ = parse_migration(sql)
+            if version in applied:
+                continue
+            
+            with open(file, 'r') as f:
+                sql = env_substitute(f.read(), context)
 
-        with conn.cursor() as cur:
-            cur.execute(up_sql)
-            cur.execute("INSERT INTO _migrations (version) VALUES (%s);", (version,))
-            conn.commit()
+            up_sql, _ = parse_migration(sql)
 
-        typer.echo(f"Applied migration {version}")
+            with conn.cursor() as cur:
+                cur.execute(up_sql)
+                cur.execute("INSERT INTO _migrations (version) VALUES (%s);", (version,))
+                conn.commit()
+
+            typer.echo(f"Applied migration {version}")
 
 @app.command("rollback")
 def rollback():
@@ -83,23 +86,26 @@ def rollback():
     ensure_migration_table(conn)
     applied = get_applied_migrations(conn)
 
-    migration_dir = Path(config.db.rw_migrations_path)
+    
     context = get_context()
 
-    for file in reversed(sorted(migration_dir.glob("*.sql"))):
-        version = file.stem
-        
-        if version not in applied:
-            continue
-        
-        with open(file, 'r') as f:
-            sql = env_substitute(f.read(), context)
+    for path in reversed(config.db.rw_migrations_paths):
+        migration_dir = Path(path)
 
-        _, down_sql = parse_migration(sql)
+        for file in reversed(sorted(migration_dir.glob("*.sql"))):
+            version = file.stem
+            
+            if version not in applied:
+                continue
+            
+            with open(file, 'r') as f:
+                sql = env_substitute(f.read(), context)
 
-        with conn.cursor() as cur:
-            cur.execute(down_sql)
-            cur.execute("DELETE FROM _migrations WHERE version = %s;", (version,))
-            conn.commit()
+            _, down_sql = parse_migration(sql)
 
-        typer.echo(f"Rolled back migration {version}")
+            with conn.cursor() as cur:
+                cur.execute(down_sql)
+                cur.execute("DELETE FROM _migrations WHERE version = %s;", (version,))
+                conn.commit()
+
+            typer.echo(f"Rolled back migration {version}")

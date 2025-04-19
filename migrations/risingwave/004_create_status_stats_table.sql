@@ -9,4 +9,4 @@ CREATE TABLE status_stats (
 ) FROM pg_source TABLE 'public.status_stats';
 
 -- :down
-DROP TABLE IF EXISTS status_stats;
+DROP TABLE IF EXISTS status_stats CASCADE;

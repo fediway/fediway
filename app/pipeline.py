@@ -1,26 +1,17 @@
 
-import bytewax.operators as op
-from bytewax.dataflow import Dataflow
-from bytewax.testing import TestingSource
-from bytewax.connectors.stdio import StdOutSink
+from feast import FeatureStore
+from faststream import FastStream
+from faststream.confluent import KafkaBroker
+from loguru import logger
 
-import json
-
+from .events.features.account_author_features import AccountAuthorFeaturesEventHandler
+from .modules.debezium import DebeziumEvent, process_debezium_event
 from config import config
 
-# fs = FeatureStore(repo_path=config.feast.feast_repo_path)
+feature_store = FeatureStore(repo_path=config.feast.feast_repo_path)
+broker = KafkaBroker(config.db.kafka_url)
+app = FastStream(broker)
 
-# broker = KafkaInput(
-#     brokers=["localhost:9092"], 
-#     topics=["debezium_likes"],
-# )
-
-inp = [0, 1, 2]
-
-flow = Dataflow("test")
-input_stream = op.input('int', flow, TestingSource)
-
-# flow.input("kafka-in", broker)
-
-if __name__ == "__main__":
-    pass
+@broker.subscriber("account_author_features")
+async def on_account_author_features(event: DebeziumEvent):
+    await process_debezium_event(event, AccountAuthorFeaturesEventHandler, args=(feature_store, ))

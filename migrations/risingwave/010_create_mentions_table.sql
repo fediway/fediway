@@ -9,4 +9,4 @@ CREATE TABLE mentions (
 ) FROM pg_source TABLE 'public.mentions';
 
 -- :down
-DROP TABLE IF EXISTS mentions;
+DROP TABLE IF EXISTS mentions CASCADE;
