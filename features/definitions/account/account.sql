@@ -1,15 +1,14 @@
 -- :up
-CREATE MATERIALIZED VIEW IF NOT EXISTS account_author_features_daily AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS author_engagements AS
 SELECT 
     window_start, 
     window_end, 
-    account_id, 
     author_id, 
     COUNT(*) FILTER (WHERE type = 'favourite') AS fav_count,
     COUNT(*) FILTER (WHERE type = 'reblog') AS reblogs_count,
     COUNT(*) FILTER (WHERE type = 'reply') AS replies_count
 FROM 
-    TUMBLE (enriched_status_engagements, event_time, INTERVAL '1 DAY')
+    TUMBLE (status_engagements, event_time, INTERVAL '1 HOUR')
 GROUP BY 
     account_id, author_id, window_start, window_end;
 
@@ -18,7 +17,7 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS account_author_features AS
 SELECT
     account_id, 
     author_id, 
-    window_end as event_time, 
+    window_end, 
 
     -- 7d
     SUM(fav_count) OVER (PARTITION BY account_id, author_id ORDER BY window_end ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS fav_count_7d,
@@ -37,7 +36,7 @@ WITH (
     connector='kafka',
     properties.bootstrap.server='${bootstrap_server}',
     topic='account_author_features',
-    primary_key='account_id,author_id,event_time',
+    primary_key='account_id,author_id,window_end',
 ) FORMAT DEBEZIUM ENCODE JSON;
 
 -- :down

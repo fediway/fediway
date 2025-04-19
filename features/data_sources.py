@@ -4,7 +4,6 @@ from feast import (
     PushSource,
 )
 
-
 account_author_batch_source = FileSource(
     name="account_author_source",
     path=f"../data/account_author.parquet",

@@ -1,5 +1,6 @@
 
 import psycopg2
+from jinja2 import Template
 from pathlib import Path
 import typer
 import re
@@ -25,7 +26,10 @@ def parse_migration(sql):
     up_sql = re.search(r'--\s*:up(.*?)(--\s*:down|$)', sql, re.DOTALL)
     down_sql = re.search(r'--\s*:down(.*)', sql, re.DOTALL)
 
-    return up_sql.group(1).strip(), down_sql.group(1).strip() if down_sql else None
+    up_sql = Template(up_sql.group(1).strip()).render()
+    down_sql = Template(down_sql.group(1).strip()).render() if down_sql else None
+
+    return up_sql, down_sql
 
 def ensure_migration_table(conn):
     with conn.cursor() as cur:

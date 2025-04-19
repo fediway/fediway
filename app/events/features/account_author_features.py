@@ -1,5 +1,6 @@
 
 from feast import FeatureStore
+from feast.data_source import PushMode
 from loguru import logger
 import time
 
@@ -19,11 +20,11 @@ class AccountAuthorFeaturesEventHandler(DebeziumEventHandler):
         logger.debug(f"Updated account_author_features.")
 
     async def deleted(self, data: dict):
-        logger.debug(f"Deleted account_author_features.")
+        pass
 
     def _push(self, data):
         now = int(time.time() * 1000)
-        
+
         self.fs.push("account_author_features", [{
             'account_id': data['account_id'],
             'author_id': data['author_id'],
@@ -36,4 +37,4 @@ class AccountAuthorFeaturesEventHandler(DebeziumEventHandler):
             'fav_count_30d': data['fav_count_30d'],
             'reblogs_count_30d': data['reblogs_count_30d'],
             'replies_count_30d': data['replies_count_30d'],
-        }])
+        }], to=PushMode.ONLINE_AND_OFFLINE)
