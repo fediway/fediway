@@ -170,14 +170,14 @@ class SeedHerdeService:
                 bar.update(1)
 
     def seed_accounts(self, batch_size: int = 100):
-        query = select(Account)
+        query = select(Account.id, Account.indexable)
         # total = self.db.scalar(select(func.count(Account.id)))
 
         bar = tqdm(desc="Accounts", unit="accounts")
 
         for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
             for row in batch:
-                self.herde.add_account(row)
+                self.herde.add_account(Account(**row))
                 bar.update(1)
 
     def seed_tags(self, batch_size: int = 100):
