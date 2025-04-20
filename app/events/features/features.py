@@ -8,7 +8,6 @@ import time
 from ..base import DebeziumEventHandler
 
 class FeaturesEventHandler(DebeziumEventHandler):
-
     def __init__(self, fs: FeatureStore, source: str):
         self.fs = fs
         self.source = source
