@@ -28,7 +28,7 @@ class Account(SQLModel, table=True):
     created_at: datetime | None = Field()
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     silenced_at: datetime | None = Field()
-    suspendet_at: datetime | None = Field()
+    suspended_at: datetime | None = Field()
     sensitized_at: datetime | None = Field()
     display_name: str = Field(nullable=False)
     note: str = Field(nullable=False)

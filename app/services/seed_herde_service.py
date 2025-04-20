@@ -29,11 +29,11 @@ class SeedHerdeService:
         with utils.duration("Set up memgraph in {:.3f} seconds"):
             self.herde.setup()
 
-        with utils.duration("Created favourite seeds in {:.3f} seconds"):
-            self.seed_tags()
-
         with utils.duration("Seeded accounts in {:.3f} seconds"):
             self.seed_accounts()
+
+        with utils.duration("Seeded tags in {:.3f} seconds"):
+            self.seed_tags()
 
         with utils.duration("Seeded statuses in {:.3f} seconds"):
             self.seed_statuses()
@@ -170,14 +170,14 @@ class SeedHerdeService:
                 bar.update(1)
 
     def seed_accounts(self, batch_size: int = 100):
-        query = select(Account.id, Account.indexable)
+        query = select(Account)
         # total = self.db.scalar(select(func.count(Account.id)))
 
         bar = tqdm(desc="Accounts", unit="accounts")
 
         for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
             for row in batch:
-                self.herde.add_account(Account(**row))
+                self.herde.add_account(row)
                 bar.update(1)
 
     def seed_tags(self, batch_size: int = 100):
