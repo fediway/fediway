@@ -71,6 +71,8 @@ for group, group_entities, specs in GROUPS:
                 batch_source=batch_source,
             )
             
+            print(push_source.name)
+            
             schema = flatten([[
                 Field(name=f"{fv_name}.{name}_{spec}", dtype=Int64) for name in feats['fields']
             ] for spec in specs])

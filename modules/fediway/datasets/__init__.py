@@ -1,8 +1,6 @@
 
-from .statuses_dataset import StatusesDataset
-from .interaction_graph_dataset import InteractionGraphDataset
+from .ranker_v1_dataset import RankerV1Dataset
 
 DATASETS = {
-    # 'statuses': StatusesDataset,
-    'interaction-graph': InteractionGraphDataset,
+    'ranker-v1': RankerV1Dataset
 }

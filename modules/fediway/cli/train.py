@@ -26,29 +26,18 @@ def train_kirby(
         help="Model name",
         callback=validate_kirby_model
     ),
-    features: list[str] = [
-        'feat.status.age_in_seconds',
-        'feat.status.num_images',
-        'feat.status.num_videos',
-        'feat.status.num_gifs',
-        'feat.status.num_tags',
-        'feat.status.num_mentions',
-
-        # 'feat.interactions.a2b.num_favourites',
-        'feat.interactions.a2b.num_mentions',
-        'feat.interactions.a2b.is_following',
-
-        # 'feat.interactions.b2a.num_favourites',
-        'feat.interactions.b2a.num_mentions',
-        'feat.interactions.b2a.is_following',
-    ],
+    features: str = 'ranker',
     label: str = 'label.is_favourited',
     dataset_path: str = 'data/datasets',
     seed: int = 42
 ) -> int:
+    from app.core.fs import get_feature_store
     np.random.seed(seed)
 
+    fs = get_feature_store()
+
     dataset = load_from_disk(Path(dataset_path) / dataset)
+    features = [f for f in dataset['train'].features.keys() if not f.startswith('label.')]
 
     ranker = getattr(Kirby, model)(features=features, label=label)
     ranker.train(dataset['train'])

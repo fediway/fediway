@@ -21,7 +21,7 @@ def _feast_type_to_pa_type(_type):
         String: pa.string(),
         Bytes: pa.binary(),
         Bool: pa.bool_(),
-        UnixTimestamp: pa.timestamp('ns'),
+        UnixTimestamp: pa.timestamp('s'),
     }
     return type_mapping[_type]
 
@@ -29,8 +29,10 @@ def init_file_source(fv: FeatureView, source: FileSource):
     path = Path(source.path)
     if path.exists():
         return
-    arrays = [pa.array([], pa.timestamp('ns'))]
-    schema = [('event_time', pa.timestamp('ns'))]
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    arrays = [pa.array([], pa.timestamp('s'))]
+    schema = [('event_time', pa.timestamp('s'))]
     for entity in fv.entities:
         arrays.append(pa.array([], pa.int64()))
         schema.append((entity, pa.int64()))

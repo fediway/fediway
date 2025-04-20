@@ -1,4 +1,5 @@
 
+from feast import FeatureStore
 from datetime import datetime
 from pathlib import Path
 import typer
@@ -25,19 +26,24 @@ def create_dataset(
     test_size: float = 0.2,
     path: str = 'data/datasets',
 ) -> int:
-    from app.core.db import get_db_session
+    from app.core.rw import get_rw_session
+    from app.core.fs import get_feature_store
 
     typer.echo(f"Creating dataset: {name}")
 
     dataset_cls = DATASETS[name]
-    db = next(get_db_session())
+    
+    rw = next(get_rw_session())
+    fs = get_feature_store()
+    dataset = dataset_cls.extract(fs, rw)
 
     dataset_path = Path(path) / f"{name}_{datetime.now().strftime('%d_%m_%Y')}"
-    dataset = dataset_cls.extract(db, chunk_size=chunk_size)
     dataset = dataset.train_test_split(test_size=test_size)
     dataset.save_to_disk(str(dataset_path))
 
     typer.echo(dataset)
     typer.echo(f"Saved dataset to path {dataset_path}")
+
+    rw.close()
 
     return 0

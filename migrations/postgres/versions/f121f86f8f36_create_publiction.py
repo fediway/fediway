@@ -39,5 +39,5 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.execute("""
-    DROP PUBLICATION IF EXISTS risingwave_pub;
+    DROP PUBLICATION risingwave_pub;
     """);

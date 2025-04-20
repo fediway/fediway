@@ -19,7 +19,7 @@ class AccountEventHandler():
     async def updated(self, old: Account, new: Account):
         if new.silenced_at is not None:
             await self.deleted(account)
-        elif new.suspendet_at is not None:
+        elif new.suspended_at is not None:
             await self.deleted(account)
         elif new.silenced_at is not None:
             await self.deleted(account)

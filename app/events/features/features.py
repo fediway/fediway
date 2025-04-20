@@ -23,7 +23,7 @@ class FeaturesEventHandler(DebeziumEventHandler):
         pass
 
     def _push(self, data):
-        now = int(time.time() * 1000)
+        now = int(time.time())
 
         features = {}
         for key, value in data.items():
@@ -31,7 +31,7 @@ class FeaturesEventHandler(DebeziumEventHandler):
                 key = f"{self.source.replace('_features', '')}.{key}"
             features[key] = value
         
-        features['event_time'] = min(now, data['event_time'])
+        features['event_time'] = min(now, data['event_time'] * 1000)
 
         self.fs.push(self.source, pd.DataFrame([features]), to=PushMode.ONLINE_AND_OFFLINE)
 

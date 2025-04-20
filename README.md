@@ -11,7 +11,7 @@ uvicorn app.main:app --reload
 ## Kafka Consumer
 
 ```sh
-faststream run app.consumer:app
+faststream run app.pipeline:app --workers 4
 ```
 
 ## Job Scheduling
@@ -29,10 +29,10 @@ celery -A app.worker worker --loglevel=info
 ```
 
 <!-- Start worker to process topics
-
 ```sh
 celery -A jobs.main worker --queues=topics --loglevel=info
-``` -->
+``` 
+-->
 
 ## Setup
 

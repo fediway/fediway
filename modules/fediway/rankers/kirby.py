@@ -14,7 +14,8 @@ class Kirby():
 
     MODELS = [
         'linear',
-        'random_forest'
+        'random_forest',
+        'xgboost'
     ]
 
     def __init__(self, 
@@ -47,6 +48,18 @@ class Kirby():
                       n_estimators: int = 1000, 
                       random_state: int = None):
         model = RandomForestClassifier(n_estimators=n_estimators)
+        scaler = get_scaler(scaler)
+
+        return cls(model, scaler, features, label)
+
+    @classmethod
+    def xgboost(cls, 
+                      features: list[str], 
+                      label: str, 
+                      scaler: str = 'standard', 
+                      random_state: int = None):
+        from xgboost import XGBClassifier
+        model = XGBClassifier()
         scaler = get_scaler(scaler)
 
         return cls(model, scaler, features, label)

@@ -20,17 +20,19 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column('media_attachments', sa.Column('aspect_ratio', sa.Float))
-    op.add_column('media_attachments', sa.Column('duration_seconds', sa.Integer))
-    op.add_column('media_attachments', sa.Column('fps', sa.Integer))
-    op.add_column('media_attachments', sa.Column('preview_url', sa.String))
-    op.add_column('media_attachments', sa.Column('text_url', sa.String))
+    pass
+    # op.add_column('media_attachments', sa.Column('aspect_ratio', sa.Float))
+    # op.add_column('media_attachments', sa.Column('duration_seconds', sa.Integer))
+    # op.add_column('media_attachments', sa.Column('fps', sa.Integer))
+    # op.add_column('media_attachments', sa.Column('preview_url', sa.String))
+    # op.add_column('media_attachments', sa.Column('text_url', sa.String))
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_column('media_attachments', 'aspect_ratio')
-    op.drop_column('media_attachments', 'duration_seconds')
-    op.drop_column('media_attachments', 'fps')
-    op.drop_column('media_attachments', 'preview_url')
-    op.drop_column('media_attachments', 'text_url')
+    pass
+    # op.drop_column('media_attachments', 'aspect_ratio')
+    # op.drop_column('media_attachments', 'duration_seconds')
+    # op.drop_column('media_attachments', 'fps')
+    # op.drop_column('media_attachments', 'preview_url')
+    # op.drop_column('media_attachments', 'text_url')

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+export FEAST_REGISTRY=../data/features.db
+export REDIS_URL=localhost:6379
+
+feast -c features $1
