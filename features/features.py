@@ -1,12 +1,12 @@
 
-from feast import FeatureView, Field, FileSource, PushSource, FeatureService
-from feast.data_format import JsonFormat
+import os
+from feast import FeatureView, Field, FileSource, PushSource
+from feast.data_format import JsonFormat, ParquetFormat
 from feast.types import Int64
 from datetime import timedelta
 
 from entities import account, author
-from data_sources import account_author_push_source
-from utils import flatten
+from utils import flatten, init_file_source
 
 author_features = []
 account_features = []
@@ -56,8 +56,19 @@ schema = []
 for group, group_entities, specs in GROUPS:
     for feats in FEATURES:
         for t in feats['types']:
-
             fv_name = f"{group}_{feats['name']}_{t}"
+            
+            batch_source = FileSource(
+                name=f"{fv_name}_source",
+                path=f"{os.getcwd()}/../data/features/{fv_name}.parquet",
+                timestamp_field="event_time",
+                file_format=ParquetFormat(),
+            )
+            push_source = PushSource(
+                name=f"{fv_name}_features",
+                batch_source=batch_source,
+            )
+            
             schema = flatten([[
                 Field(name=f"{fv_name}.{name}_{spec}", dtype=Int64) for name in feats['fields']
             ] for spec in specs])
@@ -67,14 +78,7 @@ for group, group_entities, specs in GROUPS:
                 ttl=timedelta(days=365),
                 schema=schema,
                 online=True, 
-                source=PushSource(
-                    name=f"{fv_name}_features",
-                    batch_source=FileSource(
-                        name=f"{fv_name}_source",
-                        path=f"../data/{fv_name}.parquet",
-                        timestamp_field="event_time",
-                    ),
-                )
+                source=push_source
             )
 
             if group == 'account':
@@ -85,3 +89,7 @@ for group, group_entities, specs in GROUPS:
                 account_author_features.append(_fv)
             
             globals()[_fv.name] = _fv
+            globals()[push_source.name] = push_source
+            globals()[batch_source.name] = batch_source
+
+            init_file_source(_fv, batch_source)

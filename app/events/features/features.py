@@ -2,6 +2,7 @@
 from feast import FeatureStore
 from feast.data_source import PushMode
 from loguru import logger
+import pandas as pd
 import time
 
 from ..base import DebeziumEventHandler
@@ -33,6 +34,6 @@ class FeaturesEventHandler(DebeziumEventHandler):
         
         features['event_time'] = min(now, data['event_time'])
 
-        self.fs.push(self.source, [features])
+        self.fs.push(self.source, pd.DataFrame([features]), to=PushMode.ONLINE_AND_OFFLINE)
 
         logger.debug(f"Pushed features to {self.source}.")

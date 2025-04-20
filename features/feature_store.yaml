@@ -6,4 +6,4 @@ online_store:
   type: redis
   connection_string: "localhost:6379"
 offline_store:
-  type: file
+  type: dask
