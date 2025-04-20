@@ -21,15 +21,14 @@ class DBConfig(BaseConfig):
     rw_user: str       = "root"
     rw_pass: SecretStr = ""
     rw_name: str       = "dev"
-    rw_migrations_paths: list[str] = [
-        'migrations/risingwave',
-        'features/definitions/account_author',
-    ]
+    rw_migrations_paths: list[str] = ['migrations/risingwave']
     rw_migrations_table: str = "migrations"
 
     rw_pg_host: str | None = None
     rw_pg_user: str        = "risingwave"
     rw_pg_pass: SecretStr  = "password"
+    rw_kafka_host: str = 'kafka'
+    rw_kafka_port: int = 9092
 
     # --- Kafka ---
 

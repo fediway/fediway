@@ -1,5 +1,6 @@
 
 from pydantic import BaseModel
+from loguru import logger
 
 class DebeziumPayload(BaseModel):
     op: str  # 'c', 'u', 'd', etc.
@@ -31,3 +32,10 @@ async def process_debezium_event(event: DebeziumEvent, handler, args):
         callback_args = (handler.parse(event.payload.after), )
 
     await getattr(handler(*args), method)(*callback_args)
+
+def make_debezium_handler(broker, topic: str, event_handler, args):
+    @broker.subscriber(topic)
+    async def _handler(event: DebeziumEvent):
+        logger.debug(f"Consuming debezium event {topic}.")
+        await process_debezium_event(event, event_handler, args=args)
+    return _handler

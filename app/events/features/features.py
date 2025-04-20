@@ -8,10 +8,9 @@ from ..base import DebeziumEventHandler
 
 class FeaturesEventHandler(DebeziumEventHandler):
 
-    def __init__(self, fs: FeatureStore, fv: str, source: str):
+    def __init__(self, fs: FeatureStore, source: str):
         self.fs = fs
         self.source = source
-        self.fv = fv
 
     async def created(self, data: dict):
         self._push(data)
@@ -29,13 +28,11 @@ class FeaturesEventHandler(DebeziumEventHandler):
         features = {}
         for key, value in data.items():
             if key not in ['author_id', 'account_id', 'event_time']:
-                key = f"{self.source.replace('_features', '')}_{key}"
+                key = f"{self.source.replace('_features', '')}.{key}"
             features[key] = value
-        print(features.keys())
+        
         features['event_time'] = min(now, data['event_time'])
 
-        logger.debug(f"Pushing features to {self.source}.")
-
-        self.fs.push(self.fv, [data])
+        self.fs.push(self.source, [features])
 
         logger.debug(f"Pushed features to {self.source}.")
