@@ -1,9 +1,9 @@
 project: fediway
-registry: ../data/registry.db
+registry: ${FEAST_REGISTRY}
 provider: local
 entity_key_serialization_version: 2
 online_store:
   type: redis
-  connection_string: "localhost:6379"
+  connection_string: ${REDIS_URL}
 offline_store:
   type: duckdb

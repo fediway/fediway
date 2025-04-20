@@ -8,6 +8,8 @@ from datetime import timedelta
 from entities import account, author
 from utils import flatten, init_file_source
 
+offline_store_path = os.environ.get("OFFLINE_STORE_PATH") or f"{os.getcwd()}/../data/features"
+
 author_features = []
 account_features = []
 account_author_features = []
@@ -60,7 +62,7 @@ for group, group_entities, specs in GROUPS:
             
             batch_source = FileSource(
                 name=f"{fv_name}_source",
-                path=f"{os.getcwd()}/../data/features/{fv_name}.parquet",
+                path=f"{offline_store_path}/{fv_name}.parquet",
                 timestamp_field="event_time",
                 file_format=ParquetFormat(),
             )
