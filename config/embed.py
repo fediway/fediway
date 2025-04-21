@@ -6,7 +6,12 @@ from .base import BaseConfig
 
 class EmbedConfig(BaseConfig):
     sentence_transformer: str = 'sentence-transformers/all-MiniLM-L6-v2'
-    text_embed_max_batch_size: int = 8
+    
+    clip_model: str = 'M-CLIP/LABSE-Vit-L-14'
+    clip_enabled: bool = False
+
+    embed_max_batch_size: int = 8
+    embed_text_min_chars: int = 4
 
     k_latest_account_favourites_embeddings: int = 50
     k_latest_account_reblogs_embeddings: int = 50

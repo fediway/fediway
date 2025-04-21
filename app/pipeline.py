@@ -4,6 +4,8 @@ from faststream import FastStream
 from faststream.confluent import KafkaBroker
 from loguru import logger
 
+from modules.fediway.sources.herde import Herde
+
 from .stream.herde import (
     AccountEventHandler as HerdeAccountEventHandler,
     StatusEventHandler as HerdeStatusEventHandler,
@@ -14,12 +16,12 @@ from .stream.herde import (
     TagEventHandler as HerdeTagEventHandler,
 )
 from .stream.features import FeaturesEventHandler
-from modules.fediway.sources.herde import Herde
 from .modules.debezium import make_debezium_handler, DebeziumEvent, process_debezium_event
+from core.fs import fs as feature_store
+from .core.qdrant import client
 from .core.herde import driver
 from config import config
 
-feature_store = FeatureStore(repo_path=config.feast.feast_repo_path)
 broker = KafkaBroker(config.db.kafka_url)
 app = FastStream(broker)
 
@@ -53,7 +55,23 @@ for topic in feature_topics:
     make_debezium_handler(
         broker, topic, 
         FeaturesEventHandler, 
-        args=(feature_store, topic)
+        args=(feature_store, topic),
+        group_id="features"
+    )
+
+# Embedding conumers (responsible for pushing vectors to qdrant)
+
+account_embedding_topics = [
+    'latest_account_favourites_embeddings',
+    'latest_account_reblogs_embeddings',
+    'latest_account_replies_embeddings',
+]
+
+for topic in account_embedding_topics:
+    make_debezium_handler(
+        broker, topic, 
+        AccountEmbeddingsEventHandler, 
+        args=(client, topic)
     )
 
 # Herde consumers (responsible for pushing data to memgraph)
@@ -83,11 +101,5 @@ async def on_statuses_tags(event: DebeziumEvent):
     await process_debezium_event(event, HerdeStatusTagEventHandler, args=(Herde(driver), ))
 
 @broker.subscriber("tags")
-async def on_tags(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeTagEventHandler, args=(Herde(driver), ))
-
-# Qdrand consumer (responsible for pushing to vector database qdrand)
-
-@broker.subscriber("status_text_embeddings")
 async def on_tags(event: DebeziumEvent):
     await process_debezium_event(event, HerdeTagEventHandler, args=(Herde(driver), ))

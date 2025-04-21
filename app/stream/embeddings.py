@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 import app.utils as utils
-from app.modules.embed import Embedder
+from app.modules.embed import Embedder, MultimodalEmbedder
 from app.modules.debezium import DebeziumBatchHandler, DebeziumEventHandler
 
 class StatusEmbeddings(BaseModel):
@@ -15,9 +15,10 @@ class StatusEmbeddings(BaseModel):
     embedding: list[float]
     created_at: datetime
 
-class TextEmbeddingsEventHandler(DebeziumBatchHandler):
-    def __init__(self, embedder: Embedder):
+class TextEmbeddingsBatchHandler(DebeziumBatchHandler):
+    def __init__(self, embedder: Embedder, min_chars: int = 4):
         self.embedder = embedder
+        self.min_chars = min_chars
 
     async def created(self, data: list[dict]):
         return self._embed(data)
@@ -25,10 +26,21 @@ class TextEmbeddingsEventHandler(DebeziumBatchHandler):
     async def updated(self, old: list[dict], new: list[dict]):
         return self._embed(new)
 
+    def _filtered_texts(self, data: list[dict]):
+        return [item['text'] for item in data if len(item['text']) >= self.min_chars]
+
     def _embed(self, data):
         status_ids = [item['status_id'] for item in data]
+        texts = self._filtered_texts(data)
+
+        if len(texts) == 0:
+            return []
+
         with utils.duration("Generated text embeddings in {:.3f} seconds."):
-            embeddings = self.embedder([item['text'] for item in data])
+            if isinstance(self.embedder, MultimodalEmbedder):
+                embeddings = self.embedder.texts(texts)
+            else:
+                embeddings = self.embedder(texts)
         created_at = datetime.now()
         
         return [StatusEmbeddings(
@@ -62,11 +74,13 @@ class AccountEmbeddingsEventHandler(DebeziumEventHandler):
         
         embeddings = np.array(data['embeddings'])
 
+        print(np.mean(embeddings, axis=0).shape)
+
         self.client.upsert(
             collection_name=self.collection,
             points=[models.PointStruct(
                 id=data['account_id'],
-                vector=np.mean(embeddings, axis=0).tolist()
+                vector=np.mean(embeddings, axis=0)
             )]
         )
 

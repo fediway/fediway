@@ -2,7 +2,7 @@
 from qdrant_client import models
 import typer
 
-from app.core.embed import text_embeder
+from app.core.embed import embedder
 from app.core.qdrant import client
 from config import config
 
@@ -21,8 +21,17 @@ def migrate():
         if client.collection_exists(collection):
             continue
         
-        vectors_config = models.VectorParams(size=text_embeder.dim(), distance=models.Distance.COSINE)
+        vectors_config = models.VectorParams(size=embedder.dim(), distance=models.Distance.COSINE)
         client.create_collection(collection_name=collection, vectors_config=vectors_config)
 
         typer.echo(f"✅ Created '{collection}' collection.")
 
+@app.command("purge")
+def purge():
+    for collection in COLLECTIONS:
+        if not client.collection_exists(collection):
+            continue
+        
+        client.delete_collection(collection_name=collection)
+
+        typer.echo(f"✅ Deleted '{collection}' collection.")
