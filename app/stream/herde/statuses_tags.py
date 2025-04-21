@@ -5,7 +5,9 @@ from loguru import logger
 from app.modules.models import StatusTag
 from modules.fediway.sources.herde import Herde
 
-class StatusTagEventHandler():
+from app.modules.debezium import DebeziumEventHandler
+
+class StatusTagEventHandler(DebeziumEventHandler):
     def __init__(self, herde: Herde):
         self.herde = herde
 

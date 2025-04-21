@@ -5,7 +5,9 @@ from loguru import logger
 from app.modules.models import Account
 from modules.fediway.sources.herde import Herde
 
-class AccountEventHandler():
+from app.modules.debezium import DebeziumEventHandler
+
+class AccountEventHandler(DebeziumEventHandler):
     def __init__(self, herde: Herde):
         self.herde = herde
 

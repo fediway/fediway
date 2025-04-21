@@ -5,7 +5,7 @@ from loguru import logger
 import pandas as pd
 import time
 
-from ..base import DebeziumEventHandler
+from app.modules.debezium import DebeziumEventHandler
 
 class FeaturesEventHandler(DebeziumEventHandler):
     def __init__(self, fs: FeatureStore, source: str):
@@ -14,7 +14,6 @@ class FeaturesEventHandler(DebeziumEventHandler):
 
     async def created(self, data: dict):
         self._push(data)
-        
 
     async def updated(self, old: dict, new: dict):
         self._push(new)

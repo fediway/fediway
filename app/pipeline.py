@@ -4,7 +4,7 @@ from faststream import FastStream
 from faststream.confluent import KafkaBroker
 from loguru import logger
 
-from .events.herde import (
+from .stream.herde import (
     AccountEventHandler as HerdeAccountEventHandler,
     StatusEventHandler as HerdeStatusEventHandler,
     FavouriteEventHandler as HerdeFavouriteEventHandler,
@@ -13,7 +13,7 @@ from .events.herde import (
     StatusTagEventHandler as HerdeStatusTagEventHandler,
     TagEventHandler as HerdeTagEventHandler,
 )
-from .events.features.features import FeaturesEventHandler
+from .stream.features import FeaturesEventHandler
 from modules.fediway.sources.herde import Herde
 from .modules.debezium import make_debezium_handler, DebeziumEvent, process_debezium_event
 from .core.herde import driver
@@ -56,6 +56,8 @@ for topic in feature_topics:
         args=(feature_store, topic)
     )
 
+# Herde consumers (responsible for pushing data to memgraph)
+
 @broker.subscriber("accounts")
 async def on_accounts(event: DebeziumEvent):
     await process_debezium_event(event, HerdeAccountEventHandler, args=(Herde(driver), ))
@@ -81,5 +83,11 @@ async def on_statuses_tags(event: DebeziumEvent):
     await process_debezium_event(event, HerdeStatusTagEventHandler, args=(Herde(driver), ))
 
 @broker.subscriber("tags")
+async def on_tags(event: DebeziumEvent):
+    await process_debezium_event(event, HerdeTagEventHandler, args=(Herde(driver), ))
+
+# Qdrand consumer (responsible for pushing to vector database qdrand)
+
+@broker.subscriber("status_text_embeddings")
 async def on_tags(event: DebeziumEvent):
     await process_debezium_event(event, HerdeTagEventHandler, args=(Herde(driver), ))
