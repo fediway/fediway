@@ -77,30 +77,30 @@ for topic in account_embedding_topics:
 
 # Herde consumers (responsible for pushing data to memgraph)
 
-@broker.subscriber("accounts")
-async def on_accounts(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeAccountEventHandler, args=(Herde(driver), ))
+# @broker.subscriber("accounts")
+# async def on_accounts(event: DebeziumEvent):
+#     await process_debezium_event(event, HerdeAccountEventHandler, args=(Herde(driver), ))
 
-@broker.subscriber("statuses")
-async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeStatusEventHandler, args=(Herde(driver), ))
+# @broker.subscriber("statuses")
+# async def on_status(event: DebeziumEvent):
+#     await process_debezium_event(event, HerdeStatusEventHandler, args=(Herde(driver), ))
 
-@broker.subscriber("mentions")
-async def on_mentions(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeMentionEventHandler, args=(Herde(driver), ))
+# @broker.subscriber("mentions")
+# async def on_mentions(event: DebeziumEvent):
+#     await process_debezium_event(event, HerdeMentionEventHandler, args=(Herde(driver), ))
 
-@broker.subscriber("follows")
-async def on_follows(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeFollowEventHandler, args=(Herde(driver), ))
+# @broker.subscriber("follows")
+# async def on_follows(event: DebeziumEvent):
+#     await process_debezium_event(event, HerdeFollowEventHandler, args=(Herde(driver), ))
 
-@broker.subscriber("favourites")
-async def on_favourites(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeFavouriteEventHandler, args=(Herde(driver), ))
+# @broker.subscriber("favourites")
+# async def on_favourites(event: DebeziumEvent):
+#     await process_debezium_event(event, HerdeFavouriteEventHandler, args=(Herde(driver), ))
 
-@broker.subscriber("statuses_tags")
-async def on_statuses_tags(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeStatusTagEventHandler, args=(Herde(driver), ))
+# @broker.subscriber("statuses_tags")
+# async def on_statuses_tags(event: DebeziumEvent):
+#     await process_debezium_event(event, HerdeStatusTagEventHandler, args=(Herde(driver), ))
 
-@broker.subscriber("tags")
-async def on_tags(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeTagEventHandler, args=(Herde(driver), ))
+# @broker.subscriber("tags")
+# async def on_tags(event: DebeziumEvent):
+#     await process_debezium_event(event, HerdeTagEventHandler, args=(Herde(driver), ))

@@ -1,4 +1,4 @@
--- 001_create_source.sql
+
 -- :up
 CREATE TABLE tags (
     id BIGINT PRIMARY KEY,

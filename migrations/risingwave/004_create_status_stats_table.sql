@@ -1,4 +1,4 @@
--- 001_create_source.sql
+
 -- :up
 CREATE TABLE status_stats (
     id BIGINT PRIMARY KEY,

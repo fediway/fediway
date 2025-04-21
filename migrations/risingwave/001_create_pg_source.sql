@@ -1,4 +1,4 @@
--- 001_create_source.sql
+
 -- :up
 CREATE SOURCE pg_source WITH (
     connector = 'postgres-cdc',

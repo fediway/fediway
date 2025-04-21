@@ -11,4 +11,4 @@ CREATE TABLE status_text_embeddings (
 ) FORMAT PLAIN ENCODE JSON;
 
 -- :down
-DROP TABLE IF EXISTS status_text_embeddings;
+DROP TABLE IF EXISTS status_text_embeddings CASCADE;

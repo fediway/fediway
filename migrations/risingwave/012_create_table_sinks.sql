@@ -1,4 +1,4 @@
--- 001_create_source.sql
+
 -- :up
 {% for table, primary_key in [
     ('accounts', 'id'), 

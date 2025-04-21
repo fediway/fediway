@@ -1,4 +1,4 @@
--- 001_create_source.sql
+
 -- :up
 CREATE TABLE mentions (
     id BIGINT PRIMARY KEY,
