@@ -6,9 +6,9 @@ from loguru import logger
 
 from modules.fediway.sources.herde import Herde
 
-from app.stream.embeddings import AccountEmbeddingsEventHandler
-from app.stream.features import FeaturesEventHandler
-from app.stream.herde import (
+from app.streaming.embeddings import AccountEmbeddingsEventHandler
+from app.streaming.features import FeaturesEventHandler
+from app.streaming.herde import (
     AccountEventHandler as HerdeAccountEventHandler,
     StatusEventHandler as HerdeStatusEventHandler,
     FavouriteEventHandler as HerdeFavouriteEventHandler,
@@ -18,7 +18,7 @@ from app.stream.herde import (
     TagEventHandler as HerdeTagEventHandler,
 )
 from app.modules.debezium import make_debezium_handler, DebeziumEvent, process_debezium_event
-from app.core.fs import fs as feature_store
+from app.core.feast import feature_store
 from app.core.qdrant import client
 from app.core.herde import driver
 from config import config

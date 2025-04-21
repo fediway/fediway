@@ -18,3 +18,6 @@ def duration(message, level=logging.INFO):
         message = message(elapsed_time)
     
     logger.log(level, message.format(elapsed_time))
+
+def flatten(arr):
+    return reduce(operator.add, arr)

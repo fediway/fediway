@@ -2,8 +2,6 @@
 from qdrant_client import models
 import typer
 
-from app.core.embed import embedder
-from app.core.qdrant import client
 from config import config
 
 app = typer.Typer(help="Qdrant commands.")
@@ -17,6 +15,9 @@ COLLECTIONS = [
 
 @app.command("migrate")
 def migrate():
+    from app.core.embed import embedder
+    from app.core.qdrant import client
+
     for collection in COLLECTIONS:
         if client.collection_exists(collection):
             continue
@@ -28,6 +29,9 @@ def migrate():
 
 @app.command("purge")
 def purge():
+    from app.core.embed import embedder
+    from app.core.qdrant import client
+    
     for collection in COLLECTIONS:
         if not client.collection_exists(collection):
             continue

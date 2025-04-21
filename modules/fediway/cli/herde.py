@@ -6,7 +6,6 @@ import time
 
 from config import config
 from modules.fediway.sources.herde import Herde
-from app.core.db import get_db_session
 
 app = typer.Typer(help="Herde commands.")
 
@@ -60,6 +59,8 @@ def seed():
     from app.modules.models import Account, Status, Follow, Favourite
     from app.services.seed_herde_service import SeedHerdeService
     from tqdm import tqdm
+    from app.core.db import get_db_session
+
     db = next(get_db_session())
     SeedHerdeService(db, get_driver()).seed()
     db.close()

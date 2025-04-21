@@ -1,9 +1,0 @@
-project: fediway
-registry: ${FEAST_REGISTRY}
-provider: local
-entity_key_serialization_version: 2
-online_store:
-  type: redis
-  connection_string: ${REDIS_URL}
-offline_store:
-  type: duckdb

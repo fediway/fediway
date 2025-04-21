@@ -1,8 +1,6 @@
 
 from feast import Entity, ValueType
 
-# --- core entitites ---
-
 account = Entity(
     name="account_id",
     value_type=ValueType.INT64,
@@ -20,18 +18,3 @@ status = Entity(
     value_type=ValueType.INT64,
     description="Status identifier"
 )
-
-# --- composite entitites ---
-
-# account_status = Entity(
-#     name="account_status",
-#     value_type=ValueType.STRING,
-#     join_keys=["account_id", "status_id"]
-# )
-
-# account_author = Entity(
-#     name="account_author",
-#     value_type=ValueType.STRING,
-#     join_keys=["account_id", "author_id"]
-# )
-
