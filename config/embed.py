@@ -10,7 +10,7 @@ class EmbedConfig(BaseConfig):
     clip_model: str = 'M-CLIP/LABSE-Vit-L-14'
     clip_enabled: bool = False
 
-    embed_max_batch_size: int = 8
+    embed_max_batch_size: int = 16
     embed_text_min_chars: int = 4
 
     k_latest_account_favourites_embeddings: int = 50

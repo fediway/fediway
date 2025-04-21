@@ -36,7 +36,7 @@ class TextEmbeddingsBatchHandler(DebeziumBatchHandler):
         if len(texts) == 0:
             return []
 
-        with utils.duration("Generated text embeddings in {:.3f} seconds."):
+        with utils.duration("Generated "+str(len(texts))+" text embeddings in {:.3f} seconds."):
             if isinstance(self.embedder, MultimodalEmbedder):
                 embeddings = self.embedder.texts(texts)
             else:
