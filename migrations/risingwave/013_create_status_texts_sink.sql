@@ -1,4 +1,4 @@
--- 001_create_source.sql
+
 -- :up
 CREATE MATERIALIZED VIEW status_texts AS
 SELECT

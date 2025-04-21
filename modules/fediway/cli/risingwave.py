@@ -1,5 +1,6 @@
 
 import psycopg2
+from confluent_kafka.admin import AdminClient, NewTopic
 from jinja2 import Template
 from pathlib import Path
 import typer
@@ -57,6 +58,12 @@ def get_connection():
 
 @app.command("migrate")
 def migrate():
+    # admin = AdminClient({'bootstrap.servers': config.db.kafka_url})
+    # topic = NewTopic("status_text_embeddings", num_partitions=1, replication_factor=1)
+    # admin.create_topics([topic])
+    # exit()
+
+
     conn = get_connection()
     ensure_migration_table(conn)
     applied = get_applied_migrations(conn)
