@@ -1,6 +1,5 @@
 
 import psycopg2
-from confluent_kafka.admin import AdminClient, NewTopic
 from jinja2 import Template
 from pathlib import Path
 import typer
@@ -17,7 +16,10 @@ def get_context():
         "db_user": config.db.rw_pg_user,
         "db_pass": config.db.rw_pg_pass.get_secret_value(),
         "db_name": config.db.db_name,
-        "bootstrap_server": f"{config.db.rw_kafka_host}:{config.db.rw_kafka_port}"
+        "bootstrap_server": f"{config.db.rw_kafka_host}:{config.db.rw_kafka_port}",
+        "k_latest_account_favourites_embeddings": config.embed.k_latest_account_favourites_embeddings,
+        "k_latest_account_reblogs_embeddings": config.embed.k_latest_account_reblogs_embeddings,
+        "k_latest_account_replies_embeddings": config.embed.k_latest_account_replies_embeddings,
     }
 
 def env_substitute(sql: str, context: dict):
@@ -26,7 +28,7 @@ def env_substitute(sql: str, context: dict):
 def parse_migration(sql):
     up_sql = re.search(r'--\s*:up(.*?)(--\s*:down|$)', sql, re.DOTALL)
     down_sql = re.search(r'--\s*:down(.*)', sql, re.DOTALL)
-
+    
     up_sql = Template(up_sql.group(1).strip()).render()
     down_sql = Template(down_sql.group(1).strip()).render() if down_sql else None
 
@@ -58,12 +60,6 @@ def get_connection():
 
 @app.command("migrate")
 def migrate():
-    # admin = AdminClient({'bootstrap.servers': config.db.kafka_url})
-    # topic = NewTopic("status_text_embeddings", num_partitions=1, replication_factor=1)
-    # admin.create_topics([topic])
-    # exit()
-
-
     conn = get_connection()
     ensure_migration_table(conn)
     applied = get_applied_migrations(conn)
@@ -83,7 +79,7 @@ def migrate():
                 sql = env_substitute(f.read(), context)
 
             up_sql, _ = parse_migration(sql)
-
+            
             with conn.cursor() as cur:
                 cur.execute(up_sql)
                 cur.execute("INSERT INTO _migrations (version) VALUES (%s);", (version,))

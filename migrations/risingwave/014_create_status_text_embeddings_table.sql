@@ -3,7 +3,7 @@
 CREATE TABLE status_text_embeddings (
     status_id BIGINT PRIMARY KEY,
     embedding REAL[],
-    updated_at TIMESTAMP
+    created_at TIMESTAMP
 ) WITH (
     connector = 'kafka',
     topic = 'status_text_embeddings',

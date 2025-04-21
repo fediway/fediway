@@ -6,6 +6,8 @@ from .debezium import app as debezium_app
 from .train import app as train_app
 from .herde import app as herde_app
 from .risingwave import app as risingwave_app
+from .kafka import app as kafka_app
+from .qdrant import app as qdrant_app
 
 app = typer.Typer()
 
@@ -31,6 +33,18 @@ app.add_typer(
     herde_app,
     name="herde",
     help="Run actions on the Herde (in-memory interaction graph)"
+)
+
+app.add_typer(
+    kafka_app,
+    name="kafka",
+    help="Run actions for RisingWave (Streaming Platform)"
+)
+
+app.add_typer(
+    qdrant_app,
+    name="qdrant",
+    help="Run actions for Qdrant (Vector Database)"
 )
 
 app.add_typer(

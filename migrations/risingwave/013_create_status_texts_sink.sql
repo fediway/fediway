@@ -8,7 +8,6 @@ SELECT
 FROM statuses s
 WHERE 
     s.reblog_of_id IS NULL
-AND s.in_reply_to_id IS NULL
 AND s.text IS NOT NULL;
 
 CREATE SINK IF NOT EXISTS status_texts_sink

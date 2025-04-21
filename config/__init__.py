@@ -9,6 +9,7 @@ from .fediway import FediwayConfig
 from .files import FilesConfig
 from .geo import GeoLocationConfig
 from .logging import LoggingConfig
+from .qdrant import QdrantConfig
 from .session import SessionConfig
 from .tasks import TasksConfig
 
@@ -27,6 +28,7 @@ class config:
     files = FilesConfig()
     geo = GeoLocationConfig()
     logging = LoggingConfig()
+    qdrant = QdrantConfig()
     session = SessionConfig()
     tasks = TasksConfig()
 
