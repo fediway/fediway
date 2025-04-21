@@ -1,11 +1,15 @@
 
+from feast import FeatureStore
+from feast.data_source import PushMode
 from qdrant_client import QdrantClient, models
 from datetime import datetime
 from pydantic import BaseModel
 from loguru import logger
+import pandas as pd
 import numpy as np
 import time
 
+from config import config
 import app.utils as utils
 from app.modules.embed import Embedder, MultimodalEmbedder
 from app.modules.debezium import DebeziumBatchHandler, DebeziumEventHandler
@@ -52,9 +56,10 @@ class TextEmbeddingsBatchHandler(DebeziumBatchHandler):
 class AccountEmbeddingsEventHandler(DebeziumEventHandler):
     client: QdrantClient
 
-    def __init__(self, client: QdrantClient, collection: str):
+    def __init__(self, client: QdrantClient, fs: FeatureStore, topic: str):
+        self.fs = fs
         self.client = client
-        self.collection = collection
+        self.topic = topic
 
     async def created(self, data: dict):
         self._push(data)
@@ -72,16 +77,31 @@ class AccountEmbeddingsEventHandler(DebeziumEventHandler):
         if len(data['embeddings']) == 0:
             return
         
+        # aggregate embeddings
         embeddings = np.array(data['embeddings'])
-
-        print(np.mean(embeddings, axis=0).shape)
+        embeddings = np.mean(embeddings, axis=0)
 
         self.client.upsert(
-            collection_name=self.collection,
+            collection_name=self.topic,
             points=[models.PointStruct(
                 id=data['account_id'],
-                vector=np.mean(embeddings, axis=0)
+                vector=embeddings
             )]
         )
 
-        logger.debug(f"Updated account embeddings for {data['account_id']} in '{self.collection}' collection.")
+        logger.info(f"Updated account embeddings for {data['account_id']} in '{self.topic}' collection.")
+
+        # embeddings are only pushed to offline store (if enabled) for model training
+        # qdrant serves as the online store for embeddings
+        if config.feast.feast_offline_store_enabled:
+
+            event_time = int(time.time())
+            df = pd.DataFrame({
+                'account_id': data['account_id'],
+                'event_time': event_time,
+                f"{self.topic}.embeddings": [embeddings],
+            })
+
+            self.fs.push(f"{self.topic}_stream", df, to=PushMode.OFFLINE)
+
+            logger.info(f"Pushed '{self.topic}' for {data['account_id']} to offline feature store.")

@@ -1,7 +1,7 @@
 
 from feast import FeatureView, FileSource
 from feast.types import (
-    Int64, Float32, Float64, String, Bytes, Bool, Int32, UnixTimestamp
+    Int64, Float32, Float64, String, Bytes, Bool, Int32, UnixTimestamp, Array
 )
 import pyarrow as pa
 from pyarrow.parquet import ParquetDataset, write_table
@@ -23,6 +23,10 @@ def _feast_type_to_pa_type(_type):
         Bool: pa.bool_(),
         UnixTimestamp: pa.timestamp('s'),
     }
+
+    if isinstance(_type, Array):
+        return pa.list_(_feast_type_to_pa_type(_type.base_type))
+
     return type_mapping[_type]
 
 def init_file_source(fv: FeatureView, source: FileSource):

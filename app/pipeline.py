@@ -72,7 +72,7 @@ for topic in account_embedding_topics:
     make_debezium_handler(
         broker, topic, 
         AccountEmbeddingsEventHandler, 
-        args=(client, topic)
+        args=(client, feature_store, topic)
     )
 
 # Herde consumers (responsible for pushing data to memgraph)

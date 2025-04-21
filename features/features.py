@@ -2,7 +2,7 @@
 import os
 from feast import FeatureView, Field, FileSource, PushSource
 from feast.data_format import JsonFormat, ParquetFormat
-from feast.types import Int64
+from feast.types import Int64, Array, Float32
 from datetime import timedelta
 
 from entities import account, author
@@ -71,8 +71,6 @@ for group, group_entities, specs in GROUPS:
                 batch_source=batch_source,
             )
             
-            print(push_source.name)
-            
             schema = flatten([[
                 Field(name=f"{fv_name}.{name}_{spec}", dtype=Int64) for name in feats['fields']
             ] for spec in specs])
@@ -97,3 +95,41 @@ for group, group_entities, specs in GROUPS:
             globals()[batch_source.name] = batch_source
 
             init_file_source(_fv, batch_source)
+
+account_embeddings = []
+account_embedding_types = [
+    'latest_account_favourites_embeddings',
+    'latest_account_reblogs_embeddings',
+    'latest_account_replies_embeddings',
+]
+
+for embedding_type in account_embedding_types:
+    batch_source = FileSource(
+        name=f"{embedding_type}_source",
+        path=f"{offline_store_path}/{embedding_type}.parquet",
+        timestamp_field="event_time",
+        file_format=ParquetFormat(),
+    )
+    push_source = PushSource(
+        name=f"{embedding_type}_stream",
+        batch_source=batch_source,
+    )
+    
+    schema = [Field(name=f"{embedding_type}.embeddings", dtype=Array(Float32))]
+    
+    _fv = FeatureView(
+        name=embedding_type,
+        entities=[account],
+        ttl=timedelta(days=365),
+        schema=schema,
+        online=True, 
+        source=push_source
+    )
+
+    account_embeddings.append(_fv)
+
+    globals()[_fv.name] = _fv
+    globals()[push_source.name] = push_source
+    globals()[batch_source.name] = batch_source
+
+    init_file_source(_fv, batch_source)
