@@ -96,6 +96,7 @@ class AccountEmbeddingsEventHandler(DebeziumEventHandler):
         if config.feast.feast_offline_store_enabled:
 
             event_time = int(time.time())
+            
             df = pd.DataFrame({
                 'account_id': data['account_id'],
                 'event_time': event_time,
