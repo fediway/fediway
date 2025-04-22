@@ -1,6 +1,4 @@
 
-import torch
-
 class Embedder():
     def __init__(self):
         pass
@@ -72,6 +70,7 @@ if __name__ == "__main__":
     embedder = SentenceTransformerEmbedder(model_id)
     print(f"Embedding dimension of {model_id}: {embedder.dim()}")
     import time
+    import torch
 
     torch.set_num_threads(4)
 
