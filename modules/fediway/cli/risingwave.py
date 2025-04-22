@@ -16,7 +16,7 @@ def get_context():
         "db_user": config.db.rw_pg_user,
         "db_pass": config.db.rw_pg_pass.get_secret_value(),
         "db_name": config.db.db_name,
-        "bootstrap_server": f"{config.db.rw_kafka_host}:{config.db.rw_kafka_port}",
+        "bootstrap_server": config.db.rw_kafka_bootstrap_servers,
         "k_latest_account_favourites_embeddings": config.embed.k_latest_account_favourites_embeddings,
         "k_latest_account_reblogs_embeddings": config.embed.k_latest_account_reblogs_embeddings,
         "k_latest_account_replies_embeddings": config.embed.k_latest_account_replies_embeddings,

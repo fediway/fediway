@@ -23,7 +23,7 @@ from app.core.qdrant import client
 from app.core.herde import driver
 from config import config
 
-broker = KafkaBroker(config.db.kafka_url)
+broker = KafkaBroker(config.kafka.kafka_bootstrap_servers)
 app = FastStream(broker)
 
 feature_topics = {

@@ -21,38 +21,15 @@ class DBConfig(BaseConfig):
     rw_user: str       = "root"
     rw_pass: SecretStr = ""
     rw_name: str       = "dev"
+
     rw_migrations_paths: list[str] = ['migrations/risingwave']
     rw_migrations_table: str = "migrations"
 
     rw_pg_host: str | None = None
     rw_pg_user: str        = "risingwave"
     rw_pg_pass: SecretStr  = "password"
-    rw_kafka_host: str = 'kafka'
-    rw_kafka_port: int = 9092
-
-    # --- Kafka ---
-
-    kafka_host: str       = "localhost"
-    kafka_port: int       = 29092
-    kafka_user: str       = ""
-    kafka_pass: SecretStr = ""
-
-    debezium_db_host: str = 'postgres'
-    debezium_host: str = 'localhost'
-    debezium_port: int = 8083
-    debezium_connector_name: str = "postgres-connector"
-    debezium_db_server: str = "pgserver"
-    debezium_topic_prefix: str = "postgres"
-    debezium_tables: list[str] = [
-        'accounts', 
-        'statuses',
-        'status_stats',
-        'follows',
-        'mentions',
-        'favourites',
-        'tags',
-        'statuses_tags',
-    ]
+    
+    rw_kafka_bootstrap_servers: str  = "kafka:9092"
 
     @property
     def url(self):
@@ -75,37 +52,3 @@ class DBConfig(BaseConfig):
             database=self.rw_name,
             port=self.rw_port
         )
-
-    @property
-    def kafka_url(self) -> str:
-        return f"{self.kafka_host}:{self.kafka_port}"
-
-    @property
-    def debezium_url(self):
-        return f"http://{self.debezium_host}:{self.debezium_port}"
-
-    @property
-    def debezium_connector_config(self):
-        return {
-            "name": self.debezium_connector_name,
-            "config": {
-                "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-                "topic.prefix": self.debezium_topic_prefix,
-                "plugin.name": "pgoutput",
-                "database.hostname": "postgres",
-                "database.port": self.db_port,
-                "database.user": self.db_user,
-                "database.password": self.db_pass.get_secret_value(),
-                "database.dbname": self.db_name,
-                "database.server.name": self.debezium_db_server,
-                "table.include.list": ",".join([f"public.{table}" for table in self.debezium_tables]),
-                "key.converter": "org.apache.kafka.connect.json.JsonConverter",
-                "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-                "topic.creation.default.replication.factor": 1,
-                "topic.creation.default.partitions": 1,
-                "topic.creation.enable": True
-            }
-        }
-
-    def debezium_topic(self, entity, schema='public'):
-        return f"{self.debezium_db_server}.{schema}.{entity}"

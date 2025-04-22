@@ -7,7 +7,7 @@ from .streaming.embeddings import TextEmbeddingsBatchHandler, AccountEmbeddingsE
 from .modules.debezium import DebeziumEvent, process_debezium_batch, make_debezium_handler
 from config import config
 
-broker = KafkaBroker(config.db.kafka_url)
+broker = KafkaBroker(config.kafka.kafka_bootstrap_servers)
 app = FastStream(broker)
 
 embeddings_publisher = broker.publisher('status_text_embeddings')

@@ -8,6 +8,7 @@ from .feast import FeastConfig
 from .fediway import FediwayConfig
 from .files import FilesConfig
 from .geo import GeoLocationConfig
+from .kafka import KafkaConfig
 from .logging import LoggingConfig
 from .qdrant import QdrantConfig
 from .session import SessionConfig
@@ -27,6 +28,7 @@ class config:
     fediway = FediwayConfig()
     files = FilesConfig()
     geo = GeoLocationConfig()
+    kafka = KafkaConfig()
     logging = LoggingConfig()
     qdrant = QdrantConfig()
     session = SessionConfig()

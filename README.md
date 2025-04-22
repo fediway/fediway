@@ -72,6 +72,23 @@ Create migration
 alembic revision -m "create topics table"
 ```
 
+### Feast
+
+Storing registry on s3:
+
+```sh
+# 1. install requirements
+python -m pip install feast[aws]
+
+# 1. add variable to .env file
+FEAST_REGISTRY=s3://my-bucket/registry.db
+
+# 2. export the following variables
+export FEAST_S3_ENDPOINT_URL="https://nbg1.your-objectstorage.com"
+export AWS_ACCESS_KEY_ID="YOUR_S3_ACCESS_KEY"
+export AWS_SECRET_ACCESS_KEY="YOUR_S3_SECRET_KEY"
+```
+
 ## ip2location
 
 Download ip-database

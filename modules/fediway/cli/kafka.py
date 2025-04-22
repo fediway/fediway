@@ -9,12 +9,16 @@ from config import config
 app = typer.Typer(help="Kafka commands.")
 
 TOPICS = [
-    NewTopic("status_text_embeddings", num_partitions=1, replication_factor=1)
+    NewTopic(
+        "status_text_embeddings", 
+        num_partitions=config.kafka.kafka_num_partitions, 
+        replication_factor=config.kafka.kafka_replication_factor
+    )
 ]
 
 @app.command("create-topics")
 def create_topics():
-    admin = AdminClient({'bootstrap.servers': config.db.kafka_url})
+    admin = AdminClient({'bootstrap.servers': config.kafka.kafka_bootstrap_servers})
     existing_topics = admin.list_topics().topics.keys()
 
     topics = [topic for topic in TOPICS if topic.topic not in existing_topics]
@@ -32,5 +36,3 @@ def create_topics():
             typer.echo(f"✅ Topic '{topic}' created")
         except KafkaException as e:
             typer.error(f"Topic creation failed: {e}")
-
-    
