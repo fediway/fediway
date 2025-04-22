@@ -1,4 +1,5 @@
 
+from urllib.parse import quote
 from datetime import timedelta
 from pydantic import SecretStr
 from sqlalchemy import URL
@@ -19,4 +20,5 @@ class TasksConfig(BaseConfig):
 
     @property
     def worker_url(self):
-        return f"redis://:{self.worker_pass.get_secret_value()}@{self.worker_host}:{self.worker_port}/0"
+        password = quote(self.worker_pass.get_secret_value())
+        return f"redis://:{password}@{self.worker_host}:{self.worker_port}/0"
