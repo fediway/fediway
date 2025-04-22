@@ -1,4 +1,7 @@
 
+from confluent_kafka.admin import AdminClient, NewTopic
+from confluent_kafka import KafkaException
+import asyncio
 import typer
 
 from config import config
@@ -15,10 +18,6 @@ TOPICS = [
 
 @app.command("create-topics")
 def create_topics():
-    from confluent_kafka.admin import AdminClient, NewTopic
-    from confluent_kafka import KafkaException
-    import asyncio
-
     admin = AdminClient({'bootstrap.servers': config.kafka.kafka_bootstrap_servers})
     existing_topics = admin.list_topics().topics.keys()
 
