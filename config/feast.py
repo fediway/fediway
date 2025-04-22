@@ -11,7 +11,7 @@ from sqlalchemy import URL
 
 from .base import BaseConfig
 
-class OfflineStoreTypes(Enum):
+class OfflineStoreType(Enum):
     duckdb: str = "duckdb"
     spark: str  = "spark"
 
@@ -19,7 +19,7 @@ class FeastConfig(BaseConfig):
     feast_registry: str = 'data/features.db'
 
     feast_offline_store_enabled: bool = False
-    feast_offline_store_type: OfflineStoreTypes = OfflineStoreTypes.duckdb
+    feast_offline_store_type: OfflineStoreType = OfflineStoreType.duckdb
     feast_offline_store_s3_endpoint: str = ''
     
 
@@ -56,10 +56,10 @@ class FeastConfig(BaseConfig):
 
     @property
     def offline_config(self):
-        if self.feast_offline_store_type == OfflineStoreTypes.duckdb:
+        if self.feast_offline_store_type == OfflineStoreType.duckdb:
             return self.get_duckdb_config()
 
-        if self.feast_offline_store_type == OfflineStoreTypes.spark:
+        if self.feast_offline_store_type == OfflineStoreType.spark:
             return self.get_spark_config()
 
     def get_duckdb_config(self) -> DuckDBOfflineStoreConfig:
@@ -69,21 +69,21 @@ class FeastConfig(BaseConfig):
         from feast.infra.offline_stores.contrib.spark_offline_store.spark import SparkOfflineStoreConfig
 
         spark_conf = {
+            "spark.master": "local[*]",
+
+            "spark.jars.packages": "org.apache.hadoop:hadoop-aws:3.3.1",
+            "spark.jars.excludes": "org.wildfly.openssl:wildfly-openssl",
+
             "spark.hadoop.fs.s3a.endpoint": self.feast_spark_s3_endpoint,
-            "spark.hadoop.fs.s3a.access.key": self.feast_spark_s3_access_key.get_secret_value(),
-            "spark.hadoop.fs.s3a.secret.key": self.feast_spark_s3_secret_key.get_secret_value(),
+            # "spark.hadoop.fs.s3a.access.key": self.feast_spark_s3_access_key.get_secret_value(),
+            # "spark.hadoop.fs.s3a.secret.key": self.feast_spark_s3_secret_key.get_secret_value(),
+            "spark.hadoop.fs.s3a.aws.credentials.provider": "com.amazonaws.auth.DefaultAWSCredentialsProviderChain",
             "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
             "spark.hadoop.fs.s3a.path.style.access": "true",
-            # "spark.hadoop.fs.s3a.connection.ssl.enabled": "true",
 
+            # "spark.hadoop.fs.s3a.connection.ssl.enabled": "true",
             # "spark.sql.session.timeZone": "UTC",
-            
-            # 4) Leave SSL on (or disable if your endpoint is HTTP only)
-            # "spark.hadoop.fs.s3a.connection.ssl.enabled": "true",
-            # 5) (Optional) Pick your desired file‑size or memory settings…
-            
         }
-
 
         return SparkOfflineStoreConfig(
             staging_location=self.feast_offline_store_path,

@@ -13,7 +13,7 @@ from functools import reduce
 import operator
 
 from config import config
-from config.feast import OfflineStoreTypes
+from config.feast import OfflineStoreType
 
 def make_feature_view(
     name: str, 
@@ -37,7 +37,8 @@ def make_feature_view(
         source=source
     )
 
-    init_file_source(fv, source.batch_source)
+    if not offline_store_path.startswith("s3"):
+        init_file_source(fv, source.batch_source)
 
     return fv
 
@@ -80,16 +81,27 @@ def init_file_source(fv: FeatureView, source: FileSource):
     write_table(empty_table, str(path))
 
 def get_push_source(view_name: str, offline_store_path: str, s3_endpoint: str | None = None) -> PushSource:
-    batch_source = FileSource(
-        name=f"{view_name}_source",
-        path=f"{offline_store_path}/{view_name}.parquet",
-        timestamp_field="event_time",
-        file_format=ParquetFormat(),
-        s3_endpoint_override=s3_endpoint
-    )
+    if config.feast.feast_offline_store_type == OfflineStoreType.spark:
+        from feast.infra.offline_stores.contrib.spark_offline_store.spark_source import SparkSource
+        batch_source = SparkSource(
+            name=f"{view_name}_source",
+            path=f"{offline_store_path}/{view_name}",
+            file_format="parquet",
+            timestamp_field="event_time"
+        )
+    else:
+        batch_source = FileSource(
+            name=f"{view_name}_source",
+            path=f"{offline_store_path}/{view_name}.parquet",
+            timestamp_field="event_time",
+            file_format=ParquetFormat(),
+            s3_endpoint_override=s3_endpoint
+        )
     push_source = PushSource(
         name=f"{view_name}_stream",
         batch_source=batch_source,
     )
 
     return push_source
+
+    

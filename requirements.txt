@@ -17,5 +17,4 @@ celery==5.4.0
 aiobotocore==2.17.0
 boto3==1.35.93
 feast[redis,duckdb,aws]==0.48.1
-sentence-transformers==4.1.0
 qdrant-client==1.13.0
