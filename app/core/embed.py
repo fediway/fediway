@@ -1,6 +1,4 @@
 
-from sentence_transformers import SentenceTransformer
-
 from app.modules.embed import SentenceTransformerEmbedder, ClipEmbedder
 from config import config
 
