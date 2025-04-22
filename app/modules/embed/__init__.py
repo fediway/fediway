@@ -32,12 +32,12 @@ class SentenceTransformerEmbedder(Embedder):
         return self.model.get_sentence_embedding_dimension()
 
 class ClipEmbedder(MultimodalEmbedder):
-    def __init__(self, model_id: str):
+    def __init__(self, model_id: str, cache_dir: str = 'data'):
         from multilingual_clip import pt_multilingual_clip
         import transformers
 
-        self.model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(model_id)
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_id)
+        self.model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(model_id, cache_dir=f"{cache_dir}/{model_id}")
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, cache_dir=f"{cache_dir}/{model_id}")
 
         # self.model = torch.quantization.quantize_dynamic(
         #     self.model,
