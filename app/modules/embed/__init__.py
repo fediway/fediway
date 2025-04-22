@@ -33,7 +33,7 @@ class SentenceTransformerEmbedder(Embedder):
     def dim(self) -> int:
         return self.model.get_sentence_embedding_dimension()
 
-class ClipEmbedder(Embedder):
+class ClipEmbedder(MultimodalEmbedder):
     def __init__(self, model_id: str):
         from multilingual_clip import pt_multilingual_clip
         import transformers
