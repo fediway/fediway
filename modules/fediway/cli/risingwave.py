@@ -53,7 +53,7 @@ def get_connection():
     return psycopg2.connect(
         dbname=config.db.rw_name,
         user=config.db.rw_user,
-        password=config.db.rw_pass,
+        password=config.db.rw_pass.get_secret_value(),
         host=config.db.rw_host,
         port=config.db.rw_port,
     )
