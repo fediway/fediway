@@ -37,6 +37,7 @@ COPY --chown=fediway:fediway requirements.txt .
 
 # install requirements
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
+RUN pip install --no-cache-dir --upgrade torch
 
 # Copy application code
 COPY --chown=fediway:fediway . .
