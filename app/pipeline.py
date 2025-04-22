@@ -25,7 +25,6 @@ from config import config
 
 broker = KafkaBroker(
     bootstrap_servers=config.kafka.kafka_bootstrap_servers,
-    security=config.kafka.faststream_security
 )
 app = FastStream(broker)
 
