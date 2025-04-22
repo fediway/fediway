@@ -74,6 +74,7 @@ class FeastConfig(BaseConfig):
             "spark.hadoop.fs.s3a.secret.key": self.feast_spark_s3_secret_key.get_secret_value(),
             "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
             "spark.hadoop.fs.s3a.path.style.access": "true",
+            # "spark.hadoop.fs.s3a.connection.ssl.enabled": "true",
 
             # "spark.sql.session.timeZone": "UTC",
             

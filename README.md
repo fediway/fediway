@@ -84,7 +84,7 @@ python -m pip install feast[aws]
 FEAST_REGISTRY=s3://my-bucket/registry.db
 
 # 2. export the following variables
-export FEAST_S3_ENDPOINT_URL="https://nbg1.your-objectstorage.com"
+export FEAST_S3_ENDPOINT_URL="https://fsn1.your-objectstorage.com"
 export AWS_ACCESS_KEY_ID="YOUR_S3_ACCESS_KEY"
 export AWS_SECRET_ACCESS_KEY="YOUR_S3_SECRET_KEY"
 ```
