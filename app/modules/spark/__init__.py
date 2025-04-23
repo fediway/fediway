@@ -78,7 +78,7 @@ def get_spark_streaming_session(app_name: str, s3_enabled: bool = False, s3_endp
 
     if s3_enabled:
         packages += [
-             "org.apache.hadoop:hadoop-aws:3.3.4"
+             "org.apache.hadoop:hadoop-aws:3.3.4",
              "com.amazonaws:aws-java-sdk-bundle:1.11.1026"
         ]
         spark = (
