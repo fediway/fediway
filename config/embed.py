@@ -5,10 +5,10 @@ from pydantic import PostgresDsn, SecretStr, HttpUrl, RedisDsn
 from .base import BaseConfig
 
 class EmbedConfig(BaseConfig):
-    sentence_transformer: str = 'sentence-transformers/all-MiniLM-L6-v2'
+    sentence_transformer: str = 'sentence-transformers/LaBSE'
     
     clip_model: str = 'M-CLIP/LABSE-Vit-L-14'
-    clip_enabled: bool = True
+    clip_enabled: bool = False
 
     models_cache_dir: str = 'data'
 

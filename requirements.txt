@@ -20,3 +20,4 @@ boto3==1.35.93
 feast[redis,spark,aws]==0.48.1
 qdrant-client==1.13.0
 multilingual-clip==1.0.10
+sentence-transformers[onnx]==4.1.0

@@ -4,6 +4,9 @@ RUN apt-get update \
   && apt-get install -y openjdk-17-jre-headless curl \
   && rm -rf /var/lib/apt/lists/*
 
+ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH $JAVA_HOME/bin:$PATH
+
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -39,8 +42,8 @@ WORKDIR /app
 COPY --chown=fediway:fediway requirements.txt .
 
 # install requirements
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
 RUN pip install --no-cache-dir --upgrade torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # download jars (for spark)
 ADD https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar /opt/spark/jars/
