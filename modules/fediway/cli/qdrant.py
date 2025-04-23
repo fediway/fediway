@@ -15,13 +15,14 @@ COLLECTIONS = [
 
 @app.command("migrate")
 def migrate():
+    from app.core.embed import embedder
     from app.core.qdrant import client
 
     for collection in COLLECTIONS:
         if client.collection_exists(collection):
             continue
         
-        vectors_config = models.VectorParams(size=config.embed.dim(), distance=models.Distance.COSINE)
+        vectors_config = models.VectorParams(size=embedder.dim(), distance=models.Distance.COSINE)
         client.create_collection(collection_name=collection, vectors_config=vectors_config)
 
         typer.echo(f"✅ Created '{collection}' collection.")
