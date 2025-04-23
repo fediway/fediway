@@ -70,6 +70,7 @@ def get_spark_streaming_session(app_name: str, s3_enabled: bool = False, s3_endp
         SparkSession.builder
         .appName(app_name) 
         .config("spark.sql.adaptive.enabled", "false")
+        .config("spark.sql.session.timeZone", "UTC")
         .config("log4j.logger.org.apache.spark.sql.execution.streaming", "INFO")
     )
 

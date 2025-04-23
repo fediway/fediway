@@ -65,6 +65,7 @@ def get_push_source(view_name: str, offline_store_path: str) -> PushSource:
         path=f"{offline_store_path}/{view_name}",
         file_format="parquet",
         timestamp_field="event_time",
+        date_partition_column="date"
     )
     
     push_source = PushSource(

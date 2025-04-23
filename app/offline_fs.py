@@ -41,16 +41,11 @@ def process_features(spark, topic, fv, schema, callback = None):
         )
         .drop("event_time")
         .withColumnRenamed("true_event_time","event_time")
-        .withColumn("year", F.year(F.col("event_time")))
-        .withColumn("month", F.month(F.col("event_time")))
-        .withColumn("day", F.day(F.col("event_time")))
+        .withColumn("date", F.col("event_time").cast("date"))
     )
 
     if callback is not None:
         df = callback(df)
-
-    # for field in fv.schema:
-    #     df = df.withColumnRenamed(field.name.split('.')[-1], field.name)
     
     # return (
     #     df.writeStream
@@ -66,7 +61,7 @@ def process_features(spark, topic, fv, schema, callback = None):
         .format("parquet")
         .option("path", f"{config.feast.feast_offline_store_path}/{fv.name}")
         .option("checkpointLocation", f"{config.feast.feast_spark_checkpoint_location}/{fv.name}")
-        # .partitionBy("year", "month", "day")
+        .partitionBy("date")
         .trigger(processingTime="5 seconds")
         .start()
     )
