@@ -32,6 +32,10 @@ class FeaturesEventHandler(DebeziumEventHandler):
         
         features['event_time'] = min(now, data['event_time'] * 1000)
 
-        self.fs.push(self.source.replace('_features', '_stream'), pd.DataFrame([features]), to=PushMode.OFFLINE)
+        self.fs.push(
+            self.source.replace('_features', '_stream'), 
+            pd.DataFrame([features]), 
+            to=PushMode.ONLINE
+        )
 
         logger.debug(f"Pushed features to {self.source}.")

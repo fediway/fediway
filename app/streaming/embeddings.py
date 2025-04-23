@@ -56,8 +56,7 @@ class TextEmbeddingsBatchHandler(DebeziumBatchHandler):
 class AccountEmbeddingsEventHandler(DebeziumEventHandler):
     client: QdrantClient
 
-    def __init__(self, client: QdrantClient, fs: FeatureStore, topic: str):
-        self.fs = fs
+    def __init__(self, client: QdrantClient, topic: str):
         self.client = client
         self.topic = topic
 
@@ -90,19 +89,3 @@ class AccountEmbeddingsEventHandler(DebeziumEventHandler):
         )
 
         logger.info(f"Updated account embeddings for {data['account_id']} in '{self.topic}' collection.")
-
-        # embeddings are only pushed to offline store (if enabled) for model training
-        # qdrant serves as the online store for embeddings
-        if config.feast.feast_offline_store_enabled:
-
-            event_time = int(time.time())
-
-            df = pd.DataFrame({
-                'account_id': [data['account_id']],
-                'event_time': [event_time],
-                f"{self.topic}.embeddings": [embeddings],
-            })
-
-            self.fs.push(f"{self.topic}_stream", df, to=PushMode.OFFLINE)
-
-            logger.info(f"Pushed '{self.topic}' for {data['account_id']} to offline feature store.")
