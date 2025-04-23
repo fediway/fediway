@@ -20,10 +20,10 @@ class MultimodalEmbedder():
         raise NotImplementedError
 
 class SentenceTransformerEmbedder(Embedder):
-    def __init__(self, model_id: str):
+    def __init__(self, model_id: str, cache_dir: str = 'data'):
         from sentence_transformers import SentenceTransformer
 
-        self.model = SentenceTransformer(model_id)
+        self.model = SentenceTransformer(model_id, cache_dir=f"{cache_dir}/{model_id}", local_files_only=True)
         
     def __call__(self, texts: list[str]) -> list[list[float]]:
         return self.model.encode(texts, convert_to_numpy=False)
@@ -36,8 +36,8 @@ class ClipEmbedder(MultimodalEmbedder):
         from multilingual_clip import pt_multilingual_clip
         import transformers
 
-        self.model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(model_id, cache_dir=f"{cache_dir}/{model_id}")
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, cache_dir=f"{cache_dir}/{model_id}")
+        self.model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(model_id, cache_dir=f"{cache_dir}/{model_id}", local_files_only=True)
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, cache_dir=f"{cache_dir}/{model_id}", local_files_only=True)
 
         # self.model = torch.quantization.quantize_dynamic(
         #     self.model,
