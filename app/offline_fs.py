@@ -49,8 +49,8 @@ def process_features(spark, topic, fv, schema, callback = None):
     if callback is not None:
         df = callback(df)
 
-    for field in fv.schema:
-        df = df.withColumnRenamed(field.name.split('.')[-1], field.name)
+    # for field in fv.schema:
+    #     df = df.withColumnRenamed(field.name.split('.')[-1], field.name)
     
     # return (
     #     df.writeStream
@@ -64,9 +64,9 @@ def process_features(spark, topic, fv, schema, callback = None):
         df.writeStream 
         .outputMode("append")
         .format("parquet")
-        .option("path", f"{config.feast.feast_offline_store_path}/{topic}")
-        .option("checkpointLocation", f"{config.feast.feast_spark_checkpoint_location}/{topic}")
-        .partitionBy("year", "month", "day")
+        .option("path", f"{config.feast.feast_offline_store_path}/{fv.name}")
+        .option("checkpointLocation", f"{config.feast.feast_spark_checkpoint_location}/{fv.name}")
+        # .partitionBy("year", "month", "day")
         .trigger(processingTime="5 seconds")
         .start()
     )

@@ -14,7 +14,7 @@ account_embedding_types = [
 ]
 
 for embedding_type in account_embedding_types:
-    schema = [Field(name=f"{embedding_type}.embeddings", dtype=Array(Float32))]
+    schema = [Field(name="embeddings", dtype=Array(Float32))]
 
     _fv = make_feature_view(
         embedding_type,

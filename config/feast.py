@@ -1,7 +1,7 @@
 
 from feast.feature_store import RepoConfig
 from feast.infra.online_stores.redis import RedisOnlineStoreConfig
-from feast.infra.offline_stores.duckdb import DuckDBOfflineStoreConfig
+from feast.infra.offline_stores.contrib.spark_offline_store.spark import SparkOfflineStoreConfig
 
 from enum import Enum
 
@@ -11,20 +11,14 @@ from sqlalchemy import URL
 
 from .base import BaseConfig
 
-class OfflineStoreType(Enum):
-    duckdb: str = "duckdb"
-    spark: str = "spark"
-
 class FeastConfig(BaseConfig):
     feast_registry: str = 'data/features.db'
 
     feast_offline_store_enabled: bool = False
-    feast_offline_store_type: OfflineStoreType = OfflineStoreType.duckdb
     feast_offline_store_s3_endpoint: str = ''
-
-    feast_offline_store_path: str = "data/features"
-
-    feast_spark_checkpoint_location: str = ''
+    feast_offline_store_path: str = 'data/features'
+    feast_spark_checkpoint_location: str = 'data/features-staging'
+    feast_spark_staging_location: str = 'data/features-checkpoint'
 
     feast_redis_host: str       = 'localhost'
     feast_redis_port: int       = 6379
@@ -54,10 +48,12 @@ class FeastConfig(BaseConfig):
 
     @property
     def offline_config(self):
-        if self.feast_offline_store_type == OfflineStoreType.duckdb:
-            return self.get_duckdb_config()
+        spark_conf = {
+            'spark.master': 'local[*]',
+            # 'spark.sql.session.timeZone': 'UTC'
+        }
 
-        raise NotImplementedError
-
-    def get_duckdb_config(self) -> DuckDBOfflineStoreConfig:
-        return DuckDBOfflineStoreConfig()
+        return SparkOfflineStoreConfig(
+            spark_conf=spark_conf,
+            staging_location=self.feast_spark_staging_location
+        )

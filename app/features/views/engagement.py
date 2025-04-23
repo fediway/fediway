@@ -65,7 +65,7 @@ def _make_engagement_fv(
 
     for spec in specs:
         for field in fields:
-            schema.append(Field(name=f"{view_name}.{field}_{spec}", dtype=Int64))
+            schema.append(Field(name=f"{field}_{spec}", dtype=Int64))
 
     return make_feature_view(
         view_name,
