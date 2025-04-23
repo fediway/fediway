@@ -4,9 +4,6 @@ RUN apt-get update \
   && apt-get install -y openjdk-17-jre-headless curl \
   && rm -rf /var/lib/apt/lists/*
 
-ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk-amd64
-ENV PATH $JAVA_HOME/bin:$PATH
-
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -55,6 +52,7 @@ ENV SPARK_CLASSPATH="/opt/spark/jars/*"
 # download whois geolocation databases
 ADD https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country-ipv4.mmdb data/geo-whois-asn-country-ipv4.mmdb
 ADD https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country-ipv6.mmdb data/geo-whois-asn-country-ipv6.mmdb
+RUN chown -R fediway:fediway data
 
 # Copy application code
 COPY --chown=fediway:fediway . .
