@@ -10,9 +10,11 @@ from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy import label, and_
 from datetime import datetime, timedelta
 from datasets import Dataset
+from tqdm import tqdm
 
 import app.utils as utils
 from modules.fediway.models import StatusEngagement
+from app.features.offline_fs import get_historical_features
 
 LABEL2ID = {
     'favourite': 1,
@@ -22,7 +24,7 @@ LABEL2ID = {
 
 class RankerV1Dataset(Dataset):
     @classmethod
-    def extract(cls, fs: FeatureStore, rw: Session):
+    def extract(cls, fs: FeatureStore, db: Session):
         query = select(StatusEngagement).filter(StatusEngagement.type == 'favourite')
         
         labels = []
@@ -31,7 +33,7 @@ class RankerV1Dataset(Dataset):
         lookup = set()
         account_ids = []
         author_ids = []
-        for engagement in rw.exec(query).yield_per(100):
+        for engagement in tqdm(db.exec(query).yield_per(100)):
             lookup.add((engagement.account_id, engagement.author_id))
             pos_entites.append((
                 engagement.account_id,
@@ -42,6 +44,7 @@ class RankerV1Dataset(Dataset):
             author_ids.append((engagement.author_id, engagement.status_event_time))
             labels.append(1)
         
+        exit()
         while len(neg_entities) < len(pos_entites) * 2:
             account_id = random.choice(account_ids)
             author_id, event_time = random.choice(author_ids)

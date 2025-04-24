@@ -1,6 +1,7 @@
 
 from neo4j import Driver
 from loguru import logger
+from datetime import datetime, timedelta
 
 from app.modules.models import Status
 from modules.fediway.sources.herde import Herde
@@ -16,7 +17,7 @@ class StatusEventHandler(DebeziumEventHandler):
         return Status(**data)
 
     async def created(self, status: Status):
-        if status.created_at > datetime.now() - config.fediway.feed_max_age_in_days:
+        if status.created_at > datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days):
             return
             
         if status.reblog_of_id is None:
