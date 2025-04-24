@@ -1,12 +1,12 @@
 FROM python:3.10-slim
 
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends openjdk-17-jre-headless procps \
-  && rm -rf /var/lib/apt/lists/*
+# RUN apt-get update \
+#   && apt-get install -y --no-install-recommends openjdk-17-jre-headless procps \
+#   && rm -rf /var/lib/apt/lists/*
 
-# Set Java environment
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV PATH="${JAVA_HOME}/bin:${PATH}"
+# # Set Java environment
+# ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+# ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -47,11 +47,10 @@ RUN pip install --no-cache-dir --upgrade torch --index-url https://download.pyto
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # download jars (for spark)
-ADD https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar /opt/spark/jars/
-ADD https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar /opt/spark/jars/
-ADD https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.1026/aws-java-sdk-bundle-1.11.1026.jar /opt/spark/jars/
-
-ENV SPARK_CLASSPATH="/opt/spark/jars/*"
+# ADD https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar /opt/spark/jars/
+# ADD https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar /opt/spark/jars/
+# ADD https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.1026/aws-java-sdk-bundle-1.11.1026.jar /opt/spark/jars/
+# ENV SPARK_CLASSPATH="/opt/spark/jars/*"
 
 # download whois geolocation databases
 ADD https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country-ipv4.mmdb data/geo-whois-asn-country-ipv4.mmdb
