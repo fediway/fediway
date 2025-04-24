@@ -17,7 +17,8 @@ class StatusEventHandler(DebeziumEventHandler):
         return Status(**data)
 
     async def created(self, status: Status):
-        if status.created_at > datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days):
+        limit = int((datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)).timestamp() / 1000)
+        if status.created_at > limit:
             return
             
         if status.reblog_of_id is None:
