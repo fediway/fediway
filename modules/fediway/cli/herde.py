@@ -1,6 +1,7 @@
 
 from neo4j import GraphDatabase, AsyncGraphDatabase
 from datetime import datetime, timedelta
+from loguru import logger
 import typer
 import time
 

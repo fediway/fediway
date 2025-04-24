@@ -67,11 +67,26 @@ class Herde():
     def add_account(self, account: Account):
         query = """
         MERGE (a:Account {id: $id})
-        ON CREATE SET a.indexable = $indexable
-        ON MATCH SET a.indexable = $indexable
         """
 
-        self._run_query(query, id=account.id, indexable=account.indexable)
+        self._run_query(query, id=account.id)
+
+    def add_account_stats(self, stats: dict[str, int]):
+        query = """
+        MERGE (a:Account {id: $id})
+        ON MATCH SET 
+            a.avg_favs = $avg_favs,
+            a.avg_replies = $avg_replies,
+            a.avg_reblogs = $avg_reblogs;
+        """
+
+        self._run_query(
+            query, 
+            id=stats['account_id'],
+            avg_favs=stats['avg_favourites_90d'],
+            avg_replies=stats['avg_replies_90d'],
+            avg_reblogs=stats['avg_reblogs_90d'],
+        )
 
     def remove_account(self, account: Account):
         query = """
@@ -294,10 +309,12 @@ class Herde():
         MATCH (a:Account)-[:CREATED_BY]->(s:Status {language: $language})
         WHERE 
             a.rank IS NOT NULL 
-        AND a.avg_favs > 1 
-        AND a.avg_reblogs > 1 
+        // AND a.avg_favs > 1 
+        // AND a.avg_reblogs > 1 
+        // AND a.avg_replies > 1 
         AND s.num_favs > 0 
         AND s.num_reblogs > 0
+        AND s.num_replies > 0
         WITH a, s, (now - s.created_at) / 86400 AS age_days
         WITH a, s, age_days,
             a.rank * (s.num_favs + 2 * s.num_reblogs) / (a.avg_favs + 2 * a.avg_reblogs) AS score
@@ -316,7 +333,7 @@ class Herde():
         #     a.id as account_id, 
         #     s.id AS status_id,
         #     // Content virality (60% weight)
-        #     0.6  * (s.num_favs + 2 * s.num_reblogs) * 10 / (a.avg_favs + 2 * a.avg_reblogs) + 
+        #     0.6  * (s.num_favs + 2 * s.num_reblogs) * 10 / (a.avg_favs + 2 * a.avg_reblogs + 1) + 
         #     0.5 * a.rank
         #     AS score
         #     // Cross-community appeal (25% weight)

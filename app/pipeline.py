@@ -10,6 +10,7 @@ from app.streaming.embeddings import AccountEmbeddingsEventHandler
 from app.streaming.features import FeaturesEventHandler
 from app.streaming.herde import (
     AccountEventHandler as HerdeAccountEventHandler,
+    EnrichedAccountStatsEventHandler as HerdeEnrichedAccountStatsEventHandler,
     StatusEventHandler as HerdeStatusEventHandler,
     FavouriteEventHandler as HerdeFavouriteEventHandler,
     FollowEventHandler as HerdeFollowEventHandler,
@@ -62,7 +63,7 @@ for topic in feature_topics:
         group_id="features"
     )
 
-# Embedding conumers (responsible for pushing vectors to qdrant)
+Embedding conumers (responsible for pushing vectors to qdrant)
 
 account_embedding_topics = [
     'latest_account_favourites_embeddings',
@@ -82,6 +83,10 @@ for topic in account_embedding_topics:
 @broker.subscriber("accounts")
 async def on_accounts(event: DebeziumEvent):
     await process_debezium_event(event, HerdeAccountEventHandler, args=(Herde(driver), ))
+
+@broker.subscriber("enriched_account_stats")
+async def on_accounts(event: DebeziumEvent):
+    await process_debezium_event(event, HerdeEnrichedAccountStatsEventHandler, args=(Herde(driver), ))
 
 @broker.subscriber("statuses")
 async def on_status(event: DebeziumEvent):
