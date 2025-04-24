@@ -92,8 +92,9 @@ class Feed():
             return
 
         if candidates is None and ranker_index == 0:
-            candidates = self._sourced_candidates
-            self._sourced_candidates = []
+            async with self._sourced_candidates_condition:
+                candidates = self._sourced_candidates
+                self._sourced_candidates = set()
         else:
             raise ValueError("Candidates missing.")
 
@@ -102,7 +103,6 @@ class Feed():
 
         X = self.features.get(candidates, ranker.features)
         scores = ranker.predict(X)
-        print(scores)
 
         # reset queue if it is not the final candidate queue
         if ranker_index != len(self.rankers) - 1:

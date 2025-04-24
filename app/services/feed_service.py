@@ -34,14 +34,12 @@ class FeedService():
         Initialize feed.
         '''
 
-        # state = self.session.get(self.session_key)
+        state = self.session.get(self.session_key)
 
-        # if state is not None:
-        #     self.feed.merge_dict(state)
-        #     return
+        if state is not None:
+            self.feed.merge_dict(state)
+            return
 
-        state = None
-        
         await self.collect_sources()
 
         feed_model = FeedModel(
@@ -80,8 +78,6 @@ class FeedService():
 
         await self.feed.rank()
 
-        print("Ranked")
-
     def _save_recommendations(self, recommendations):
         self.db.bulk_save_objects([FeedRecommendation(
             feed_id=self.feed.id,
@@ -101,7 +97,7 @@ class FeedService():
         self.tasks.add_task(self._save_recommendations, recommendations)
 
         # load new candidates
-        # self.tasks.add_task(self.collect_sources)
+        self.tasks.add_task(self.collect_sources)
         
         # save feed state in session
         self.session[self.session_key] = self.feed.to_dict()

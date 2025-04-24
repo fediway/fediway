@@ -22,7 +22,7 @@ class LightStatsRanker(Ranker):
                  coef_fav: float = 0.5, 
                  coef_reb: float = 2.0, 
                  coef_rep: float = 2.0,
-                 decay: float = 0.1):
+                 decay: float = 0.5):
         self.alpha = np.array([coef_fav, coef_reb, coef_rep])
         self.decay = decay
 

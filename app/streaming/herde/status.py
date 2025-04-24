@@ -5,6 +5,7 @@ from loguru import logger
 from app.modules.models import Status
 from modules.fediway.sources.herde import Herde
 
+from config import config
 from app.modules.debezium import DebeziumEventHandler
 
 class StatusEventHandler(DebeziumEventHandler):
@@ -15,6 +16,9 @@ class StatusEventHandler(DebeziumEventHandler):
         return Status(**data)
 
     async def created(self, status: Status):
+        if status.created_at > datetime.now() - config.fediway.feed_max_age_in_days:
+            return
+            
         if status.reblog_of_id is None:
             self.herde.add_status(status)
             logger.debug(f"Added status with id {status.id} to memgraph.")
