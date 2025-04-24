@@ -6,4 +6,5 @@ from .follow import FollowEventHandler
 from .favourite import FavouriteEventHandler
 from .mention import MentionEventHandler
 from .statuses_tags import StatusTagEventHandler
+from .status_stats import StatusStatsEventHandler
 from .tag import TagEventHandler

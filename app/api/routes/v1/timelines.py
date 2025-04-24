@@ -33,7 +33,7 @@ async def public_timeline(
     )),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
-    feed.init()
+    await feed.init()
 
     recommendations = feed.get_recommendations(config.fediway.feed_batch_size)
     statuses = db.exec(Status.select_by_ids([r.item for r in recommendations])).all()

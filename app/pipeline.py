@@ -12,6 +12,7 @@ from app.streaming.herde import (
     AccountEventHandler as HerdeAccountEventHandler,
     EnrichedAccountStatsEventHandler as HerdeEnrichedAccountStatsEventHandler,
     StatusEventHandler as HerdeStatusEventHandler,
+    StatusStatsEventHandler as HerdeStatusStatsEventHandler,
     FavouriteEventHandler as HerdeFavouriteEventHandler,
     FollowEventHandler as HerdeFollowEventHandler,
     MentionEventHandler as HerdeMentionEventHandler,
@@ -107,6 +108,10 @@ async def on_favourites(event: DebeziumEvent):
 @broker.subscriber("statuses_tags")
 async def on_statuses_tags(event: DebeziumEvent):
     await process_debezium_event(event, HerdeStatusTagEventHandler, args=(Herde(driver), ))
+
+@broker.subscriber("status_stats")
+async def on_statuses_tags(event: DebeziumEvent):
+    await process_debezium_event(event, HerdeStatusStatsEventHandler, args=(Herde(driver), ))
 
 @broker.subscriber("tags")
 async def on_tags(event: DebeziumEvent):

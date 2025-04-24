@@ -6,6 +6,7 @@ import typer
 import time
 
 from config import config
+import app.utils as utils
 from modules.fediway.sources.herde import Herde
 
 app = typer.Typer(help="Herde commands.")
@@ -53,7 +54,7 @@ def query(language: str = 'en'):
         print(record)
 
 @app.command("rank")
-def query():
+def rank():
     herde = Herde(get_driver())
 
     logger.info("Start computing account ranks...")
@@ -65,7 +66,7 @@ def query():
         herde.compute_tag_rank()
 
 @app.command("clean")
-def query():
+def clean():
     herde = Herde(get_driver())
 
     logger.info("Purging old statuses...")

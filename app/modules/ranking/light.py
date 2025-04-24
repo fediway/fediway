@@ -12,10 +12,10 @@ class LightStatsRanker(Ranker):
     '''
 
     features = [
-        'favourites_count',
-        'reblogs_count',
-        'replies_count',
-        'age_in_seconds',
+        'status_meta:favourites_count',
+        'status_meta:reblogs_count',
+        'status_meta:replies_count',
+        'status_meta:age_in_seconds',
     ]
 
     def __init__(self, 

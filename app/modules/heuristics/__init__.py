@@ -4,7 +4,7 @@ import numpy as np
 from modules.fediway.feed import Heuristic
 
 class DiversifyAccountsHeuristic(Heuristic):
-    features = ['account_id']
+    features = ['status_meta:account_id']
 
     def __init__(self, 
                  penalty: float = 0.5,

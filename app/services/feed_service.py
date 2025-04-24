@@ -2,6 +2,7 @@
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, BackgroundTasks, Depends
 from loguru import logger
+import asyncio
 import time
 
 from modules.fediway.feed import Feed
@@ -28,18 +29,20 @@ class FeedService():
         self.sources = sources
         self.feed = feed
     
-    def init(self):
+    async def init(self):
         '''
         Initialize feed.
         '''
 
-        state = self.session.get(self.session_key)
+        # state = self.session.get(self.session_key)
 
-        if state is not None:
-            self.feed.merge_dict(state)
-            return
+        # if state is not None:
+        #     self.feed.merge_dict(state)
+        #     return
+
+        state = None
         
-        self.collect_sources_async()
+        await self.collect_sources()
 
         feed_model = FeedModel(
             session_id=self.session.id,
@@ -52,29 +55,32 @@ class FeedService():
 
         self.feed.id = feed_model.id
 
-        # wait until at least n candidates are collected from the sources
-        # or timout
-        self.feed.wait_for_candidates(self.max_n_per_source())
-
-        # start ranking
-        self.feed.rank_async()
-
-        # wait until the ranker has finished
-        self.feed.wait_for_ranker()
+        # await collecting
 
     def max_n_per_source(self):
         return config.fediway.feed_max_light_candidates // len(self.sources)
 
-    def collect_sources_async(self):
-        candidates = []
+    async def collect_sources(self):
+        jobs = []
         max_n_per_source = self.max_n_per_source()
+
+        start = time.time()
 
         # collect candidates from sources
         for source in self.sources:
             logger.info(f"Started collecting candidates from {source}.")
-            start = time.time()
-            callback = lambda n: logger.info(f"Collected {n} candidates from {source} in {int((time.time() - start) * 1000)} milliseconds.")
-            self.feed.collect_async(source, args=(max_n_per_source, ), callback=callback)
+            
+            jobs.append(
+                self.feed.collect(source, args=(max_n_per_source, ))
+            )
+
+        await asyncio.gather(*jobs)
+
+        logger.info(f"Collected candidates in {int((time.time() - start) * 1000)} milliseconds.")
+
+        await self.feed.rank()
+
+        print("Ranked")
 
     def _save_recommendations(self, recommendations):
         self.db.bulk_save_objects([FeedRecommendation(
@@ -95,7 +101,7 @@ class FeedService():
         self.tasks.add_task(self._save_recommendations, recommendations)
 
         # load new candidates
-        self.collect_sources_async()
+        # self.tasks.add_task(self.collect_sources)
         
         # save feed state in session
         self.session[self.session_key] = self.feed.to_dict()
