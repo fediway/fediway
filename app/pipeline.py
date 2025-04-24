@@ -63,7 +63,7 @@ for topic in feature_topics:
         group_id="features"
     )
 
-Embedding conumers (responsible for pushing vectors to qdrant)
+# Embedding conumers (responsible for pushing vectors to qdrant)
 
 account_embedding_topics = [
     'latest_account_favourites_embeddings',
