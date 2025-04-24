@@ -51,6 +51,26 @@ def query(language: str = 'en'):
     for record in herde.get_relevant_statuses(language=language):
         print(record)
 
+@app.command("rank")
+def query():
+    herde = Herde(get_driver())
+
+    logger.info("Start computing account ranks...")
+    with utils.duration("Computed account ranks in {:.3f} seconds"):
+        herde.compute_account_rank()
+
+    logger.info("Start computing tag ranks...")
+    with utils.duration("Computed tag ranks in {:.3f} seconds"):
+        herde.compute_tag_rank()
+
+@app.command("clean")
+def query():
+    herde = Herde(get_driver())
+
+    logger.info("Purging old statuses...")
+    with utils.duration("Purged old statuses in {:.3f} seconds"):
+        herde.purge_old_statuses(config.fediway.herde_max_status_age)
+
 @app.command("seed")
 def seed():
     from sqlmodel import select, exists, func, union_all
