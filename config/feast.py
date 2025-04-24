@@ -2,6 +2,7 @@
 from feast.feature_store import RepoConfig
 from feast.infra.online_stores.redis import RedisOnlineStoreConfig
 from feast.infra.offline_stores.contrib.spark_offline_store.spark import SparkOfflineStoreConfig
+from feast.infra.offline_stores.contrib.postgres_offline_store.postgres import PostgreSQLOfflineStoreConfig
 
 from enum import Enum
 
@@ -48,6 +49,17 @@ class FeastConfig(BaseConfig):
 
     @property
     def offline_config(self):
+        from .db import DBConfig
+        db = DBConfig()
+
+        return PostgreSQLOfflineStoreConfig(
+            host=db.rw_host,
+            port=db.rw_port,
+            database=db.rw_name,
+            user=db.rw_user,
+            password=db.rw_pass.get_secret_value(),
+        )
+
         spark_conf = {
             'spark.master': 'local[*]',
             'spark.sql.session.timeZone': 'UTC'

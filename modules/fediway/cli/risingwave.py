@@ -79,9 +79,17 @@ def migrate():
                 sql = env_substitute(f.read(), context)
 
             up_sql, _ = parse_migration(sql)
-            
+
             with conn.cursor() as cur:
-                cur.execute(up_sql)
+                for query in up_sql.split(";"):
+                    try:
+                        cur.execute(query+";")
+                        conn.commit()
+                    except Exception as e:
+                        if str(e) == "can't execute an empty query":
+                            continue
+                        print(query)
+                        raise e
                 cur.execute("INSERT INTO _migrations (version) VALUES (%s);", (version,))
                 conn.commit()
 
@@ -102,8 +110,8 @@ def rollback():
         for file in reversed(sorted(migration_dir.glob("*.sql"))):
             version = file.stem
             
-            if version not in applied:
-                continue
+            # if version not in applied:
+            #     continue
             
             with open(file, 'r') as f:
                 sql = env_substitute(f.read(), context)

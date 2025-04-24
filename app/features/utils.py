@@ -1,5 +1,6 @@
 
-from feast.infra.offline_stores.contrib.spark_offline_store.spark_source import SparkSource
+from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import PostgreSQLSource
+# from feast.infra.offline_stores.contrib.spark_offline_store.spark_source import SparkSource
 from feast import FeatureView, PushSource, Entity, Field
 from feast.data_format import ParquetFormat
 from feast.types import (
@@ -60,12 +61,18 @@ def _feast_type_to_pa_type(_type):
     return type_mapping[_type]
 
 def get_push_source(view_name: str, offline_store_path: str) -> PushSource:
-    batch_source = SparkSource(
+    # batch_source = SparkSource(
+    #     name=f"{view_name}_source",
+    #     path=f"{offline_store_path}/{view_name}",
+    #     file_format="parquet",
+    #     timestamp_field="event_time",
+    #     date_partition_column="date"
+    # )
+
+    batch_source = PostgreSQLSource(
         name=f"{view_name}_source",
-        path=f"{offline_store_path}/{view_name}",
-        file_format="parquet",
+        table=f"offline_fs_{view_name}_features",
         timestamp_field="event_time",
-        date_partition_column="date"
     )
     
     push_source = PushSource(

@@ -76,16 +76,30 @@ WHERE EXISTS (
 	 AND ste.embedding IS NOT NULL
 );
 
-{% for engagement_type in ['favourites', 'reblogs', 'replies']  %}
-	CREATE SINK IF NOT EXISTS latest_account_{{ engagement_type }}_sink
-    FROM latest_account_{{ engagement_type }}_embeddings
-    WITH (
-        connector='kafka',
-        properties.bootstrap.server='${bootstrap_server}',
-        topic='latest_account_{{ engagement_type }}_embeddings',
-        primary_key='account_id',
-    ) FORMAT DEBEZIUM ENCODE JSON;
-{% endfor -%}
+-- {% for engagement_type in ['favourites', 'reblogs', 'replies']  %}
+	-- CREATE SINK IF NOT EXISTS latest_account_{{ engagement_type }}_sink
+    -- FROM latest_account_{{ engagement_type }}_embeddings
+    -- WITH (
+    --     connector='kafka',
+    --     properties.bootstrap.server='${bootstrap_server}',
+    --     topic='latest_account_{{ engagement_type }}_embeddings',
+    --     primary_key='account_id',
+    -- ) FORMAT DEBEZIUM ENCODE JSON;
+
+	-- CREATE TABLE offline_fs_latest_account_{{ engagement_type }}_embeddings (
+	-- 	account_id BIGINT PRIMARY KEY,
+	-- 	embeddings REAL[][],
+	-- ) APPEND ONLY WITH (retention_seconds = 86400);
+
+	-- CREATE SINK IF NOT EXISTS latest_account_{{ engagement_type }}_sink
+    -- FROM latest_account_{{ engagement_type }}_embeddings
+    -- WITH (
+    --     connector='kafka',
+    --     properties.bootstrap.server='${bootstrap_server}',
+    --     topic='latest_account_{{ engagement_type }}_embeddings',
+    --     primary_key='account_id',
+    -- ) FORMAT DEBEZIUM ENCODE JSON;
+-- {% endfor -%}
 
 -- :down
 DROP VIEW IF EXISTS latest_account_favourites_embeddings;
