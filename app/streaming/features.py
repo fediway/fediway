@@ -27,7 +27,7 @@ class FeaturesEventHandler(DebeziumEventHandler):
         features = {}
         for key, value in data.items():
             if key not in ['author_id', 'account_id', 'event_time']:
-                key = f"{self.source.replace('_features', '')}.{key}"
+                key = f"{key}"
             features[key] = value
         
         features['event_time'] = min(now, data['event_time'] * 1000)
