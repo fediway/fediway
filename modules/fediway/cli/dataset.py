@@ -31,12 +31,14 @@ def create_dataset(
     typer.echo(f"Creating dataset: {name}")
 
     dataset_cls = DATASETS[name]
+
+    name = f"{name}_{datetime.now().strftime('%d_%m_%Y')}"
     
     rw = next(get_rw_session())
     fs = get_feature_store()
-    dataset = dataset_cls.extract(fs, rw)
+    dataset = dataset_cls.extract(fs, rw, name)
 
-    dataset_path = Path(path) / f"{name}_{datetime.now().strftime('%d_%m_%Y')}"
+    dataset_path = Path(path) / name
     dataset = dataset.train_test_split(test_size=test_size)
     dataset.save_to_disk(str(dataset_path))
 

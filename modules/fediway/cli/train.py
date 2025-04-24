@@ -31,13 +31,15 @@ def train_kirby(
     dataset_path: str = 'data/datasets',
     seed: int = 42
 ) -> int:
-    from app.core.fs import get_feature_store
+    from app.core.feast import get_feature_store
     np.random.seed(seed)
 
     fs = get_feature_store()
 
+    # fv = fs.get_feature_view("account_engagement_all")
+
     dataset = load_from_disk(Path(dataset_path) / dataset)
-    features = [f for f in dataset['train'].features.keys() if not f.startswith('label.')]
+    features = [f for f in dataset['train'].features.keys() if "__" in f]
 
     ranker = getattr(Kirby, model)(features=features, label=label)
     ranker.train(dataset['train'])
