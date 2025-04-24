@@ -103,7 +103,7 @@ class Feed():
 
         X = self.features.get(candidates, ranker.features)
         scores = ranker.predict(X)
-
+        
         # reset queue if it is not the final candidate queue
         if ranker_index != len(self.rankers) - 1:
             queue.reset()

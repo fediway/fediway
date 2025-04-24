@@ -31,7 +31,7 @@ class TopKPriorityQueue:
     def to_dict(self):
         return {
             'k': self.k,
-            'heap': self.heap,
+            'heap': [tuple(item) for item in self.heap],
             'counter': next(self.counter),
         }
 
