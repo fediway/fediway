@@ -15,19 +15,26 @@ class AccountEventHandler(DebeziumEventHandler):
         return Account(**data)
 
     async def created(self, account: Account):
+        if new.silenced_at is not None:
+            return await self.deleted(account)
+        elif new.suspended_at is not None:
+            return await self.deleted(account)
+        elif new.silenced_at is not None:
+            return await self.deleted(account)
+
         self.herde.add_account(account)
         logger.debug(f"Added account {account.acct} to memgraph.")
 
     async def updated(self, old: Account, new: Account):
         if new.silenced_at is not None:
-            await self.deleted(account)
+            return await self.deleted(account)
         elif new.suspended_at is not None:
-            await self.deleted(account)
+            return await self.deleted(account)
         elif new.silenced_at is not None:
-            await self.deleted(account)
+            return await self.deleted(account)
         
         if old.indexable != new.indexable:
-            self.add_account(account)
+            self.herde.add_account(account)
             logger.debug(f"Updared account {account.acct} in memgraph.")
 
     async def deleted(self, account: Account):

@@ -132,6 +132,7 @@
     FROM {{ group }}_engagement_is_{{ type }}_features
     WITH (type = 'append-only', force_append_only='true');
 
+    -- TODO: Add kafka sink for online feature store (but only latest by event_time and append only!)
     -- CREATE SINK IF NOT EXISTS {{ group }}_engagement_is_{{ type }}_features_sink
     -- FROM {{ group }}_engagement_is_{{ type }}_features
     -- WITH (
