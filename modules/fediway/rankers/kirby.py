@@ -15,7 +15,8 @@ class Kirby():
     MODELS = [
         'linear',
         'random_forest',
-        'xgboost'
+        'xgboost',
+        'lightgbm',
     ]
 
     def __init__(self, 
@@ -45,7 +46,7 @@ class Kirby():
                       features: list[str], 
                       label: str, 
                       scaler: str = 'standard', 
-                      n_estimators: int = 1000, 
+                      n_estimators: int = 1500, 
                       random_state: int = None):
         model = RandomForestClassifier(n_estimators=n_estimators)
         scaler = get_scaler(scaler)
@@ -60,6 +61,21 @@ class Kirby():
                       random_state: int = None):
         from xgboost import XGBClassifier
         model = XGBClassifier()
+        scaler = get_scaler(scaler)
+
+        return cls(model, scaler, features, label)
+
+    @classmethod
+    def lightgbm(cls, 
+                 features: list[str], 
+                 label: str, 
+                 scaler: str = 'standard', 
+                 n_estimators: int = 1000, 
+                 random_state: int = None):
+        from lightgbm import LGBMClassifier
+        model = LGBMClassifier(
+            n_estimators=n_estimators
+        )
         scaler = get_scaler(scaler)
 
         return cls(model, scaler, features, label)

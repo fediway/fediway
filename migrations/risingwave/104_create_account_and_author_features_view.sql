@@ -1,3 +1,4 @@
+
 -- :up
 {% for group_id, group, interval, interval_name, specs in [
   ('account_id', 'account', '1 HOUR', 'hourly', [(24, '1d'), (6*24, '7d'), (29*24, '30d')]), 

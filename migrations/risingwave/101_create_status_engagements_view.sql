@@ -6,6 +6,9 @@ CREATE MATERIALIZED VIEW status_engagements AS
     f.account_id,
     f.status_id,
     'favourite' AS type,
+    f.id as favourite_id,
+    NULL::BIGINT as reblog_id,
+    NULL::BIGINT as reply_id,
     f.created_at AS event_time
   FROM favourites f
 
@@ -16,6 +19,9 @@ CREATE MATERIALIZED VIEW status_engagements AS
     s.account_id,
     s.reblog_of_id AS status_id,
     'reblog' AS type,
+    NULL::BIGINT as favourite_id,
+    s.id as reblog_id,
+    NULL::BIGINT as reply_id,
     s.created_at AS event_time
   FROM statuses s
   WHERE s.reblog_of_id IS NOT NULL
@@ -27,6 +33,9 @@ CREATE MATERIALIZED VIEW status_engagements AS
     s.account_id,
     s.in_reply_to_id AS status_id,
     'reply' AS type,
+    NULL::BIGINT as favourite_id,
+    NULL::BIGINT as reblog_id,
+    s.id as reply_id,
     s.created_at AS event_time
   FROM statuses s
   WHERE s.in_reply_to_id IS NOT NULL 

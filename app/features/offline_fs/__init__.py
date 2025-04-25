@@ -6,42 +6,86 @@ from sqlalchemy import text
 
 import app.utils as utils
 
-def get_historical_features(entity_table: str, fv: FeatureView, db: Session):
-    table = f"offline_fs_{fv.name}_features"
+def get_historical_features(entity_table: str, feature_views: list[FeatureView], db: Session):
+    
+    queries = []
+    for fv in feature_views:
+        table = f"offline_fs_{fv.name}_features"
+        schema_select_clause = ', '.join([f'f.{f.name}' for f in fv.schema])
+        entities_select_clause = ', '.join([f'f.{e}' for e in fv.entities])
+        entities_and_clause = ' and '.join([f'f.{e} = ds.{e}' for e in fv.entities])
+        null_columns = ', '.join([f"NULL AS {_fv.name}" for _fv in feature_views if _fv.name != fv.name])
 
-    schema_select_clause = ', '.join([f'f.{f.name}' for f in fv.schema])
-    entities_select_clause = ', '.join([f'f.{e}' for e in fv.entities])
-    entities_and_clause = ' and '.join([f'f.{e} = ds.{e}' for e in fv.entities])
-    query = f"""
-    select 
-        ds.*,
-        latest.event_time as event_time,
-        (
+        fv_select = f"""(
             select ARRAY[{schema_select_clause}]
             from {table} f 
             where {entities_and_clause} and f.event_time = latest.event_time
             limit 1
-        ) as feats
-    from {entity_table} ds
-    full outer join (
-        select max(f.event_time) as event_time, {entities_select_clause}
-        from {table} f 
-        join {entity_table} ds
-        on {entities_and_clause} and f.event_time < ds.time
-        group by {entities_select_clause}
-    ) as latest
-    on {entities_and_clause.replace('f', 'latest')};
+        )::BIGINT[] as {fv.name}"""
+
+        columns = []
+        for _fv in feature_views:
+            if _fv.name == fv.name:
+                columns.append(fv_select)
+            else:
+                columns.append(f"NULL::BIGINT[] AS {_fv.name}")
+        columns = ',\n  '.join(columns)        
+
+        query = f"""
+        select 
+            ds.account_id,
+            ds.status_id,
+            {columns}
+        from {entity_table} ds
+        join (
+            select max(f.event_time) as event_time, {entities_select_clause}
+            from {table} f 
+            join {entity_table} ds
+            on {entities_and_clause} and f.event_time < ds.time
+            group by {entities_select_clause}
+        ) as latest
+        on {entities_and_clause.replace('f', 'latest')}
+        """
+        queries.append(query)
+
+    entities_and_clause = ' AND '.join([f'data.{e} = ds.{e}' for e in ['account_id', 'status_id']])
+    features_clause = ' AND '.join([f"{fv.name} IS NOT NULL" for fv in feature_views])
+    entties_select = ", ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
+    fv_select = ", ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
+    query = f"""
+    SELECT 
+        ds.account_id, 
+        ds.status_id, 
+        COALESCE(BOOL_OR(l.is_favourited), FALSE) AS is_favourited,
+        COALESCE(BOOL_OR(l.is_replied), FALSE) AS is_replied,
+        COALESCE(BOOL_OR(l.is_reblogged), FALSE) AS is_reblogged,
+        COALESCE(BOOL_OR(l.is_reply_engaged_by_author), FALSE) AS is_reply_engaged_by_author,
+        {fv_select}
+    FROM {entity_table} as ds
+    LEFT JOIN ({' UNION ALL '.join(queries)}) data ON {entities_and_clause}
+    LEFT JOIN account_status_labels l
+      ON l.account_id = ds.account_id AND l.status_id = ds.status_id
+    GROUP BY ds.account_id, ds.status_id;
     """
-    
+
+
+
     rows = []
     
     for row in db.exec(text(query)).mappings().yield_per(100):
-        feats = {f"{fv.name}__{f.name}": value for f, value in zip(fv.schema, row['feats'])}
-        entities = {e: row[e] for e in fv.entities}
+        feats = {}
+        for fv in feature_views:
+            if row[fv.name] is None:
+                feats |= {f"{fv.name}__{f.name}": None for f in fv.schema}
+            else:
+                feats |= {f"{fv.name}__{f.name}": value for f, value in zip(fv.schema, row[fv.name])}
+        entities = {e: row[e] for e in ['account_id', 'status_id']}
 
         rows.append(entities | {
-            'event_time': row.event_time,
-            'label.is_favourited': row.label,
+            'label.is_favourited': row.is_favourited,
+            'label.is_replied': row.is_replied,
+            'label.is_reblogged': row.is_reblogged,
+            'label.is_reply_engaged_by_author': row.is_reply_engaged_by_author,
         } | feats)
     
     return pd.DataFrame(rows)

@@ -1,10 +1,16 @@
+
 -- :up
 CREATE MATERIALIZED VIEW enriched_status_engagements AS
 SELECT
   e.account_id,
   e.status_id,
   MAX(s.account_id) as author_id,
+  MAX(s.in_reply_to_id) as in_reply_to_id,
+  MAX(s.reblog_of_id) as reblog_of_id,
   e.type,
+  MAX(e.favourite_id) as favourite_id,
+  MAX(e.reblog_id) as reblog_id,
+  MAX(e.reply_id) as reply_id,
   e.event_time,
   MAX(s.created_at) AS status_event_time,
   MAX(f.fav_count) as fav_count,
@@ -18,7 +24,11 @@ SELECT
 FROM status_engagements e
 JOIN statuses s ON s.id = e.status_id
 JOIN status_features f ON f.status_id = e.status_id
-GROUP BY e.account_id, e.status_id, e.event_time, e.type;
+GROUP BY 
+  e.account_id, 
+  e.status_id, 
+  e.event_time, 
+  e.type;
 
 -- :down
 DROP VIEW IF EXISTS enriched_status_engagements;

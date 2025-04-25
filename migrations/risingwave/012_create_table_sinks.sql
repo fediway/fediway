@@ -7,7 +7,8 @@
     ('follows', 'id'), 
     ('favourites', 'id'), 
     ('tags', 'id'), 
-    ('statuses_tags', 'status_id,tag_id')
+    ('statuses_tags', 'status_id,tag_id'),
+    ('status_stats', 'id')
 ] -%}
     CREATE SINK IF NOT EXISTS {{ table }}_sink
     FROM {{ table }}
@@ -20,6 +21,6 @@
 {% endfor -%}
 
 -- :down
-{% for table in ['accounts', 'statuses', 'mentions', 'follows', 'favourites', 'tags', 'statuses_tags']  %}
+{% for table in ['accounts', 'statuses', 'mentions', 'follows', 'favourites', 'tags', 'statuses_tags', 'status_stats']  %}
     DROP SINK IF EXISTS {{ table }}_sink;
 {% endfor -%}
