@@ -37,11 +37,12 @@ class RankerV1Dataset(Dataset):
             Column('time', DateTime),
         )
 
-        db.exec(text(
-            utils.compile_sql(CreateTable(table))
-            .replace(" NOT NULL", "")
-            .replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS")
-        ))
+        # db.exec(text(f"DROP TABLE IF EXISTS {table.name};"))
+        # db.exec(text(
+        #     utils.compile_sql(CreateTable(table))
+        #     .replace(" NOT NULL", "")
+        #     .replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS")
+        # ))
         
         # pos_entites = 0
         # neg_entities = 0
@@ -61,7 +62,7 @@ class RankerV1Dataset(Dataset):
         #     statuses.append((label.status_id, label.author_id, label.status_created_at))
         
         # misses = 0
-        # while neg_entities < pos_entites:
+        # while neg_entities < pos_entites * 4:
         #     account_id = random.choice(account_ids)
         #     status_id, author_id, event_time = random.choice(statuses)
 
@@ -82,6 +83,7 @@ class RankerV1Dataset(Dataset):
         #         time=event_time,
         #     ))
         # db.commit()
+        # exit()
 
         feature_views = [
             'author_engagement_all',

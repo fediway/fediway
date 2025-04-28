@@ -15,11 +15,11 @@ class AccountEventHandler(DebeziumEventHandler):
         return Account(**data)
 
     async def created(self, account: Account):
-        if new.silenced_at is not None:
+        if account.silenced_at is not None:
             return await self.deleted(account)
-        elif new.suspended_at is not None:
+        elif account.suspended_at is not None:
             return await self.deleted(account)
-        elif new.silenced_at is not None:
+        elif account.silenced_at is not None:
             return await self.deleted(account)
 
         self.herde.add_account(account)
@@ -31,6 +31,8 @@ class AccountEventHandler(DebeziumEventHandler):
         elif new.suspended_at is not None:
             return await self.deleted(account)
         elif new.silenced_at is not None:
+            return await self.deleted(account)
+        elif new.indexable is not None and not new.indexable:
             return await self.deleted(account)
         
         if old.indexable != new.indexable:
