@@ -25,7 +25,7 @@ class TrendingStatusesByInfluentialUsers(Herde, Source):
         AND s.num_reblogs > 0
         WITH a, s, (now - s.created_at) / 86400 AS age_days
         WITH a, s, age_days,
-            0.6 * ((s.num_favs + 1) * (s.num_reblogs + 1)) * 2 / ((a.avg_favs + 1) * (a.avg_reblogs + 1)) + 0.4 * a.rank AS score
+            ((s.num_favs + 1) * (s.num_reblogs + 1)) * 10 / ((a.avg_favs + 1) * (a.avg_reblogs + 1)) * a.rank * EXP(-age_days) AS score
         ORDER BY a.id, score DESC
         WITH a.id AS account_id, collect([s.id, score])[0] AS top_status
         RETURN account_id, top_status[0] AS status_id, top_status[1] AS score
