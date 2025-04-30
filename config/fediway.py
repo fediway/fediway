@@ -12,7 +12,7 @@ class FediwayConfig(BaseConfig):
     feed_max_age_in_days: int       = 3
     feed_max_light_candidates: int  = 500
     feed_max_heavy_candidates: int  = 100
-    feed_batch_size: int            = 10
+    feed_batch_size: int            = 20
 
     herde_max_status_age_in_days: int = 7
 
