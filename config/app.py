@@ -9,7 +9,7 @@ class AppEnvTypes(Enum):
     dev: str = "development"
     test: str = "test"
 
-class AppConfig(BaseConfig):
+class AppConfig(BaseConfig):    
     debug: bool = False
 
     app_env: AppEnvTypes = AppEnvTypes.prod

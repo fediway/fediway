@@ -1,6 +1,6 @@
 
 from sqlmodel import Session as DBSession, select
-from fastapi import Request, BackgroundTasks, Depends
+from fastapi import Request, BackgroundTasks, Depends, Response
 from loguru import logger
 import asyncio
 import time
@@ -17,6 +17,8 @@ class FeedService():
     def __init__(self, 
                  name: str,
                  db: DBSession,
+                 request: Request,
+                 response: Response,
                  tasks: BackgroundTasks,
                  session: Session, 
                  sources: list[Source],
@@ -25,6 +27,8 @@ class FeedService():
         self.name = name
         self.db = db
         self.tasks = tasks
+        self.request = request
+        self.response = response
         self.session = session
         self.sources = sources
         self.feed = feed
@@ -36,9 +40,10 @@ class FeedService():
 
         state = self.session.get(self.session_key)
 
-        # if state is not None:
-        #     self.feed.merge_dict(state)
-        #     return
+        if state is not None:
+            self.feed.merge_dict(state)
+            self._set_link_header()
+            return
 
         await self.collect_sources()
 
@@ -52,8 +57,13 @@ class FeedService():
         self.db.commit()
 
         self.feed.id = feed_model.id
+        self._set_link_header()
 
         # await collecting
+
+    def _set_link_header(self):
+        next_url = self.request.url.include_query_params(feed=self.feed.id)
+        self.response.headers['link'] = f'<{next_url}>; rel="next"'
 
     def max_n_per_source(self):
         return config.fediway.feed_max_light_candidates // len(self.sources)

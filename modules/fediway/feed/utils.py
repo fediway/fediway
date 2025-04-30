@@ -31,14 +31,14 @@ class TopKPriorityQueue:
     def to_dict(self):
         return {
             'k': self.k,
-            'heap': [tuple(item) for item in self.heap],
+            'heap': self.heap,
             'counter': next(self.counter),
         }
 
     @classmethod
     def from_dict(cls, data):
         queue = cls(data['k'])
-        queue.heap = data['heap']
+        queue.heap = [tuple(item) for item in data['heap']]
         queue.counter = count(data['counter'])
         return queue
 

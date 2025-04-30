@@ -1,6 +1,6 @@
 
 from sqlmodel import Session as DBSession, select
-from fastapi import Request, BackgroundTasks, Depends
+from fastapi import Request, Response, BackgroundTasks, Depends
 
 from app.core.db import get_db_session
 from app.services.feed_service import FeedService
@@ -14,6 +14,7 @@ def get_status_feed(name: str,
                     sampler: Sampler = TopKSampler(),):
     
     def _inject(request: Request, 
+                response: Response, 
                 tasks: BackgroundTasks,
                 db: DBSession = Depends(get_db_session),
                 features: StatusFeaturesService = Depends(StatusFeaturesService),
@@ -24,6 +25,8 @@ def get_status_feed(name: str,
             name=name, 
             db=db, 
             session=request.state.session, 
+            request=request,
+            response=response,
             tasks=tasks,
             sources=_sources,
             feed=Feed(
