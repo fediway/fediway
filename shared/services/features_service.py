@@ -10,6 +10,8 @@ from modules.mastodon.models import Status, StatusStats
 from modules.fediway.feed.features import Features
 
 class FeaturesService(Features):
+    cache = {}
+
     def __init__(self, fs: FeatureStore = feature_store):
         self.fs = fs
 

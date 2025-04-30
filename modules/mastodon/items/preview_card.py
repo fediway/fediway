@@ -1,5 +1,6 @@
 
 from .base import Item
+from .preview_card_author import PreviewCardAuthorItem
 from ..models import PreviewCard
 
 PREVIEW_CARD_TYPES = {
@@ -14,6 +15,7 @@ class PreviewCardItem(Item):
     title: str
     description: str
     type: str
+    authors: list[PreviewCardAuthorItem] = []
     author_name: str
     author_url: str
     provider_name: str
