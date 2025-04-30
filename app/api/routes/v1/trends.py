@@ -10,7 +10,7 @@ from app.api.dependencies import (
     get_status_feed
 )
 from app.core.db import get_db_session
-from app.modules.models import Tag
+from app.modules.models import Tag, Status
 from app.api.dependencies import get_trending_tags_sources
 from app.api.items import TagItem
 from app.api.items import StatusItem
