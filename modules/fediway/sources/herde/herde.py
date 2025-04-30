@@ -149,7 +149,7 @@ class Herde():
         CREATE (a)-[:CREATED_BY]->(s)
         """
 
-        created_at = status.created_at if type(status.created_at) == int else (status.created_at.timestamp())
+        created_at = status.created_at if type(status.created_at) == int else int(status.created_at.timestamp() / 1000)
 
         params = {
             'id': status.id,

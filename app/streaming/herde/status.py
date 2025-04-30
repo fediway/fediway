@@ -18,6 +18,7 @@ class StatusEventHandler(DebeziumEventHandler):
 
     async def created(self, status: Status):
         limit = int((datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)).timestamp() / 1000)
+        
         if status.created_at > limit:
             return
             
