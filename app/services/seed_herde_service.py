@@ -1,4 +1,7 @@
 
+import pandas as pd
+from dask import dataframe as dd
+from dask.base import normalize_token
 from sqlmodel import Session as DBSession, select, func, exists
 from sqlalchemy.orm import selectinload, aliased
 from sqlalchemy import or_, and_
@@ -17,6 +20,86 @@ import app.utils as utils
 def query_line(query):
     return query.strip().replace('  ', '').replace('\n', ' ') + "\n"
 
+class InsertBatch:
+    def __init__(self, db, herde):
+        self.db = db
+        self.herde = herde
+
+    def __dask_tokenize__(self):
+        return normalize_token(type(self))
+
+class InsertStatuses(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        statuses = [Status(id=id, **data) for id, data in rows.iterrows()]
+
+        if statuses[0].id == 1:
+            return
+
+        self.herde.add_statuses(statuses)
+
+class InsertStatusStats(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        stats = [StatusStats(status_id=status_id, **data) for status_id, data in rows.iterrows()]
+
+        if stats[0].status_id == 1:
+            return
+
+        self.herde.add_status_stats_batch(stats)
+
+class InsertStatusTags(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        status_tags = [StatusTag(status_id=status_id, **data) for status_id, data in rows.iterrows()]
+
+        if status_tags[0].status_id == 1:
+            return
+
+        self.herde.add_status_tags(status_tags)
+
+class InsertReblogs(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        reblogs = [Status(id=id, **data) for id, data in rows.iterrows()]
+
+        if reblogs[0].id == 1:
+            return
+
+        self.herde.add_reblogs(reblogs)
+
+class InsertFavourites(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        favourites = [Favourite(id=id, **data) for id, data in rows.iterrows()]
+
+        if favourites[0].id == 1:
+            return
+
+        self.herde.add_favourites(favourites)
+
+class InsertMentions(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        mentions = [Mention(id=id, **data) for id, data in rows.iterrows()]
+
+        if mentions[0].id == 1:
+            return
+
+        self.herde.add_mentions(mentions)
+
 class SeedHerdeService:
     def __init__(self, db: DBSession, driver: Driver):
         self.db = db
@@ -29,11 +112,11 @@ class SeedHerdeService:
         with utils.duration("Set up memgraph in {:.3f} seconds"):
             self.herde.setup()
 
-        with utils.duration("Seeded accounts in {:.3f} seconds"):
-            self.seed_accounts()
+        # with utils.duration("Seeded accounts in {:.3f} seconds"):
+        #     self.seed_accounts()
 
-        with utils.duration("Seeded tags in {:.3f} seconds"):
-            self.seed_tags()
+        # with utils.duration("Seeded tags in {:.3f} seconds"):
+        #     self.seed_tags()
 
         with utils.duration("Seeded statuses in {:.3f} seconds"):
             self.seed_statuses()
@@ -44,8 +127,8 @@ class SeedHerdeService:
         with utils.duration("Seeded reblogs in {:.3f} seconds"):
             self.seed_reblogs()
 
-        with utils.duration("Seeded follows in {:.3f} seconds"):
-            self.seed_follows()
+        # with utils.duration("Seeded follows in {:.3f} seconds"):
+        #     self.seed_follows()
 
         with utils.duration("Created favourite seeds in {:.3f} seconds"):
             self.seed_favourites()
@@ -75,18 +158,29 @@ class SeedHerdeService:
             .where(Status.created_at > self.max_age)
             .where(Status.reblog_of_id.is_(None))
         )
-        # total = self.db.scalar(
-        #     select(func.count(Status.id))
-        #     .where(Status.created_at > self.max_age)
-        #     .where(Status.reblog_of_id.is_(None))
-        # )
+        total = self.db.scalar(
+            select(func.count(Status.id))
+            .where(Status.created_at > self.max_age)
+            .where(Status.reblog_of_id.is_(None))
+        )
 
-        bar = tqdm(desc="Statuses", unit="statuses")
-        
-        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-            for row in batch:
-                self.herde.add_status(Status(**row))
-                bar.update(1)
+        logger.info(f"Inserting {total} statuses.")
+
+        ddf = (
+            dd.read_sql_query(
+                sql=query,
+                con=self.db.get_bind().url.render_as_string(hide_password=False),
+                index_col="id",
+                npartitions=max(1, total // 1_000),
+                meta=pd.DataFrame({
+                    "account_id": pd.Series([], dtype="int64"),
+                    "language": pd.Series([], dtype="string"),
+                    "created_at": pd.Series([], dtype="datetime64[ms]"),
+                })
+            )
+            .map_partitions(InsertStatuses(self.db, self.herde))
+            .compute()
+        )
 
     def seed_reblogs(self, batch_size: int = 100):
         query = (
@@ -99,64 +193,118 @@ class SeedHerdeService:
             .where(Status.created_at > self.max_age)
             .where(~Status.reblog_of_id.is_(None))
         )
-        # total = self.db.scalar(
-        #     select(func.count(Status.id))
-        #     .where(Status.created_at > self.max_age)
-        #     .where(~Status.reblog_of_id.is_(None))
-        # )
 
-        bar = tqdm(desc="Statuses", unit="statuses")
-        
-        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-            for row in batch:
-                self.herde.add_reblog(Status(**row))
-                bar.update(1)
+        total = self.db.scalar(
+            select(func.count(Status.id))
+            .where(Status.created_at > self.max_age)
+            .where(~Status.reblog_of_id.is_(None))
+        )
+
+        if total == 0:
+            return
+
+        logger.info(f"Inserting {total} reblogs.")
+
+        ddf = (
+            dd.read_sql_query(
+                sql=query,
+                con=self.db.get_bind().url.render_as_string(hide_password=False),
+                index_col="id",
+                npartitions=max(1, total // 1_000),
+                meta=pd.DataFrame({
+                    "account_id": pd.Series([], dtype="int64"),
+                    "language": pd.Series([], dtype="string"),
+                    "created_at": pd.Series([], dtype="datetime64[ms]"),
+                })
+            )
+            .map_partitions(InsertReblogs(self.db, self.herde))
+            .compute()
+        )
 
     def seed_favourites(self, batch_size: int = 100):
         query = (
-            select(Favourite)
+            select(
+                Favourite.id, 
+                Favourite.account_id, 
+                Favourite.status_id
+            )
+            .where(
+                exists(Status).where(and_(
+                    Status.id.label('sid') == Favourite.status_id,
+                    Status.created_at > self.max_age
+                ))
+            )
+        )
+
+        total = self.db.scalar(
+            select(func.count(Favourite.id))
             .join(Status, and_(
                 Status.id == Favourite.status_id,
                 Status.created_at > self.max_age
             ))
         )
-        # total = self.db.scalar(
-        #     select(func.count(Favourite.id))
-        #     .join(Status, and_(
-        #         Status.id == Favourite.status_id,
-        #         Status.created_at > self.max_age
-        #     ))
-        # )
 
-        bar = tqdm(desc="Favourites", unit="favourites")
-        
-        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-            for row in batch:
-                self.herde.add_favourite(row)
-                bar.update(1)
+        if total == 0:
+            return
+
+        logger.info(f"Inserting {total} favourites.")
+
+        ddf = (
+            dd.read_sql_query(
+                sql=query,
+                con=self.db.get_bind().url.render_as_string(hide_password=False),
+                index_col="id",
+                npartitions=max(1, total // 1_000),
+                meta=pd.DataFrame({
+                    "account_id": pd.Series([], dtype="int64"),
+                    "status_id": pd.Series([], dtype="int64"),
+                })
+            )
+            .map_partitions(InsertFavourites(self.db, self.herde))
+            .compute()
+        )
 
     def seed_status_stats(self, batch_size: int = 100):
         query = (
-            select(StatusStats)
+            select(
+                StatusStats.status_id, 
+                StatusStats.replies_count, 
+                StatusStats.reblogs_count, 
+                StatusStats.favourites_count
+            )
             .join(Status, and_(
                 Status.id == StatusStats.status_id,
-                Status.created_at > self.max_age
+                Status.created_at > self.max_age,
+                Status.reblog_of_id.is_(None)
             ))
         )
-        # total = self.db.scalar(
-        #     select(func.count(StatusStats.status_id))
-        #     .join(Status, and_(
-        #         Status.id == StatusStats.status_id,
-        #         Status.created_at > self.max_age
-        #     ))
-        # )
 
-        bar = tqdm(desc="Status Stats", unit="status_stats")
+        total = self.db.scalar(
+            select(func.count(StatusStats.status_id))
+            .join(Status, and_(
+                Status.id == StatusStats.status_id,
+                Status.created_at > self.max_age,
+                Status.reblog_of_id.is_(None)
+            ))
+        )
 
-        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-            for row in batch:
-                self.herde.add_status_stats(row)
-                bar.update(1)
+        logger.info(f"Inserting {total} status stats.")
+
+        ddf = (
+            dd.read_sql_query(
+                sql=query,
+                con=self.db.get_bind().url.render_as_string(hide_password=False),
+                index_col="status_id",
+                npartitions=max(1, total // 1_000),
+                meta=pd.DataFrame({
+                    "replies_count": pd.Series([], dtype="int64"),
+                    "reblogs_count": pd.Series([], dtype="int64"),
+                    "favourites_count": pd.Series([], dtype="int64"),
+                })
+            )
+            .map_partitions(InsertStatusStats(self.db, self.herde))
+            .compute()
+        )
 
     def seed_follows(self, batch_size: int = 100):
         query = select(Follow)
@@ -171,14 +319,25 @@ class SeedHerdeService:
 
     def seed_accounts(self, batch_size: int = 100):
         query = select(Account.id)
-        # total = self.db.scalar(select(func.count(Account.id)))
+        total = self.db.scalar(select(func.count(Account.id)))
 
-        bar = tqdm(desc="Accounts", unit="accounts")
+        ddf = (
+            dd.read_sql_query(
+                sql=query,
+                con=self.db.get_bind().url.render_as_string(hide_password=False),
+                index_col="id",
+                npartitions=max(1, total // 1_000),
+            )
+            .map_partitions(InsertAccountBatch(self.db, self.herde))
+            .compute()
+        )
 
-        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-            for row in batch:
-                self.herde.add_account(Account(id=row))
-                bar.update(1)
+        # bar = tqdm(desc="Accounts", unit="accounts")
+
+        # for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
+        #     for row in batch:
+        #         self.herde.add_account(Account(id=row))
+        #         bar.update(1)
 
     def seed_tags(self, batch_size: int = 100):
         query = select(Tag)
@@ -192,23 +351,76 @@ class SeedHerdeService:
                 bar.update(1)
 
     def seed_statuses_tags(self, batch_size: int = 100):
-        query = select(StatusTag)
-        # total = self.db.scalar(select(func.count(StatusTag.status_id)))
+        query = (
+            select(StatusTag.status_id, StatusTag.tag_id)
+            .where(
+                exists(Status).where(and_(
+                    Status.id.label('sid') == StatusTag.status_id,
+                    Status.created_at > self.max_age
+                ))
+            )
+        )
+        
+        total = self.db.scalar(
+            select(func.count(StatusTag.status_id))
+            .where(
+                exists(Status).where(and_(
+                    Status.id.label('sid') == StatusTag.status_id,
+                    Status.created_at > self.max_age
+                ))
+            )
+        )
 
-        bar = tqdm(desc="Status Tags", unit="statuses_tags")
+        logger.info(f"Inserting {total} status tags.")
 
-        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-            for row in batch:
-                self.herde.add_status_tag(row)
-                bar.update(1)
+        ddf = (
+            dd.read_sql_query(
+                sql=query,
+                con=self.db.get_bind().url.render_as_string(hide_password=False),
+                index_col="status_id",
+                npartitions=max(1, total // 1_000),
+                meta=pd.DataFrame({
+                    "tag_id": pd.Series([], dtype="int64"),
+                })
+            )
+            .map_partitions(InsertStatusTags(self.db, self.herde))
+            .compute()
+        )
 
     def seed_mentions(self, batch_size: int = 100):
-        query = select(Mention)
-        # total = self.db.scalar(select(func.count(Mention.id)))
+        query = (
+            select(Mention.id, Mention.status_id, Mention.account_id)
+            .where(
+                exists(Status).where(and_(
+                    Status.id.label('sid') == Mention.status_id,
+                    Status.created_at > self.max_age
+                ))
+            )
+        )
 
-        bar = tqdm(desc="Mentions", unit="mentions")
+        total = self.db.scalar(
+            select(func.count(Mention.id))
+            .where(
+                exists(Status).where(and_(
+                    Status.id.label('sid') == Mention.status_id,
+                    Status.created_at > self.max_age
+                ))
+            )
+        )
 
-        for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-            for row in batch:
-                self.herde.add_mention(row)
-                bar.update(1)
+        logger.info(f"Inserting {total} mentions.")
+
+        ddf = (
+            dd.read_sql_query(
+                sql=query,
+                con=self.db.get_bind().url.render_as_string(hide_password=False),
+                index_col="id",
+                npartitions=max(1, total // 1_000),
+                meta=pd.DataFrame({
+                    "status_id": pd.Series([], dtype="int64"),
+                    "account_id": pd.Series([], dtype="int64"),
+                })
+            )
+            .map_partitions(InsertMentions(self.db, self.herde))
+            .compute()
+        )

@@ -139,9 +139,29 @@ class Herde():
             num_reblogs=stats.reblogs_count,
         )
 
+    def add_status_stats_batch(self, stats: list[StatusStats]):
+        query = """
+        UNWIND $stats as row
+        MERGE (s:Status {id: row.id})
+        ON MATCH SET 
+            s.num_favs = row.num_favs,
+            s.num_replies = row.num_replies,
+            s.num_reblogs = row.num_reblogs;
+        """
+
+        self._run_query(
+            query, 
+            stats=[{
+                'id': row.status_id,
+                'num_favs': row.favourites_count,
+                'num_replies': row.replies_count,
+                'num_reblogs': row.reblogs_count,
+            } for row in stats]
+        )
+
     def add_status(self, status: Status):
         query = """
-        MATCH (a:Account {id: $account_id})
+        MERGE (a:Account {id: $account_id})
         MERGE (s:Status {id: $id})
         ON CREATE SET 
             s.language = $language, 
@@ -149,7 +169,7 @@ class Herde():
         CREATE (a)-[:CREATED_BY]->(s)
         """
 
-        created_at = status.created_at if type(status.created_at) == int else int(status.created_at.timestamp() / 1000)
+        created_at = status.created_at if type(status.created_at) == int else int(status.created_at.timestamp() * 1000)
 
         params = {
             'id': status.id,
@@ -160,6 +180,26 @@ class Herde():
 
         self._run_query(query, **params)
 
+    def add_statuses(self, statuses: list[Status]):
+        query = """
+        UNWIND $statuses AS status
+        MERGE (a:Account {id: status.account_id})
+        MERGE (s:Status {id: status.id})
+        ON CREATE SET 
+            s.language = status.language, 
+            s.created_at = status.created_at
+        CREATE (a)-[:CREATED_BY]->(s)
+        """
+
+        statuses = [{
+            'id': status.id,
+            'account_id': status.account_id,
+            'language': status.language,
+            'created_at': status.created_at if type(status.created_at) == int else int(status.created_at.timestamp() * 1000),
+        } for status in statuses]
+
+        self._run_query(query, statuses=statuses)
+
     def add_status_tag(self, status_tag: StatusTag):
         query = """
         MERGE (s:Status {id: $status_id})
@@ -169,7 +209,23 @@ class Herde():
 
         self._run_query(query, status_id=status_tag.status_id, tag_id=status_tag.tag_id)
 
-    def remove_status_tag(self, stats: StatusStats):
+    def add_status_tags(self, status_tags: list[StatusTag]):
+        query = """
+        UNWIND $status_tags as status_tag
+        MERGE (s:Status {id: status_tag.status_id})
+        MERGE (t:Tag {id: status_tag.tag_id})
+        CREATE (s)-[:TAGS]->(t)
+        """
+
+        self._run_query(
+            query, 
+            status_tags=[{
+                'status_id': status_tag.status_id,
+                'tag_id': status_tag.tag_id,
+            } for status_tag in status_tags]
+        )
+
+    def remove_status_tag(self, status_tag: StatusTag):
         query = """
         MATCH (s:Status {id: $status_id})-[r:TAGS]->(t:Tag {id: $tag_id})
         DELETE r;
@@ -188,6 +244,22 @@ class Herde():
             query, 
             account_id=mention.account_id,
             status_id=mention.status_id,
+        )
+
+    def add_mentions(self, mentions: list[Mention]):
+        query = """
+        UNWIND $mentions as mention
+        MATCH (a:Account {id: mention.account_id})
+        MATCH (s:Status {id: mention.status_id})
+        MERGE (s)-[:MENTIONS]->(a);
+        """
+
+        self._run_query(
+            query, 
+            mentions=[{
+                'account_id': mention.account_id,
+                'status_id': mention.status_id,
+            } for mention in mentions]
         )
 
     def remove_mention(self, mention: Mention):
@@ -210,7 +282,7 @@ class Herde():
 
         self._run_query(query, id=status.id)
     
-    def add_reblog(self, status: Status):
+    def add_reblog(self, reblog: Status):
         query = """
         MATCH (a:Account {id: $account_id})
         MATCH (s:Status {id: $reblog_of_id})
@@ -219,8 +291,24 @@ class Herde():
 
         self._run_query(
             query, 
-            account_id=status.account_id,
-            reblog_of_id=status.reblog_of_id,
+            account_id=reblog.account_id,
+            reblog_of_id=reblog.reblog_of_id,
+        )
+
+    def add_reblogs(self, reblogs: list[Status]):
+        query = """
+        UNWIND $reblogs AS reblog
+        MATCH (a:Account {id: reblog.account_id})
+        MATCH (s:Status {id: reblog.reblog_of_id})
+        CREATE (a)-[:REBLOGS]->(s);
+        """
+
+        self._run_query(
+            query, 
+            reblogs=[{
+                'account_id': reblog.account_id,
+                'reblog_of_id': reblog.reblog_of_id,
+            } for reblog in reblogs]
         )
 
     def remove_reblog(self, status: Status):
@@ -235,33 +323,6 @@ class Herde():
             reblog_of_id=status.reblog_of_id,
         )
 
-    def add_statuses(self, statuses: list[Status]):
-        query = """
-        UNWIND $batch AS status
-        MATCH (a:Account {id: status.account_id})
-        MERGE (s:Status {id: status.id})
-        ON CREATE SET 
-            s.language = status.language, 
-            s.created_at = status.created_at,
-            s.num_favs = status.num_favs,
-            s.num_replies = status.num_replies,
-            s.num_reblogs = status.num_reblogs
-        CREATE (a)-[:CREATED_BY]->(s)
-        """
-
-        self._run_query(
-            query, 
-            batch = [{
-                'id': status.id,
-                'account_id': status.account_id,
-                'language': status.language,
-                'created_at': status.created_at.timestamp(),
-                'num_favs': status.stats.favourites_count,
-                'num_replies': status.stats.replies_count,
-                'num_reblogs': status.stats.reblogs_count,
-            } for status in statuses]
-        )
-
     def add_favourite(self, favourite: Favourite):
         query = """
         MATCH (a:Account {id: $account_id})
@@ -270,6 +331,22 @@ class Herde():
         """
 
         self._run_query(query, account_id=favourite.account_id, status_id=favourite.status_id)
+
+    def add_favourites(self, favourites: list[Favourite]):
+        query = """
+        UNWIND $favs AS fav
+        MATCH (a:Account {id: fav.account_id})
+        MATCH (s:Status {id: fav.status_id})
+        MERGE (a)-[:FAVOURITES]->(s)
+        """
+
+        self._run_query(
+            query, 
+            favs=[{
+                'account_id': fav.account_id,
+                'status_id': fav.status_id,
+            } for fav in favourites]
+        )
 
     def remove_favourite(self, favourite: Favourite):
         query = """
