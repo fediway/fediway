@@ -6,7 +6,7 @@ from sqlalchemy import URL
 from .base import BaseConfig
 
 from modules.fediway.sources import Source
-from modules.fediway.feed import Heuristic
+from modules.fediway.heuristics import Heuristic
 
 class FediwayConfig(BaseConfig):    
     feed_max_age_in_days: int       = 3
@@ -34,7 +34,7 @@ class FediwayConfig(BaseConfig):
 
     @property
     def feed_heuristics(self) -> list[Heuristic]:
-        from app.modules.heuristics import DiversifyAccountsHeuristic
+        from modules.fediway.heuristics import DiversifyAccountsHeuristic
 
         return [
             DiversifyAccountsHeuristic(penalty=0.1)

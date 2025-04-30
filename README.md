@@ -5,13 +5,13 @@
 Start server
 
 ```sh
-uvicorn app.main:app --reload
+uvicorn apps.api.main:app --reload
 ```
 
 ## Kafka Consumer
 
 ```sh
-faststream run app.pipeline:app --workers 4
+faststream run apps.streaming.main:app
 ```
 
 ## Job Scheduling
@@ -19,13 +19,13 @@ faststream run app.pipeline:app --workers 4
 Start task beat scheduler
 
 ```sh
-celery -A app.worker beat --loglevel=info
+celery -A apps.worker.main beat --loglevel=info
 ```
 
 Start task worker scheduler
 
 ```sh
-celery -A app.worker worker --loglevel=info
+celery -A apps.worker.main worker --loglevel=info
 ```
 
 <!-- Start worker to process topics

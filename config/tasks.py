@@ -7,7 +7,7 @@ from sqlalchemy import URL
 from .base import BaseConfig
 
 from modules.fediway.sources import Source
-from modules.fediway.feed import Heuristic
+from modules.fediway.heuristics import Heuristic
 
 class TasksConfig(BaseConfig):    
     worker_host: str        = 'localhost'

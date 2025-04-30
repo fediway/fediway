@@ -5,7 +5,7 @@ import numpy as np
 import time
 
 from ..rankers import Ranker
-from .heuristics import Heuristic
+from ..heuristics import Heuristic
 from .sampling import Sampler, TopKSampler
 from .features import Features
 from .utils import BatchIterator, TopKPriorityQueue
@@ -104,7 +104,8 @@ class Feed():
         ranker = self.rankers[ranker_index]
         queue = self.candidate_queues[ranker_index]
 
-        X = self.features.get(candidates, ranker.features)
+        entities = [{'status_id': c} for c in candidates]
+        X = self.features.get(entities, ranker.features)
         scores = ranker.predict(X)
         
         # reset queue if it is not the final candidate queue
@@ -136,10 +137,12 @@ class Feed():
         adjusted_scores = scores.copy()
         
         for heuristic in self.heuristics:
+            entities = [{'status_id': c} for c in candidates]
+            
             adjusted_scores = heuristic(
                 candidates, 
                 adjusted_scores, 
-                self.features.get(candidates, heuristic.features)
+                self.features.get(entities, heuristic.features)
             )
         
         return scores, adjusted_scores
@@ -175,7 +178,7 @@ class Feed():
             for heuristic in self.heuristics:
                 heuristic.update_seen(
                     candidate, 
-                    self.features.get([candidate], heuristic.features)[0]
+                    self.features.get([{'status_id': candidate}], heuristic.features)[0]
                 )
 
             return Recommendation(
