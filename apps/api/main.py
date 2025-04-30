@@ -7,10 +7,10 @@ from starlette.exceptions import HTTPException
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from .api.middlewares.session_middleware import SessionMiddleware
-from .api.errors.http_error import http_error_handler
-from .api.errors.validation_error import http422_error_handler
-from .api.routes.api import router as api_router
+from .middlewares.session_middleware import SessionMiddleware
+from .errors.http_error import http_error_handler
+from .errors.validation_error import http422_error_handler
+from .routes.api import router as api_router
 from config import config
 
 def get_application() -> FastAPI:

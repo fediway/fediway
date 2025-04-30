@@ -10,12 +10,12 @@ from sqlmodel import Session as DBSession, select, func, desc
 from sqlalchemy.orm import selectinload
 from datetime import timedelta
 
-from app.services.feed_service import FeedService, get_feed_service
+from shared.services.feed_service import FeedService, get_feed_service
 
 from config import config
-from app.core.db import get_db_session
-from app.core.lang import get_languages
-from app.core.feed import get_samples
+from shared.core.db import get_db_session
+from shared.core.lang import get_languages
+from shared.core.feed import get_samples
 from app.modules.sessions import Session
 from app.modules.feed import Feed
 from app.modules.models import (

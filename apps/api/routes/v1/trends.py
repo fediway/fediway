@@ -4,12 +4,12 @@ from sqlmodel import select, Session as DBSession
 from fastapi import APIRouter, Depends, Request
 
 from modules.fediway.sources import Source
-from app.services.feed_service import FeedService
+from shared.services.feed_service import FeedService
 from app.api.dependencies import (
     get_trending_statuses_by_influential_accounts_source,
     get_status_feed
 )
-from app.core.db import get_db_session
+from shared.core.db import get_db_session
 from app.modules.models import Tag, Status
 from app.api.dependencies import get_trending_tags_sources
 from app.api.items import TagItem

@@ -2,9 +2,9 @@
 from faststream import FastStream
 from faststream.confluent import KafkaBroker
 
-from .core.embed import embedder
-from .streaming.embeddings import TextEmbeddingsBatchHandler, AccountEmbeddingsEventHandler
-from .modules.debezium import DebeziumEvent, process_debezium_batch, make_debezium_handler
+from .handlers.embeddings import TextEmbeddingsBatchHandler, AccountEmbeddingsEventHandler
+from shared.core.embed import embedder
+from modules.debezium import DebeziumEvent, process_debezium_batch, make_debezium_handler
 from config import config
 
 broker = KafkaBroker(config.kafka.kafka_bootstrap_servers)

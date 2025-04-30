@@ -6,7 +6,7 @@ import typer
 import time
 
 from config import config
-import app.utils as utils
+import modules.utils as utils
 from modules.fediway.sources.herde import Herde
 
 app = typer.Typer(help="Herde commands.")
@@ -91,9 +91,9 @@ def seed():
     from sqlalchemy.orm import selectinload
     from sqlalchemy import or_, and_
     from app.modules.models import Account, Status, Follow, Favourite
-    from app.services.seed_herde_service import SeedHerdeService
+    from shared.services.seed_herde_service import SeedHerdeService
     from tqdm import tqdm
-    from app.core.db import get_db_session
+    from shared.core.db import get_db_session
 
     db = next(get_db_session())
     SeedHerdeService(db, get_driver()).seed()

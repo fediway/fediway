@@ -1,5 +1,5 @@
 #!/bin/python
 
-from modules.fediway.cli import app
+from apps.cli import app
 
 app()

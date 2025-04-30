@@ -3,7 +3,7 @@ from sqlmodel import Session as DBSession
 from fastapi import APIRouter, Depends, Request, BackgroundTasks
 
 from modules.fediway.sources import Source
-from app.core.db import get_db_session
+from shared.core.db import get_db_session
 from app.api.dependencies import (
     get_hot_statuses_by_language_source, 
     get_trending_statuses_by_influential_accounts_source,
@@ -11,7 +11,7 @@ from app.api.dependencies import (
     get_status_feed
 )
 from app.api.items import StatusItem
-from app.services.feed_service import FeedService
+from shared.services.feed_service import FeedService
 from app.modules.models import Status
 from app.api.items import StatusItem
 from config import config

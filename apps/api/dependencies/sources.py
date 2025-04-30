@@ -6,8 +6,8 @@ from datetime import timedelta
 
 from modules.fediway.sources import Source
 from modules.fediway.sources.herde import Herde, TrendingStatusesByInfluentialUsers, TrendingTagsSource, CollaborativeFilteringSource
-from app.core.herde import driver
-from app.core.db import get_long_living_db_session
+from shared.core.herde import driver
+from shared.core.db import get_long_living_db_session
 from app.modules.sources import (
     HotStatusesByLanguage, 
     NewStatusesByLanguage,

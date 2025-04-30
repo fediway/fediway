@@ -69,14 +69,12 @@ class AccountItem(Item):
             last_status_at=account.stats.last_status_at.date()
         )
 
-class StatusVisibility(Enum):
-    PUBLIC = 0 # Visible to everyone, shown in public timelines.
-    UNLISTED = 1 # Visible to public, but not included in public timelines.
-    PRIVATE = 2 # Visible to followers only, and to any mentioned users.
-    DIRECT = 3 # Visible only to mentioned users.
-
-    def __str__(self):
-        return self.name.lower()
+STATUS_VISIBILITY = {
+    0: 'public',
+    1: 'unlisted',
+    2: 'private',
+    3: 'direct',
+}
 
 class MediaAttachmentItem(Item):
     id: int
@@ -162,7 +160,7 @@ class StatusItem(Item):
     url: str | None
     created_at: datetime
     content: str | None
-    visibility: StatusVisibility
+    visibility: str
     language: str | None = None
     edited_at: datetime | None = None
     sensitive: bool
@@ -190,7 +188,7 @@ class StatusItem(Item):
             account=AccountItem.from_model(account=status.account),
             media_attachments=[MediaAttachmentItem.from_model(m) for m in status.media_attachments],
             content=status.text,
-            visibility=StatusVisibility(status.visibility),
+            visibility=STATUS_VISIBILITY[status.visibility],
             sensitive=status.sensitive,
             spoiler_text=status.spoiler_text,
             reblog=StatusItem.from_model(status.reblog, with_reblog=False) if status.reblog and with_reblog else None,

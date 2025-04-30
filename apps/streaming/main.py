@@ -6,9 +6,9 @@ from loguru import logger
 
 from modules.fediway.sources.herde import Herde
 
-from app.streaming.embeddings import AccountEmbeddingsEventHandler
-from app.streaming.features import FeaturesEventHandler
-from app.streaming.herde import (
+from .handlers.embeddings import AccountEmbeddingsEventHandler
+from .handlers.features import FeaturesEventHandler
+from .handlers.herde import (
     AccountEventHandler as HerdeAccountEventHandler,
     EnrichedAccountStatsEventHandler as HerdeEnrichedAccountStatsEventHandler,
     StatusEventHandler as HerdeStatusEventHandler,
@@ -19,10 +19,10 @@ from app.streaming.herde import (
     StatusTagEventHandler as HerdeStatusTagEventHandler,
     TagEventHandler as HerdeTagEventHandler,
 )
-from app.modules.debezium import make_debezium_handler, DebeziumEvent, process_debezium_event
-from app.core.feast import feature_store
-from app.core.qdrant import client
-from app.core.herde import driver
+from modules.debezium import make_debezium_handler, DebeziumEvent, process_debezium_event
+from shared.core.feast import feature_store
+from shared.core.qdrant import client
+from shared.core.herde import driver
 from config import config
 
 broker = KafkaBroker(

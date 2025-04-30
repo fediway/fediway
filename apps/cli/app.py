@@ -1,21 +1,14 @@
 
 import typer
 
-from .dataset import app as dataset_app
 from .feast import app as feast_app
-from .train import app as train_app
 from .herde import app as herde_app
 from .risingwave import app as risingwave_app
 from .kafka import app as kafka_app
 from .qdrant import app as qdrant_app
+from .kirby import app as kirby_app
 
 app = typer.Typer()
-
-app.add_typer(
-    dataset_app,
-    name="dataset",
-    help="Manage datasets (create, preprocess, etc.)"
-)
 
 app.add_typer(
     feast_app,
@@ -24,9 +17,9 @@ app.add_typer(
 )
 
 app.add_typer(
-    train_app,
-    name="train",
-    help="Train a given model"
+    kirby_app,
+    name="kirby",
+    help="Kirby commands (ranker)"
 )
 
 app.add_typer(

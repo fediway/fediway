@@ -1,7 +1,7 @@
 
 from fastapi import Request
 
-import app.utils as utils
+import modules.utils as utils
 
 def get_language_from_location(location) -> None | str:
     if location is None:

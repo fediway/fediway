@@ -15,8 +15,8 @@ COLLECTIONS = [
 
 @app.command("migrate")
 def migrate():
-    from app.core.embed import embedder
-    from app.core.qdrant import client
+    from shared.core.embed import embedder
+    from shared.core.qdrant import client
 
     for collection in COLLECTIONS:
         if client.collection_exists(collection):
@@ -29,7 +29,7 @@ def migrate():
 
 @app.command("purge")
 def purge():
-    from app.core.qdrant import client
+    from shared.core.qdrant import client
     
     for collection in COLLECTIONS:
         if not client.collection_exists(collection):

@@ -5,13 +5,13 @@
 Start server
 
 ```sh
-uvicorn app.main:app --reload
+uvicorn apps.api.main:app --reload
 ```
 
 ## Kafka Consumer
 
 ```sh
-faststream run app.pipeline:app --workers 4
+faststream run apps.streaming.main:app
 ```
 
 ## Job Scheduling

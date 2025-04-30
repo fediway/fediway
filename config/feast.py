@@ -1,7 +1,6 @@
 
 from feast.feature_store import RepoConfig
 from feast.infra.online_stores.redis import RedisOnlineStoreConfig
-# from feast.infra.offline_stores.contrib.spark_offline_store.spark import SparkOfflineStoreConfig
 from feast.infra.offline_stores.contrib.postgres_offline_store.postgres import PostgreSQLOfflineStoreConfig
 
 from enum import Enum
