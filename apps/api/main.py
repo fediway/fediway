@@ -17,7 +17,7 @@ def get_application() -> FastAPI:
     config.logging.configure_logging()
 
     application = FastAPI(**config.fastapi_kwargs)
-
+    
     application.add_middleware(
         CORSMiddleware,
         allow_origins=config.cors.allow_origins,
