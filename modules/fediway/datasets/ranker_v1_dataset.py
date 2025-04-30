@@ -4,8 +4,6 @@ from dask import dataframe as dd
 from dask import array as da
 from dask.distributed import Client, as_completed
 from dask.base import normalize_token
-# from xgboost.dask import DaskXGBClassifier
-from xgboost import XGBClassifier as DaskXGBClassifier
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import pandas as pd
 import numpy as np
