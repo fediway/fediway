@@ -15,7 +15,7 @@ class TrendingStatusesByInfluentialUsers(Herde, Source):
 
     def collect(self, limit: int):
         query = """
-        WITH timestamp() / 1000000 AS now
+        WITH timestamp() / 1000 AS now
         MATCH (a:Account)-[:CREATED_BY]->(s:Status)
         WHERE 
             a.rank IS NOT NULL 
@@ -50,7 +50,7 @@ class TrendingTagsSource(Herde, Source):
 
     def collect(self, limit: int):
         query = """
-        WITH timestamp() / 1000000 AS now
+        WITH timestamp() / 1000 AS now
         MATCH (s:Status {language: $language})-[:TAGS]->(t:Tag)
         WHERE 
             t.rank IS NOT NULL
