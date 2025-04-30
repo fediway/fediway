@@ -40,10 +40,10 @@ class FeedService():
 
         state = self.session.get(self.session_key)
 
-        if state is not None:
-            self.feed.merge_dict(state)
-            self._set_link_header()
-            return
+        # if state is not None:
+        #     # self.feed.merge_dict(state)
+        #     self._set_link_header()
+        #     return
 
         await self.collect_sources()
 
