@@ -63,6 +63,7 @@ class FeedService():
 
     def _set_link_header(self):
         next_url = self.request.url.include_query_params(feed=self.feed.id)
+
         self.response.headers['link'] = f'<{next_url}>; rel="next"'
 
     def max_n_per_source(self):

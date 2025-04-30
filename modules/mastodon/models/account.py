@@ -49,9 +49,20 @@ class Account(SQLModel, table=True):
     stats: AccountStats = Relationship(back_populates='account', sa_relationship_kwargs={"uselist": False})
 
     @property
+    def local(self):
+        return self.domain is None
+    
+    @property
     def acct(self):
         if self.domain is None:
             return self.username
+        return f"{self.username}@{self.domain}"
+
+    @property
+    def pretty_acct(self):
+        if self.domain is None:
+            return self.username
+        # TODO:
         return f"{self.username}@{self.domain}"
 
     @property
