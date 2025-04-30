@@ -34,10 +34,10 @@ class TrendingStatusesByInfluentialUsers(Herde, Source):
         LIMIT $limit;
         """
 
-        max_age = datetime.now() - self.max_age
+        max_age = int((datetime.now() - self.max_age).timestamp() * 1000)
 
         with self.driver.session() as session:
-            results = session.run(query, language=self.language, limit=limit, max_age=int(max_age.timestamp()))
+            results = session.run(query, language=self.language, limit=limit, max_age=max_age)
 
             for result in list(results):
                 yield result['status_id']
@@ -64,10 +64,10 @@ class TrendingTagsSource(Herde, Source):
         LIMIT $limit;
         """
 
-        max_age = datetime.now() - self.max_age
+        max_age = int((datetime.now() - self.max_age).timestamp() * 1000)
 
         with self.driver.session() as session:
-            results = session.run(query, language=self.language, limit=limit, max_age=int(max_age.timestamp()))
+            results = session.run(query, language=self.language, limit=limit, max_age=max_age)
 
             for result in list(results):
                 yield result['tag_id']
