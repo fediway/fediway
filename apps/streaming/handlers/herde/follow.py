@@ -2,10 +2,9 @@
 from neo4j import Driver
 from loguru import logger
 
-from app.modules.models import Follow
-from modules.fediway.sources.herde import Herde
-
-from app.modules.debezium import DebeziumEventHandler
+from modules.mastodon.models import Follow
+from modules.herde import Herde
+from modules.debezium import DebeziumEventHandler
 
 class FollowEventHandler(DebeziumEventHandler):
     def __init__(self, herde: Herde):

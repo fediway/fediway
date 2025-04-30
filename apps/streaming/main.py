@@ -4,9 +4,8 @@ from faststream import FastStream
 from faststream.confluent import KafkaBroker
 from loguru import logger
 
-from modules.fediway.sources.herde import Herde
+from modules.herde import Herde
 
-from .handlers.embeddings import AccountEmbeddingsEventHandler
 from .handlers.features import FeaturesEventHandler
 from .handlers.herde import (
     AccountEventHandler as HerdeAccountEventHandler,
@@ -62,21 +61,6 @@ for topic in feature_topics:
         FeaturesEventHandler, 
         args=(feature_store, topic),
         group_id="features"
-    )
-
-# Embedding conumers (responsible for pushing vectors to qdrant)
-
-account_embedding_topics = [
-    'latest_account_favourites_embeddings',
-    'latest_account_reblogs_embeddings',
-    'latest_account_replies_embeddings',
-]
-
-for topic in account_embedding_topics:
-    make_debezium_handler(
-        broker, topic, 
-        AccountEmbeddingsEventHandler, 
-        args=(client, topic)
     )
 
 # Herde consumers (responsible for pushing data to memgraph)

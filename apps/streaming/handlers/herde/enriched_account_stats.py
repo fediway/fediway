@@ -2,10 +2,10 @@
 from neo4j import Driver
 from loguru import logger
 
-from app.modules.models import Account
-from modules.fediway.sources.herde import Herde
+from modules.mastodon.models import Account
+from modules.herde import Herde
 
-from app.modules.debezium import DebeziumEventHandler
+from modules.debezium import DebeziumEventHandler
 
 class EnrichedAccountStatsEventHandler(DebeziumEventHandler):
     def __init__(self, herde: Herde):

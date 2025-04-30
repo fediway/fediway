@@ -2,10 +2,9 @@
 from neo4j import Driver
 from loguru import logger
 
-from app.modules.models import StatusStats
-from modules.fediway.sources.herde import Herde
-
-from app.modules.debezium import DebeziumEventHandler
+from modules.mastodon.models import StatusStats
+from modules.herde import Herde
+from modules.debezium import DebeziumEventHandler
 
 class StatusStatsEventHandler(DebeziumEventHandler):
     def __init__(self, herde: Herde):

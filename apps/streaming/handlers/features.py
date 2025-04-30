@@ -5,7 +5,7 @@ from loguru import logger
 import pandas as pd
 import time
 
-from app.modules.debezium import DebeziumEventHandler
+from modules.debezium import DebeziumEventHandler
 
 class FeaturesEventHandler(DebeziumEventHandler):
     def __init__(self, fs: FeatureStore, source: str):

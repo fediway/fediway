@@ -1,5 +1,5 @@
 
-from .clip import ClipEmbedder
+from .base import MultimodalEmbedder
 
 class ClipEmbedder(MultimodalEmbedder):
     def __init__(self, model_id: str, cache_dir: str = 'data'):
