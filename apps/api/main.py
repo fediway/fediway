@@ -22,6 +22,7 @@ def get_application() -> FastAPI:
         CORSMiddleware,
         allow_origins=config.cors.allow_origins,
         allow_credentials=config.cors.allow_credentials,
+        expose_headers=['link'],
         allow_methods=["*"],
         allow_headers=["*"],
     )
