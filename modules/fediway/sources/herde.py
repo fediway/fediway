@@ -15,14 +15,14 @@ class TrendingStatusesByInfluentialUsers(Source):
     def collect(self, limit: int):
         query = """
         WITH timestamp() / 1000 AS now
-        MATCH (a:Account)-[:CREATED_BY]->(s:Status)
+        MATCH (a:Account)-[:CREATED_BY]->(s:Status {language: $language})
         WHERE 
             a.rank IS NOT NULL 
         AND s.created_at > $max_age
-        // AND a.avg_favs > 1 
-        // AND a.avg_reblogs > 1 
-        // AND s.num_favs > 0 
-        // AND s.num_reblogs > 0
+        AND a.avg_favs > 1 
+        AND a.avg_reblogs > 1 
+        AND s.num_favs > 0 
+        AND s.num_reblogs > 0
         WITH a, s, (now - s.created_at) / 86400 AS age_days
         WITH a, s, age_days,
             a.rank * EXP(-age_days) * ((s.num_favs + 1) * (s.num_reblogs + 1)) * 10 / ((a.avg_favs + 1) * (a.avg_reblogs + 1)) AS score
