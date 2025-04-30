@@ -1,30 +1,17 @@
 
 from typing import Optional
-from pydantic import BaseModel
 from datetime import datetime, date
 from enum import Enum
 
-from app.modules.models.media_attachment import MediaAttachment
-from app.modules.models.status import Status, StatusStats
-from app.modules.models.account import Account, AccountStats
-from app.modules.models.preview_card import PreviewCard
-from app.modules.models.topic import Topic
-
-class Item(BaseModel):
-    class Config:
-        extra = 'ignore'
-        use_enum_values = True
-
-class TopicItem(Item):
-    name: str
-    display_name: str
-
-    @classmethod
-    def from_model(cls, topic: Topic):
-        return cls(
-            name=topic.name,
-            display_name=topic.display_name,
-        )
+from .base import Item
+from ..models import (
+    MediaAttachment, 
+    Status, 
+    StatusStats, 
+    Account, 
+    AccountStats, 
+    PreviewCard, 
+)
 
 class AccountItem(Item):
     id: str

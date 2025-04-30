@@ -2,11 +2,13 @@
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, Response, BackgroundTasks, Depends
 
-from core.db import get_db_session
-from shared.services.feed_service import FeedService
-from shared.services.status_features_service import StatusFeaturesService
+from ..core.ranker import ranker
+from ..services.feed_service import FeedService
+from shared.core.db import get_db_session
+from shared.services.features_service import FeaturesService
 from modules.fediway.sources import Source
-from modules.fediway.feed import Feed, Heuristic, Sampler, TopKSampler
+from modules.fediway.feed import Feed, Sampler, TopKSampler
+from modules.fediway.heuristics import Heuristic
 
 def get_status_feed(name: str, 
                     sources: callable,
@@ -17,9 +19,7 @@ def get_status_feed(name: str,
                 response: Response, 
                 tasks: BackgroundTasks,
                 db: DBSession = Depends(get_db_session),
-                features: StatusFeaturesService = Depends(StatusFeaturesService),
                 _sources: list[Source] = Depends(sources)):
-        from core.feed import light_ranker, heavy_ranker
 
         return FeedService(
             name=name, 
@@ -30,8 +30,8 @@ def get_status_feed(name: str,
             tasks=tasks,
             sources=_sources,
             feed=Feed(
-                features=features,
-                rankers=[(light_ranker, 100)],
+                features=FeaturesService(),
+                rankers=[(ranker, 100)],
                 heuristics=heuristics,
                 sampler=sampler
             ))

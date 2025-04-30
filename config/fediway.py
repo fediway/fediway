@@ -34,7 +34,7 @@ class FediwayConfig(BaseConfig):
 
     @property
     def feed_heuristics(self) -> list[Heuristic]:
-        from app.modules.heuristics import DiversifyAccountsHeuristic
+        from modules.fediway.heuristics import DiversifyAccountsHeuristic
 
         return [
             DiversifyAccountsHeuristic(penalty=0.1)

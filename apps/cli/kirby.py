@@ -1,4 +1,5 @@
 
+from modules.fediway.rankers.kirby import Kirby
 from pathlib import Path
 import typer
 
@@ -10,7 +11,7 @@ def create_dataset(
     path: str = 'data/datasets',
 ) -> int:
     from shared.core.rw import get_rw_session, engine
-    from shared.core.feast import get_feature_store
+    from shared.core.feast import feature_store
 
     typer.echo(f"Creating dataset: {name}")
 
@@ -19,8 +20,7 @@ def create_dataset(
     name = f"{name}_{datetime.now().strftime('%d_%m_%Y')}"
     
     rw = next(get_rw_session())
-    fs = get_feature_store()
-    dataset = dataset_cls.extract(fs, rw, name)
+    dataset = dataset_cls.extract(feature_store, rw, name)
 
     dataset_path = Path(path) / name
     dataset = dataset.train_test_split(test_size=test_size)
@@ -32,6 +32,13 @@ def create_dataset(
     rw.close()
 
     return 0
+
+def validate_kirby_model(name: str):
+    if name not in Kirby.MODELS:
+        raise typer.BadParameter(
+            f"Invalid ranker '{name}', must be any of: {', '.join(Kirby.MODELS)}"
+        )
+    return name
 
 @app.command("train")
 def train_kirby(
@@ -49,13 +56,11 @@ def train_kirby(
     dataset_path: str = 'data/datasets',
     seed: int = 42
 ) -> int:
-    from shared.core.feast import get_feature_store
+    from shared.core.feast import feature_store
     import numpy as np
     from datasets import load_from_disk
 
     np.random.seed(seed)
-
-    fs = get_feature_store()
 
     # fv = fs.get_feature_view("account_engagement_all")
 

@@ -56,7 +56,6 @@ class Status(SQLModel, table=True):
         "foreign_keys": "Status.reblog_of_id",
         "uselist": False
     })
-    recommendations: list["FeedRecommendation"] = Relationship(back_populates='status')
 
     @classmethod
     def select_by_ids(cls, ids):

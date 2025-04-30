@@ -17,89 +17,6 @@ from app.modules.models import Account, Status, StatusStats, Follow, Favourite, 
 from modules.fediway.sources.herde import Herde
 import app.utils as utils
 
-def query_line(query):
-    return query.strip().replace('  ', '').replace('\n', ' ') + "\n"
-
-class InsertBatch:
-    def __init__(self, db, herde):
-        self.db = db
-        self.herde = herde
-
-    def __dask_tokenize__(self):
-        return normalize_token(type(self))
-
-class InsertStatuses(InsertBatch):
-    def __call__(self, rows) -> None:
-        if len(rows) == 0:
-            return
-        
-        statuses = [Status(id=id, **data) for id, data in rows.iterrows()]
-
-        if statuses[0].id == 1:
-            return
-
-        self.herde.add_statuses(statuses)
-
-class InsertStatusStats(InsertBatch):
-    def __call__(self, rows) -> None:
-        if len(rows) == 0:
-            return
-        
-        stats = [StatusStats(status_id=status_id, **data) for status_id, data in rows.iterrows()]
-
-        if stats[0].status_id == 1:
-            return
-
-        self.herde.add_status_stats_batch(stats)
-
-class InsertStatusTags(InsertBatch):
-    def __call__(self, rows) -> None:
-        if len(rows) == 0:
-            return
-        
-        status_tags = [StatusTag(status_id=status_id, **data) for status_id, data in rows.iterrows()]
-
-        if status_tags[0].status_id == 1:
-            return
-
-        self.herde.add_status_tags(status_tags)
-
-class InsertReblogs(InsertBatch):
-    def __call__(self, rows) -> None:
-        if len(rows) == 0:
-            return
-        
-        reblogs = [Status(id=id, **data) for id, data in rows.iterrows()]
-
-        if reblogs[0].id == 1:
-            return
-
-        self.herde.add_reblogs(reblogs)
-
-class InsertFavourites(InsertBatch):
-    def __call__(self, rows) -> None:
-        if len(rows) == 0:
-            return
-        
-        favourites = [Favourite(id=id, **data) for id, data in rows.iterrows()]
-
-        if favourites[0].id == 1:
-            return
-
-        self.herde.add_favourites(favourites)
-
-class InsertMentions(InsertBatch):
-    def __call__(self, rows) -> None:
-        if len(rows) == 0:
-            return
-        
-        mentions = [Mention(id=id, **data) for id, data in rows.iterrows()]
-
-        if mentions[0].id == 1:
-            return
-
-        self.herde.add_mentions(mentions)
-
 class SeedHerdeService:
     def __init__(self, db: DBSession, driver: Driver):
         self.db = db
@@ -317,28 +234,6 @@ class SeedHerdeService:
                 self.herde.add_follow(row)
                 bar.update(1)
 
-    def seed_accounts(self, batch_size: int = 100):
-        query = select(Account.id)
-        total = self.db.scalar(select(func.count(Account.id)))
-
-        ddf = (
-            dd.read_sql_query(
-                sql=query,
-                con=self.db.get_bind().url.render_as_string(hide_password=False),
-                index_col="id",
-                npartitions=max(1, total // 1_000),
-            )
-            .map_partitions(InsertAccountBatch(self.db, self.herde))
-            .compute()
-        )
-
-        # bar = tqdm(desc="Accounts", unit="accounts")
-
-        # for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
-        #     for row in batch:
-        #         self.herde.add_account(Account(id=row))
-        #         bar.update(1)
-
     def seed_tags(self, batch_size: int = 100):
         query = select(Tag)
         # total = self.db.scalar(select(func.count(Tag.id)))
@@ -424,3 +319,83 @@ class SeedHerdeService:
             .map_partitions(InsertMentions(self.db, self.herde))
             .compute()
         )
+
+class InsertBatch:
+    def __init__(self, db, herde):
+        self.db = db
+        self.herde = herde
+
+    def __dask_tokenize__(self):
+        return normalize_token(type(self))
+
+class InsertStatuses(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        statuses = [Status(id=id, **data) for id, data in rows.iterrows()]
+
+        if statuses[0].id == 1:
+            return
+
+        self.herde.add_statuses(statuses)
+
+class InsertStatusStats(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        stats = [StatusStats(status_id=status_id, **data) for status_id, data in rows.iterrows()]
+
+        if stats[0].status_id == 1:
+            return
+
+        self.herde.add_status_stats_batch(stats)
+
+class InsertStatusTags(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        status_tags = [StatusTag(status_id=status_id, **data) for status_id, data in rows.iterrows()]
+
+        if status_tags[0].status_id == 1:
+            return
+
+        self.herde.add_status_tags(status_tags)
+
+class InsertReblogs(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        reblogs = [Status(id=id, **data) for id, data in rows.iterrows()]
+
+        if reblogs[0].id == 1:
+            return
+
+        self.herde.add_reblogs(reblogs)
+
+class InsertFavourites(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        favourites = [Favourite(id=id, **data) for id, data in rows.iterrows()]
+
+        if favourites[0].id == 1:
+            return
+
+        self.herde.add_favourites(favourites)
+
+class InsertMentions(InsertBatch):
+    def __call__(self, rows) -> None:
+        if len(rows) == 0:
+            return
+        
+        mentions = [Mention(id=id, **data) for id, data in rows.iterrows()]
+
+        if mentions[0].id == 1:
+            return
+
+        self.herde.add_mentions(mentions)

@@ -5,13 +5,19 @@ from neo4j import AsyncSession
 from datetime import timedelta
 
 from modules.fediway.sources import Source
-from modules.fediway.sources.herde import Herde, TrendingStatusesByInfluentialUsers, TrendingTagsSource, CollaborativeFilteringSource
-from shared.core.herde import driver
-from shared.core.db import get_long_living_db_session
-from app.modules.sources import (
+
+from modules.fediway.sources.herde import (
+    TrendingStatusesByInfluentialUsers, 
+    TrendingTagsSource, 
+    CollaborativeFilteringSource
+)
+from modules.fediway.sources.db import (
     HotStatusesByLanguage, 
     NewStatusesByLanguage,
 )
+
+from shared.core.herde import driver
+from shared.core.db import get_long_living_db_session
 
 from config import config
 

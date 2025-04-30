@@ -4,15 +4,8 @@ from neo4j import Driver
 import numpy as np
 import time
 
-from app.modules.models import (
-    Status, 
-    StatusStats, 
-    Account, 
-    Tag, 
-    StatusTag, 
-    Mention, 
-    Follow, 
-    Favourite
+from modules.mastodon.models import (
+    Status, StatusStats, Account, Tag, StatusTag, Mention, Follow, Favourite
 )
 
 class Herde():

@@ -10,7 +10,7 @@ from psycopg2.extensions import register_adapter, AsIs
 import numpy as np
 import pandas as pd
 
-from app.modules.models import Status, StatusStats
+from modules.mastodon.models import Status, StatusStats
 
 # tell psycopg2 how to handle numpy types
 register_adapter(np.int64, AsIs)
@@ -32,9 +32,9 @@ status_meta_request = RequestSource(
     ],
 )
 def status_meta_features(status_ids: pd.DataFrame) -> pd.DataFrame:
-    from app.core.db import get_db_session_context
+    from shared.core.db import db_session
     
-    with get_db_session_context() as db:
+    with db_session() as db:
         rows = db.exec(
             select(
                 Status.id, 

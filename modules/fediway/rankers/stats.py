@@ -6,7 +6,7 @@ from .base import Ranker
 
 class SimpleStatsRanker(Ranker):
     '''
-    A simple ranking model base on status stats.
+    A simple linear regression ranking model based on status stats and age.
     '''
 
     features = [

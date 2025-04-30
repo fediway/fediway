@@ -7,7 +7,6 @@ import time
 
 from config import config
 import modules.utils as utils
-from modules.fediway.sources.herde import Herde
 
 app = typer.Typer(help="Herde commands.")
 
@@ -31,6 +30,8 @@ def verify_connection():
 
 @app.command("migrate")
 def migrate():
+    from modules.herde import Herde
+
     Herde(get_driver()).setup()
 
     typer.echo("✅ Migration completed!")
@@ -59,6 +60,7 @@ def query(language: str = 'en'):
         print(status_id)
     exit(())
 
+    from modules.herde import Herde
     herde = Herde(get_driver())
 
     print("start")
@@ -67,6 +69,7 @@ def query(language: str = 'en'):
 
 @app.command("rank")
 def rank():
+    from modules.herde import Herde
     herde = Herde(get_driver())
 
     logger.info("Start computing account ranks...")
@@ -79,6 +82,7 @@ def rank():
 
 @app.command("clean")
 def clean():
+    from modules.herde import Herde
     herde = Herde(get_driver())
 
     logger.info("Purging old statuses...")
@@ -87,16 +91,10 @@ def clean():
 
 @app.command("seed")
 def seed():
-    from sqlmodel import select, exists, func, union_all
-    from sqlalchemy.orm import selectinload
-    from sqlalchemy import or_, and_
-    from app.modules.models import Account, Status, Follow, Favourite
     from shared.services.seed_herde_service import SeedHerdeService
-    from tqdm import tqdm
-    from shared.core.db import get_db_session
+    from shared.core.db import db_session
 
-    db = next(get_db_session())
-    SeedHerdeService(db, get_driver()).seed()
-    db.close()
+    with db_session() as db:
+        SeedHerdeService(db, get_driver()).seed()
 
     typer.echo("✅ Seeding completed!")

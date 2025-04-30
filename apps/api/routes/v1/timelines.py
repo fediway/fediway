@@ -3,17 +3,19 @@ from sqlmodel import Session as DBSession
 from fastapi import APIRouter, Depends, Request, BackgroundTasks
 
 from modules.fediway.sources import Source
+from modules.mastodon.items import StatusItem
+from modules.mastodon.models import Status
+
 from shared.core.db import get_db_session
-from app.api.dependencies import (
+
+from apps.api.services.feed_service import FeedService
+from apps.api.dependencies.feeds import get_status_feed
+from apps.api.dependencies.sources import (
     get_hot_statuses_by_language_source, 
     get_trending_statuses_by_influential_accounts_source,
     get_collaborative_filtering_source,
-    get_status_feed
 )
-from app.api.items import StatusItem
-from shared.services.feed_service import FeedService
-from app.modules.models import Status
-from app.api.items import StatusItem
+
 from config import config
 
 router = APIRouter()

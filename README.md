@@ -19,13 +19,13 @@ faststream run apps.streaming.main:app
 Start task beat scheduler
 
 ```sh
-celery -A app.worker beat --loglevel=info
+celery -A apps.worker.main beat --loglevel=info
 ```
 
 Start task worker scheduler
 
 ```sh
-celery -A app.worker worker --loglevel=info
+celery -A apps.worker.main worker --loglevel=info
 ```
 
 <!-- Start worker to process topics

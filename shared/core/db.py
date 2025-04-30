@@ -14,7 +14,7 @@ def get_db_session():
         yield session
 
 @contextmanager
-def get_db_session_context():
+def db_session():
     with Session(engine) as session:
         yield session
 
