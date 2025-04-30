@@ -6,6 +6,8 @@ from sqlmodel import SQLModel, Field, Relationship
 from .favourite import Favourite
 from config import config
 
+AUTOMATED_ACTOR_TYPES = ['Service', 'Application']
+
 class AccountStats(SQLModel, table=True):
     __tablename__ = 'account_stats'
 
@@ -38,6 +40,7 @@ class Account(SQLModel, table=True):
     header_file_name: str | None = Field()
     discoverable: bool = Field(default=False)
     indexable: bool = Field(default=False)
+    locked: bool = Field(default=False)
     moved_to_account_id: int | None = Field(foreign_key='accounts.id')
     actor_type: str = Field(default='')
 
@@ -76,3 +79,11 @@ class Account(SQLModel, table=True):
     @property
     def avatar_static_url(self):
         return self.avatar_url
+
+    @property
+    def bot(self):
+        return self.actor_type in AUTOMATED_ACTOR_TYPES
+
+    @property
+    def group(self):
+        return self.actor_type == 'Group'

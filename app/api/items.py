@@ -1,7 +1,7 @@
 
 from typing import Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 
 from app.modules.models.media_attachment import MediaAttachment
@@ -27,10 +27,13 @@ class TopicItem(Item):
         )
 
 class AccountItem(Item):
-    id: int
+    id: str
     username: str
     acct: str
     url: str | None
+    locked: bool = False
+    bot: bool = False
+    discoverable: bool
     display_name: str
     note: str
     avatar: str | None
@@ -40,16 +43,22 @@ class AccountItem(Item):
     statuses_count: int
     followers_count: int
     following_count: int
+    fields: list[str] = []
+    last_status_at: date | None
 
     @classmethod
     def from_model(cls, account: Account):
         return cls(
-            id=account.id,
+            id=str(account.id),
             username=account.username,
             acct=f"{account.username}@{account.domain}",
             url=account.url,
             display_name=account.display_name,
             note=account.note,
+            locked=account.locked,
+            bot=account.bot,
+            group=account.group,
+            discoverable=account.discoverable,
             avatar=account.avatar_url,
             avatar_static=account.avatar_static_url,
             header=account.header_url,
@@ -57,6 +66,7 @@ class AccountItem(Item):
             statuses_count=account.stats.statuses_count,
             followers_count=account.stats.followers_count,
             following_count=account.stats.following_count,
+            last_status_at=account.stats.last_status_at.date()
         )
 
 class StatusVisibility(Enum):
@@ -147,12 +157,14 @@ class PreviewCardItem(Item):
         )
 
 class StatusItem(Item):
-    id: int
+    id: str
     uri: str | None
     url: str | None
     created_at: datetime
     content: str | None
     visibility: StatusVisibility
+    language: str | None = None
+    edited_at: datetime | None = None
     sensitive: bool
     spoiler_text: str | None
     account: AccountItem
@@ -169,10 +181,12 @@ class StatusItem(Item):
     @classmethod
     def from_model(cls, status: Status, with_reblog: bool = True):
         return cls(
-            id=status.id,
+            id=str(status.id),
             uri=status.uri,
             url=status.url,
             created_at=status.created_at,
+            edited_at=status.edited_at,
+            language=status.language,
             account=AccountItem.from_model(account=status.account),
             media_attachments=[MediaAttachmentItem.from_model(m) for m in status.media_attachments],
             content=status.text,
