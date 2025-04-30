@@ -6,5 +6,6 @@ from .sources import (
     get_hot_statuses_by_language_source,
     get_new_statuses_by_language_source,
     get_trending_statuses_by_influential_accounts_source,
+    get_collaborative_filtering_source,
     get_trending_tags_sources
 )

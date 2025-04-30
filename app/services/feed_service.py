@@ -36,9 +36,9 @@ class FeedService():
 
         state = self.session.get(self.session_key)
 
-        if state is not None:
-            self.feed.merge_dict(state)
-            return
+        # if state is not None:
+        #     self.feed.merge_dict(state)
+        #     return
 
         await self.collect_sources()
 
@@ -90,7 +90,7 @@ class FeedService():
         self.db.commit()
 
     def get_recommendations(self, n) -> list[int | str]:
-        with utils.duration("Fetched "+str(n)+" recommendations in {:.3f} seconds."):
+        with utils.duration("Fetched recommendations in {:.3f} seconds."):
             recommendations = self.feed.get_batch(n)
 
         # save recommendations

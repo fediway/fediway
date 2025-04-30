@@ -47,6 +47,17 @@ def purge():
 
 @app.command("query")
 def query(language: str = 'en'):
+    # from modules.fediway.sources.herde import CollaborativeFilteringSource
+    # source = CollaborativeFilteringSource(
+    #     driver=get_driver(),
+    #     account_id=114394115240930061,
+    #     language='en'
+    # )
+    
+    # for status_id in source.collect(10):
+    #     print(status_id)
+    # exit(())
+
     herde = Herde(get_driver())
 
     print("start")

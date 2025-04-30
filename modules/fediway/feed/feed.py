@@ -98,6 +98,9 @@ class Feed():
         else:
             raise ValueError("Candidates missing.")
 
+        if len(candidates) == 0:
+            return
+
         ranker = self.rankers[ranker_index]
         queue = self.candidate_queues[ranker_index]
 
@@ -121,7 +124,6 @@ class Feed():
         return BatchIterator(self, batch_size)
 
     def get_batch(self, batch_size) -> list[Recommendation]:
-        print("foo")
         return [item for item in self.iter_batch(batch_size)]
 
     def _get_adjusted_scores(self, queue_idx):
@@ -149,7 +151,6 @@ class Feed():
                 return idx
 
     def __next__(self) -> Recommendation | None:
-        print("hello")
         queue_idx = self._get_queue_idx()
 
         if queue_idx is None:

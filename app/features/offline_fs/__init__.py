@@ -68,8 +68,6 @@ def get_historical_features(entity_table: str, feature_views: list[FeatureView],
     GROUP BY ds.account_id, ds.status_id;
     """
 
-
-
     rows = []
     
     for row in db.exec(text(query)).mappings().yield_per(100):

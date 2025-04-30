@@ -25,7 +25,7 @@ def create_dataset(
     test_size: float = 0.2,
     path: str = 'data/datasets',
 ) -> int:
-    from app.core.rw import get_rw_session
+    from app.core.rw import get_rw_session, engine
     from app.core.feast import get_feature_store
 
     typer.echo(f"Creating dataset: {name}")

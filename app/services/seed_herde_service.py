@@ -166,7 +166,7 @@ class SeedHerdeService:
 
         for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
             for row in batch:
-                self.herde.add_follow(Account(**row))
+                self.herde.add_follow(row)
                 bar.update(1)
 
     def seed_accounts(self, batch_size: int = 100):
@@ -177,7 +177,7 @@ class SeedHerdeService:
 
         for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
             for row in batch:
-                self.herde.add_account(Account(**row))
+                self.herde.add_account(Account(id=row))
                 bar.update(1)
 
     def seed_tags(self, batch_size: int = 100):
