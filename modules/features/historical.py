@@ -139,7 +139,6 @@ class FlattenFeatureViews:
 def get_historical_features(entity_table: str, feature_views: list[FeatureView], db: Session):
     total = db.scalar(text(f"SELECT COUNT(*) FROM {entity_table}"))
     query = _get_historical_features_query(entity_table, feature_views)
-    bar = tqdm(total=total, desc="Features", unit="samples")
 
     schema = {
         "account_id": pd.Series([], dtype="int64"),
@@ -163,25 +162,3 @@ def get_historical_features(entity_table: str, feature_views: list[FeatureView],
     )
 
     return ddf.map_partitions(FlattenFeatureViews(feature_views))
-
-    # for row in db.exec(text(query)).mappings().yield_per(100):
-    #     feats = {}
-    #     for fv in feature_views:
-    #         if row[fv.name] is None:
-    #             feats |= {f"{fv.name}__{f.name}": None for f in fv.schema}
-    #         else:
-    #             feats |= {f"{fv.name}__{f.name}": value for f, value in zip(fv.schema, row[fv.name])}
-    #     entities = {e: row[e] for e in ['account_id', 'status_id']}
-
-    #     row = entities | {
-    #         'label.is_favourited': row.is_favourited,
-    #         'label.is_replied': row.is_replied,
-    #         'label.is_reblogged': row.is_reblogged,
-    #         'label.is_reply_engaged_by_author': row.is_reply_engaged_by_author,
-    #     } | feats
-
-    #     yield pd.Series(row)
-
-    #     bar.update(1)
-
-    # bar.close()
