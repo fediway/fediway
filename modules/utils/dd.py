@@ -22,6 +22,7 @@ def read_sql_join_query(
     head_rows=5,
     meta=None,
     engine_kwargs=None,
+    sql_append="",
     **kwargs,
 ):
     """
@@ -112,7 +113,7 @@ def read_sql_join_query(
         else sa.Column(index_col.name, index_col.type)
     )
 
-    kwargs["index_col"] = index.name
+    kwargs["index_col"] = index.name.split('.')[-1]
 
     if head_rows > 0:
         # derive metadata from first few rows
@@ -136,9 +137,11 @@ def read_sql_join_query(
     if divisions is None:
         if limits is None:
             # calculate max and min for given index
+            q = str(sql.compile(engine, compile_kwargs={"literal_binds": True}))
             q = sa.sql.select(
-                sa.sql.func.max(index), sa.sql.func.min(index)
-            ).select_from(sql.subquery())
+                sa.sql.func.max(sa.Column(index_col.split('.')[-1])), 
+                sa.sql.func.min(sa.Column(index_col.split('.')[-1]))
+            ).select_from(sa.text("(" + q + f" {sql_append})"))
             minmax = pd.read_sql(q, engine)
             maxi, mini = minmax.iloc[0]
             dtype = minmax.dtypes["max_1"]
@@ -147,7 +150,10 @@ def read_sql_join_query(
             dtype = pd.Series(limits).dtype
 
         if npartitions is None:
-            q = sa.sql.select(sa.sql.func.count(index)).select_from(sql.subquery())
+            q = str(sql.compile(engine, compile_kwargs={"literal_binds": True}))
+            q = sa.sql.select(
+                sa.sql.func.count(sa.Column(index_col.split('.')[-1]))
+            ).select_from(sa.text("(" + q + f" {sql_append})"))
             count = pd.read_sql(q, engine)["count_1"][0]
             npartitions = (
                 int(round(count * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
@@ -181,6 +187,7 @@ def read_sql_join_query(
             q += f"{index} <= {upper}"
         else:
             q += f"{index} < {upper}"
+        q += f" {sql_append}"
         # q = sql.where(sa.sql.and_(index >= lower, cond))
         parts.append(
             delayed(_read_sql_chunk)(

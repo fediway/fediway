@@ -279,27 +279,18 @@ def create_dataset(path: str,
     time.sleep(0.5)
 
     _sample_negatives(db, table, start_date, end_date)
-
-    open_fn = open
-    if path.startswith('s3://'):
-        import s3fs
-        s3 = s3fs.S3FileSystem(endpoint_url=config.fediway.datasets_s3_endpoint)
-        open_fn = s3.open
     
-    with open_fn(f"{path}/data.csv",'w') as f:
-        schema = None
-        for i, row in enumerate(get_historical_features(entity_table=table.name, feature_views=feature_views, db=db)):
-            if i == 0:
-                f.write(",".join([str(c) for c in row.index.to_list()])+"\n")
-                schema = row.index.to_list()
-            f.write(",".join([str(c) for c in row.fillna(0.)[schema].values])+"\n")
+    with ProgressBar():
+        ddf = get_historical_features(entity_table=table.name, feature_views=feature_views, db=db)
+        ddf.to_parquet(f"{path}/data/", write_index=False, storage_options=storage_options)
 
     db.exec(text(f"DROP TABLE IF EXISTS {table.name};"))
+    db.commit()
 
     unique_account_ids = (
-        dd.read_csv(
-            f"{path}/data.csv", 
-            usecols=['account_id'],
+        dd.read_parquet(
+            f"{path}/data/", 
+            columns=['account_id'],
             storage_options=storage_options
         )
         .drop_duplicates()
@@ -315,8 +306,8 @@ def create_dataset(path: str,
     train_accounts_dd = dd.from_pandas(train_accounts, npartitions=(len(train_accounts) // 10_000) + 1)
     test_accounts_dd  = dd.from_pandas(test_accounts,  npartitions=(len(test_accounts) // 10_000) + 1)
 
-    df_full = dd.read_csv(
-        f"{path}/data.csv",
+    df_full = dd.read_parquet(
+        f"{path}/data/",
         storage_options=storage_options,
         blocksize="64MB"
     )
