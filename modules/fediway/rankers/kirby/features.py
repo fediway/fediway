@@ -25,5 +25,12 @@ FEATURE_VIEWS = [
     'account_author_engagement_has_video',
 ]
 
+LABELS = [
+    'label.is_favourited',
+    'label.is_reblogged',
+    # 'label.is_replied',
+    # 'label.is_reply_engaged_by_author',
+]
+
 def get_feature_views(feature_store: FeatureStore):
     return [feature_store.get_feature_view(fv) for fv in FEATURE_VIEWS]

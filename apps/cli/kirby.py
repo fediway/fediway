@@ -1,7 +1,10 @@
 
+from modules.fediway.rankers.kirby.features import LABELS
 from datetime import datetime, date
-from config import config
+from loguru import logger
 import typer
+
+from config import config
 
 app = typer.Typer(help="Kirby commands.")
 
@@ -41,14 +44,14 @@ def create_dataset(
         import s3fs
         s3 = s3fs.S3FileSystem(endpoint_url=config.fediway.datasets_s3_endpoint)
         with s3.open(f"{path}/{name}/train.csv",'w') as f:
-            train_df.to_csv(f)
+            train_df.to_csv(f, index=False)
         with s3.open(f"{path}/{name}/test.csv",'w') as f:
-            test_df.to_csv(f)
+            test_df.to_csv(f, index=False)
     else:
         dataset_path = Path(path) / name
         dataset_path.mkdir(exist_ok=True, parents=True)
-        train_df.to_csv(f"{path}/{name}/train.csv")
-        test_df.to_csv(f"{path}/{name}/test.csv")
+        train_df.to_csv(f"{path}/{name}/train.csv", index=False)
+        test_df.to_csv(f"{path}/{name}/test.csv", index=False)
 
     typer.echo(f"Saved dataset to path {path}/{name}")
 
@@ -73,7 +76,7 @@ def train_kirby(
         help="Model name",
         callback=validate_kirby_model
     ),
-    label: str = 'label.is_favourited',
+    labels: list[str] = LABELS,
     path: str = config.fediway.datasets_path,
     seed: int = 42
 ) -> int:
@@ -97,9 +100,13 @@ def train_kirby(
         test = pd.read_csv(f"{dataset_path}/test.csv")
 
     features = [c for c in train.columns if '__' in c]
-    labels = [c for c in train.columns if 'label.' in c]
 
-    ranker = getattr(Kirby, model)(features=features, label=label)
+    for label in labels:
+        logger.info(f"[Train] {label} count: {train[label].values.sum()}")
+    for label in labels:
+        logger.info(f"[Test] {label} count: {test[label].values.sum()}")
+
+    ranker = getattr(Kirby, model)(features=features, labels=labels)
     ranker.train(train)
     train_metrics = ranker.evaluate(train)
     test_metrics = ranker.evaluate(test)
