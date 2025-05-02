@@ -1,5 +1,4 @@
 
-from neo4j import GraphDatabase, AsyncGraphDatabase
 from datetime import datetime, timedelta
 from loguru import logger
 import typer
@@ -11,12 +10,14 @@ import modules.utils as utils
 app = typer.Typer(help="Herde commands.")
 
 def get_driver():
+    from neo4j import GraphDatabase
     return GraphDatabase.driver(
         config.fediway.graph_url, 
         auth=config.fediway.graph_auth
     )
 
 def get_async_driver():
+    from neo4j import AsyncGraphDatabase
     return AsyncGraphDatabase.driver(
         config.fediway.graph_url, 
         auth=config.fediway.graph_auth

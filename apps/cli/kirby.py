@@ -1,5 +1,7 @@
 
+from datetime import datetime, date
 from pathlib import Path
+from config import config
 import typer
 
 app = typer.Typer(help="Kirby commands.")
@@ -8,21 +10,25 @@ app = typer.Typer(help="Kirby commands.")
 def create_dataset(
     test_size: float = 0.2,
     path: str = 'data/datasets',
+    start_date: datetime | None = None,
+    end_date: datetime = datetime.now()
 ) -> int:
     from modules.fediway.rankers.kirby import KirbyDataset
     from shared.core.rw import rw_session, engine
     from shared.core.feast import feature_store
 
     from sklearn.model_selection import train_test_split
-    from datetime import datetime
     from pathlib import Path
 
     typer.echo(f"Creating dataset...")
 
-    name = f"kirby_{datetime.now().strftime('%d_%m_%Y')}"
+    if start_date:
+        name = f"kirby_{start_date.strftime('%d_%m_%Y')}-{end_date.strftime('%d_%m_%Y')}"
+    else:
+        name = f"kirby_{end_date.strftime('%d_%m_%Y')}"
     
     with rw_session() as db:
-        df = KirbyDataset.extract(feature_store, db, name)
+        df = KirbyDataset.extract(feature_store, db, name, start_date, end_date)
 
     unique_account_ids = df['account_id'].unique()
     train_accounts, test_accounts = train_test_split(

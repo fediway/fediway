@@ -16,7 +16,7 @@ from sqlmodel.sql._expression_select_cls import Select
 from sqlalchemy.orm import selectinload, joinedload, aliased
 from sqlalchemy.schema import CreateTable
 from sqlalchemy import label, and_, text, MetaData, Table, DateTime, Column, Integer, BigInteger, String, Float, insert
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from datasets import Dataset
 from tqdm import tqdm
 
@@ -185,8 +185,11 @@ class RandomNegativeSampler(NegativeSampler):
     
 class KirbyDataset(Dataset):
     @classmethod
-    def extract(cls, fs: FeatureStore, db: Session, name: str):
-        query = (select(AccountStatusLabel))
+    def extract(cls, fs: FeatureStore, db: Session, name: str, start_date: date | None = None, end_date: date = datetime.now().date()):
+        query = select(AccountStatusLabel).where(AccountStatusLabel.status_created_at < end_date)
+        if start_date is not None:
+            query = query.where(AccountStatusLabel.status_created_at >= start_date)
+        
         table = create_entities_table(name.replace("-", "_"), db)
         db_uri = db.get_bind().url.render_as_string(hide_password=False)
         feature_views = get_feature_views(fs)
