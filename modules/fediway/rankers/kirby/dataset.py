@@ -3,6 +3,7 @@ from feast import FeatureStore
 from dask import dataframe as dd
 from dask import array as da
 from dask.distributed import Client, as_completed
+from dask.diagnostics import ProgressBar
 from dask.base import normalize_token
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import pandas as pd
@@ -44,10 +45,9 @@ class InsertPositives:
         return normalize_token(type(self)), self.table.name
 
 class NegativeSampler():
-    def __init__(self, db, table, npartitions):
+    def __init__(self, db, table):
         self.db = db
         self.table = table
-        self.npartitions = npartitions
 
     def _insert_batch(self, batch):
         values = [{
@@ -85,8 +85,8 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
         ddf = utils.read_sql_join_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
+            bytes_per_chunk="64 MiB",
             index_col="status_id",
-            npartitions=self.npartitions,
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
                 "author_id": pd.Series([], dtype="int64"),
@@ -94,7 +94,8 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
             })
         )
 
-        ddf.map_partitions(self._insert_batch).compute()
+        with ProgressBar():
+            ddf.map_partitions(self._insert_batch).compute()
     
     def __dask_tokenize__(self):
         return normalize_token(type(self)), self.table.name
@@ -125,8 +126,8 @@ class FollowingNegativeSampler(NegativeSampler):
         ddf = utils.read_sql_join_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
+            bytes_per_chunk="64 MiB",
             index_col="status_id",
-            npartitions=self.npartitions,
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
                 "author_id": pd.Series([], dtype="int64"),
@@ -134,7 +135,8 @@ class FollowingNegativeSampler(NegativeSampler):
             })
         )
 
-        ddf.map_partitions(self._insert_batch).compute()
+        with ProgressBar():
+            ddf.map_partitions(self._insert_batch).compute()
     
     def __dask_tokenize__(self):
         return normalize_token(type(self)), self.table.name
@@ -170,7 +172,7 @@ class RandomNegativeSampler(NegativeSampler):
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             index_col="status_id",
-            npartitions=self.npartitions,
+            bytes_per_chunk="64 MiB",
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
                 "author_id": pd.Series([], dtype="int64"),
@@ -178,7 +180,8 @@ class RandomNegativeSampler(NegativeSampler):
             })
         )
 
-        ddf.map_partitions(self._insert_batch).compute()
+        with ProgressBar():
+            ddf.map_partitions(self._insert_batch).compute()
     
     def __dask_tokenize__(self):
         return normalize_token(type(self)), self.table.name
@@ -196,7 +199,6 @@ class KirbyDataset():
         db_uri = db.get_bind().url.render_as_string(hide_password=False)
         feature_views = get_feature_views(fs)
         total = db.scalar(total_query)
-        npartitions = (total // 1000) + 1
 
         start = time.time()
 
@@ -204,7 +206,7 @@ class KirbyDataset():
             sql=query,
             con=db_uri,
             index_col="author_id",
-            npartitions=npartitions,
+            bytes_per_chunk="64 MiB",
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
                 "status_id": pd.Series([], dtype="int64"),
@@ -220,16 +222,17 @@ class KirbyDataset():
             })
         )
         
-        ddf.map_partitions(InsertPositives(db, table)).compute()
+        with ProgressBar():
+            ddf.map_partitions(InsertPositives(db, table)).compute()
         db.commit()
 
         print(f"Duration = {time.time()-start}")
 
         # sample negatives from statuses of engaged author
         negative_samplers = [
-            EngagedAuthorNegativeSampler(db, table, npartitions=npartitions),
-            FollowingNegativeSampler(db, table, npartitions=npartitions),
-            RandomNegativeSampler(db, table, npartitions=npartitions),
+            EngagedAuthorNegativeSampler(db, table),
+            FollowingNegativeSampler(db, table),
+            RandomNegativeSampler(db, table),
         ]
         
         for sampler in negative_samplers:
