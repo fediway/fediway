@@ -21,9 +21,9 @@ def create_dataset(
     typer.echo(f"Creating dataset...")
 
     if start_date:
-        name = f"kirby_{start_date.strftime('%d_%m_%Y')}-{end_date.strftime('%d_%m_%Y')}"
+        name = f"kirby_{start_date.strftime('%Y_%m_%d')}-{end_date.strftime('%Y_%m_%d')}"
     else:
-        name = f"kirby_{end_date.strftime('%d_%m_%Y')}"
+        name = f"kirby_{end_date.strftime('%Y_%m_%d')}"
     
     with rw_session() as db:
         df = KirbyDataset.extract(feature_store, db, name, start_date, end_date)
