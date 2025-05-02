@@ -44,9 +44,10 @@ class InsertPositives:
         return normalize_token(type(self)), self.table.name
 
 class NegativeSampler():
-    def __init__(self, db, table):
+    def __init__(self, db, table, npartitions):
         self.db = db
         self.table = table
+        self.npartitions = npartitions
 
     def _insert_batch(self, batch):
         values = [{
@@ -85,7 +86,7 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             index_col="status_id",
-            npartitions=10,
+            npartitions=self.npartitions,
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
                 "author_id": pd.Series([], dtype="int64"),
@@ -125,7 +126,7 @@ class FollowingNegativeSampler(NegativeSampler):
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             index_col="status_id",
-            npartitions=10,
+            npartitions=self.npartitions,
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
                 "author_id": pd.Series([], dtype="int64"),
@@ -169,7 +170,7 @@ class RandomNegativeSampler(NegativeSampler):
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             index_col="status_id",
-            npartitions=10,
+            npartitions=self.npartitions,
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
                 "author_id": pd.Series([], dtype="int64"),
@@ -185,13 +186,17 @@ class RandomNegativeSampler(NegativeSampler):
 class KirbyDataset():
     @classmethod
     def extract(cls, fs: FeatureStore, db: Session, name: str, start_date: date | None = None, end_date: date = datetime.now().date()):
+        total_query = select(func.count(text("*"))).where(AccountStatusLabel.status_created_at < end_date)
         query = select(AccountStatusLabel).where(AccountStatusLabel.status_created_at < end_date)
         if start_date is not None:
             query = query.where(AccountStatusLabel.status_created_at >= start_date)
+            total_query = total_query.where(AccountStatusLabel.status_created_at >= start_date)
         
         table = create_entities_table(name.replace("-", "_"), db)
         db_uri = db.get_bind().url.render_as_string(hide_password=False)
         feature_views = get_feature_views(fs)
+        total = db.scalar(total_query)
+        npartitions = (total // 1000) + 1
 
         start = time.time()
 
@@ -199,7 +204,7 @@ class KirbyDataset():
             sql=query,
             con=db_uri,
             index_col="author_id",
-            npartitions=10,
+            npartitions=npartitions,
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
                 "status_id": pd.Series([], dtype="int64"),
@@ -222,12 +227,13 @@ class KirbyDataset():
 
         # sample negatives from statuses of engaged author
         negative_samplers = [
-            EngagedAuthorNegativeSampler(db, table),
-            FollowingNegativeSampler(db, table),
-            RandomNegativeSampler(db, table),
+            EngagedAuthorNegativeSampler(db, table, npartitions=npartitions),
+            FollowingNegativeSampler(db, table, npartitions=npartitions),
+            RandomNegativeSampler(db, table, npartitions=npartitions),
         ]
         
         for sampler in negative_samplers:
+            print(f"Start sampling {sampler}")
             with utils.duration("Sampled negatives in {:.3f} seconds."):
                 sampler()
 
