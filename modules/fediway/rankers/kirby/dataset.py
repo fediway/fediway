@@ -235,7 +235,7 @@ class KirbyDataset():
         # sample negatives from statuses of engaged author
         negative_samplers = [
             EngagedAuthorNegativeSampler(db, table),
-            FollowingNegativeSampler(db, table),
+            # FollowingNegativeSampler(db, table),
             RandomNegativeSampler(db, table),
         ]
         
