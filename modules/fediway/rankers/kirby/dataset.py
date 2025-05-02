@@ -154,7 +154,6 @@ class FollowingNegativeSampler(NegativeSampler):
         return normalize_token(type(self)), self.table.name
 
 class RandomNegativeSampler(NegativeSampler):
-
     def __call__(self):
         query = select(text(f""" 
             n.account_id,
@@ -181,8 +180,6 @@ class RandomNegativeSampler(NegativeSampler):
             ) s
         ) n ON s.id = n.status_id
         """))
-
-        query = select(text(f"* FROM {self.table.name}"))
 
         ddf = dd.read_sql_query(
             sql=query,
