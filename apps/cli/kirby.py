@@ -84,6 +84,7 @@ def train_kirby(
     test = pd.read_csv(dataset_path / 'test.csv')
 
     features = [c for c in train.columns if '__' in c]
+    labels = [c for c in train.columns if 'label.' in c]
 
     ranker = getattr(Kirby, model)(features=features, label=label)
     ranker.train(train)
