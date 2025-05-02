@@ -19,6 +19,7 @@ def create_dataset(
     from shared.core.rw import rw_session, engine
     from shared.core.feast import feature_store
 
+    from pathlib import Path
     from sklearn.model_selection import train_test_split
 
     typer.echo(f"Creating dataset...")

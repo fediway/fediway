@@ -72,15 +72,23 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
         FROM statuses s
         JOIN (
             SELECT 
-                ds.account_id,
-                MAX(n.id) AS status_id
-            FROM {self.table.name} ds
-            JOIN statuses n
-            ON n.id != ds.status_id 
-            AND n.account_id = ds.author_id 
-            AND n.id < ds.status_id
-            AND n.reblog_of_id IS NULL
-            GROUP BY ds.account_id, ds.status_id
+                d.account_id,
+                s.id AS status_id
+            FROM {self.table.name} d
+            CROSS JOIN LATERAL (
+                SELECT s.id
+                FROM statuses s
+                WHERE s.id < d.status_id
+                  AND s.account_id = d.author_id
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM {self.table.name} d2
+                    WHERE d2.status_id = s.id
+                      AND d2.account_id = d.account_id
+                )
+                ORDER BY s.id DESC
+                LIMIT 1
+            ) s
         ) n ON s.id = n.status_id
         """))
 
@@ -121,7 +129,8 @@ class FollowingNegativeSampler(NegativeSampler):
                 JOIN follows f
                   ON f.account_id = d.account_id
                  AND f.target_account_id = s.account_id
-                WHERE NOT EXISTS (
+                WHERE s.id < d.status_id
+                  AND NOT EXISTS (
                     SELECT 1
                     FROM {self.table.name} d2
                     WHERE d2.status_id = s.id
@@ -133,9 +142,7 @@ class FollowingNegativeSampler(NegativeSampler):
         ) n ON s.id = n.status_id
         """))
 
-        # query = select(text(f"* FROM {self.table.name}"))
-
-        ddf = dd.read_sql_query(
+        ddf = utils.read_sql_join_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             bytes_per_chunk="64 MiB",
@@ -147,8 +154,8 @@ class FollowingNegativeSampler(NegativeSampler):
             })
         )
 
-        # with ProgressBar():
-        ddf.map_partitions(self._insert_batch).compute()
+        with ProgressBar():
+            ddf.map_partitions(self._insert_batch).compute()
     
     def __dask_tokenize__(self):
         return normalize_token(type(self)), self.table.name
@@ -169,19 +176,20 @@ class RandomNegativeSampler(NegativeSampler):
             CROSS JOIN LATERAL (
                 SELECT s.id
                 FROM statuses s
-                WHERE NOT EXISTS (
+                WHERE s.id < d.status_id
+                  AND NOT EXISTS (
                     SELECT 1
                     FROM {self.table.name} d2
                     WHERE d2.status_id = s.id
                       AND d2.account_id = d.account_id
                 )
-                ORDER BY md5(s.id::text)
+                ORDER BY s.id DESC
                 LIMIT 1
             ) s
         ) n ON s.id = n.status_id
         """))
 
-        ddf = dd.read_sql_query(
+        ddf = utils.read_sql_join_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             index_col="status_id",
@@ -202,22 +210,18 @@ class RandomNegativeSampler(NegativeSampler):
 class KirbyDataset():
     @classmethod
     def extract(cls, fs: FeatureStore, db: Session, name: str, start_date: date | None = None, end_date: date = datetime.now().date()):
-        total_query = select(func.count(text("*"))).where(AccountStatusLabel.status_created_at < end_date)
         query = select(AccountStatusLabel).where(AccountStatusLabel.status_created_at < end_date)
         if start_date is not None:
             query = query.where(AccountStatusLabel.status_created_at >= start_date)
-            total_query = total_query.where(AccountStatusLabel.status_created_at >= start_date)
         
         table = create_entities_table(name.replace("-", "_"), db)
-        db_uri = db.get_bind().url.render_as_string(hide_password=False)
         feature_views = get_feature_views(fs)
-        total = db.scalar(total_query)
 
         start = time.time()
 
         ddf = dd.read_sql_query(
             sql=query,
-            con=db_uri,
+            con=db.get_bind().url.render_as_string(hide_password=False),
             index_col="author_id",
             bytes_per_chunk="64 MiB",
             meta=pd.DataFrame({
@@ -265,42 +269,3 @@ class KirbyDataset():
         db.exec(text(f"DROP TABLE IF EXISTS {table.name};"))
         
         return df
-
-# class NegativeSampler:
-#     def __init__(self, positives):
-#         self.positives = positives
-#         self.reset()
-
-#     def reset(self):
-#         self.unique_pairs = set([tuple(p) for p in self.positives[['account_id', 'status_id']].drop_duplicates().values.tolist()])
-    
-#     def __call__(self, n, db, table):
-#         bar = tqdm(desc="Negatives", total=n)
-
-#         n_misses = 0
-#         n_negatives = 0
-
-#         while n_negatives < n:
-#             account_id = self.positives['account_id'].sample(1).values[0]
-#             status_id, author_id, event_time = self.positives.sample(1).values[0, 1:]
-
-#             if (account_id, status_id) in self.unique_pairs:
-#                 n_misses += 1
-#                 if n_misses > 10:
-#                     break
-#                 continue
-
-#             n_misses = 0
-#             n_negatives += 1
-            
-#             self.unique_pairs.add((account_id, status_id))
-
-#             db.exec(insert(table).values(
-#                 account_id=account_id,
-#                 status_id=status_id,
-#                 author_id=author_id,
-#                 time=event_time,
-#             ))
-#             bar.update(1)
-
-#         db.commit()
