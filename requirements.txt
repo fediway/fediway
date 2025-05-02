@@ -22,4 +22,4 @@ qdrant-client==1.13.0
 multilingual-clip==1.0.10
 sentence-transformers[onnx]==4.1.0
 dask[distributed]==2025.4.1
-s3fs==2025.3.2
+s3fs==2024.9.0
