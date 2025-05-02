@@ -94,7 +94,6 @@ def get_historical_features(entity_table: str, feature_views: list[FeatureView],
     query = _get_historical_features_query(entity_table, feature_views)
     bar = tqdm(total=total, desc="Features", unit="samples")
 
-    rows = []
     for row in db.exec(text(query)).mappings().yield_per(100):
         feats = {}
         for fv in feature_views:
@@ -104,15 +103,15 @@ def get_historical_features(entity_table: str, feature_views: list[FeatureView],
                 feats |= {f"{fv.name}__{f.name}": value for f, value in zip(fv.schema, row[fv.name])}
         entities = {e: row[e] for e in ['account_id', 'status_id']}
 
-        rows.append(entities | {
+        row = entities | {
             'label.is_favourited': row.is_favourited,
             'label.is_replied': row.is_replied,
             'label.is_reblogged': row.is_reblogged,
             'label.is_reply_engaged_by_author': row.is_reply_engaged_by_author,
-        } | feats)
+        } | feats
+
+        yield pd.Series(row)
 
         bar.update(1)
 
     bar.close()
-    
-    return pd.DataFrame(rows)

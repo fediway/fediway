@@ -15,7 +15,7 @@ def create_dataset(
     start_date: datetime | None = None,
     end_date: datetime = datetime.now()
 ) -> int:
-    from modules.fediway.rankers.kirby import KirbyDataset
+    from modules.fediway.rankers.kirby.dataset import create_dataset
     from shared.core.rw import rw_session, engine
     from shared.core.feast import feature_store
 
@@ -28,32 +28,22 @@ def create_dataset(
         name = f"kirby_{start_date.strftime('%Y_%m_%d')}-{end_date.strftime('%Y_%m_%d')}"
     else:
         name = f"kirby_{end_date.strftime('%Y_%m_%d')}"
+    dataset_path = f"{path}/{name}"
+
+    storage_options = {'client_kwargs': {'endpoint_url': config.fediway.datasets_s3_endpoint}}
     
     with rw_session() as db:
-        df = KirbyDataset.extract(feature_store, db, name, start_date, end_date)
-
-    unique_account_ids = df['account_id'].unique()
-    train_accounts, test_accounts = train_test_split(
-        unique_account_ids, 
-        test_size=test_size, 
-        random_state=42
-    )
-    train_df = df[df['account_id'].isin(train_accounts)]
-    test_df = df[df['account_id'].isin(test_accounts)]
-
-    if path.startswith('s3://'):
-        import s3fs
-        s3 = s3fs.S3FileSystem(endpoint_url=config.fediway.datasets_s3_endpoint)
-        with s3.open(f"{path}/{name}/train.csv",'w') as f:
-            train_df.to_csv(f, index=False)
-        with s3.open(f"{path}/{name}/test.csv",'w') as f:
-            test_df.to_csv(f, index=False)
-    else:
-        dataset_path = Path(path) / name
-        dataset_path.mkdir(exist_ok=True, parents=True)
-        train_df.to_csv(f"{path}/{name}/train.csv", index=False)
-        test_df.to_csv(f"{path}/{name}/test.csv", index=False)
-
+        create_dataset(
+            dataset_path,
+            feature_store,
+            db, 
+            name, 
+            start_date, 
+            end_date, 
+            test_size, 
+            storage_options=storage_options
+        )
+    
     typer.echo(f"Saved dataset to path {path}/{name}")
 
     return 0
@@ -83,22 +73,22 @@ def train_kirby(
 ) -> int:
     from modules.fediway.rankers.kirby import Kirby
     from shared.core.feast import feature_store
+    from dask import dataframe as dd
     import pandas as pd
     import numpy as np
 
     np.random.seed(seed)
     dataset_path = f"{path}/{dataset}"
 
-    if dataset_path.startswith('s3://'):
-        import s3fs
-        s3 = s3fs.S3FileSystem(endpoint_url=config.fediway.datasets_s3_endpoint)
-        with s3.open(f"{dataset_path}/train.csv",'r') as f:
-            train = pd.read_csv(f)
-        with s3.open(f"{dataset_path}/test.csv",'r') as f:
-            test = pd.read_csv(f)
-    else:
-        train = pd.read_csv(f"{dataset_path}/train.csv")
-        test = pd.read_csv(f"{dataset_path}/test.csv")
+    storage_options = {'client_kwargs': {'endpoint_url': config.fediway.datasets_s3_endpoint}}
+    train = dd.read_parquet(
+        f"{dataset_path}/train/",
+        storage_options=storage_options,
+    ).compute()
+    test = dd.read_parquet(
+        f"{dataset_path}/test/",
+        storage_options=storage_options,
+    ).compute()
 
     features = [c for c in train.columns if '__' in c]
 

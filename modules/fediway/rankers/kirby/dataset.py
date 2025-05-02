@@ -6,6 +6,7 @@ from dask.distributed import Client, as_completed
 from dask.diagnostics import ProgressBar
 from dask.base import normalize_token
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
 
@@ -24,6 +25,7 @@ import modules.utils as utils
 from modules.fediway.models.risingwave import AccountStatusLabel
 from modules.features import get_historical_features, create_entities_table
 from .features import get_feature_views
+from config import config
 
 class InsertPositives:
     def __init__(self, db, table):
@@ -260,27 +262,67 @@ def _sample_negatives(db, table, start_date, end_date):
         with utils.duration("Sampled negatives in {:.3f} seconds."):
             sampler()
 
-class KirbyDataset():
+def create_dataset(path: str, 
+                   fs: FeatureStore, 
+                   db: Session, 
+                   name: str, 
+                   start_date: date | None = None, 
+                   end_date: date = datetime.now().date(),
+                   test_size: float = 0.2,
+                   storage_options = {}):
+    table = create_entities_table(name.replace("-", "_"), db)
+    feature_views = get_feature_views(fs)
 
-    @classmethod
-    def extract(cls, fs: FeatureStore, db: Session, name: str, start_date: date | None = None, end_date: date = datetime.now().date()):
-        table = create_entities_table(name.replace("-", "_"), db)
-        feature_views = get_feature_views(fs)
+    with utils.duration("Sampled positives in {:.3f} seconds."):
+        _sample_positives(db, table, start_date, end_date)
 
-        with utils.duration("Sampled positives in {:.3f} seconds."):
-            _sample_positives(db, table, start_date, end_date)
+    time.sleep(0.5)
 
-        time.sleep(0.5)
+    _sample_negatives(db, table, start_date, end_date)
 
-        _sample_negatives(db, table, start_date, end_date)
-
-        with utils.duration("Fetched historical features in {:.3f} seconds."):
-            df = get_historical_features(
-                entity_table=table.name,
-                feature_views=feature_views,
-                db=db
-            ).fillna(0)
+    open_fn = open
+    if path.startswith('s3://'):
+        import s3fs
+        s3 = s3fs.S3FileSystem(endpoint_url=config.fediway.datasets_s3_endpoint)
+        open_fn = s3.open
     
-        db.exec(text(f"DROP TABLE IF EXISTS {table.name};"))
-        
-        return df
+    with open_fn(f"{path}/data.csv",'w') as f:
+        schema = None
+        for i, row in enumerate(get_historical_features(entity_table=table.name, feature_views=feature_views, db=db)):
+            if i == 0:
+                f.write(",".join([str(c) for c in row.index.to_list()])+"\n")
+                schema = row.index.to_list()
+            f.write(",".join([str(c) for c in row.fillna(0.)[schema].values])+"\n")
+
+    db.exec(text(f"DROP TABLE IF EXISTS {table.name};"))
+
+    unique_account_ids = (
+        dd.read_csv(
+            f"{path}/data.csv", 
+            usecols=['account_id'],
+            storage_options=storage_options
+        )
+        .drop_duplicates()
+        .compute()
+    )
+
+    train_accounts, test_accounts = train_test_split(
+        unique_account_ids, 
+        test_size=test_size, 
+        random_state=42
+    )
+
+    train_accounts_dd = dd.from_pandas(train_accounts, npartitions=(len(train_accounts) // 10_000) + 1)
+    test_accounts_dd  = dd.from_pandas(test_accounts,  npartitions=(len(test_accounts) // 10_000) + 1)
+
+    df_full = dd.read_csv(
+        f"{path}/data.csv",
+        storage_options=storage_options,
+        blocksize="64MB"
+    )
+
+    train_ddf = df_full.merge(train_accounts_dd, on="account_id", how="inner")
+    test_ddf  = df_full.merge(test_accounts_dd,  on="account_id", how="inner")
+
+    train_ddf.to_parquet(f"{path}/train/", write_index=False, storage_options=storage_options)
+    test_ddf.to_parquet(f"{path}/test/" , write_index=False, storage_options=storage_options)
