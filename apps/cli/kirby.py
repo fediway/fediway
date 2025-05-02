@@ -1,5 +1,4 @@
 
-from modules.fediway.rankers.kirby import Kirby
 from pathlib import Path
 import typer
 
@@ -10,30 +9,41 @@ def create_dataset(
     test_size: float = 0.2,
     path: str = 'data/datasets',
 ) -> int:
-    from shared.core.rw import get_rw_session, engine
+    from modules.fediway.rankers.kirby import KirbyDataset
+    from shared.core.rw import rw_session, engine
     from shared.core.feast import feature_store
 
-    typer.echo(f"Creating dataset: {name}")
+    from sklearn.model_selection import train_test_split
+    from datetime import datetime
+    from pathlib import Path
 
-    dataset_cls = DATASETS[name]
+    typer.echo(f"Creating dataset...")
 
-    name = f"{name}_{datetime.now().strftime('%d_%m_%Y')}"
+    name = f"kirby_{datetime.now().strftime('%d_%m_%Y')}"
     
-    rw = next(get_rw_session())
-    dataset = dataset_cls.extract(feature_store, rw, name)
+    with rw_session() as db:
+        df = KirbyDataset.extract(feature_store, db, name)
 
+    unique_account_ids = df['account_id'].unique()
+    train_accounts, test_accounts = train_test_split(
+        unique_account_ids, 
+        test_size=test_size, 
+        random_state=42
+    )
+    train_df = df[df['account_id'].isin(train_accounts)]
+    test_df = df[df['account_id'].isin(test_accounts)]
     dataset_path = Path(path) / name
-    dataset = dataset.train_test_split(test_size=test_size)
-    dataset.save_to_disk(str(dataset_path))
+    dataset_path.mkdir(exist_ok=True, parents=True)
 
-    typer.echo(dataset)
+    train_df.to_csv(dataset_path / 'train.csv')
+    test_df.to_csv(dataset_path / 'test.csv')
+
     typer.echo(f"Saved dataset to path {dataset_path}")
-
-    rw.close()
 
     return 0
 
 def validate_kirby_model(name: str):
+    from modules.fediway.rankers.kirby import Kirby
     if name not in Kirby.MODELS:
         raise typer.BadParameter(
             f"Invalid ranker '{name}', must be any of: {', '.join(Kirby.MODELS)}"
@@ -56,21 +66,23 @@ def train_kirby(
     dataset_path: str = 'data/datasets',
     seed: int = 42
 ) -> int:
+    from modules.fediway.rankers.kirby import Kirby
     from shared.core.feast import feature_store
+    import pandas as pd
     import numpy as np
-    from datasets import load_from_disk
 
     np.random.seed(seed)
+    dataset_path = Path(dataset_path) / dataset
 
-    # fv = fs.get_feature_view("account_engagement_all")
+    train = pd.read_csv(dataset_path / 'train.csv')
+    test = pd.read_csv(dataset_path / 'test.csv')
 
-    dataset = load_from_disk(Path(dataset_path) / dataset)
-    features = [f for f in dataset['train'].features.keys() if "__" in f]
+    features = [c for c in train.columns if '__' in c]
 
     ranker = getattr(Kirby, model)(features=features, label=label)
-    ranker.train(dataset['train'])
-    train_metrics = ranker.evaluate(dataset['train'])
-    test_metrics = ranker.evaluate(dataset['test'])
+    ranker.train(train)
+    train_metrics = ranker.evaluate(train)
+    test_metrics = ranker.evaluate(test)
 
     print("train", train_metrics)
     print("test", test_metrics)

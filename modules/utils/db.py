@@ -4,11 +4,10 @@ from sqlmodel.sql._expression_select_cls import Select, SelectOfScalar
 from contextlib import contextmanager
 from uuid import uuid4
 
-def compile_sql(query):
+def compile_sql(query, engine):
     '''
     Converts a query builder instance into a sql string.
     '''    
-    from app.core.db import engine
     return str(query.compile(engine, compile_kwargs={"literal_binds": True}))
 
 @contextmanager
