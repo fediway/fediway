@@ -112,20 +112,30 @@ class FollowingNegativeSampler(NegativeSampler):
         FROM statuses s
         JOIN (
             SELECT 
-                ds.account_id,
-                MAX(n.id) AS status_id
-            FROM {self.table.name} ds
-            JOIN follows f ON f.account_id = ds.account_id
-            JOIN statuses n 
-            ON n.id != ds.status_id 
-            AND n.account_id = f.target_account_id  
-            AND n.id < ds.status_id
-            AND n.reblog_of_id IS NULL
-            GROUP BY ds.account_id, ds.status_id
+                d.account_id,
+                s.id AS status_id
+            FROM {self.table.name} d
+            CROSS JOIN LATERAL (
+                SELECT s.id
+                FROM statuses s
+                JOIN follows f
+                  ON f.account_id = d.account_id
+                 AND f.target_account_id = s.account_id
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM {self.table.name} d2
+                    WHERE d2.status_id = s.id
+                      AND d2.account_id = d.account_id
+                )
+                ORDER BY s.id DESC
+                LIMIT 1
+            ) s
         ) n ON s.id = n.status_id
         """))
 
-        ddf = utils.read_sql_join_query(
+        # query = select(text(f"* FROM {self.table.name}"))
+
+        ddf = dd.read_sql_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             bytes_per_chunk="64 MiB",
@@ -137,13 +147,14 @@ class FollowingNegativeSampler(NegativeSampler):
             })
         )
 
-        with ProgressBar():
-            ddf.map_partitions(self._insert_batch).compute()
+        # with ProgressBar():
+        ddf.map_partitions(self._insert_batch).compute()
     
     def __dask_tokenize__(self):
         return normalize_token(type(self)), self.table.name
 
 class RandomNegativeSampler(NegativeSampler):
+
     def __call__(self):
         query = select(text(f""" 
             n.account_id,
@@ -153,24 +164,27 @@ class RandomNegativeSampler(NegativeSampler):
         FROM statuses s
         JOIN (
             SELECT 
-                ds.account_id,
-                MAX(n.id) AS status_id
-            FROM {self.table.name} ds
-            JOIN (
-                SELECT *
+                d.account_id,
+                s.id AS status_id
+            FROM {self.table.name} d
+            CROSS JOIN LATERAL (
+                SELECT s.id
                 FROM statuses s
-                JOIN {self.table.name} ds
-                ON ds.status_id = s.id
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM {self.table.name} d2
+                    WHERE d2.status_id = s.id
+                      AND d2.account_id = d.account_id
+                )
+                ORDER BY md5(s.id::text)
                 LIMIT 1
-            ) n 
-            ON n.id != ds.status_id
-            AND n.id < ds.status_id
-            AND n.reblog_of_id IS NULL
-            GROUP BY ds.account_id, ds.status_id
+            ) s
         ) n ON s.id = n.status_id
         """))
 
-        ddf = utils.read_sql_join_query(
+        query = select(text(f"* FROM {self.table.name}"))
+
+        ddf = dd.read_sql_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             index_col="status_id",
@@ -235,7 +249,7 @@ class KirbyDataset():
         # sample negatives from statuses of engaged author
         negative_samplers = [
             EngagedAuthorNegativeSampler(db, table),
-            # FollowingNegativeSampler(db, table),
+            FollowingNegativeSampler(db, table),
             RandomNegativeSampler(db, table),
         ]
         

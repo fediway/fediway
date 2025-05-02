@@ -78,8 +78,15 @@ class Kirby():
                  n_estimators: int = 1000, 
                  random_state: int = None):
         from lightgbm import LGBMClassifier
+
         model = LGBMClassifier(
-            n_estimators=n_estimators
+            objective='multiclass',
+            num_class=len(labels),
+            metric='multi_logloss',
+            n_estimators=n_estimators,
+            num_leaves=50,
+            learning_rate=0.1,
+            max_depth=10
         )
         scaler = get_scaler(scaler)
 
