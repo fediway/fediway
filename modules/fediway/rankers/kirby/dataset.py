@@ -46,9 +46,17 @@ class InsertPositives:
         return normalize_token(type(self)), self.table.name
 
 class NegativeSampler():
-    def __init__(self, db, table):
+    def __init__(self, db, table, start_date, end_date):
         self.db = db
         self.table = table
+        self.start_date = start_date
+        self.end_date = end_date
+
+    def _get_date_clause(self):
+        query = f"s.created_at < '{self.end_date.strftime('%Y-%m-%d')}'"
+        if self.start_date is not None:
+            query += f" AND s.created_at >= '{self.end_date.strftime('%Y-%m-%d')}'"
+        return query
 
     def _insert_batch(self, batch):
         values = [{
@@ -80,6 +88,7 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
                 FROM statuses s
                 WHERE s.id < d.status_id
                   AND s.account_id = d.author_id
+                  AND {self._get_date_clause()}
                   AND NOT EXISTS (
                     SELECT 1
                     FROM {self.table.name} d2
@@ -130,6 +139,7 @@ class FollowingNegativeSampler(NegativeSampler):
                   ON f.account_id = d.account_id
                  AND f.target_account_id = s.account_id
                 WHERE s.id < d.status_id
+                  AND {self._get_date_clause()}
                   AND NOT EXISTS (
                     SELECT 1
                     FROM {self.table.name} d2
@@ -177,6 +187,7 @@ class RandomNegativeSampler(NegativeSampler):
                 SELECT s.id
                 FROM statuses s
                 WHERE s.id < d.status_id
+                  AND {self._get_date_clause()}
                   AND NOT EXISTS (
                     SELECT 1
                     FROM {self.table.name} d2
@@ -249,9 +260,9 @@ class KirbyDataset():
 
         # sample negatives from statuses of engaged author
         negative_samplers = [
-            EngagedAuthorNegativeSampler(db, table),
-            FollowingNegativeSampler(db, table),
-            RandomNegativeSampler(db, table),
+            EngagedAuthorNegativeSampler(db, table, start_date, end_date),
+            FollowingNegativeSampler(db, table, start_date, end_date),
+            RandomNegativeSampler(db, table, start_date, end_date),
         ]
         
         for sampler in negative_samplers:
