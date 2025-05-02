@@ -8,7 +8,6 @@ loguru==0.7.3
 pydantic_settings==2.8.1
 sqlmodel==0.0.24
 cachetools==5.5.2
-datasets==3.5.0
 scikit-learn==1.6.1
 neo4j==5.28.1
 tqdm==4.67.1
@@ -23,3 +22,4 @@ qdrant-client==1.13.0
 multilingual-clip==1.0.10
 sentence-transformers[onnx]==4.1.0
 dask[distributed]==2025.4.1
+s3fs==2025.3.2

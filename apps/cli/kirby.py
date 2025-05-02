@@ -1,6 +1,5 @@
 
 from datetime import datetime, date
-from pathlib import Path
 from config import config
 import typer
 
@@ -9,7 +8,7 @@ app = typer.Typer(help="Kirby commands.")
 @app.command("create-dataset")
 def create_dataset(
     test_size: float = 0.2,
-    path: str = 'data/datasets',
+    path: str = config.fediway.datasets_path,
     start_date: datetime | None = None,
     end_date: datetime = datetime.now()
 ) -> int:
@@ -18,7 +17,6 @@ def create_dataset(
     from shared.core.feast import feature_store
 
     from sklearn.model_selection import train_test_split
-    from pathlib import Path
 
     typer.echo(f"Creating dataset...")
 
@@ -38,13 +36,21 @@ def create_dataset(
     )
     train_df = df[df['account_id'].isin(train_accounts)]
     test_df = df[df['account_id'].isin(test_accounts)]
-    dataset_path = Path(path) / name
-    dataset_path.mkdir(exist_ok=True, parents=True)
 
-    train_df.to_csv(dataset_path / 'train.csv')
-    test_df.to_csv(dataset_path / 'test.csv')
+    if path.startswith('s3://'):
+        import s3fs
+        s3 = s3fs.S3FileSystem(endpoint_url=config.fediway.datasets_s3_endpoint)
+        with s3.open(f"{path}/{name}/train.csv",'w') as f:
+            train_df.to_csv(f)
+        with s3.open(f"{path}/{name}/test.csv",'w') as f:
+            test_df.to_csv(f)
+    else:
+        dataset_path = Path(path) / name
+        dataset_path.mkdir(exist_ok=True, parents=True)
+        train_df.to_csv(f"{path}/{name}/train.csv")
+        test_df.to_csv(f"{path}/{name}/test.csv")
 
-    typer.echo(f"Saved dataset to path {dataset_path}")
+    typer.echo(f"Saved dataset to path {path}/{name}")
 
     return 0
 
@@ -67,9 +73,8 @@ def train_kirby(
         help="Model name",
         callback=validate_kirby_model
     ),
-    features: str = 'ranker',
     label: str = 'label.is_favourited',
-    dataset_path: str = 'data/datasets',
+    path: str = config.fediway.datasets_path,
     seed: int = 42
 ) -> int:
     from modules.fediway.rankers.kirby import Kirby
@@ -78,10 +83,18 @@ def train_kirby(
     import numpy as np
 
     np.random.seed(seed)
-    dataset_path = Path(dataset_path) / dataset
+    dataset_path = f"{path}/{dataset}"
 
-    train = pd.read_csv(dataset_path / 'train.csv')
-    test = pd.read_csv(dataset_path / 'test.csv')
+    if dataset_path.startswith('s3://'):
+        import s3fs
+        s3 = s3fs.S3FileSystem(endpoint_url=config.fediway.datasets_s3_endpoint)
+        with s3.open(f"{dataset_path}/train.csv",'r') as f:
+            train = pd.read_csv(f)
+        with s3.open(f"{dataset_path}/test.csv",'r') as f:
+            test = pd.read_csv(f)
+    else:
+        train = pd.read_csv(f"{dataset_path}/train.csv")
+        test = pd.read_csv(f"{dataset_path}/test.csv")
 
     features = [c for c in train.columns if '__' in c]
     labels = [c for c in train.columns if 'label.' in c]

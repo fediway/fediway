@@ -23,6 +23,8 @@ class FediwayConfig(BaseConfig):
     memgraph_name: str       = 'fediway_development'
 
     herde_migrations_path: str = 'migrations/herde'
+    datasets_path: str = 'data/datasets'
+    datasets_s3_endpoint: str | None = None
 
     @property
     def graph_url(self):

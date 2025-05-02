@@ -17,7 +17,6 @@ from sqlalchemy.orm import selectinload, joinedload, aliased
 from sqlalchemy.schema import CreateTable
 from sqlalchemy import label, and_, text, MetaData, Table, DateTime, Column, Integer, BigInteger, String, Float, insert
 from datetime import datetime, timedelta, date
-from datasets import Dataset
 from tqdm import tqdm
 
 import modules.utils as utils
@@ -183,7 +182,7 @@ class RandomNegativeSampler(NegativeSampler):
     def __dask_tokenize__(self):
         return normalize_token(type(self)), self.table.name
     
-class KirbyDataset(Dataset):
+class KirbyDataset():
     @classmethod
     def extract(cls, fs: FeatureStore, db: Session, name: str, start_date: date | None = None, end_date: date = datetime.now().date()):
         query = select(AccountStatusLabel).where(AccountStatusLabel.status_created_at < end_date)
