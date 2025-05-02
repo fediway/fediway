@@ -117,7 +117,8 @@ def read_sql_join_query(
 
     if head_rows > 0:
         # derive metadata from first few rows
-        q = sql.limit(head_rows)
+        q = str(sql.compile(engine, compile_kwargs={"literal_binds": True}))
+        q += f" {sql_append} LIMIT {head_rows}"
         head = pd.read_sql(q, engine, **kwargs)
 
         if len(head) == 0:

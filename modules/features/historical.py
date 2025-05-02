@@ -153,12 +153,10 @@ def get_historical_features(entity_table: str, feature_views: list[FeatureView],
     ddf = read_sql_join_query(
         sql=query,
         con=db.get_bind().url.render_as_string(hide_password=False),
-        npartitions=(total // 10_000)+1,
         bytes_per_chunk="64 MiB",
         index_col="ds.status_id",
         meta=pd.DataFrame(schema),
         sql_append="GROUP BY ds.account_id, ds.status_id",
-        head_rows=0
     )
 
     return ddf.map_partitions(FlattenFeatureViews(feature_views))
