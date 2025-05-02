@@ -98,7 +98,7 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
                 ORDER BY s.id DESC
                 LIMIT 1
             ) s
-        ) n ON s.id = n.status_id
+        ) n ON s.id = n.status_id AND {self._get_date_clause()}
         """))
 
         ddf = utils.read_sql_join_query(
@@ -149,7 +149,7 @@ class FollowingNegativeSampler(NegativeSampler):
                 ORDER BY s.id DESC
                 LIMIT 1
             ) s
-        ) n ON s.id = n.status_id
+        ) n ON s.id = n.status_id AND {self._get_date_clause()}
         """))
 
         ddf = utils.read_sql_join_query(
@@ -197,7 +197,7 @@ class RandomNegativeSampler(NegativeSampler):
                 ORDER BY s.id DESC
                 LIMIT 1
             ) s
-        ) n ON s.id = n.status_id
+        ) n ON s.id = n.status_id AND {self._get_date_clause()}
         """))
 
         ddf = utils.read_sql_join_query(
