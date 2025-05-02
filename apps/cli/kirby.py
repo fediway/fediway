@@ -102,8 +102,10 @@ def train_kirby(
 
     features = [c for c in train.columns if '__' in c]
 
+    logger.info(f"[Train] size: {len(train)}")
     for label in labels:
         logger.info(f"[Train] {label} count: {train[label].values.sum()}")
+    logger.info(f"[Test] size: {len(test)}")
     for label in labels:
         logger.info(f"[Test] {label} count: {test[label].values.sum()}")
 

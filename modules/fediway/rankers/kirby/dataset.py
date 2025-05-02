@@ -217,58 +217,62 @@ class RandomNegativeSampler(NegativeSampler):
     
     def __dask_tokenize__(self):
         return normalize_token(type(self)), self.table.name
+
+def _sample_positives(db, table, start_date, end_date):
+    query = select(AccountStatusLabel).where(AccountStatusLabel.status_created_at < end_date)
+    if start_date is not None:
+        query = query.where(AccountStatusLabel.status_created_at >= start_date)
+
+    ddf = dd.read_sql_query(
+        sql=query,
+        con=db.get_bind().url.render_as_string(hide_password=False),
+        index_col="author_id",
+        bytes_per_chunk="64 MiB",
+        meta=pd.DataFrame({
+            "account_id": pd.Series([], dtype="int64"),
+            "status_id": pd.Series([], dtype="int64"),
+            "status_created_at": pd.Series([], dtype="datetime64[s]"),
+            "is_favourited": pd.Series([], dtype="bool"),
+            "is_reblogged": pd.Series([], dtype="bool"),
+            "is_replied": pd.Series([], dtype="bool"),
+            "is_reply_engaged_by_author": pd.Series([], dtype="bool"),
+            "is_favourited_at": pd.Series([], dtype="datetime64[s]"),
+            "is_reblogged_at": pd.Series([], dtype="datetime64[s]"),
+            "is_replied_at": pd.Series([], dtype="datetime64[s]"),
+            "is_reply_engaged_by_author_at": pd.Series([], dtype="datetime64[s]"),
+        })
+    )
     
+    with ProgressBar():
+        ddf.map_partitions(InsertPositives(db, table)).compute()
+    db.commit()    
+
+def _sample_negatives(db, table, start_date, end_date):
+    # sample negatives from statuses of engaged author
+    negative_samplers = [
+        EngagedAuthorNegativeSampler(db, table, start_date, end_date),
+        FollowingNegativeSampler(db, table, start_date, end_date),
+        # RandomNegativeSampler(db, table, start_date, end_date),
+    ]
+    
+    for sampler in negative_samplers:
+        print(f"Start sampling {sampler}")
+        with utils.duration("Sampled negatives in {:.3f} seconds."):
+            sampler()
+
 class KirbyDataset():
+
     @classmethod
     def extract(cls, fs: FeatureStore, db: Session, name: str, start_date: date | None = None, end_date: date = datetime.now().date()):
-        query = select(AccountStatusLabel).where(AccountStatusLabel.status_created_at < end_date)
-        if start_date is not None:
-            query = query.where(AccountStatusLabel.status_created_at >= start_date)
-        
         table = create_entities_table(name.replace("-", "_"), db)
         feature_views = get_feature_views(fs)
 
-        start = time.time()
-
-        ddf = dd.read_sql_query(
-            sql=query,
-            con=db.get_bind().url.render_as_string(hide_password=False),
-            index_col="author_id",
-            bytes_per_chunk="64 MiB",
-            meta=pd.DataFrame({
-                "account_id": pd.Series([], dtype="int64"),
-                "status_id": pd.Series([], dtype="int64"),
-                "status_created_at": pd.Series([], dtype="datetime64[s]"),
-                "is_favourited": pd.Series([], dtype="bool"),
-                "is_reblogged": pd.Series([], dtype="bool"),
-                "is_replied": pd.Series([], dtype="bool"),
-                "is_reply_engaged_by_author": pd.Series([], dtype="bool"),
-                "is_favourited_at": pd.Series([], dtype="datetime64[s]"),
-                "is_reblogged_at": pd.Series([], dtype="datetime64[s]"),
-                "is_replied_at": pd.Series([], dtype="datetime64[s]"),
-                "is_reply_engaged_by_author_at": pd.Series([], dtype="datetime64[s]"),
-            })
-        )
-        
-        with ProgressBar():
-            ddf.map_partitions(InsertPositives(db, table)).compute()
-        db.commit()
-
-        print(f"Duration = {time.time()-start}")
+        with utils.duration("Sampled positives in {:.3f} seconds."):
+            _sample_positives(db, table, start_date, end_date)
 
         time.sleep(0.5)
 
-        # sample negatives from statuses of engaged author
-        negative_samplers = [
-            EngagedAuthorNegativeSampler(db, table, start_date, end_date),
-            FollowingNegativeSampler(db, table, start_date, end_date),
-            # RandomNegativeSampler(db, table, start_date, end_date),
-        ]
-        
-        for sampler in negative_samplers:
-            print(f"Start sampling {sampler}")
-            with utils.duration("Sampled negatives in {:.3f} seconds."):
-                sampler()
+        _sample_negatives(db, table, start_date, end_date)
 
         with utils.duration("Fetched historical features in {:.3f} seconds."):
             df = get_historical_features(
