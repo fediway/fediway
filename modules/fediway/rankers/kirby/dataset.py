@@ -40,6 +40,7 @@ class InsertPositives:
         
         if len(values) > 0 and values[0]['account_id'] != 1:
             self.db.exec(insert(self.table).values(values))
+            self.db.commit()
 
     def __dask_tokenize__(self):
         return normalize_token(type(self)), self.table.name
@@ -55,10 +56,11 @@ class NegativeSampler():
             'status_id': status_id,
             'author_id': row.author_id,
             'time': row.time,
-        } for status_id, row in batch.iterrows()]
+        } for status_id, row in batch.iterrows() if isinstance(row.time, datetime)]
 
         if len(values) > 0 and values[0]['account_id'] != 1:
             self.db.exec(insert(self.table).values(values))
+            self.db.commit()
 
 class EngagedAuthorNegativeSampler(NegativeSampler):
     def __call__(self):
@@ -227,6 +229,8 @@ class KirbyDataset():
         db.commit()
 
         print(f"Duration = {time.time()-start}")
+
+        time.sleep(0.5)
 
         # sample negatives from statuses of engaged author
         negative_samplers = [
