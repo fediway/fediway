@@ -262,7 +262,7 @@ class KirbyDataset():
         negative_samplers = [
             EngagedAuthorNegativeSampler(db, table, start_date, end_date),
             FollowingNegativeSampler(db, table, start_date, end_date),
-            RandomNegativeSampler(db, table, start_date, end_date),
+            # RandomNegativeSampler(db, table, start_date, end_date),
         ]
         
         for sampler in negative_samplers:
