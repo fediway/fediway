@@ -93,8 +93,10 @@ class Kirby():
         return cls(model, scaler, features, labels)
 
     def train(self, dataset: pd.DataFrame):
+        print(dataset)
+        exit()
         X = self.scaler.fit_transform(dataset[self.features].values)
-        y = np.argmax(dataset[self.labels].values, axis=1)
+        y = np.argmax(dataset[self.labels].values.astype(int), axis=1)
 
         self.model.fit(X, y)
 
@@ -104,7 +106,7 @@ class Kirby():
         return self.model.predict_proba(X)
 
     def evaluate(self, dataset: pd.DataFrame):
-        y_true_all = dataset[self.labels].values
+        y_true_all = dataset[self.labels].values.astype(int)
         y_pred_all = self.predict_proba(dataset)
 
         results = {}

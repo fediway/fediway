@@ -23,7 +23,7 @@ from tqdm import tqdm
 
 import modules.utils as utils
 from modules.fediway.models.risingwave import AccountStatusLabel
-from modules.features import get_historical_features, create_entities_table
+from modules.features import get_historical_features_ddf, create_entities_table
 from .features import get_feature_views
 from config import config
 
@@ -281,7 +281,7 @@ def create_dataset(path: str,
     _sample_negatives(db, table, start_date, end_date)
     
     with ProgressBar():
-        ddf = get_historical_features(entity_table=table.name, feature_views=feature_views, db=db)
+        ddf = get_historical_features_ddf(entity_table=table.name, feature_views=feature_views, db=db)
         ddf.to_parquet(f"{path}/data/", write_index=False, storage_options=storage_options)
 
     db.exec(text(f"DROP TABLE IF EXISTS {table.name};"))

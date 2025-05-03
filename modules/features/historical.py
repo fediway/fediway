@@ -127,16 +127,20 @@ class FlattenFeatureViews:
 
             rows.append(row)
 
-        return (
+        df = (
             pd.DataFrame(rows)[list(self.schema.keys())]
             .fillna(0.)
             .astype({f: s.dtype for f, s in self.schema.items()})
         )
 
+        print(df)
+
+        return df
+
     def __dask_tokenize__(self):
         return normalize_token(type(self))
 
-def get_historical_features(entity_table: str, feature_views: list[FeatureView], db: Session):
+def get_historical_features_ddf(entity_table: str, feature_views: list[FeatureView], db: Session):
     total = db.scalar(text(f"SELECT COUNT(*) FROM {entity_table}"))
     query = _get_historical_features_query(entity_table, feature_views)
 
