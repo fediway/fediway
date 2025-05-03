@@ -299,6 +299,8 @@ def create_dataset(path: str,
 
     print(unique_account_ids)
 
+    exit()
+
     train_accounts, test_accounts = train_test_split(
         unique_account_ids, 
         test_size=test_size, 
