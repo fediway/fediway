@@ -76,7 +76,7 @@ class NegativeSampler():
 
 class EngagedAuthorNegativeSampler(NegativeSampler):
     def __call__(self):
-        query = select(text(f""" 
+        query = select(text(f"""
             s.id,
             n.account_id,
             n.status_id,
