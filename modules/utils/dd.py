@@ -11,6 +11,8 @@ from dask.dataframe.utils import pyarrow_strings_enabled
 from dask.delayed import delayed, tokenize
 from dask.utils import parse_bytes
 
+import modules.utils as utils
+
 def read_sql_join_query(
     sql,
     con,
@@ -138,27 +140,29 @@ def read_sql_join_query(
     if divisions is None:
         if limits is None:
             # calculate max and min for given index
-            q = str(sql.compile(engine, compile_kwargs={"literal_binds": True}))
-            q = sa.sql.select(
-                sa.sql.func.max(sa.Column(index_col.split('.')[-1])), 
-                sa.sql.func.min(sa.Column(index_col.split('.')[-1]))
-            ).select_from(sa.text("(" + q + f" {sql_append})"))
-            minmax = pd.read_sql(q, engine)
-            maxi, mini = minmax.iloc[0]
-            dtype = minmax.dtypes["max_1"]
+            with utils.duration("limits: {:.3f}"):
+                q = str(sql.compile(engine, compile_kwargs={"literal_binds": True}))
+                q = sa.sql.select(
+                    sa.sql.func.max(sa.Column(index_col.split('.')[-1])), 
+                    sa.sql.func.min(sa.Column(index_col.split('.')[-1]))
+                ).select_from(sa.text("(" + q + f" {sql_append})"))
+                minmax = pd.read_sql(q, engine)
+                maxi, mini = minmax.iloc[0]
+                dtype = minmax.dtypes["max_1"]
         else:
             mini, maxi = limits
             dtype = pd.Series(limits).dtype
 
         if npartitions is None:
-            q = str(sql.compile(engine, compile_kwargs={"literal_binds": True}))
-            q = sa.sql.select(
-                sa.sql.func.count(sa.Column(index_col.split('.')[-1]))
-            ).select_from(sa.text("(" + q + f" {sql_append})"))
-            count = pd.read_sql(q, engine)["count_1"][0]
-            npartitions = (
-                int(round(count * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
-            )
+            with utils.duration("npartitions: {:.3f}"):
+                q = str(sql.compile(engine, compile_kwargs={"literal_binds": True}))
+                q = sa.sql.select(
+                    sa.sql.func.count(sa.Column(index_col.split('.')[-1]))
+                ).select_from(sa.text("(" + q + f" {sql_append})"))
+                count = pd.read_sql(q, engine)["count_1"][0]
+                npartitions = (
+                    int(round(count * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
+                )
         if dtype.kind == "M":
             divisions = methods.tolist(
                 pd.date_range(

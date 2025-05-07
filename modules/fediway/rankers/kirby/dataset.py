@@ -5,6 +5,8 @@ from dask import array as da
 from dask.distributed import Client, as_completed
 from dask.diagnostics import ProgressBar
 from dask.base import normalize_token
+from dask.utils import parse_bytes
+
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 import pandas as pd
@@ -75,6 +77,7 @@ class NegativeSampler():
 class EngagedAuthorNegativeSampler(NegativeSampler):
     def __call__(self):
         query = select(text(f""" 
+            s.id,
             n.account_id,
             n.status_id,
             s.account_id AS author_id,
@@ -103,13 +106,24 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
         ) n ON s.id = n.status_id AND {self._get_date_clause()}
         """))
 
+        min_id = self.db.scalar(text(f"SELECT MIN(s.id) FROM statuses s WHERE {self._get_date_clause()}"))
+        max_id = self.db.scalar(text(f"SELECT MAX(s.id) FROM statuses s WHERE {self._get_date_clause()}"))
+        count_approx = self.db.scalar(text(f"SELECT COUNT(d.account_id) FROM {self.table.name} d"))
+        bytes_per_row = 32
+        bytes_per_chunk="64 MiB"
+        npartitions = int(round(count_approx * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
+
         ddf = utils.read_sql_join_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             bytes_per_chunk="64 MiB",
-            index_col="status_id",
+            index_col="id",
+            limits=(min_id, max_id),
+            npartitions=npartitions,
+            head_rows=0,
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
+                "status_id": pd.Series([], dtype="int64"),
                 "author_id": pd.Series([], dtype="int64"),
                 "time": pd.Series([], dtype="datetime64[s]"),
             })
@@ -124,6 +138,7 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
 class FollowingNegativeSampler(NegativeSampler):
     def __call__(self):
         query = select(text(f""" 
+            s.id,
             n.account_id,
             n.status_id,
             s.account_id AS author_id,
@@ -154,13 +169,24 @@ class FollowingNegativeSampler(NegativeSampler):
         ) n ON s.id = n.status_id AND {self._get_date_clause()}
         """))
 
+        min_id = self.db.scalar(text(f"SELECT MIN(s.id) FROM statuses s WHERE {self._get_date_clause()}"))
+        max_id = self.db.scalar(text(f"SELECT MAX(s.id) FROM statuses s WHERE {self._get_date_clause()}"))
+        count_approx = self.db.scalar(text(f"SELECT COUNT(d.account_id) FROM {self.table.name} d"))
+        bytes_per_row = 32
+        bytes_per_chunk="64 MiB"
+        npartitions = int(round(count_approx * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
+
         ddf = utils.read_sql_join_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             bytes_per_chunk="64 MiB",
-            index_col="status_id",
+            index_col="id",
+            limits=(min_id, max_id),
+            npartitions=npartitions,
+            head_rows=0,
             meta=pd.DataFrame({
                 "account_id": pd.Series([], dtype="int64"),
+                "status_id": pd.Series([], dtype="int64"),
                 "author_id": pd.Series([], dtype="int64"),
                 "time": pd.Series([], dtype="datetime64[s]"),
             })
@@ -175,6 +201,7 @@ class FollowingNegativeSampler(NegativeSampler):
 class RandomNegativeSampler(NegativeSampler):
     def __call__(self):
         query = select(text(f""" 
+            s.id,
             n.account_id,
             n.status_id,
             s.account_id AS author_id,
@@ -202,13 +229,23 @@ class RandomNegativeSampler(NegativeSampler):
         ) n ON s.id = n.status_id AND {self._get_date_clause()}
         """))
 
+        min_id = self.db.scalar(text(f"SELECT MIN(s.id) FROM statuses s WHERE {self._get_date_clause()}"))
+        max_id = self.db.scalar(text(f"SELECT MAX(s.id) FROM statuses s WHERE {self._get_date_clause()}"))
+        count_approx = self.db.scalar(text(f"SELECT COUNT(d.account_id) FROM {self.table.name} d"))
+        bytes_per_row = 32
+        bytes_per_chunk="64 MiB"
+        npartitions = int(round(count_approx * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
+
         ddf = utils.read_sql_join_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
-            index_col="status_id",
+            index_col="account_id",
             bytes_per_chunk="64 MiB",
+            limits=(min_id, max_id),
+            npartitions=npartitions,
+            head_rows=0,
             meta=pd.DataFrame({
-                "account_id": pd.Series([], dtype="int64"),
+                "status_id": pd.Series([], dtype="int64"),
                 "author_id": pd.Series([], dtype="int64"),
                 "time": pd.Series([], dtype="datetime64[s]"),
             })
@@ -276,7 +313,7 @@ def create_dataset(path: str,
     with utils.duration("Sampled positives in {:.3f} seconds."):
         _sample_positives(db, table, start_date, end_date)
 
-    time.sleep(0.5)
+    time.sleep(1.0)
 
     _sample_negatives(db, table, start_date, end_date)
     
