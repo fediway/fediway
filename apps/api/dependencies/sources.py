@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from modules.fediway.sources import Source
 
-from modules.fediway.sources.herde import (
+from modules.fediway.sources.schwarm import (
     TrendingStatusesByInfluentialUsers, 
     TrendingTagsSource, 
     CollaborativeFilteringSource
@@ -16,7 +16,7 @@ from modules.fediway.sources.db import (
     NewStatusesByLanguage,
 )
 
-from shared.core.herde import driver
+from shared.core.schwarm import driver
 from shared.core.db import get_long_living_db_session
 
 from config import config

@@ -4,24 +4,24 @@ from faststream import FastStream
 from faststream.confluent import KafkaBroker
 from loguru import logger
 
-from modules.herde import Herde
+from modules.schwarm import Schwarm
 
 from .handlers.features import FeaturesEventHandler
-from .handlers.herde import (
-    AccountEventHandler as HerdeAccountEventHandler,
-    EnrichedAccountStatsEventHandler as HerdeEnrichedAccountStatsEventHandler,
-    StatusEventHandler as HerdeStatusEventHandler,
-    StatusStatsEventHandler as HerdeStatusStatsEventHandler,
-    FavouriteEventHandler as HerdeFavouriteEventHandler,
-    FollowEventHandler as HerdeFollowEventHandler,
-    MentionEventHandler as HerdeMentionEventHandler,
-    StatusTagEventHandler as HerdeStatusTagEventHandler,
-    TagEventHandler as HerdeTagEventHandler,
+from .handlers.schwarm import (
+    AccountEventHandler as SchwarmAccountEventHandler,
+    EnrichedAccountStatsEventHandler as SchwarmEnrichedAccountStatsEventHandler,
+    StatusEventHandler as SchwarmStatusEventHandler,
+    StatusStatsEventHandler as SchwarmStatusStatsEventHandler,
+    FavouriteEventHandler as SchwarmFavouriteEventHandler,
+    FollowEventHandler as SchwarmFollowEventHandler,
+    MentionEventHandler as SchwarmMentionEventHandler,
+    StatusTagEventHandler as SchwarmStatusTagEventHandler,
+    TagEventHandler as SchwarmTagEventHandler,
 )
 from modules.debezium import make_debezium_handler, DebeziumEvent, process_debezium_event
 from shared.core.feast import feature_store
 from shared.core.qdrant import client
-from shared.core.herde import driver
+from shared.core.schwarm import driver
 from config import config
 
 broker = KafkaBroker(
@@ -63,40 +63,40 @@ for topic in feature_topics:
         group_id="features"
     )
 
-# Herde consumers (responsible for pushing data to memgraph)
+# Schwarm consumers (responsible for pushing data to memgraph)
 
 @broker.subscriber("accounts")
 async def on_accounts(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeAccountEventHandler, args=(Herde(driver), ))
+    await process_debezium_event(event, SchwarmAccountEventHandler, args=(Schwarm(driver), ))
 
 @broker.subscriber("enriched_account_stats")
 async def on_accounts(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeEnrichedAccountStatsEventHandler, args=(Herde(driver), ))
+    await process_debezium_event(event, SchwarmEnrichedAccountStatsEventHandler, args=(Schwarm(driver), ))
 
 @broker.subscriber("statuses")
 async def on_status(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeStatusEventHandler, args=(Herde(driver), ))
+    await process_debezium_event(event, SchwarmStatusEventHandler, args=(Schwarm(driver), ))
 
 @broker.subscriber("mentions")
 async def on_mentions(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeMentionEventHandler, args=(Herde(driver), ))
+    await process_debezium_event(event, SchwarmMentionEventHandler, args=(Schwarm(driver), ))
 
 @broker.subscriber("follows")
 async def on_follows(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeFollowEventHandler, args=(Herde(driver), ))
+    await process_debezium_event(event, SchwarmFollowEventHandler, args=(Schwarm(driver), ))
 
 @broker.subscriber("favourites")
 async def on_favourites(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeFavouriteEventHandler, args=(Herde(driver), ))
+    await process_debezium_event(event, SchwarmFavouriteEventHandler, args=(Schwarm(driver), ))
 
 @broker.subscriber("statuses_tags")
 async def on_statuses_tags(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeStatusTagEventHandler, args=(Herde(driver), ))
+    await process_debezium_event(event, SchwarmStatusTagEventHandler, args=(Schwarm(driver), ))
 
 @broker.subscriber("status_stats")
 async def on_statuses_tags(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeStatusStatsEventHandler, args=(Herde(driver), ))
+    await process_debezium_event(event, SchwarmStatusStatsEventHandler, args=(Schwarm(driver), ))
 
 @broker.subscriber("tags")
 async def on_tags(event: DebeziumEvent):
-    await process_debezium_event(event, HerdeTagEventHandler, args=(Herde(driver), ))
+    await process_debezium_event(event, SchwarmTagEventHandler, args=(Schwarm(driver), ))

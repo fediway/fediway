@@ -23,3 +23,4 @@ multilingual-clip==1.0.10
 sentence-transformers[onnx]==4.1.0
 dask[distributed]==2025.4.1
 s3fs==2024.9.0
+python-arango==8.1.6

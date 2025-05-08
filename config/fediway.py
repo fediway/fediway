@@ -14,7 +14,7 @@ class FediwayConfig(BaseConfig):
     feed_max_heavy_candidates: int  = 100
     feed_batch_size: int            = 20
 
-    herde_max_status_age_in_days: int = 7
+    schwarm_max_status_age_in_days: int = 7
 
     memgraph_host: str       = 'localhost'
     memgraph_port: int       = 7687
@@ -22,17 +22,28 @@ class FediwayConfig(BaseConfig):
     memgraph_pass: SecretStr = ''
     memgraph_name: str       = 'fediway_development'
 
-    herde_migrations_path: str = 'migrations/herde'
+    arango_host: str = 'localhost'
+    arango_port: int = 8529
+    arango_name: str = 'herde'
+    arango_user: str = 'root'
+    arango_pass: str = 'openSesame'
+    arango_graph: str = 'herde_graph'
+
+    schwarm_migrations_path: str = 'migrations/schwarm'
     datasets_path: str = 'data/datasets'
     datasets_s3_endpoint: str | None = None
 
     @property
-    def graph_url(self):
+    def memgraph_url(self):
         return f"bolt://{self.memgraph_host}:{self.memgraph_port}"
 
     @property
-    def graph_auth(self) -> tuple[str, str]:
+    def memgraph_auth(self) -> tuple[str, str]:
         return (self.memgraph_user, self.memgraph_pass.get_secret_value())
+
+    @property
+    def arango_hosts(self) -> str:
+        return f"http://{self.arango_host}:{self.arango_port}"
 
     @property
     def feed_heuristics(self) -> list[Heuristic]:
@@ -43,5 +54,5 @@ class FediwayConfig(BaseConfig):
         ]
 
     @property
-    def herde_max_status_age(self) -> timedelta:
-        return timedelta(days=self.herde_max_status_age_in_days)
+    def schwarm_max_status_age(self) -> timedelta:
+        return timedelta(days=self.schwarm_max_status_age_in_days)

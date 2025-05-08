@@ -5,97 +5,62 @@ import typer
 import time
 
 from config import config
-import modules.utils as utils
 
-app = typer.Typer(help="Herde commands.")
+app = typer.Typer(help="Schwarm commands.")
 
-def get_driver():
-    from neo4j import GraphDatabase
-    return GraphDatabase.driver(
-        config.fediway.graph_url, 
-        auth=config.fediway.graph_auth
+def get_client():
+    from arango import ArangoClient
+    return ArangoClient(hosts=config.fediway.arango_hosts)
+
+@app.command("create-db")
+def create_db():
+    client = get_client()
+
+    sys_db = client.db(
+        "_system", 
+        username=config.fediway.arango_user, 
+        password=config.fediway.arango_pass
     )
 
-def get_async_driver():
-    from neo4j import AsyncGraphDatabase
-    return AsyncGraphDatabase.driver(
-        config.fediway.graph_url, 
-        auth=config.fediway.graph_auth
-    )
-
-@app.command("verify-connection")
-def verify_connection():
-    with get_driver() as client:
-        client.verify_connectivity()
-        typer.echo("✅ Connection verified!")
+    if not sys_db.has_database(config.fediway.arango_name):
+        sys_db.create_database(config.fediway.arango_name)
+        typer.echo(f"✅ Created {config.fediway.arango_name} arango database.")
+    else:
+        typer.echo(f"Arango database {config.fediway.arango_name} already exists.")
 
 @app.command("migrate")
 def migrate():
-    from modules.herde import Herde
+    from shared.core.herde import db
 
-    Herde(get_driver()).setup()
+    if not db.has_graph(config.fediway.arango_graph):
+        graph = db.create_graph(config.fediway.arango_graph)
+    else:
+        graph = db.graph(config.fediway.arango_graph)
 
-    typer.echo("✅ Migration completed!")
+    if not graph.has_vertex_collection("accounts"):
+        accounts = graph.create_vertex_collection("accounts")
 
-@app.command("purge")
-def purge():
-    with get_driver().session() as session:
-        session.run("""
-        MATCH (n)
-        DETACH DELETE n;
-        """)
+    if not graph.has_vertex_collection("statuses"):
+        statuses = graph.create_vertex_collection("statuses")
 
-    typer.echo("✅ Purged memgraph!")
+    if not graph.has_vertex_collection("tags"):
+        tags = graph.create_vertex_collection("tags")
 
-@app.command("query")
-def query(language: str = 'en'):
-    from modules.fediway.sources.herde import TrendingStatusesByInfluentialUsers
-    source = TrendingStatusesByInfluentialUsers(
-        driver=get_driver(),
-        # account_id=114394115240930061,
-        language='en',
-        max_age=timedelta(days=14)
+    graph.create_edge_definition(
+        edge_collection='follows',
+        from_vertex_collections=['accounts'],
+        to_vertex_collections=['accounts']
     )
-    
-    for status_id in source.collect(10):
-        print(status_id)
-    exit(())
 
-    from modules.herde import Herde
-    herde = Herde(get_driver())
+    graph.create_edge_definition(
+        edge_collection='tagged',
+        from_vertex_collections=['statuses'],
+        to_vertex_collections=['tags']
+    )
 
-    print("start")
-    for record in herde.get_relevant_statuses(language=language):
-        print(record)
-
-@app.command("rank")
-def rank():
-    from modules.herde import Herde
-    herde = Herde(get_driver())
-
-    logger.info("Start computing account ranks...")
-    with utils.duration("Computed account ranks in {:.3f} seconds"):
-        herde.compute_account_rank()
-
-    logger.info("Start computing tag ranks...")
-    with utils.duration("Computed tag ranks in {:.3f} seconds"):
-        herde.compute_tag_rank()
-
-@app.command("clean")
-def clean():
-    from modules.herde import Herde
-    herde = Herde(get_driver())
-
-    logger.info("Purging old statuses...")
-    with utils.duration("Purged old statuses in {:.3f} seconds"):
-        herde.purge_old_statuses(config.fediway.herde_max_status_age)
-
-@app.command("seed")
-def seed():
-    from shared.services.seed_herde_service import SeedHerdeService
-    from shared.core.db import db_session
-
-    with db_session() as db:
-        SeedHerdeService(db, get_driver()).seed()
-
-    typer.echo("✅ Seeding completed!")
+    for edge in ['favourited', 'reblogged', 'replied', 'created']:
+        graph.create_edge_definition(
+            edge_collection=edge,
+            from_vertex_collections=['accounts'],
+            to_vertex_collections=['statuses']
+        )

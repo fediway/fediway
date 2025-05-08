@@ -4,14 +4,14 @@ from loguru import logger
 from datetime import datetime, timedelta
 
 from modules.mastodon.models import Status
-from modules.herde import Herde
+from modules.schwarm import Schwarm
 from modules.debezium import DebeziumEventHandler
 
 from config import config
 
 class StatusEventHandler(DebeziumEventHandler):
-    def __init__(self, herde: Herde):
-        self.herde = herde
+    def __init__(self, schwarm: Schwarm):
+        self.schwarm = schwarm
 
     def parse(data: dict) -> Status:
         return Status(**data)
@@ -23,10 +23,10 @@ class StatusEventHandler(DebeziumEventHandler):
             return
             
         if status.reblog_of_id is None:
-            self.herde.add_status(status)
+            self.schwarm.add_status(status)
             logger.debug(f"Added status with id {status.id} to memgraph.")
         else:
-            self.herde.add_reblog(status)
+            self.schwarm.add_reblog(status)
             logger.debug(f"Added reblog of {status.reblog_of_id} by {status.account_id} to memgraph.")
 
     async def updated(self, old: Status, new: Status):
@@ -35,8 +35,8 @@ class StatusEventHandler(DebeziumEventHandler):
 
     async def deleted(self, status: Status):
         if status.reblog_of_id is None:
-            self.herde.remove_status(status)
+            self.schwarm.remove_status(status)
             logger.debug(f"Removed status with id {status.id} from memgraph.")
         else:
-            self.herde.remove_reblog(status)
+            self.schwarm.remove_reblog(status)
             logger.debug(f"Removed reblog of {status.reblog_of_id} by {status.account_id} from memgraph.")

@@ -2,8 +2,8 @@
 from fastapi import Depends
 from neo4j import AsyncSession
 
-from shared.core.herde import driver
-from modules.herde import Herde
+from shared.core.schwarm import driver
+from modules.schwarm import Schwarm
 
-def get_herde():
-    return Herde(driver)
+def get_schwarm():
+    return Schwarm(driver)

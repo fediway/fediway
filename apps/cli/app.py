@@ -3,10 +3,11 @@ import typer
 
 from .feast import app as feast_app
 from .herde import app as herde_app
-from .risingwave import app as risingwave_app
 from .kafka import app as kafka_app
 from .qdrant import app as qdrant_app
 from .kirby import app as kirby_app
+from .risingwave import app as risingwave_app
+from .schwarm import app as schwarm_app
 
 app = typer.Typer()
 
@@ -17,15 +18,21 @@ app.add_typer(
 )
 
 app.add_typer(
+    herde_app,
+    name="herde",
+    help="Run actions on Herde (large graph database)"
+)
+
+app.add_typer(
     kirby_app,
     name="kirby",
     help="Kirby commands (ranker)"
 )
 
 app.add_typer(
-    herde_app,
-    name="herde",
-    help="Run actions on the Herde (in-memory interaction graph)"
+    schwarm_app,
+    name="schwarm",
+    help="Run actions on Schwarm (in-memory interaction graph)"
 )
 
 app.add_typer(

@@ -14,20 +14,20 @@ import shutil
 
 from config import config
 from app.modules.models import Account, Status, StatusStats, Follow, Favourite, Tag, StatusTag, Mention
-from modules.fediway.sources.herde import Herde
+from modules.fediway.sources.schwarm import Schwarm
 import app.utils as utils
 
-class SeedHerdeService:
+class SeedSchwarmService:
     def __init__(self, db: DBSession, driver: Driver):
         self.db = db
         self.driver = driver
-        self.herde = Herde(self.driver)
+        self.schwarm = Schwarm(self.driver)
         self.max_age = datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)
 
     def seed(self):
 
         with utils.duration("Set up memgraph in {:.3f} seconds"):
-            self.herde.setup()
+            self.schwarm.setup()
 
         # with utils.duration("Seeded accounts in {:.3f} seconds"):
         #     self.seed_accounts()
@@ -58,11 +58,11 @@ class SeedHerdeService:
 
         logger.info("Start computing account ranks...")
         with utils.duration("Computed account ranks in {:.3f} seconds"):
-            self.herde.compute_account_rank()
+            self.schwarm.compute_account_rank()
 
         logger.info("Start computing tag ranks...")
         with utils.duration("Computed tag ranks in {:.3f} seconds"):
-            self.herde.compute_tag_rank()
+            self.schwarm.compute_tag_rank()
 
     def seed_statuses(self, batch_size: int = 100):
         query = (
@@ -95,7 +95,7 @@ class SeedHerdeService:
                     "created_at": pd.Series([], dtype="datetime64[ms]"),
                 })
             )
-            .map_partitions(InsertStatuses(self.db, self.herde))
+            .map_partitions(InsertStatuses(self.db, self.schwarm))
             .compute()
         )
 
@@ -134,7 +134,7 @@ class SeedHerdeService:
                     "created_at": pd.Series([], dtype="datetime64[ms]"),
                 })
             )
-            .map_partitions(InsertReblogs(self.db, self.herde))
+            .map_partitions(InsertReblogs(self.db, self.schwarm))
             .compute()
         )
 
@@ -177,7 +177,7 @@ class SeedHerdeService:
                     "status_id": pd.Series([], dtype="int64"),
                 })
             )
-            .map_partitions(InsertFavourites(self.db, self.herde))
+            .map_partitions(InsertFavourites(self.db, self.schwarm))
             .compute()
         )
 
@@ -219,7 +219,7 @@ class SeedHerdeService:
                     "favourites_count": pd.Series([], dtype="int64"),
                 })
             )
-            .map_partitions(InsertStatusStats(self.db, self.herde))
+            .map_partitions(InsertStatusStats(self.db, self.schwarm))
             .compute()
         )
 
@@ -231,7 +231,7 @@ class SeedHerdeService:
 
         for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
             for row in batch:
-                self.herde.add_follow(row)
+                self.schwarm.add_follow(row)
                 bar.update(1)
 
     def seed_tags(self, batch_size: int = 100):
@@ -242,7 +242,7 @@ class SeedHerdeService:
 
         for batch in utils.iter_db_batches(self.db, query, batch_size = batch_size):
             for row in batch:
-                self.herde.add_tag(row)
+                self.schwarm.add_tag(row)
                 bar.update(1)
 
     def seed_statuses_tags(self, batch_size: int = 100):
@@ -278,7 +278,7 @@ class SeedHerdeService:
                     "tag_id": pd.Series([], dtype="int64"),
                 })
             )
-            .map_partitions(InsertStatusTags(self.db, self.herde))
+            .map_partitions(InsertStatusTags(self.db, self.schwarm))
             .compute()
         )
 
@@ -316,14 +316,14 @@ class SeedHerdeService:
                     "account_id": pd.Series([], dtype="int64"),
                 })
             )
-            .map_partitions(InsertMentions(self.db, self.herde))
+            .map_partitions(InsertMentions(self.db, self.schwarm))
             .compute()
         )
 
 class InsertBatch:
-    def __init__(self, db, herde):
+    def __init__(self, db, schwarm):
         self.db = db
-        self.herde = herde
+        self.schwarm = schwarm
 
     def __dask_tokenize__(self):
         return normalize_token(type(self))
@@ -338,7 +338,7 @@ class InsertStatuses(InsertBatch):
         if statuses[0].id == 1:
             return
 
-        self.herde.add_statuses(statuses)
+        self.schwarm.add_statuses(statuses)
 
 class InsertStatusStats(InsertBatch):
     def __call__(self, rows) -> None:
@@ -350,7 +350,7 @@ class InsertStatusStats(InsertBatch):
         if stats[0].status_id == 1:
             return
 
-        self.herde.add_status_stats_batch(stats)
+        self.schwarm.add_status_stats_batch(stats)
 
 class InsertStatusTags(InsertBatch):
     def __call__(self, rows) -> None:
@@ -362,7 +362,7 @@ class InsertStatusTags(InsertBatch):
         if status_tags[0].status_id == 1:
             return
 
-        self.herde.add_status_tags(status_tags)
+        self.schwarm.add_status_tags(status_tags)
 
 class InsertReblogs(InsertBatch):
     def __call__(self, rows) -> None:
@@ -374,7 +374,7 @@ class InsertReblogs(InsertBatch):
         if reblogs[0].id == 1:
             return
 
-        self.herde.add_reblogs(reblogs)
+        self.schwarm.add_reblogs(reblogs)
 
 class InsertFavourites(InsertBatch):
     def __call__(self, rows) -> None:
@@ -386,7 +386,7 @@ class InsertFavourites(InsertBatch):
         if favourites[0].id == 1:
             return
 
-        self.herde.add_favourites(favourites)
+        self.schwarm.add_favourites(favourites)
 
 class InsertMentions(InsertBatch):
     def __call__(self, rows) -> None:
@@ -398,4 +398,4 @@ class InsertMentions(InsertBatch):
         if mentions[0].id == 1:
             return
 
-        self.herde.add_mentions(mentions)
+        self.schwarm.add_mentions(mentions)

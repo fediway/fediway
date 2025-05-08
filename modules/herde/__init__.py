@@ -1,2 +1,0 @@
-
-from .herde import Herde

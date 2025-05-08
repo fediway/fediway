@@ -1,7 +1,7 @@
 
 from neo4j import Driver
 
-class HerdeInteractionFeatures():
+class SchwarmInteractionFeatures():
     driver: Driver
 
     def __init__(self, driver: Driver):
@@ -59,7 +59,7 @@ class HerdeInteractionFeatures():
 
         return [results_map[target_id] for target_id in target_ids]
 
-class HerdeTwoHopFeatures():
+class SchwarmTwoHopFeatures():
     driver: Driver
 
     def __init__(self, driver: Driver):
