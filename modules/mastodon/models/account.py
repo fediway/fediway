@@ -26,7 +26,7 @@ class Account(SQLModel, table=True):
 
     id: int | None = Field(primary_key=True)
     username: str = Field(nullable=False)
-    domain: str = Field()
+    domain: str | None = Field()
     created_at: datetime | None = Field()
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     silenced_at: datetime | None = Field()

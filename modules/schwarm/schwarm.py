@@ -97,24 +97,7 @@ class Schwarm():
         """
         
         self._run_query(query, max_age=int(time.time()) - max_age.total_seconds())
-
-    def add_follow(self, follow: Follow):
-        query = """
-        MATCH (a:Account {id: $source_id})
-        MATCH (b:Account {id: $target_id})
-        MERGE (a)-[:FOLLOWS]->(b);
-        """
-
-        self._run_query(query, source_id=follow.account_id, target_id=follow.target_account_id)
-
-    def remove_follow(self, follow: Follow):
-        query = """
-        MATCH (a:Account {id: $source_id})-[r:FOLLOWS]->(b:Account {id: $target_id})
-        DELETE r;
-        """
-
-        self._run_query(query, source_id=follow.account_id, target_id=follow.target_account_id)
-
+    
     def add_status_stats(self, stats: StatusStats):
         query = """
         MERGE (s:Status {id: $id})
@@ -190,7 +173,7 @@ class Schwarm():
             'language': status.language,
             'created_at': status.created_at if type(status.created_at) == int else int(status.created_at.timestamp() * 1000),
         } for status in statuses]
-
+        
         self._run_query(query, statuses=statuses)
 
     def add_status_tag(self, status_tag: StatusTag):

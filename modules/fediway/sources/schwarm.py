@@ -118,3 +118,41 @@ class FolloweeActivitySource(Source):
 
             for result in list(results):
                 yield result['status_id']
+
+class MostInteractedByAccountsSource(Source):
+    '''
+    Collects statuses that where most interacted with by a list of accounts.
+    '''
+
+    def __init__(
+        self, 
+        driver, 
+        account_ids: list[int],
+        alpha: float = 0.1
+    ):
+        self.driver = driver
+        self.account_ids = account_ids
+        self.alpha = alpha
+
+    def collect(self, limit: int):
+        query = """
+        WITH timestamp() / 1000 AS now
+        MATCH (a:Account)-[:FAVOURITES]->(s:Status)
+        // WHERE a.id IN $account_ids
+        WITH s, (now - s.created_at) / (86400 * 1000) AS age_days, now
+        WITH s, SUM(EXP(-$alpha * age_days)) AS score
+        RETURN s.id as status_id, score
+        ORDER BY score DESC
+        LIMIT $limit
+        """
+
+        with self.driver.session() as session:
+            results = session.run(
+                query, 
+                account_ids=self.account_ids, 
+                alpha=self.alpha,
+                limit=limit, 
+            )
+
+            for result in list(results):
+                yield result['status_id']

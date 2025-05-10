@@ -12,4 +12,6 @@ db = client.db(
     password=config.fediway.arango_pass,
 )
 
-graph = db.graph(config.fediway.arango_graph)
+graph = None
+if db.has_graph(config.fediway.arango_graph):
+    graph = db.graph(config.fediway.arango_graph)

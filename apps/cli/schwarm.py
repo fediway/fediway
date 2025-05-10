@@ -12,15 +12,15 @@ app = typer.Typer(help="Schwarm commands.")
 def get_driver():
     from neo4j import GraphDatabase
     return GraphDatabase.driver(
-        config.fediway.graph_url, 
-        auth=config.fediway.graph_auth
+        config.fediway.memgraph_url, 
+        auth=config.fediway.memgraph_auth
     )
 
 def get_async_driver():
     from neo4j import AsyncGraphDatabase
     return AsyncGraphDatabase.driver(
-        config.fediway.graph_url, 
-        auth=config.fediway.graph_auth
+        config.fediway.memgraph_url, 
+        auth=config.fediway.memgraph_auth
     )
 
 @app.command("verify-connection")
@@ -47,14 +47,15 @@ def purge():
 
     typer.echo("✅ Purged memgraph!")
 
-@app.command("query")
+@app.command("collect")
 def query(language: str = 'en'):
-    from modules.fediway.sources.schwarm import TrendingStatusesByInfluentialUsers
-    source = TrendingStatusesByInfluentialUsers(
+    from modules.fediway.sources.schwarm import TrendingStatusesByInfluentialUsers, MostInteractedByAccountsSource
+    source = MostInteractedByAccountsSource(
         driver=get_driver(),
+        account_ids=[114397974544358424, 114397974544358424]
         # account_id=114394115240930061,
-        language='en',
-        max_age=timedelta(days=14)
+        # language='en',
+        # max_age=timedelta(days=14)
     )
     
     for status_id in source.collect(10):

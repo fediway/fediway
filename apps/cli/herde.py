@@ -34,33 +34,112 @@ def migrate():
 
     if not db.has_graph(config.fediway.arango_graph):
         graph = db.create_graph(config.fediway.arango_graph)
+        typer.echo(f"✅ Created graph '{config.fediway.arango_graph}'.")
     else:
         graph = db.graph(config.fediway.arango_graph)
 
     if not graph.has_vertex_collection("accounts"):
         accounts = graph.create_vertex_collection("accounts")
+        typer.echo(f"✅ Created vertex 'accounts'.")
 
     if not graph.has_vertex_collection("statuses"):
         statuses = graph.create_vertex_collection("statuses")
+        typer.echo(f"✅ Created vertex 'statuses'.")
 
     if not graph.has_vertex_collection("tags"):
         tags = graph.create_vertex_collection("tags")
+        typer.echo(f"✅ Created vertex 'tags'.")
 
-    graph.create_edge_definition(
-        edge_collection='follows',
-        from_vertex_collections=['accounts'],
-        to_vertex_collections=['accounts']
-    )
+    if not graph.has_edge_definition('follows'):
+        graph.create_edge_definition(
+            edge_collection='follows',
+            from_vertex_collections=['accounts'],
+            to_vertex_collections=['accounts']
+        )
+        typer.echo(f"✅ Created edge 'follows'.")
 
-    graph.create_edge_definition(
-        edge_collection='tagged',
-        from_vertex_collections=['statuses'],
-        to_vertex_collections=['tags']
-    )
+    if not graph.has_edge_definition('tagged'):
+        graph.create_edge_definition(
+            edge_collection='tagged',
+            from_vertex_collections=['statuses'],
+            to_vertex_collections=['tags']
+        )
+        typer.echo(f"✅ Created edge 'tagged'.")
+
+    if not graph.has_edge_definition('mentioned'):
+        graph.create_edge_definition(
+            edge_collection='mentioned',
+            from_vertex_collections=['statuses'],
+            to_vertex_collections=['accounts']
+        )
+        typer.echo(f"✅ Created edge 'mentioned'.")
 
     for edge in ['favourited', 'reblogged', 'replied', 'created']:
+        if graph.has_edge_definition(edge):
+            continue
         graph.create_edge_definition(
             edge_collection=edge,
             from_vertex_collections=['accounts'],
             to_vertex_collections=['statuses']
         )
+        typer.echo(f"✅ Created edge '{edge}'.")
+
+@app.command("seed")
+def seed():
+    from shared.services.seed_herde_service import SeedHerdeService
+    from shared.core.db import db_session
+    from shared.core.herde import graph
+
+    with db_session() as db:
+        SeedHerdeService(db, graph).seed()
+
+    typer.echo("✅ Seeding completed!")
+
+@app.command("compute-affinities")
+def compute_affinities():
+    from shared.core.herde import graph, db
+    from modules.herde import Herde
+    import modules.utils as utils
+    
+    herde = Herde(graph)
+
+    with utils.duration("✅ Computed affinities in {:.3f} seconds."):
+        query = """
+        FOR follow IN follows
+            LET a = follow._from
+            LET b = follow._to
+
+            // Count common favourites
+            LET common = (
+                FOR favA IN favourited
+                    FILTER favA._from == a
+                    FOR favB IN favourited
+                        FILTER favB._from == b AND favB._to == favA._to
+                        COLLECT WITH COUNT INTO cnt
+                        RETURN cnt
+            )[0]
+
+            // Count favorites for a and b
+            LET a_count = (
+                FOR fav IN favourited
+                    FILTER fav._from == a
+                    COLLECT WITH COUNT INTO cnt
+                    RETURN cnt
+            )[0]
+            LET b_count = (
+                FOR fav IN favorites
+                    FILTER fav._from == b
+                    COLLECT WITH COUNT INTO cnt
+                    RETURN cnt
+            )[0]
+
+            // Compute Jaccard
+            LET union = a_count + b_count - (common ?? 0)
+            FILTER union > 0
+            LET jaccard = (common ?? 0) / union
+            // Update affinities
+            UPSERT { _from: a, _to: b }
+            INSERT { _from: a, _to: b, jaccard: jaccard }
+            UPDATE { jaccard: jaccard } IN affinities
+        """
+        db.aql.execute(query)
