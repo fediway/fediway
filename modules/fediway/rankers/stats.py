@@ -10,10 +10,10 @@ class SimpleStatsRanker(Ranker):
     '''
 
     features = [
-        'status_meta:favourites_count',
-        'status_meta:reblogs_count',
-        'status_meta:replies_count',
-        'status_meta:age_in_seconds',
+        'status:favourites_count',
+        'status:reblogs_count',
+        'status:replies_count',
+        'status:age_in_seconds',
     ]
 
     def __init__(self, 

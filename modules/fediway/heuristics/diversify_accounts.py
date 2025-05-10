@@ -4,7 +4,7 @@ import numpy as np
 from .base import Heuristic
 
 class DiversifyAccountsHeuristic(Heuristic):
-    features = ['status_meta:account_id']
+    features = ['status:account_id']
 
     def __init__(self, 
                  penalty: float = 0.5,

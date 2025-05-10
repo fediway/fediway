@@ -38,6 +38,19 @@ async def public_timeline(
     )),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
+
+    # statuses = (
+    #     feed.name('public')
+    #     .rank_by()
+    #     .filter(~Post.is_sensitive)
+    #     .aggregate()
+    #     .diversify(
+    #         by='status:account_id',
+    #         strategy="round_robin"
+    #     )
+    #     .paginate()
+    # )
+
     await feed.init()
 
     recommendations = feed.get_recommendations(config.fediway.feed_batch_size)
