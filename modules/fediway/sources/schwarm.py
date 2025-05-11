@@ -19,13 +19,13 @@ class TrendingStatusesByInfluentialUsers(Source):
         WHERE 
             a.rank IS NOT NULL 
         AND s.created_at > $max_age
-        AND a.avg_favs > 1 
-        AND a.avg_reblogs > 1 
+        // AND a.avg_favs > 1 
+        // AND a.avg_reblogs > 1 
         AND s.num_favs > 0 
         AND s.num_reblogs > 0
         WITH a, s, (now - s.created_at) / 86400 AS age_days
         WITH a, s, age_days,
-            a.rank * EXP(-age_days) * ((s.num_favs + 1) * (s.num_reblogs + 1)) * 10 / ((a.avg_favs + 1) * (a.avg_reblogs + 1)) AS score
+            a.rank * EXP(-age_days) * ((s.num_favs + 1) * (s.num_reblogs + 1)) * 10 as score // / ((a.avg_favs + 1) * (a.avg_reblogs + 1)) AS score
         ORDER BY a.id, score DESC
         WITH a.id AS account_id, collect([s.id, score])[0] AS top_status
         RETURN account_id, top_status[0] AS status_id, top_status[1] AS score

@@ -3,7 +3,9 @@ import random
 from sqlmodel import select, Session as DBSession
 from fastapi import APIRouter, Depends, Request
 
+from modules.fediway.feed.pipeline import Feed
 from modules.fediway.sources import Source
+from apps.api.core.ranker import ranker
 from apps.api.services.feed_service import FeedService
 from apps.api.dependencies.feeds import get_status_feed
 from apps.api.dependencies.sources import (
@@ -25,17 +27,24 @@ def public_timeline_sources(
 @router.get('/statuses')
 async def status_trends(
     request: Request,
-    feed: FeedService = Depends(get_status_feed(
-        name='public',
-        heuristics=config.fediway.feed_heuristics,
-        sources=public_timeline_sources
-    )),
+    feed: FeedService = Depends(get_status_feed(name='trends/statuses')),
+    sources = Depends(public_timeline_sources),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
-    await feed.init()
+    max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
 
-    recommendations = feed.get_recommendations(config.fediway.feed_batch_size)
-    statuses = db.exec(Status.select_by_ids([r.item for r in recommendations])).all()
+    pipeline = (
+        feed
+        .sources([(source, max_candidates_per_source) for source in sources])
+        .rank(ranker)
+        .diversify(by='status:account_id', penalty=0.1)
+        .sample(config.fediway.feed_batch_size)
+        .paginate(config.fediway.feed_batch_size, offset=0)
+    )
+
+    recommendations = await feed.execute()
+
+    statuses = db.exec(Status.select_by_ids(recommendations)).all()
 
     return [StatusItem.from_model(status) for status in statuses]
 

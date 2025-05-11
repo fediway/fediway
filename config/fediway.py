@@ -10,7 +10,7 @@ from modules.fediway.heuristics import Heuristic
 
 class FediwayConfig(BaseConfig):    
     feed_max_age_in_days: int       = 3
-    feed_max_light_candidates: int  = 500
+    feed_max_sourced_candidates: int  = 500
     feed_max_heavy_candidates: int  = 100
     feed_batch_size: int            = 20
 
@@ -47,12 +47,15 @@ class FediwayConfig(BaseConfig):
 
     @property
     def feed_heuristics(self) -> list[Heuristic]:
-        from modules.fediway.heuristics import DiversifyAccountsHeuristic
+        from modules.fediway.heuristics import DiversifyHeuristic
 
         return [
-            DiversifyAccountsHeuristic(penalty=0.1)
+            DiversifyHeuristic(by='status:account_id', penalty=0.1)
         ]
 
     @property
     def schwarm_max_status_age(self) -> timedelta:
         return timedelta(days=self.schwarm_max_status_age_in_days)
+
+    def max_candidates_per_source(self, n_sources: int):
+        return self.feed_max_sourced_candidates // n_sources

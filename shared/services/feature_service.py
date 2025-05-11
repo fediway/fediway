@@ -9,7 +9,7 @@ from shared.core.feast import feature_store
 from modules.mastodon.models import Status, StatusStats
 from modules.fediway.feed.features import Features
 
-class FeaturesService(Features):
+class FeatureService(Features):
     cache = {}
 
     def __init__(self, fs: FeatureStore = feature_store):

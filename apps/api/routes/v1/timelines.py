@@ -31,11 +31,7 @@ def public_timeline_sources(
 @router.get('/public')
 async def public_timeline(
     request: Request,
-    feed: FeedService = Depends(get_status_feed(
-        name='public',
-        heuristics=config.fediway.feed_heuristics,
-        sources=public_timeline_sources
-    )),
+    feed: FeedService = Depends(get_status_feed(name='timelines/public')),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
 
@@ -51,6 +47,19 @@ async def public_timeline(
     #     .paginate()
     # )
 
+    await feed.init()
+
+    recommendations = feed.get_recommendations(config.fediway.feed_batch_size)
+    statuses = db.exec(Status.select_by_ids([r.item for r in recommendations])).all()
+
+    return [StatusItem.from_model(status) for status in statuses]
+
+@router.get('/home')
+async def home_timeline(
+    request: Request,
+    feed: FeedService = Depends(get_status_feed(name='timelines/public')),
+    db: DBSession = Depends(get_db_session),
+) -> list[StatusItem]:
     await feed.init()
 
     recommendations = feed.get_recommendations(config.fediway.feed_batch_size)

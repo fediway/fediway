@@ -26,22 +26,20 @@ class SeedSchwarmService:
 
     def seed(self):
 
-        # with utils.duration("Set up memgraph in {:.3f} seconds"):
-        #     self.schwarm.setup()
+        with utils.duration("Set up memgraph in {:.3f} seconds"):
+            self.schwarm.setup()
 
-        # with utils.duration("Seeded statuses in {:.3f} seconds"):
-        #     self.seed_statuses()
+        with utils.duration("Seeded statuses in {:.3f} seconds"):
+            self.seed_statuses()
 
-        # with utils.duration("Seeded status stats in {:.3f} seconds"):
-        #     self.seed_status_stats()
+        with utils.duration("Seeded status stats in {:.3f} seconds"):
+            self.seed_status_stats()
 
-        # with utils.duration("Seeded reblogs in {:.3f} seconds"):
-        #     self.seed_reblogs()
+        with utils.duration("Seeded reblogs in {:.3f} seconds"):
+            self.seed_reblogs()
 
         with utils.duration("Created favourite seeds in {:.3f} seconds"):
             self.seed_favourites()
-
-        exit()
 
         with utils.duration("Created status tag seeds in {:.3f} seconds"):
             self.seed_statuses_tags()
