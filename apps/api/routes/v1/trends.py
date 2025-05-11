@@ -7,7 +7,7 @@ from modules.fediway.feed.pipeline import Feed
 from modules.fediway.sources import Source
 from apps.api.core.ranker import ranker
 from apps.api.services.feed_service import FeedService
-from apps.api.dependencies.feeds import get_status_feed
+from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources import (
     get_trending_statuses_by_influential_accounts_source,
     get_trending_tags_sources,
@@ -27,7 +27,7 @@ def public_timeline_sources(
 @router.get('/statuses')
 async def status_trends(
     request: Request,
-    feed: FeedService = Depends(get_status_feed(name='trends/statuses')),
+    feed: FeedService = Depends(get_feed),
     sources = Depends(public_timeline_sources),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
@@ -35,6 +35,8 @@ async def status_trends(
 
     pipeline = (
         feed
+        .name('trends/statuses')
+        .select('status_id')
         .sources([(source, max_candidates_per_source) for source in sources])
         .rank(ranker)
         .diversify(by='status:account_id', penalty=0.1)

@@ -21,15 +21,12 @@ class FeedService():
     feed: Feed
 
     def __init__(self, 
-                 name: str,
                  db: DBSession,
                  request: Request,
                  response: Response,
                  tasks: BackgroundTasks,
                  session: Session, 
                  feature_service: FeatureService):
-        self.session_key = f"feed.{name}.state"
-        self.name = name
         self.db = db
         self.tasks = tasks
         self.request = request
@@ -40,6 +37,11 @@ class FeedService():
 
         self._set_link_header()
 
+    def name(self, name: str):
+        self._name = name
+
+        return self
+
     def source(self, source: Source, n: int):
         self.pipeline.source(source, n)
 
@@ -47,6 +49,11 @@ class FeedService():
 
     def sources(self, sources: list[tuple[Source, int]]):
         self.pipeline.sources(sources)
+
+        return self
+
+    def select(self, entity: str):
+        self.pipeline.select(entity)
 
         return self
 

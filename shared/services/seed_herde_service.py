@@ -132,7 +132,11 @@ class InsertRows(InsertBatch):
         
         models = [self.model_cls(id=id, **data) for id, data in rows.iterrows()]
 
-        if models[0].id in (0, 1):
+        id_column = "id"
+        if self.model_cls in [Favourite, Mention]:
+            id_column = "account_id"
+
+        if getattr(models[0], id_column) in (0, 1):
             return
 
         getattr(self.herde, self.herde_fn)(models)

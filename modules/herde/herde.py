@@ -79,7 +79,7 @@ class Herde():
     def add_favourite(self, favourite: Favourite):
         self.favourited.insert({
             "_from": f"accounts/{favourite.account_id}",
-            "_to": f"status/{favourite.status_id}",
+            "_to": f"statuses/{favourite.status_id}",
         }, silent=True)
 
     def add_favourites(self, favourites: list[Favourite]):

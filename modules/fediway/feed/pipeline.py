@@ -146,6 +146,7 @@ class Feed():
     pipeline: list[PipelineStep] = []
     cache: list[dict[int, float]] = []
     sampler: SamplingStep | None = None
+    entity: str
 
     def __init__(self, feature_service: Features):
         self.feature_service = feature_service
@@ -161,6 +162,11 @@ class Feed():
     def step(self, step: PipelineStep):
         self.pipeline.append(step)
         self.cache.append({})
+
+    def select(self, entity: str):
+        self.entity = entity
+
+        return self
 
     def source(self, source: Source, n: int):
         if not self._is_current_step_type(SourcingStep):

@@ -95,6 +95,66 @@ def seed():
 
     typer.echo("✅ Seeding completed!")
 
+@app.command("similar-accounts")
+def similar_accounts(account_id: int):
+    from shared.services.seed_herde_service import SeedHerdeService
+    from shared.core.herde import graph, db
+
+    similar_accounts_query = """
+        LET targetAccount = DOCUMENT("accounts", @account_id)
+        LET engagedStatuses = (
+            FOR f IN favourited FILTER f._from == targetAccount._id RETURN f._to
+        )
+        LET totalEngagedStatuses = LENGTH(engagedStatuses)
+
+        LET similarAccounts = (
+            FOR statusId IN engagedStatuses
+                FOR f IN favourited
+                    FILTER f._to == statusId
+                    FILTER f._from != targetAccount._id
+                    COLLECT accountId = f._from WITH COUNT INTO overlap
+                    LET jaccardSimilarity = overlap / (totalEngagedStatuses + LENGTH(
+                        FOR fav IN favourited
+                        FILTER fav._from == accountId
+                        COLLECT WITH COUNT INTO total
+                        RETURN total
+                    )[0] - overlap)
+                    FILTER overlap >= @min_overlap // Filter weak matches early
+                    SORT jaccardSimilarity DESC, overlap DESC
+                    LIMIT @limit
+                    RETURN {
+                        account: DOCUMENT("accounts", accountId),
+                        overlap: overlap,
+                        similarity: jaccardSimilarity,
+                        favoriteStatuses: ( // Sample of common favorites
+                            FOR fav IN favourited
+                            FILTER fav._from == accountId
+                            FILTER fav._to IN engagedStatuses
+                            LIMIT 5
+                            RETURN DOCUMENT(fav._to)
+                        )
+                    }
+        )
+
+        RETURN {
+            target: targetAccount._key,
+            totalFavorites: totalEngagedStatuses,
+            similarAccounts: similarAccounts
+        }
+    """
+
+    cursor = db.aql.execute(
+        similar_accounts_query,
+        bind_vars={
+            "account_id": str(account_id),
+            "min_overlap": 1,
+            "limit": 50
+        }
+    )
+
+    for result in cursor:
+        print(result)
+
 @app.command("compute-affinities")
 def compute_affinities():
     from shared.core.herde import graph, db

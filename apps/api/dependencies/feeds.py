@@ -11,21 +11,16 @@ from modules.fediway.sources import Source
 from modules.fediway.feed import Feed, Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
 
-def get_status_feed(name: str, 
-                    sampler: Sampler = TopKSampler(),):
-    
-    def _inject(request: Request, 
-                response: Response, 
-                tasks: BackgroundTasks,
-                db: DBSession = Depends(get_db_session),):
-        return FeedService(
-            name=name, 
-            db=db, 
-            session=request.state.session, 
-            request=request,
-            response=response,
-            tasks=tasks,
-            feature_service=FeatureService(feature_store)
-        )
-    
-    return _inject
+def get_feed(request: Request, 
+             response: Response, 
+             tasks: BackgroundTasks,
+             db: DBSession = Depends(get_db_session)):
+
+    return FeedService(
+        db=db, 
+        session=request.state.session, 
+        request=request,
+        response=response,
+        tasks=tasks,
+        feature_service=FeatureService(feature_store)
+    )
