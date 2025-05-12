@@ -57,7 +57,8 @@ class FeatureService(Features):
                 self.cache[cache_key][feature_name] = feat
             else:
                 feat = feat[~feat.index.isin(self.cache[cache_key][feature_name].index)]
-                self.cache[cache_key][feature_name] = pd.concat([self.cache[cache_key][feature_name], feat])
+                feat = pd.concat([self.cache[cache_key][feature_name], feat])
+                self.cache[cache_key][feature_name] = feat[~feat.index.duplicated(keep='last')]
 
     def get(self, entities: list[dict[str, int]], features: list[str]) -> np.ndarray | None:
         if len(features) == 0:
