@@ -1,5 +1,26 @@
 # Fediway Feeds
 
+```py
+from modules.fediway.feed import Feed
+from modules.fediway.sources import (
+    MostInteractedByMutualFollowsSource,
+    CollaborativeFilteringSource,
+)
+
+pipeline = (
+    Feed()
+    .select('status_id')
+    .source(MostInteractedByMutualFollowsSource(account_id), 100)
+    .source(CollaborativeFilteringSource(account_id, language='en'), 100)
+    .rank(ranker)
+    .diversify(by='status:account_id', penalty=0.1)
+    .sample(50)
+    .paginate(20, offset=0)
+)
+
+status_ids = pipeline.execute()
+```
+
 ## Api
 
 Start server
