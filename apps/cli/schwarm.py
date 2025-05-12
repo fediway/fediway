@@ -51,7 +51,10 @@ def purge():
 def collect(language: str = 'en'):
     from modules.fediway.sources.schwarm import (
         TrendingStatusesByInfluentialUsers, 
-        MostInteractedByAccountsSource
+        MostInteractedByAccountsSource,
+        CollaborativeFilteringSource,
+        TrendingStatusesInCommunity,
+        TrendingStatusesByTagsInCommunity
     )
 
     # source = MostInteractedByAccountsSource(
@@ -62,14 +65,20 @@ def collect(language: str = 'en'):
     #     # max_age=timedelta(days=14)
     # )
     
-    source = TrendingStatusesByInfluentialUsers(
-        driver=get_driver(),
-        language=language,
-        max_age=timedelta(days=28)
-    )
+    # source = TrendingStatusesByInfluentialUsers(
+    #     driver=get_driver(),
+    #     language=language,
+    #     max_age=timedelta(days=28)
+    # )
+
+    # source = TrendingStatusesByTagsInCommunity(
+    #     driver=get_driver(),
+    #     account_id=114398075274349836
+    # )
     
-    for status_id in source.collect(10):
-        print(status_id)
+    source.collect(10)
+    # for status_id in source.collect(10):
+    #     print(status_id)
     exit(())
 
     from modules.schwarm import Schwarm

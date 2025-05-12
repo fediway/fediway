@@ -10,11 +10,11 @@ class AccountItem(Item):
     id: str
     username: str
     acct: str
-    url: str
+    url: str | None
     uri: str
     locked: bool = False
     bot: bool = False
-    discoverable: bool
+    discoverable: bool | None
     display_name: str
     note: str
     avatar: str | None

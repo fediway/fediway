@@ -6,6 +6,7 @@ from modules.fediway.sources import Source
 from modules.mastodon.items import StatusItem
 from modules.mastodon.models import Status
 
+from apps.api.core.ranker import ranker
 from shared.core.db import get_db_session
 
 from apps.api.services.feed_service import FeedService
@@ -13,6 +14,7 @@ from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources import (
     get_hot_statuses_by_language_source, 
     get_trending_statuses_by_influential_accounts_source,
+    get_trending_statuses_in_community_source,
     get_collaborative_filtering_source,
 )
 
@@ -34,6 +36,7 @@ async def public_timeline(
     feed: FeedService = Depends(get_feed),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
+    max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
 
     pipeline = (
         feed
@@ -52,21 +55,23 @@ async def public_timeline(
 
     return [StatusItem.from_model(status) for status in statuses]
 
-def public_timeline_sources(
-    # hot_statuses_by_language: list[Source] = Depends(get_hot_statuses_by_language_source)
-    trending_statuses_by_influential_accounts: list[Source] = Depends(get_trending_statuses_by_influential_accounts_source),
-    # collaborative_filtering: list[Source] = Depends(get_collaborative_filtering_source),
+def home_sources(
+    trending_statuses_in_community: Source = Depends(get_trending_statuses_in_community_source),
+    collaborative_filtering: list[Source] = Depends(get_collaborative_filtering_source),
 ):
-    # return collaborative_filtering
-    return trending_statuses_by_influential_accounts
+    return (
+        [trending_statuses_in_community] + 
+        collaborative_filtering
+    )
 
 @router.get('/home')
 async def home_timeline(
     request: Request,
     feed: FeedService = Depends(get_feed),
-    sources = Depends(public_timeline_sources),
+    sources = Depends(home_sources),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
+    max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
 
     pipeline = (
         feed

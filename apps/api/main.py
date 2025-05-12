@@ -7,6 +7,7 @@ from starlette.exceptions import HTTPException
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from .middlewares.oauth_middleware import OAuthMiddleware
 from .middlewares.session_middleware import SessionMiddleware
 from .errors.http_error import http_error_handler
 from .errors.validation_error import http422_error_handler
@@ -27,6 +28,7 @@ def get_application() -> FastAPI:
         allow_headers=["*"],
     )
     
+    application.add_middleware(BaseHTTPMiddleware, dispatch=OAuthMiddleware())
     application.add_middleware(BaseHTTPMiddleware, dispatch=SessionMiddleware())
 
     application.add_exception_handler(HTTPException, http_error_handler)

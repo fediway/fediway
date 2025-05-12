@@ -260,8 +260,8 @@ class Schwarm():
     
     def add_reblog(self, reblog: Status):
         query = """
-        MATCH (a:Account {id: $account_id})
         MATCH (s:Status {id: $reblog_of_id})
+        MERGE (a:Account {id: $account_id})
         CREATE (a)-[:REBLOGS]->(s);
         """
 
@@ -274,8 +274,8 @@ class Schwarm():
     def add_reblogs(self, reblogs: list[Status]):
         query = """
         UNWIND $reblogs AS reblog
-        MATCH (a:Account {id: reblog.account_id})
         MATCH (s:Status {id: reblog.reblog_of_id})
+        MERGE (a:Account {id: reblog.account_id})
         CREATE (a)-[:REBLOGS]->(s);
         """
 
@@ -301,8 +301,8 @@ class Schwarm():
 
     def add_favourite(self, favourite: Favourite):
         query = """
-        MATCH (a:Account {id: $account_id})
         MATCH (s:Status {id: $status_id})
+        MERGE (a:Account {id: $account_id})
         MERGE (a)-[:FAVOURITES]->(s)
         """
 
@@ -311,8 +311,8 @@ class Schwarm():
     def add_favourites(self, favourites: list[Favourite]):
         query = """
         UNWIND $favs AS fav
-        MATCH (a:Account {id: fav.account_id})
         MATCH (s:Status {id: fav.status_id})
+        MERGE (a:Account {id: fav.account_id})
         MERGE (a)-[:FAVOURITES]->(s)
         """
 
@@ -428,6 +428,15 @@ class Schwarm():
         YIELD node, rank
         MATCH (t:Tag {id: node.id})
         SET t.rank = rank
+        """
+
+        self._run_query(query)
+
+    def compute_communities(self):
+        query = """
+        CALL community_detection.get()
+        YIELD node, community_id
+        SET node.community_id = community_id;
         """
 
         self._run_query(query)

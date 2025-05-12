@@ -55,6 +55,10 @@ class SeedSchwarmService:
         with utils.duration("Computed tag ranks in {:.3f} seconds"):
             self.schwarm.compute_tag_rank()
 
+        logger.info("Start computing communities...")
+        with utils.duration("Computed communities in {:.3f} seconds"):
+            self.schwarm.compute_communities()
+
     def seed_statuses(self, batch_size: int = 100):
         query = (
             select(

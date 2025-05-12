@@ -4,12 +4,13 @@ from sqlmodel import Session as DBSession
 from neo4j import AsyncSession
 from datetime import timedelta
 
+from modules.mastodon.models import Account
 from modules.fediway.sources import Source
-
 from modules.fediway.sources.schwarm import (
     TrendingStatusesByInfluentialUsers, 
     TrendingTagsSource, 
-    CollaborativeFilteringSource
+    TrendingStatusesInCommunity,
+    CollaborativeFilteringSource,
 )
 from modules.fediway.sources.db import (
     HotStatusesByLanguage, 
@@ -21,6 +22,7 @@ from shared.core.db import get_long_living_db_session
 
 from config import config
 
+from .auth import get_authenticated_account_or_fail
 from .lang import get_languages
 
 def get_hot_statuses_by_language_source(
@@ -62,12 +64,21 @@ def get_trending_tags_sources(
     ) for lang in languages]
 
 def get_collaborative_filtering_source(
-    languages: list[str] = Depends(get_languages)
+    account: Account = Depends(get_authenticated_account_or_fail),
+    languages: list[str] = Depends(get_languages),
 ) -> list[Source]:
 
     return [CollaborativeFilteringSource(
         driver=driver,
-        account_id=114394115240930061,
+        account_id=account.id,
         language=lang, 
         max_age=timedelta(days=config.fediway.feed_max_age_in_days),
     ) for lang in languages]
+
+def get_trending_statuses_in_community_source(
+    account: Account = Depends(get_authenticated_account_or_fail)
+) -> Source:
+    return TrendingStatusesInCommunity(
+        driver=driver,
+        account_id=account.id,
+    )

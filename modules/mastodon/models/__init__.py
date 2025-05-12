@@ -7,3 +7,6 @@ from .favourite import Favourite
 from .follow import Follow
 from .mention import Mention
 from .tag import Tag, StatusTag
+from .user import User
+
+from .oauth_access_token import AccessToken

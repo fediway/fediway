@@ -3,6 +3,7 @@ from typing import Annotated, Union
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
 
+from .user import User
 from .favourite import Favourite
 from config import config
 
@@ -38,7 +39,7 @@ class Account(SQLModel, table=True):
     url: str | None = Field()
     avatar_file_name: str | None = Field()
     header_file_name: str | None = Field()
-    discoverable: bool = Field(default=False)
+    discoverable: bool | None = Field(default=False)
     indexable: bool = Field(default=False)
     locked: bool = Field(default=False)
     moved_to_account_id: int | None = Field(foreign_key='accounts.id')
@@ -47,6 +48,7 @@ class Account(SQLModel, table=True):
     favourites: list[Favourite] = Relationship(back_populates='account')
     statuses: list["Status"] = Relationship(back_populates='account')
     stats: AccountStats = Relationship(back_populates='account', sa_relationship_kwargs={"uselist": False})
+    user: User = Relationship(back_populates='account')
 
     @property
     def local(self):
