@@ -1,12 +1,10 @@
 
 -- :up
 {% for table, primary_key in [
-    ('accounts', 'id'), 
     ('statuses', 'id'), 
     ('mentions', 'id'), 
     ('follows', 'id'), 
     ('favourites', 'id'), 
-    ('tags', 'id'), 
     ('statuses_tags', 'status_id,tag_id'),
     ('status_stats', 'id')
 ] -%}

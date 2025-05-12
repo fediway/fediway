@@ -8,15 +8,12 @@ from modules.schwarm import Schwarm
 
 from .handlers.features import FeaturesEventHandler
 from .handlers.schwarm import (
-    AccountEventHandler as SchwarmAccountEventHandler,
-    EnrichedAccountStatsEventHandler as SchwarmEnrichedAccountStatsEventHandler,
     StatusEventHandler as SchwarmStatusEventHandler,
     StatusStatsEventHandler as SchwarmStatusStatsEventHandler,
     FavouriteEventHandler as SchwarmFavouriteEventHandler,
     FollowEventHandler as SchwarmFollowEventHandler,
     MentionEventHandler as SchwarmMentionEventHandler,
     StatusTagEventHandler as SchwarmStatusTagEventHandler,
-    TagEventHandler as SchwarmTagEventHandler,
 )
 from modules.debezium import make_debezium_handler, DebeziumEvent, process_debezium_event
 from shared.core.feast import feature_store
@@ -65,14 +62,6 @@ for topic in feature_topics:
 
 # Schwarm consumers (responsible for pushing data to memgraph)
 
-@broker.subscriber("accounts")
-async def on_accounts(event: DebeziumEvent):
-    await process_debezium_event(event, SchwarmAccountEventHandler, args=(Schwarm(driver), ))
-
-@broker.subscriber("enriched_account_stats")
-async def on_accounts(event: DebeziumEvent):
-    await process_debezium_event(event, SchwarmEnrichedAccountStatsEventHandler, args=(Schwarm(driver), ))
-
 @broker.subscriber("statuses")
 async def on_status(event: DebeziumEvent):
     await process_debezium_event(event, SchwarmStatusEventHandler, args=(Schwarm(driver), ))
@@ -96,7 +85,3 @@ async def on_statuses_tags(event: DebeziumEvent):
 @broker.subscriber("status_stats")
 async def on_statuses_tags(event: DebeziumEvent):
     await process_debezium_event(event, SchwarmStatusStatsEventHandler, args=(Schwarm(driver), ))
-
-@broker.subscriber("tags")
-async def on_tags(event: DebeziumEvent):
-    await process_debezium_event(event, SchwarmTagEventHandler, args=(Schwarm(driver), ))
