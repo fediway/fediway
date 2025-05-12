@@ -26,6 +26,7 @@ class Schwarm():
         CREATE INDEX ON :Status(id);
         CREATE INDEX ON :Status(language);
         CREATE INDEX ON :Status(created_at);
+        CREATE INDEX ON :Status(score);
         CREATE INDEX ON :Tag(id);
         CREATE INDEX ON :Tag(rank);
         CREATE CONSTRAINT ON (a:Account) ASSERT a.id IS UNIQUE;
@@ -100,11 +101,12 @@ class Schwarm():
     
     def add_status_stats(self, stats: StatusStats):
         query = """
-        MERGE (s:Status {id: $id})
-        ON MATCH SET 
+        MATCH (a:Account)-[:CREATED_BY]->(s:Status {id: $id})
+        SET 
             s.num_favs = $num_favs,
             s.num_replies = $num_replies,
-            s.num_reblogs = $num_reblogs;
+            s.num_reblogs = $num_reblogs,
+            s.score = a.rank * ($num_favs * 0.5 + $num_replies * 2 + $num_reblogs);
         """
 
         self._run_query(
@@ -118,11 +120,12 @@ class Schwarm():
     def add_status_stats_batch(self, stats: list[StatusStats]):
         query = """
         UNWIND $stats as row
-        MERGE (s:Status {id: row.id})
-        ON MATCH SET 
+        MATCH (a:Account)-[:CREATED_BY]->(s:Status {id: row.id})
+        SET 
             s.num_favs = row.num_favs,
             s.num_replies = row.num_replies,
-            s.num_reblogs = row.num_reblogs;
+            s.num_reblogs = row.num_reblogs,
+            s.score = a.rank * (row.num_favs * 0.5 + row.num_replies * 2 + row.num_reblogs);
         """
 
         self._run_query(

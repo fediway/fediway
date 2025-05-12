@@ -65,20 +65,20 @@ def collect(language: str = 'en'):
     #     # max_age=timedelta(days=14)
     # )
     
-    # source = TrendingStatusesByInfluentialUsers(
-    #     driver=get_driver(),
-    #     language=language,
-    #     max_age=timedelta(days=28)
-    # )
+    source = TrendingStatusesByInfluentialUsers(
+        driver=get_driver(),
+        language=language,
+        max_age=timedelta(days=28)
+    )
 
     # source = TrendingStatusesByTagsInCommunity(
     #     driver=get_driver(),
     #     account_id=114398075274349836
     # )
     
-    source.collect(10)
-    # for status_id in source.collect(10):
-    #     print(status_id)
+    with utils.duration("Collected in {:3f} seconds"):
+        for status_id in source.collect(10):
+            print(status_id)
     exit(())
 
     from modules.schwarm import Schwarm

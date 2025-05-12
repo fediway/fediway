@@ -1,31 +1,38 @@
 
 from datetime import timedelta, datetime
 
-from .base import Source
+from .base import Source, RedisSource
 
 class TrendingStatusesByInfluentialUsers(Source):
-    def __init__(self, driver, language: str = 'en', max_age = timedelta(days=3)):
+    def __init__(
+        self, 
+        driver, 
+        language: str = 'en', 
+        max_age: timedelta = timedelta(days=3),
+        top_n: int = 500,
+        alpha: float = 0.001
+    ):
         self.driver = driver
         self.language = language
         self.max_age = max_age
-
-    def compute_scores(self):
-        pass
+        self.top_n = top_n
+        self.alpha = alpha
 
     def collect(self, limit: int):
         query = """
         WITH timestamp() / 1000 AS now
         MATCH (a:Account)-[:CREATED_BY]->(s:Status {language: $language})
         WHERE 
-            a.rank IS NOT NULL 
+            s.score IS NOT NULL
         AND s.created_at > $max_age
-        // AND a.avg_favs > 1 
-        // AND a.avg_reblogs > 1 
-        AND s.num_favs > 0 
-        AND s.num_reblogs > 0
         WITH a, s, (now - s.created_at) / 86400 AS age_days
-        WITH a, s, age_days,
-            a.rank * EXP(-age_days) * ((s.num_favs + 1) * (s.num_reblogs + 1)) * 10 as score // / ((a.avg_favs + 1) * (a.avg_reblogs + 1)) AS score
+        ORDER BY s.score DESC
+        LIMIT $top_n
+        WITH 
+            a, 
+            s, 
+            age_days, 
+            EXP(-$alpha * age_days) * s.score as score
         ORDER BY a.id, score DESC
         WITH a.id AS account_id, collect([s.id, score])[0] AS top_status
         RETURN account_id, top_status[0] AS status_id, top_status[1] AS score
@@ -36,9 +43,16 @@ class TrendingStatusesByInfluentialUsers(Source):
         max_age = int((datetime.now() - self.max_age).timestamp() * 1000)
 
         with self.driver.session() as session:
-            results = session.run(query, language=self.language, limit=limit, max_age=max_age)
+            results = session.run(
+                query, 
+                language=self.language, 
+                alpha=self.alpha,
+                limit=limit, 
+                top_n=self.top_n,
+                max_age=max_age,
+            )
 
-            for result in list(results):
+            for result in results:
                 yield result['status_id']
 
 class TrendingStatusesInCommunity(Source):
