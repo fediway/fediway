@@ -1,4 +1,5 @@
 
+from starlette.datastructures import URL
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, BackgroundTasks, Depends, Response
 from loguru import logger
@@ -123,7 +124,7 @@ class FeedService():
     #     # await collecting
 
     def _set_link_header(self):
-        next_url = self.request.url.include_query_params(
+        next_url = URL(f"{config.app.api_url}{self.request.url.path}").include_query_params(
             feed=self.id,
             offset=self._next_offset
         )
