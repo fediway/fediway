@@ -1,5 +1,17 @@
 # Fediway Feeds
 
+Fediway brings algorithmic feeds to Mastodon in an attempt to make the Fediverse more attractive to new users. Fediway feeds can be integrated into an existing mastodon server by simply redirecting desired endpoints such as `timelines/home` in nginx to the fastapi app.
+
+## How it works?
+
+The algorithm follows of a multi-stage pipeline that consists of the following main stages:
+
+1. **Candidate Sourcing**: ~1000 Statuses are fetched from various sources which aim to select the best candidates from millions of statuses.
+2. **Ranking**: These candidates are ranked by a machine learning model that estimates the likelihood of user interaction with each candidate.
+3. **Sampling**: In the final stage, heuristics are applied to diversify recommendations which are sampled depending on the engagement scores estimated in the ranking step.
+
+The project includes a recommendation engine that makes it easy to build custom recommendation pipelines:
+
 ```py
 from modules.fediway.feed import Feed
 from modules.fediway.rankers import SimpleStatsRanker
