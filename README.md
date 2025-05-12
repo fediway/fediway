@@ -7,6 +7,7 @@ Fediway brings algorithmic feeds to Mastodon in an attempt to make the Fediverse
 - [The Algorithm](#how_it_works)
     - [Recommendation Engine](#engine)
     - [Candidate Sources](#sources)
+- [Setup](#setup)
 
 <a name="how_it_works"></a>
 
@@ -14,8 +15,8 @@ Fediway brings algorithmic feeds to Mastodon in an attempt to make the Fediverse
 
 The algorithm follows of a multi-stage pipeline that consists of the following main stages:
 
-1. **Candidate Sourcing**: ~1000 Statuses are fetched from various sources which aims to preselect the best candidates from millions of statuses.
-2. **Ranking**: These candidates are ranked by a machine learning model that estimates the likelihood of user interaction with each candidate.
+1. **Candidate Sourcing**: ~1000 Posts are fetched from various sources which aims to preselect the best candidates from millions of statuses.
+2. **Ranking**: The candidates are ranked by a machine learning model that estimates the likelihood of user interaction with each candidate.
 3. **Sampling**: In the final stage, heuristics are applied to diversify recommendations which are sampled depending on the engagement scores estimated in the ranking step.
 
 <a name="engine"></a>
@@ -51,6 +52,94 @@ status_ids = pipeline.execute()
 ### Candidate Sources
 
 Narrowing down the vast pool consiting of up to billions of potential posts to recommend is a critical step in finding posts that users are actually interested in. 
+
+<a name="setup"></a>
+
+## Setup
+
+A minimal working fediway server requires the following services:
+
+- [Memgraph](https://memgraph.com/) - In memory graph database for candidate sourcing
+- [RisingWave](https://risingwave.com/) - Streaming database serving real time feature for ML inference
+- [Apache Kafka](https://kafka.apache.org/) - Message broker for ingesting data into memgraph, serving real time features and more
+
+```sh
+version: '3.8'
+
+services:
+  memgraph:
+    image: memgraph/memgraph-mage:3.1.1-memgraph-3.1.1
+    ports:
+      - "7687:7687"
+
+  postgres:
+    image: postgres:16
+    shm_size: 256mb
+    environment:
+      - POSTGRES_USER=mastodon
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=mastodon_development
+    command: 
+      - "postgres"
+      - "-c"
+      - "wal_level=logical"
+    volumes:
+      - ./../postgres16:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mastodon -d mastodon_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - app_network
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    networks:
+      - app_network
+
+  risingwave:
+    image: risingwavelabs/risingwave:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4566:4566"
+      - "5691:5691"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5691/metrics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  app_network:
+    driver: bridge
+```
+
+### Risingwave
 
 ## Api
 
