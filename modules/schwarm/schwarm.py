@@ -166,7 +166,7 @@ class Schwarm():
             CREATE (a)-[:REPLIES]->(s);
             """
 
-            self._run_query(query, {
+            self._run_query(query, **{
                 "in_reply_to_id": status.in_reply_to_id,
                 "account_id": status.account_id,
             })
