@@ -2,6 +2,7 @@
 
 ```py
 from modules.fediway.feed import Feed
+from modules.fediway.rankers import SimpleStatsRanker
 from modules.fediway.sources import (
     MostInteractedByMutualFollowsSource,
     CollaborativeFilteringSource,
@@ -12,7 +13,7 @@ pipeline = (
     .select('status_id')
     .source(MostInteractedByMutualFollowsSource(account_id), 100)
     .source(CollaborativeFilteringSource(account_id, language='en'), 100)
-    .rank(ranker)
+    .rank(SimpleStatsRanker())
     .diversify(by='status:account_id', penalty=0.1)
     .sample(50)
     .paginate(20, offset=0)

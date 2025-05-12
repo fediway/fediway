@@ -10,7 +10,7 @@ class TrendingStatusesByInfluentialUsers(Source):
         language: str = 'en', 
         max_age: timedelta = timedelta(days=3),
         top_n: int = 500,
-        alpha: float = 0.001
+        alpha: float = 1.0
     ):
         self.driver = driver
         self.language = language

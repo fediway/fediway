@@ -52,6 +52,7 @@ def get_trending_statuses_by_influential_accounts_source(
         driver=driver, 
         language=lang,
         max_age=timedelta(days=config.fediway.feed_max_age_in_days),
+        alpha=config.fediway.feed_decay_rate,
     ) for lang in languages]
 
 def get_trending_tags_sources(

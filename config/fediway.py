@@ -13,6 +13,7 @@ class FediwayConfig(BaseConfig):
     feed_max_sourced_candidates: int  = 500
     feed_max_heavy_candidates: int  = 100
     feed_batch_size: int            = 20
+    feed_decay_rate: float          = 1.0
 
     schwarm_max_status_age_in_days: int = 7
 
