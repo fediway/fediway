@@ -159,6 +159,18 @@ class Schwarm():
 
         self._run_query(query, **params)
 
+        if status.in_reply_to_id is not None:
+            query = """
+            MATCH (s:Status {id: $in_reply_to_id})
+            MERGE (a:Account {id: $account_id})
+            CREATE (a)-[:REPLIES]->(s);
+            """
+
+            self._run_query(query, {
+                "in_reply_to_id": status.in_reply_to_id,
+                "account_id": status.account_id,
+            })
+
     def add_statuses(self, statuses: list[Status]):
         query = """
         UNWIND $statuses AS status
@@ -169,15 +181,28 @@ class Schwarm():
             s.created_at = status.created_at
         CREATE (a)-[:CREATED_BY]->(s)
         """
-
-        statuses = [{
+        
+        self._run_query(query, statuses=[{
             'id': status.id,
             'account_id': status.account_id,
             'language': status.language,
             'created_at': status.created_at if type(status.created_at) == int else int(status.created_at.timestamp() * 1000),
-        } for status in statuses]
-        
-        self._run_query(query, statuses=statuses)
+        } for status in statuses])
+
+        replies = [status for status in statuses if status.in_reply_to_id is not None]
+
+        if len(replies) > 0:
+            query = """
+            UNWIND $replies AS reply
+            MATCH (s:Status {id: reply.in_reply_to_id})
+            MERGE (a:Account {id: reply.account_id})
+            CREATE (a)-[:REPLIES]->(s);
+            """
+
+            self._run_query(query, replies=[{
+                "in_reply_to_id": status.in_reply_to_id,
+                "account_id": status.account_id,
+            } for reply in replies])
 
     def add_status_tag(self, status_tag: StatusTag):
         query = """
