@@ -63,6 +63,10 @@ A minimal working fediway server requires the following services:
 - [RisingWave](https://risingwave.com/) - Streaming database serving real time features for ML inference
 - [Apache Kafka](https://kafka.apache.org/) - Message broker for ingesting data into memgraph, serving real time features and more
 
+<details>
+
+<summary>docker-compose.yaml for local development</summary>
+
 ```sh
 version: '3.8'
 
@@ -139,47 +143,9 @@ networks:
     driver: bridge
 ```
 
-### Risingwave
+</details>
 
-## Api
-
-Start server
-
-```sh
-uvicorn apps.api.main:app --reload
-```
-
-## Kafka Consumer
-
-```sh
-faststream run apps.streaming.main:app
-```
-
-## Job Scheduling
-
-Start task beat scheduler
-
-```sh
-celery -A apps.worker.main beat --loglevel=info
-```
-
-Start task worker scheduler
-
-```sh
-celery -A apps.worker.main worker --loglevel=info
-```
-
-<!-- Start worker to process topics
-```sh
-celery -A jobs.main worker --queues=topics --loglevel=info
-``` 
--->
-
-## Setup
-
-### RisingWave
-
-Create a new postgres user with CDC privileges.
+1. Create a new postgres user with CDC privileges.
 
 ```sql
 -- psql -U postgres
@@ -193,34 +159,29 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO risingwave;
 GRANT CREATE ON DATABASE mastodon_development TO risingwave;
 ```
 
-### Postgres
-
-Run migrations:
+2. Setup
 
 ```sh
-alembic upgrade head
+sh bin/setup
 ```
 
-Refresh migrations
+3. Run services
 
 ```sh
-alembic downgrade base
+# Run fastapi server
+uvicorn apps.api.main:app --reload
+
+# Run Kafka stream consumer
+faststream run apps.streaming.main:app
 ```
 
-Create migration
+### Configuration
+
+<details>
+
+<summary>Store feast registry on s3</summary>
 
 ```sh
-alembic revision -m "create topics table"
-```
-
-### Feast
-
-Storing registry on s3:
-
-```sh
-# 1. install requirements
-python -m pip install feast[aws]
-
 # 1. add variable to .env file
 FEAST_REGISTRY=s3://my-bucket/registry.db
 
@@ -228,17 +189,9 @@ FEAST_REGISTRY=s3://my-bucket/registry.db
 export FEAST_S3_ENDPOINT_URL="https://fsn1.your-objectstorage.com"
 export AWS_ACCESS_KEY_ID="YOUR_S3_ACCESS_KEY"
 export AWS_SECRET_ACCESS_KEY="YOUR_S3_SECRET_KEY"
+
+# 3. apply
+python feedctl feast apply
 ```
 
-## ip2location
-
-Download ip-database
-
-```sh
-curl -o data/geo-whois-asn-country-ipv4.mmdb https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country-ipv4.mmdb
-curl -o data/geo-whois-asn-country-ipv6.mmdb https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country-ipv6.mmdb
-```
-
-## ActivityPub
-
-https://w3c.github.io/activitypub
+</details>
