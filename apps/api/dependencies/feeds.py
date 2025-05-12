@@ -2,6 +2,7 @@
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, Response, BackgroundTasks, Depends
 
+from ..core.redis import redis
 from ..core.ranker import ranker
 from ..services.feed_service import FeedService
 from shared.core.db import get_db_session
@@ -22,5 +23,6 @@ def get_feed(request: Request,
         request=request,
         response=response,
         tasks=tasks,
+        redis=redis,
         feature_service=FeatureService(feature_store)
     )

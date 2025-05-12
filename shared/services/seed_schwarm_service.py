@@ -32,9 +32,6 @@ class SeedSchwarmService:
         with utils.duration("Seeded statuses in {:.3f} seconds"):
             self.seed_statuses()
 
-        with utils.duration("Seeded status stats in {:.3f} seconds"):
-            self.seed_status_stats()
-
         with utils.duration("Seeded reblogs in {:.3f} seconds"):
             self.seed_reblogs()
 
@@ -58,6 +55,9 @@ class SeedSchwarmService:
         logger.info("Start computing communities...")
         with utils.duration("Computed communities in {:.3f} seconds"):
             self.schwarm.compute_communities()
+
+        with utils.duration("Seeded status stats in {:.3f} seconds"):
+            self.seed_status_stats()
 
     def seed_statuses(self, batch_size: int = 100):
         query = (

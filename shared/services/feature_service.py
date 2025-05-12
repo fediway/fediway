@@ -54,9 +54,8 @@ class FeatureService(Features):
             feat = df[column]
             feat.index = entity_ids
             if not feature_name in self.cache[cache_key]:
-                self.cache[cache_key][feature_name] = feat
+                self.cache[cache_key][feature_name] = feat[~feat.index.duplicated(keep='last')]
             else:
-                feat = feat[~feat.index.isin(self.cache[cache_key][feature_name].index)]
                 feat = pd.concat([self.cache[cache_key][feature_name], feat])
                 self.cache[cache_key][feature_name] = feat[~feat.index.duplicated(keep='last')]
 
@@ -72,7 +71,6 @@ class FeatureService(Features):
         cached_df, missing_entities = self._get_cached(entities, features)
 
         if len(missing_entities) == 0 and cached_df is not None:
-            logger.info(f"Fetched cached features for {len(entities)} entities in {int((time.time() - start) * 1000)} milliseconds.")
             return cached_df.reindex(pd.DataFrame(entities).values[:, 0]).values
 
         df = self.fs.get_online_features(
@@ -85,8 +83,7 @@ class FeatureService(Features):
         if cached_df is not None:
             df.index = pd.DataFrame(missing_entities).values[:, 0]
             df = pd.concat([df, cached_df]).reindex(pd.DataFrame(entities).values[:, 0])
-            print(len(df), len(entities))
 
-        logger.info(f"Fetched features for {len(entities)} entities in {int((time.time() - start) * 1000)} milliseconds.")
+        logger.info(f"Fetched features for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds.")
 
         return df.values

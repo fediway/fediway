@@ -2,7 +2,10 @@
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, BackgroundTasks, Depends, Response
 from loguru import logger
+from redis import Redis
 import asyncio
+import json
+import uuid
 import time
 
 from modules.fediway.feed.pipeline import Feed
@@ -17,6 +20,9 @@ from modules.fediway.models.postgres import Feed as FeedModel, FeedRecommendatio
 import modules.utils as utils
 from config import config
 
+def _generate_feed_id(length: int = 8):
+    return str(uuid.uuid4()).replace('-', '')[:length]
+
 class FeedService():
     feed: Feed
 
@@ -26,7 +32,9 @@ class FeedService():
                  response: Response,
                  tasks: BackgroundTasks,
                  session: Session, 
+                 redis: Redis,
                  feature_service: FeatureService):
+        self.r = redis
         self.db = db
         self.tasks = tasks
         self.request = request
@@ -35,7 +43,9 @@ class FeedService():
         self.feature_service = feature_service
         self.pipeline = Feed(feature_service)
 
-        self._set_link_header()
+        self._next_offset = 0
+        self.id = request.query_params.get('feed', _generate_feed_id())
+        self.redis_key = f"feed:{self.id}"
 
     def name(self, name: str):
         self._name = name
@@ -69,6 +79,8 @@ class FeedService():
 
     def paginate(self, limit: int, offset: int):
         self.pipeline.paginate(limit, offset)
+
+        self._next_offset = limit + offset
 
         return self
 
@@ -111,12 +123,10 @@ class FeedService():
     #     # await collecting
 
     def _set_link_header(self):
-        next_url = self.request.url
-        
-        # .include_query_params(
-        #     feed=self.feed.id,
-        #     # offset=
-        # )
+        next_url = self.request.url.include_query_params(
+            feed=self.id,
+            offset=self._next_offset
+        )
 
         self.response.headers['link'] = f'<{next_url}>; rel="next"'
 
@@ -131,20 +141,36 @@ class FeedService():
 
         self.db.commit()
 
-    async def execute(self) -> list[int]:
-        if self.pipeline.is_empty():
-            with utils.duration("Executed pipeline in {:.3f} seconds."):
-                await self.pipeline.execute()
-            
-        recommendations = self.pipeline.results()
+    async def _execute(self):
+        with utils.duration("Executed pipeline in {:.3f} seconds."):
+            await self.pipeline.execute()
 
-        # save recommendations
-        # self.tasks.add_task(self._save_recommendations, recommendations)
+        # store feed state in redis cache
+        state = self.pipeline.get_state()
+        self.r.setex(self.redis_key, config.session.session_ttl, json.dumps(state))
 
-        # load new candidates
-        self.tasks.add_task(self.pipeline.execute)
+    def _load_cached(self):
+        if not self.r.exists(self.redis_key):
+            return
         
-        # save feed state in session
-        # self.session[self.session_key] = self.feed.to_dict()
+        state = json.loads(self.r.get(self.redis_key))
+        self.pipeline.set_state(state)
 
-        return recommendations
+    async def execute(self) -> list[int]:
+        with utils.duration("Loaded recommendations in {:.3f} seconds."):
+            self._load_cached()
+
+            if self.pipeline.is_new():
+                await self._execute()
+                
+            recommendations = self.pipeline.results()
+
+            self._set_link_header()
+
+            # save recommendations
+            # self.tasks.add_task(self._save_recommendations, recommendations)
+
+            # load new candidates
+            self.tasks.add_task(self._execute)
+
+            return recommendations

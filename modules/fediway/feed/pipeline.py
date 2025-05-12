@@ -12,22 +12,54 @@ class PipelineStep():
     def results(self) -> tuple[list[int], np.ndarray]:
         raise NotImplementedError
 
+    def get_state(self):
+        return None
+
+    def set_state(self, state):
+        pass
+
     async def __call__(self, candidates: list[int], scores: np.ndarray) -> tuple[list[int], np.ndarray]:
         raise NotImplementedError
 
 class RankingStep(PipelineStep):
-    def __init__(self, ranker: Ranker, feature_service: Features):
+    def __init__(
+        self, 
+        ranker: Ranker, 
+        feature_service: Features,
+        entity: str
+    ):
         self.ranker = ranker
         self.feature_service = feature_service
+        self.entity = entity
 
     async def __call__(self, candidates: list[int], scores: np.ndarray) -> tuple[list[int], np.ndarray]:
         if len(candidates) == 0:
             return candidates, scores
 
-        entities = [{'status_id': c} for c in candidates]
+        entities = [{self.entity: c} for c in candidates]
         X = self.feature_service.get(entities, self.ranker.features)
 
         return candidates, self.ranker.predict(X)
+
+class RememberStep(PipelineStep):
+    items: list[int] = []
+    scores: list[float] = []
+
+    def get_state(self):
+        return {
+            'items': self.items,
+            'scores': self.scores,
+        }
+
+    def set_state(self, state):
+        self.items = state.get('items', [])
+        self.scores = state.get('scores', [])
+
+    async def __call__(self, candidates: list[int], scores: np.ndarray) -> tuple[list[int], np.ndarray]:
+        self.items = candidates + self.items
+        self.scores = scores.tolist() + self.scores
+
+        return self.items, np.array(self.scores, dtype=np.float32)
 
 class PagingationStep(PipelineStep):
     items: list[int] = []
@@ -36,6 +68,16 @@ class PagingationStep(PipelineStep):
     def __init__(self, limit: int, offset: int = 0):
         self.limit = limit
         self.offset = offset
+
+    def get_state(self):
+        return {
+            'items': self.items,
+            'scores': self.scores,
+        }
+
+    def set_state(self, state):
+        self.items = state.get('items', [])
+        self.scores = state.get('scores', [])
 
     def results(self):
         start, end = self.offset, self.offset+self.limit
@@ -78,7 +120,6 @@ class SourcingStep(PipelineStep):
         
         scores = np.concatenate([scores, np.zeros(n_new)])
 
-        print(candidates, scores)
         return candidates, scores
 
 class SamplingStep(PipelineStep):
@@ -88,12 +129,20 @@ class SamplingStep(PipelineStep):
         feature_service: Features, 
         n: int = np.inf,
         heuristics: list[Heuristic] = [], 
+        unique: bool = True
     ):
         self.seen = set()
         self.n = n
         self.sampler = sampler
         self.heuristics = heuristics
         self.feature_service = feature_service
+        self.unique = unique
+
+    def get_state(self):
+        return {'seen': list(self.seen)}
+
+    def set_state(self, state):
+        self.seen = set(state.get('items', []))
 
     def _get_adjusted_scores(self, candidates, scores):
         adjusted_scores = scores.copy()
@@ -127,7 +176,7 @@ class SamplingStep(PipelineStep):
                 del candidates[idx]
                 scores = np.delete(scores, idx)
 
-                if candidate in self.seen:
+                if self.unique and candidate in self.seen:
                     continue
                     
                 sampled_candidates.append(candidate)
@@ -142,29 +191,51 @@ class SamplingStep(PipelineStep):
         return sampled_candidates, np.array(sampled_scores)
 
 class Feed():
-    seen: list[set[int]] = []
     pipeline: list[PipelineStep] = []
-    cache: list[dict[int, float]] = []
-    sampler: SamplingStep | None = None
     entity: str
 
     def __init__(self, feature_service: Features):
         self.feature_service = feature_service
         self.pipeline = []
         self._heuristics = []
+        self._is_new = True
+
+    def is_new(self) -> bool:
+        return self._is_new
+
+    def get_state(self) -> list[any]:
+        return {
+            "is_new": self._is_new,
+            "pipeline": [step.get_state() if hasattr(step, 'get_state') else None for step in self.pipeline]
+        }
+
+    def set_state(self, state):
+        self._is_new = state.get('is_new', True)
+        for step, _state in zip(self.pipeline, state['pipeline']):
+            if hasattr(step, 'set_state'):
+                step.set_state(_state)
 
     def _is_current_step_type(self, type):
         return len(self.pipeline) > 0 and isinstace(self.pipeline[-1], type)
 
-    def is_empty(self) -> bool:
-        return not any(len(cache) > 0 for cache in self.cache)
-
     def step(self, step: PipelineStep):
         self.pipeline.append(step)
-        self.cache.append({})
 
     def select(self, entity: str):
         self.entity = entity
+
+        return self
+
+    def unique(self):
+        def _step_fn(candidates, scores):
+            candidates, indices = np.unique(candidates, return_index=True)
+            return candidates, scores[indices]
+        self.pipeline.append(step_fn)
+
+        return self
+
+    def remember(self):
+        self.pipeline.append(RememberStep())
 
         return self
 
@@ -184,16 +255,17 @@ class Feed():
         return self
 
     def rank(self, ranker: Ranker):
-        self.step(RankingStep(ranker, self.feature_service))
+        self.step(RankingStep(ranker, self.feature_service, self.entity))
 
         return self
 
-    def sample(self, n: int, sampler: Sampler = TopKSampler()):
+    def sample(self, n: int, sampler: Sampler = TopKSampler(), unique=True):
         self.step(SamplingStep(
             sampler, 
             feature_service=self.feature_service,
             heuristics=self._heuristics,
-            n=n
+            unique=unique,
+            n=n,
         ))
         self._heuristics = []
 

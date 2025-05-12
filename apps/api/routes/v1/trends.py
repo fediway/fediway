@@ -27,6 +27,7 @@ def public_timeline_sources(
 @router.get('/statuses')
 async def status_trends(
     request: Request,
+    offset: int = 0,
     feed: FeedService = Depends(get_feed),
     sources = Depends(public_timeline_sources),
     db: DBSession = Depends(get_db_session),
@@ -41,7 +42,7 @@ async def status_trends(
         .rank(ranker)
         .diversify(by='status:account_id', penalty=0.1)
         .sample(config.fediway.feed_batch_size)
-        .paginate(config.fediway.feed_batch_size, offset=0)
+        .paginate(config.fediway.feed_batch_size, offset=offset)
     )
 
     recommendations = await feed.execute()
