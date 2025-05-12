@@ -60,7 +60,7 @@ Narrowing down the vast pool consiting of up to billions of potential posts to r
 A minimal working fediway server requires the following services:
 
 - [Memgraph](https://memgraph.com/) - In memory graph database for candidate sourcing
-- [RisingWave](https://risingwave.com/) - Streaming database serving real time feature for ML inference
+- [RisingWave](https://risingwave.com/) - Streaming database serving real time features for ML inference
 - [Apache Kafka](https://kafka.apache.org/) - Message broker for ingesting data into memgraph, serving real time features and more
 
 ```sh
