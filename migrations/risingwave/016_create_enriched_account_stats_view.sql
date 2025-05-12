@@ -1,6 +1,6 @@
 
 -- :up
-CREATE MATERIALIZED VIEW enriched_account_stats AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS enriched_account_stats AS
 SELECT 
 	a.account_id, 
 	a.statuses_count,
