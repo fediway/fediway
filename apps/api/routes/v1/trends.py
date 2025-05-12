@@ -3,6 +3,7 @@ import random
 from sqlmodel import select, Session as DBSession
 from fastapi import APIRouter, Depends, Request
 
+from modules.fediway.feed.sampling import InverseTransformSampler
 from modules.fediway.feed.pipeline import Feed
 from modules.fediway.sources import Source
 from apps.api.core.ranker import ranker
@@ -41,7 +42,7 @@ async def status_trends(
         .sources([(source, max_candidates_per_source) for source in sources])
         .rank(ranker)
         .diversify(by='status:account_id', penalty=0.1)
-        .sample(config.fediway.feed_batch_size)
+        .sample(config.fediway.feed_batch_size, sampler=InverseTransformSampler())
         .paginate(config.fediway.feed_batch_size, offset=offset)
     )
 

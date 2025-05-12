@@ -23,7 +23,7 @@ The algorithm follows of a multi-stage pipeline that consists of the following m
 
 ### Recommendation Engine
 
-The project includes a recommendation engine that makes it easy to build custom recommendation pipelines:
+Fediway includes a recommendation engine that makes it easy to build custom recommendation pipelines:
 
 ```py
 from modules.fediway.feed import Feed
