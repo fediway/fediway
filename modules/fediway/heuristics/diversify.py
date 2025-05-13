@@ -14,12 +14,11 @@ class DiversifyHeuristic(Heuristic):
         self.penalty = penalty
         self.seen_ids = set(seen_ids)
 
-    def to_dict(self):
-        return {
-            'by': self.features,
-            'penalty': self.penalty,
-            'seen_ids': list(self.seen_ids),
-        }
+    def get_state(self):
+        return {'seen_ids': list(self.seen_ids)}
+
+    def set_state(self, state):
+        self.seen_ids = set(state.get('seen_ids', []))
 
     def update_seen(self, candidate, features):
         self.seen_ids.add(features[0])
@@ -28,6 +27,8 @@ class DiversifyHeuristic(Heuristic):
                  candidates: list[float],
                  scores: np.ndarray,
                  features):
+        if len(scores) == 0:
+            return scores
         
         if len(self.seen_ids) == 0:
             return scores

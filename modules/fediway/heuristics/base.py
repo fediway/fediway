@@ -7,12 +7,11 @@ class Heuristic():
     def update_seen(self, candidate) -> None:
         pass
 
-    def to_dict(self):
-        return {}
+    def get_state(self):
+        return None
 
-    @classmethod
-    def from_dict(cls, data):
-        return cls(**data)
+    def set_state(self, data):
+        pass
 
     def __call__(self, candidates, scores: np.ndarray, features: np.ndarray | None = None) -> np.ndarray:
         raise NotImplemented

@@ -4,12 +4,13 @@ from sqlmodel import Session as DBSession, select
 from fastapi import Request, BackgroundTasks, Depends, Response
 from loguru import logger
 from redis import Redis
+import numpy as np
 import asyncio
 import json
 import uuid
 import time
 
-from modules.fediway.feed.pipeline import Feed
+from modules.fediway.feed.pipeline import Feed, PaginationStep
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.sources import Source
 from modules.fediway.rankers import Ranker
@@ -23,6 +24,17 @@ from config import config
 
 def _generate_feed_id(length: int = 8):
     return str(uuid.uuid4()).replace('-', '')[:length]
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NumpyEncoder, self).default(obj)
 
 class FeedService():
     feed: Feed
@@ -148,7 +160,7 @@ class FeedService():
 
         # store feed state in redis cache
         state = self.pipeline.get_state()
-        self.r.setex(self.redis_key, config.session.session_ttl, json.dumps(state))
+        self.r.setex(self.redis_key, config.session.session_ttl, json.dumps(state, cls=NumpyEncoder))
 
     def _load_cached(self):
         if not self.r.exists(self.redis_key):
@@ -168,10 +180,13 @@ class FeedService():
 
             self._set_link_header()
 
+            print(str(self.request.url), len(self.pipeline[-1]))
+
             # save recommendations
             # self.tasks.add_task(self._save_recommendations, recommendations)
 
             # load new candidates
-            self.tasks.add_task(self._execute)
+            if not isinstance(self.pipeline[-1], PaginationStep) or len(self.pipeline[-1]) < (self._next_offset + self.pipeline[-1].limit):
+                self.tasks.add_task(self._execute)
 
             return recommendations

@@ -61,7 +61,7 @@ class RememberStep(PipelineStep):
 
         return self.items, np.array(self.scores, dtype=np.float32)
 
-class PagingationStep(PipelineStep):
+class PaginationStep(PipelineStep):
     items: list[int] = []
     scores: list[float] = []
 
@@ -82,10 +82,15 @@ class PagingationStep(PipelineStep):
     def results(self):
         start, end = self.offset, self.offset+self.limit
 
+        print(len(self.items), len(np.unique(self.items)))
+
         return (
             self.items[start:end], 
             np.array(self.scores[start:end])
         )
+
+    def __len__(self) -> int:
+        return len(self.items)
 
     async def __call__(self, candidates: list[int], scores: np.ndarray) -> tuple[list[int], np.ndarray]:
         self.items += candidates
@@ -127,22 +132,29 @@ class SamplingStep(PipelineStep):
         self, 
         sampler: Sampler, 
         feature_service: Features, 
+        entity: str,
         n: int = np.inf,
         heuristics: list[Heuristic] = [], 
         unique: bool = True
     ):
         self.seen = set()
         self.n = n
+        self.entity = entity
         self.sampler = sampler
         self.heuristics = heuristics
         self.feature_service = feature_service
         self.unique = unique
 
     def get_state(self):
-        return {'seen': list(self.seen)}
+        return {
+            'seen': list(self.seen),
+            'heuristics': [h.get_state() for h in self.heuristics]
+        }
 
     def set_state(self, state):
-        self.seen = set(state.get('items', []))
+        self.seen = set(state.get('seen', []))
+        for heuristic, h_state in zip(self.heuristics, state.get('heuristics')):
+            heuristic.set_state(h_state)
 
     def _get_adjusted_scores(self, candidates, scores):
         adjusted_scores = scores.copy()
@@ -150,7 +162,7 @@ class SamplingStep(PipelineStep):
         for heuristic in self.heuristics:
             features = None
             if heuristic.features and len(heuristic.features) > 0:
-                entities = [{'status_id': c} for c in candidates]
+                entities = [{self.entity: c} for c in candidates]
                 features = self.feature_service.get(entities, heuristic.features)
             
             adjusted_scores = heuristic(candidates, adjusted_scores, features)
@@ -160,12 +172,19 @@ class SamplingStep(PipelineStep):
     async def __call__(self, candidates: list[int], scores: np.ndarray) -> tuple[list[int], np.ndarray]:
         sampled_candidates = []
         sampled_scores = []
+        
+        if self.unique:
+            scores = scores[[i for i, c in enumerate(candidates) if c not in self.seen]]
+            candidates = [c for c in candidates if c not in self.seen]
 
         for _ in range(self.n):
             if len(candidates) == 0:
                 break
             
             while True:
+                if len(candidates) == 0:
+                    break
+
                 adjusted_scores = self._get_adjusted_scores(candidates, scores)
 
                 idx = self.sampler.sample(adjusted_scores)
@@ -181,13 +200,14 @@ class SamplingStep(PipelineStep):
                     
                 sampled_candidates.append(candidate)
                 sampled_scores.append(score)
+                self.seen.add(candidate)
 
                 for heuristic in self.heuristics:
-                    features = self.feature_service.get([{'status_id': candidate}], heuristic.features)[0]
+                    features = self.feature_service.get([{self.entity: candidate}], heuristic.features)[0]
                     heuristic.update_seen(candidate, features)
                 
                 break
-
+        
         return sampled_candidates, np.array(sampled_scores)
 
 class Feed():
@@ -263,6 +283,7 @@ class Feed():
         self.step(SamplingStep(
             sampler, 
             feature_service=self.feature_service,
+            entity=self.entity,
             heuristics=self._heuristics,
             unique=unique,
             n=n,
@@ -272,7 +293,7 @@ class Feed():
         return self
 
     def paginate(self, limit: int, offset: int = 0):
-        self.step(PagingationStep(limit, offset))
+        self.step(PaginationStep(limit, offset))
 
         return self
 
@@ -320,3 +341,6 @@ class Feed():
         candidates, _ = self.pipeline[step_idx].results()
 
         return candidates
+
+    def __getitem__(self, idx):
+        return self.pipeline[idx]
