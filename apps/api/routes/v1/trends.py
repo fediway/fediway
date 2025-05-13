@@ -41,6 +41,7 @@ async def status_trends(
         .select('status_id')
         .sources([(source, max_candidates_per_source) for source in sources])
         .rank(ranker)
+        .remember()
         .diversify(by='status:account_id', penalty=0.1)
         .sample(config.fediway.feed_batch_size, sampler=InverseTransformSampler())
         .paginate(config.fediway.feed_batch_size, offset=offset)

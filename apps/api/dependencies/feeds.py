@@ -15,7 +15,7 @@ from modules.fediway.heuristics import Heuristic
 def get_feed(request: Request, 
              response: Response, 
              tasks: BackgroundTasks,
-             db: DBSession = Depends(get_db_session)):
+             db: DBSession = Depends(get_db_session)) -> FeedService:
 
     return FeedService(
         db=db, 

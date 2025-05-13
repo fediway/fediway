@@ -82,7 +82,8 @@ class FeatureService(Features):
 
         if cached_df is not None:
             df.index = pd.DataFrame(missing_entities).values[:, 0]
-            df = pd.concat([df, cached_df]).reindex(pd.DataFrame(entities).values[:, 0])
+            df = pd.concat([df, cached_df])
+            df = df[~df.index.duplicated()].reindex(pd.DataFrame(entities).values[:, 0])
 
         logger.info(f"Fetched features for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds.")
 

@@ -70,6 +70,11 @@ class FeedService():
 
         return self
 
+    def remember(self):
+        self.pipeline.remember()
+
+        return self
+
     def sources(self, sources: list[tuple[Source, int]]):
         self.pipeline.sources(sources)
 
