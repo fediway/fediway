@@ -11,7 +11,6 @@ from .handlers.schwarm import (
     StatusEventHandler as SchwarmStatusEventHandler,
     StatusStatsEventHandler as SchwarmStatusStatsEventHandler,
     FavouriteEventHandler as SchwarmFavouriteEventHandler,
-    FollowEventHandler as SchwarmFollowEventHandler,
     MentionEventHandler as SchwarmMentionEventHandler,
     StatusTagEventHandler as SchwarmStatusTagEventHandler,
 )
@@ -69,10 +68,6 @@ async def on_status(event: DebeziumEvent):
 @broker.subscriber("mentions")
 async def on_mentions(event: DebeziumEvent):
     await process_debezium_event(event, SchwarmMentionEventHandler, args=(Schwarm(driver), ))
-
-@broker.subscriber("follows")
-async def on_follows(event: DebeziumEvent):
-    await process_debezium_event(event, SchwarmFollowEventHandler, args=(Schwarm(driver), ))
 
 @broker.subscriber("favourites")
 async def on_favourites(event: DebeziumEvent):

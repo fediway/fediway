@@ -22,7 +22,7 @@ Fediway brings algorithmic feeds to Mastodon in an attempt to make the Fediverse
 
 The algorithm follows of a multi-stage pipeline that consists of the following main stages:
 
-1. **Candidate Sourcing**: ~1000 Posts are fetched from various sources which aims to preselect the best candidates from millions of statuses.
+1. **Candidate Sourcing**: ~1000 Posts are fetched from various sources which aim to preselect the best candidates from millions of posts.
 2. **Ranking**: The candidates are ranked by a machine learning model that estimates the likelihood of user interaction with each candidate.
 3. **Sampling**: In the final stage, heuristics are applied to diversify recommendations which are sampled depending on the engagement scores estimated in the ranking step.
 

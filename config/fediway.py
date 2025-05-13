@@ -1,5 +1,5 @@
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 from pydantic import SecretStr
 from sqlalchemy import URL
 
@@ -33,6 +33,9 @@ class FediwayConfig(BaseConfig):
     schwarm_migrations_path: str = 'migrations/schwarm'
     datasets_path: str = 'data/datasets'
     datasets_s3_endpoint: str | None = None
+
+    def feed_max_age(self):
+        return datetime.now() - timedelta(days=self.feed_max_age_in_days)
 
     @property
     def memgraph_url(self):
