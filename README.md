@@ -4,10 +4,17 @@ Fediway brings algorithmic feeds to Mastodon in an attempt to make the Fediverse
 
 ## Table Of Contents
 
+- [Architecture](#architecture)
 - [The Algorithm](#how_it_works)
     - [Recommendation Engine](#engine)
     - [Candidate Sources](#sources)
 - [Setup](#setup)
+
+<a name="architecture"></a>
+
+## Architecture
+
+![Fediway Architecture](architecture.jpg "Fediway Architecture")
 
 <a name="how_it_works"></a>
 
@@ -57,11 +64,12 @@ Narrowing down the vast pool consiting of up to billions of potential posts to r
 
 ## Setup
 
-A minimal working fediway server requires the following services:
+Fediway requires the following services:
 
 - [Memgraph](https://memgraph.com/) - In memory graph database for candidate sourcing
 - [RisingWave](https://risingwave.com/) - Streaming database serving real time features for ML inference
 - [Apache Kafka](https://kafka.apache.org/) - Message broker for ingesting data into memgraph, serving real time features and more
+- [Qdrant](https://qdrant.tech/) (Optional) - Vector database for content based candidates sourcing
 
 <details>
 
@@ -75,6 +83,17 @@ services:
     image: memgraph/memgraph-mage:3.1.1-memgraph-3.1.1
     ports:
       - "7687:7687"
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333" # HTTP API
+      - "6334:6334" # gRPC API
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   postgres:
     image: postgres:16

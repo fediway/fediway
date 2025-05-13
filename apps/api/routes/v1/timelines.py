@@ -22,18 +22,16 @@ from config import config
 
 router = APIRouter()
 
-def public_timeline_sources(
-    # hot_statuses_by_language: list[Source] = Depends(get_hot_statuses_by_language_source)
+def public_sources(
     trending_statuses_by_influential_accounts: list[Source] = Depends(get_trending_statuses_by_influential_accounts_source),
-    # collaborative_filtering: list[Source] = Depends(get_collaborative_filtering_source),
 ):
-    # return collaborative_filtering
     return trending_statuses_by_influential_accounts
 
 @router.get('/public')
 async def public_timeline(
     request: Request,
     feed: FeedService = Depends(get_feed),
+    sources = Depends(public_sources),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
