@@ -1,5 +1,5 @@
 -- :up
-CREATE MATERIALIZED VIEW status_features AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS status_features AS
 SELECT
   s.id as status_id,
   MAX(st.favourites_count) AS fav_count,

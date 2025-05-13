@@ -1,6 +1,6 @@
 
 -- :up
-CREATE MATERIALIZED VIEW status_texts AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS status_texts AS
 SELECT
     s.id as status_id,
     s.text as text,

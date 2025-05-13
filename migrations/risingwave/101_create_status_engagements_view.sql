@@ -1,5 +1,5 @@
 -- :up
-CREATE MATERIALIZED VIEW status_engagements AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS status_engagements AS
 (
   -- favourites
   SELECT
