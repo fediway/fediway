@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE tags (
+CREATE TABLE IF NOT EXISTS tags (
     id BIGINT PRIMARY KEY,
     name VARCHAR,
     display_name VARCHAR,

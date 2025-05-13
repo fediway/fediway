@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE account_stats (
+CREATE TABLE IF NOT EXISTS account_stats (
     id BIGINT PRIMARY KEY,
     account_id BIGINT,
     statuses_count BIGINT,

@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE status_stats (
+CREATE TABLE IF NOT EXISTS status_stats (
     id BIGINT PRIMARY KEY,
     status_id BIGINT,
     reblogs_count BIGINT,

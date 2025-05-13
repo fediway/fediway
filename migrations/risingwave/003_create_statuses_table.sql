@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE statuses (
+CREATE TABLE IF NOT EXISTS statuses (
     id BIGINT PRIMARY KEY,
     uri VARCHAR,
     text TEXT,

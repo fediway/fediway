@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE mentions (
+CREATE TABLE IF NOT EXISTS mentions (
     id BIGINT PRIMARY KEY,
     status_id BIGINT,
     account_id BIGINT,

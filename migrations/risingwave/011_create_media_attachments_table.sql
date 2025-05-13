@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE media_attachments (
+CREATE TABLE IF NOT EXISTS media_attachments (
     id BIGINT PRIMARY KEY,
     status_id BIGINT,
     account_id BIGINT,

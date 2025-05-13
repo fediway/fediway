@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE status_text_embeddings (
+CREATE TABLE IF NOT EXISTS status_text_embeddings (
     status_id BIGINT PRIMARY KEY,
     embedding REAL[],
     created_at TIMESTAMP

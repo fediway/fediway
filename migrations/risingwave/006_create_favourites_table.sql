@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE favourites (
+CREATE TABLE IF NOT EXISTS favourites (
     id BIGINT PRIMARY KEY,
     status_id BIGINT,
     account_id BIGINT,

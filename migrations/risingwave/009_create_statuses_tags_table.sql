@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE statuses_tags (
+CREATE TABLE IF NOT EXISTS statuses_tags (
     status_id BIGINT,
     tag_id BIGINT,
     PRIMARY KEY (status_id, tag_id)

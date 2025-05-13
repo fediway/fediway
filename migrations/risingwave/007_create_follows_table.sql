@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE follows (
+CREATE TABLE IF NOT EXISTS follows (
     id BIGINT PRIMARY KEY,
     account_id BIGINT,
     target_account_id BIGINT,

@@ -1,6 +1,6 @@
 
 -- :up
-CREATE TABLE accounts (
+CREATE TABLE IF NOT EXISTS accounts (
     id BIGINT PRIMARY KEY,
     username VARCHAR,
     domain VARCHAR,
