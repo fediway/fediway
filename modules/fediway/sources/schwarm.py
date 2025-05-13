@@ -9,7 +9,7 @@ class TrendingStatusesByInfluentialUsers(Source):
         driver, 
         language: str = 'en', 
         max_age: timedelta = timedelta(days=3),
-        top_n: int = 500,
+        top_n: int = 5000,
         alpha: float = 1.0
     ):
         self.driver = driver
@@ -21,22 +21,17 @@ class TrendingStatusesByInfluentialUsers(Source):
     def collect(self, limit: int):
         query = """
         WITH timestamp() / 1000 AS now
-        MATCH (a:Account)-[:CREATED_BY]->(s:Status {language: $language})
+        MATCH (s:Status {language: $language})
         WHERE 
             s.score IS NOT NULL
         AND s.created_at > $max_age
-        WITH a, s, (now - s.created_at) / 86400 AS age_days
+        WITH s, now
         ORDER BY s.score DESC
         LIMIT $top_n
-        WITH 
-            a, 
-            s, 
-            age_days, 
-            EXP(-$alpha * age_days) * s.score as score
-        ORDER BY a.id, score DESC
-        WITH a.id AS account_id, collect([s.id, score])[0] AS top_status
-        RETURN account_id, top_status[0] AS status_id, top_status[1] AS score
+        WITH s, (now - s.created_at) / 86400 AS age_days
+        WITH s, EXP(-$alpha * age_days) * s.score as score
         ORDER BY score DESC
+        RETURN s.id as status_id, score
         LIMIT $limit;
         """
 
