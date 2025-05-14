@@ -14,6 +14,8 @@ from .base import BaseConfig
 class FeastConfig(BaseConfig):
     feast_registry: str = 'data/features.db'
 
+    feast_online_store_ttl: int = 3600 * 60 * 30
+
     feast_offline_store_enabled: bool = False
     feast_offline_store_s3_endpoint: str = ''
     feast_offline_store_path: str = 'data/features'
@@ -43,7 +45,8 @@ class FeastConfig(BaseConfig):
             connection_string += f",password={self.feast_redis_pass.get_secret_value()}"
 
         return RedisOnlineStoreConfig(
-            connection_string=connection_string
+            connection_string=connection_string,
+            key_ttl_seconds=self.feast_online_store_ttl
         )
 
     @property

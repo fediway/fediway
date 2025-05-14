@@ -23,6 +23,7 @@
     SUM(num_mentions) AS num_mentions
   FROM 
     TUMBLE (enriched_status_engagements, event_time, INTERVAL '{{ interval }}')
+  WHERE event_time >= NOW() - INTERVAL '60 days'
   GROUP BY {{ group_id }}, window_start, window_end;
 
   CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_all_features AS
@@ -94,6 +95,7 @@
       TUMBLE (enriched_status_engagements, event_time, INTERVAL '{{ interval }}')
     WHERE
       type = '{{ type }}'
+    AND event_time >= NOW() - INTERVAL '60 days'
     GROUP BY {{ group_id }}, window_start, window_end;
 
     CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_is_{{ type }}_features AS
@@ -159,6 +161,7 @@
     FROM 
       TUMBLE (enriched_status_engagements, event_time, INTERVAL '{{ interval }}')
     WHERE has_{{ media }}
+    AND event_time >= NOW() - INTERVAL '60 days'
     GROUP BY {{ group_id }}, window_start, window_end;
 
     CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_has_{{ media }}_features AS
