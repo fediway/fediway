@@ -3,7 +3,7 @@
 {% for group_id, group, interval, interval_name, specs in [
   ('account_id', 'account', '1 HOUR', 'hourly', [('24 HOURS', '1d'), ('7 DAYS', '7d'), ('30 DAYS', '30d')]), 
   ('author_id', 'author', '1 HOUR', 'hourly', [('24 HOURS', '1d'), ('7 DAYS', '7d'), ('30 DAYS', '30d')]),
-  ('account_id, author_id', 'account_author', '1 DAY', 'daily', [('30 DAYS', '30d')]),
+  ('account_id,author_id', 'account_author', '1 DAY', 'daily', [('30 DAYS', '30d')]),
 ] -%}
   CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_all_{{ interval_name }} AS
   SELECT
@@ -26,14 +26,14 @@
   WHERE event_time >= NOW() - INTERVAL '60 days'
   GROUP BY {{ group_id }}, window_start, window_end;
 
-  CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_all_features AS
-  SELECT
-      {% for id in group_id.split(',') -%}
-        {{ id }}::BIGINT,
-      {% endfor %}
-      event_time::TIMESTAMP, 
+  {% for intervals, spec in specs %}
+    CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_all_features_{{ spec }} AS
+    SELECT
+        {% for id in group_id.split(',') -%}
+          {{ id }}::BIGINT,
+        {% endfor %}
+        event_time::TIMESTAMP, 
 
-      {% for intervals, spec in specs %}
         (SUM(num_images) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_images_{{ spec }},
         (SUM(num_gifvs) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_gifvs_{{ spec }},
         (SUM(num_videos) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_videos_{{ spec }},
@@ -41,9 +41,32 @@
         (SUM(fav_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS fav_count_{{ spec }},
         (SUM(reblogs_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS reblogs_count_{{ spec }},
         (SUM(replies_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS replies_count_{{ spec }}
-        {% if not loop.last %},{% endif %}
+    FROM {{ group }}_engagement_all_{{ interval_name }};
+  {% endfor %}
+
+  CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_all_features AS
+  SELECT
+      {% for id in group_id.split(',') -%}
+        a.{{ id }}::BIGINT,
       {% endfor %}
-  FROM {{ group }}_engagement_all_{{ interval_name }};
+      a.event_time::TIMESTAMP,
+      {% for intervals, spec in specs %}
+        i{{ spec }}.num_images_{{ spec }},
+        i{{ spec }}.num_gifvs_{{ spec }},
+        i{{ spec }}.num_videos_{{ spec }},
+        i{{ spec }}.num_audios_{{ spec }},
+        i{{ spec }}.fav_count_{{ spec }},
+        i{{ spec }}.reblogs_count_{{ spec }},
+        i{{ spec }}.replies_count_{{ spec }}{% if not loop.last %},{% endif %}
+      {% endfor %}    
+  FROM {{ group }}_engagement_all_{{ interval_name }} a
+  {% for intervals, spec in specs %}
+    LEFT JOIN {{ group }}_engagement_all_features_{{ spec }} i{{ spec }}
+      ON a.event_time = i{{ spec }}.event_time
+      {% for id in group_id.split(',') -%}
+        AND a.{{ id }} = i{{ spec }}.{{ id }}
+      {% endfor %}
+  {% endfor %};
 
   CREATE TABLE IF NOT EXISTS offline_fs_{{ group }}_engagement_all_features (
       {% for id in group_id.split(',') -%}
@@ -98,21 +121,41 @@
     AND event_time >= NOW() - INTERVAL '60 days'
     GROUP BY {{ group_id }}, window_start, window_end;
 
-    CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_is_{{ type }}_features AS
-    SELECT
-        {% for id in group_id.split(',') -%}
-          {{ id }}::BIGINT,
-        {% endfor %}
-        event_time::TIMESTAMP, 
-
-        {% for intervals, spec in specs %}
+    {% for intervals, spec in specs %}
+      CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_is_{{ type }}_features_{{ spec }} AS
+      SELECT
+          {% for id in group_id.split(',') -%}
+            {{ id }}::BIGINT,
+          {% endfor %}
+          event_time::TIMESTAMP, 
+          
           (SUM(num_images) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_images_{{ spec }},
           (SUM(num_gifvs) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_gifvs_{{ spec }},
           (SUM(num_videos) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_videos_{{ spec }},
           (SUM(num_audios) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_audios_{{ spec }}
-          {% if not loop.last %},{% endif %}
+      FROM {{ group }}_engagement_is_{{ type }}_{{ interval_name }};
+    {% endfor %}
+
+    CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_is_{{ type }}_features AS
+    SELECT
+        {% for id in group_id.split(',') -%}
+          a.{{ id }}::BIGINT,
         {% endfor %}
-    FROM {{ group }}_engagement_is_{{ type }}_{{ interval_name }};
+        a.event_time::TIMESTAMP,
+        {% for intervals, spec in specs %}
+          i{{ spec }}.num_images_{{ spec }},
+          i{{ spec }}.num_gifvs_{{ spec }},
+          i{{ spec }}.num_videos_{{ spec }},
+          i{{ spec }}.num_audios_{{ spec }}{% if not loop.last %},{% endif %}
+        {% endfor %}    
+    FROM {{ group }}_engagement_is_{{ type }}_{{ interval_name }} a
+    {% for intervals, spec in specs %}
+      LEFT JOIN {{ group }}_engagement_is_{{ type }}_features_{{ spec }} i{{ spec }}
+        ON a.event_time = i{{ spec }}.event_time
+        {% for id in group_id.split(',') -%}
+          AND a.{{ id }} = i{{ spec }}.{{ id }}
+        {% endfor %}
+    {% endfor %};
 
     CREATE TABLE IF NOT EXISTS offline_fs_{{ group }}_engagement_is_{{ type }}_features (
         {% for id in group_id.split(',') -%}
@@ -164,20 +207,39 @@
     AND event_time >= NOW() - INTERVAL '60 days'
     GROUP BY {{ group_id }}, window_start, window_end;
 
-    CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_has_{{ media }}_features AS
-    SELECT
-        {% for id in group_id.split(',') -%}
-          {{ id }}::BIGINT,
-        {% endfor %}
-        event_time::TIMESTAMP,  
+    {% for intervals, spec in specs %}
+      CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_has_{{ media }}_features_{{ spec }} AS
+      SELECT
+          {% for id in group_id.split(',') -%}
+            {{ id }}::BIGINT,
+          {% endfor %}
+          event_time::TIMESTAMP,  
 
-        {% for intervals, spec in specs %}
           (SUM(fav_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS fav_count_{{ spec }},
           (SUM(reblogs_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS reblogs_count_{{ spec }},
           (SUM(replies_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS replies_count_{{ spec }}
-          {% if not loop.last %},{% endif %}
+      FROM {{ group }}_engagement_has_{{ media }}_{{ interval_name }};
+    {% endfor %}
+
+    CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_has_{{ type }}_features AS
+    SELECT
+        {% for id in group_id.split(',') -%}
+          a.{{ id }}::BIGINT,
         {% endfor %}
-    FROM {{ group }}_engagement_has_{{ media }}_{{ interval_name }};
+        a.event_time::TIMESTAMP,
+        {% for intervals, spec in specs %}
+          i{{ spec }}.fav_count_{{ spec }},
+          i{{ spec }}.reblogs_count_{{ spec }},
+          i{{ spec }}.replies_count_{{ spec }}{% if not loop.last %},{% endif %}
+        {% endfor %}    
+    FROM {{ group }}_engagement_has_{{ media }}_{{ interval_name }} a
+    {% for intervals, spec in specs %}
+      LEFT JOIN {{ group }}_engagement_has_{{ media }}_features_{{ spec }} i{{ spec }}
+        ON a.event_time = i{{ spec }}.event_time
+        {% for id in group_id.split(',') -%}
+          AND a.{{ id }} = i{{ spec }}.{{ id }}
+        {% endfor %}
+    {% endfor %};
 
     CREATE TABLE IF NOT EXISTS offline_fs_{{ group }}_engagement_has_{{ media }}_features (
         {% for id in group_id.split(',') -%}
@@ -211,12 +273,18 @@
 
 -- :down
 {% for group, interval_name in [('account', 'hourly'), ('author', 'hourly'), ('account_author', 'daily')] -%}
+  {% for intervals, spec in specs %}
+    DROP VIEW IF EXISTS {{ group }}_engagement_all_features_{{ spec }};
+  {% endfor -%}
   DROP VIEW IF EXISTS {{ group }}_engagement_all_{{ interval_name }};
   DROP VIEW IF EXISTS {{ group }}_engagement_all_features;
   DROP TABLE IF EXISTS offline_fs_{{ group }}_engagement_all_features;
   DROP SINK IF EXISTS {{ group }}_engagement_all_sink;
 
   {% for type in ['favourite', 'reblog', 'reply'] -%}
+    {% for intervals, spec in specs %}
+      DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_features_{{ spec }};
+    {% endfor -%}
     DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_{{ interval_name }};
     DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_features;
     DROP TABLE IF EXISTS offline_fs_{{ group }}_engagement_is_{{ type }}_features;

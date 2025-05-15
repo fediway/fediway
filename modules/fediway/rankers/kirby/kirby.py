@@ -93,8 +93,6 @@ class Kirby():
         return cls(model, scaler, features, labels)
 
     def train(self, dataset: pd.DataFrame):
-        print(dataset)
-        exit()
         X = self.scaler.fit_transform(dataset[self.features].values)
         y = np.argmax(dataset[self.labels].values.astype(int), axis=1)
 

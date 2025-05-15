@@ -151,7 +151,16 @@ def update(version: str):
                 typer.echo(f"Rolled back migration {version}")
 
             with conn.cursor() as cur:
-                cur.execute(up_sql)
+                for query in up_sql.split(";"):
+                    try:
+                        cur.execute(query+";")
+                        conn.commit()
+                    except Exception as e:
+                        if str(e) == "can't execute an empty query":
+                            continue
+                        print(query)
+                        raise e
+                    print(query)
                 cur.execute("INSERT INTO _migrations (version) VALUES (%s);", (version,))
                 conn.commit()
 
