@@ -72,6 +72,7 @@ def _get_historical_features_query(entity_table: str, feature_views: list[Featur
     features_clause = ' AND '.join([f"{fv.name} IS NOT NULL" for fv in feature_views])
     entties_select = ", ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
     fv_select = ", ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
+
     query = select(text(f"""ds.account_id, 
         ds.status_id, 
         COALESCE(BOOL_OR(l.is_favourited), FALSE) AS is_favourited,

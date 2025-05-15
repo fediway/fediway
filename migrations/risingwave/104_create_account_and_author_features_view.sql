@@ -237,29 +237,10 @@
 {% endfor -%}
 
 -- :down
-{% for group, interval_name in [('account', 'hourly'), ('author', 'hourly'), ('account_author', 'daily')] -%}
-  {% for intervals, spec in specs %}
-    DROP VIEW IF EXISTS {{ group }}_engagement_all_features_{{ spec }};
-  {% endfor -%}
-  DROP VIEW IF EXISTS {{ group }}_engagement_all_{{ interval_name }};
-  DROP VIEW IF EXISTS {{ group }}_engagement_all_features;
-  DROP TABLE IF EXISTS offline_fs_{{ group }}_engagement_all_features;
-  DROP SINK IF EXISTS {{ group }}_engagement_all_sink;
-
-  {% for type in ['favourite', 'reblog', 'reply'] -%}
-    {% for intervals, spec in specs %}
-      DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_features_{{ spec }};
-    {% endfor -%}
-    DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_{{ interval_name }};
-    DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_features;
-    DROP TABLE IF EXISTS offline_fs_{{ group }}_engagement_is_{{ type }}_features;
-    DROP SINK IF EXISTS {{ group }}_engagement_is_{{ type }}_sink;
-  {% endfor -%}
-
-  {% for media in ['image', 'gifv', 'video'] -%}
-    DROP VIEW IF EXISTS {{ group }}_engagement_has_{{ media }}_{{ interval_name }};
-    DROP VIEW IF EXISTS {{ group }}_engagement_has_{{ media }}_features;
-    DROP TABLE IF EXISTS offline_fs_{{ group }}_engagement_has_{{ media }}_features;
-    DROP SINK IF EXISTS {{ group }}_engagement_has_{{ media }}_sink;
+{% for group, specs in [('account', ['1d', '7d', '30d']), ('author', ['1d', '7d', '30d']), ('account_author', ['30d'])] -%}
+  {% for spec in specs -%}
+    DROP VIEW IF EXISTS {{ group }}_engagement_all_{{ spec }}_features;
+    DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_{{ spec }}_features;
+    DROP VIEW IF EXISTS {{ group }}_engagement_has_{{ media }}_{{ spec }}_features;
   {% endfor -%}
 {% endfor -%}
