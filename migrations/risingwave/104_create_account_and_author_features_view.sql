@@ -34,13 +34,13 @@
       event_time::TIMESTAMP, 
 
       {% for intervals, spec in specs %}
-        (SUM(num_images) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS num_images_{{ spec }},
-        (SUM(num_gifvs) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS num_gifvs_{{ spec }},
-        (SUM(num_videos) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS num_videos_{{ spec }},
-        (SUM(num_audios) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS num_audios_{{ spec }},
-        (SUM(fav_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS fav_count_{{ spec }},
-        (SUM(reblogs_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS reblogs_count_{{ spec }},
-        (SUM(replies_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS replies_count_{{ spec }}
+        (SUM(num_images) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_images_{{ spec }},
+        (SUM(num_gifvs) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_gifvs_{{ spec }},
+        (SUM(num_videos) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_videos_{{ spec }},
+        (SUM(num_audios) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_audios_{{ spec }},
+        (SUM(fav_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS fav_count_{{ spec }},
+        (SUM(reblogs_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS reblogs_count_{{ spec }},
+        (SUM(replies_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS replies_count_{{ spec }}
         {% if not loop.last %},{% endif %}
       {% endfor %}
   FROM {{ group }}_engagement_all_{{ interval_name }};
@@ -106,10 +106,10 @@
         event_time::TIMESTAMP, 
 
         {% for intervals, spec in specs %}
-          (SUM(num_images) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS num_images_{{ spec }},
-          (SUM(num_gifvs) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS num_gifvs_{{ spec }},
-          (SUM(num_videos) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS num_videos_{{ spec }},
-          (SUM(num_audios) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS num_audios_{{ spec }}
+          (SUM(num_images) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_images_{{ spec }},
+          (SUM(num_gifvs) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_gifvs_{{ spec }},
+          (SUM(num_videos) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_videos_{{ spec }},
+          (SUM(num_audios) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS num_audios_{{ spec }}
           {% if not loop.last %},{% endif %}
         {% endfor %}
     FROM {{ group }}_engagement_is_{{ type }}_{{ interval_name }};
@@ -172,9 +172,9 @@
         event_time::TIMESTAMP,  
 
         {% for intervals, spec in specs %}
-          (SUM(fav_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS fav_count_{{ spec }},
-          (SUM(reblogs_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS reblogs_count_{{ spec }},
-          (SUM(replies_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL {{ intervals }} PRECEDING AND CURRENT ROW))::INT AS replies_count_{{ spec }}
+          (SUM(fav_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS fav_count_{{ spec }},
+          (SUM(reblogs_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS reblogs_count_{{ spec }},
+          (SUM(replies_count) OVER (PARTITION BY {{ group_id }} ORDER BY window_end RANGE BETWEEN INTERVAL '{{ intervals }}' PRECEDING AND CURRENT ROW))::INT AS replies_count_{{ spec }}
           {% if not loop.last %},{% endif %}
         {% endfor %}
     FROM {{ group }}_engagement_has_{{ media }}_{{ interval_name }};
