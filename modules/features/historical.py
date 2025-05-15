@@ -30,7 +30,7 @@ def create_entities_table(name: str, db: Session) -> Table:
 def _get_historical_features_query(entity_table: str, feature_views: list[FeatureView]) -> str:
     queries = []
     for fv in feature_views:
-        table = f"offline_fs_{fv.name}_features"
+        table = f"{fv.name}_features"
         schema_select_clause = ', '.join([f'f.{f.name}' for f in fv.schema])
         entities_select_clause = ', '.join([f'f.{e}' for e in fv.entities])
         entities_and_clause = ' AND '.join([f'f.{e} = ds.{e}' for e in fv.entities])

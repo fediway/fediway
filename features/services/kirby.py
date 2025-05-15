@@ -7,8 +7,8 @@ from ..views.engagement import (
     account_author_features
 )
 
-ranker_features = FeatureService(
-    name="ranker",
+kirby_features = FeatureService(
+    name="kirby",
     features=(
         account_features + 
         author_features + 

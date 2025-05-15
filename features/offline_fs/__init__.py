@@ -29,7 +29,7 @@ def get_historical_features(entity_table: str, feature_views: list[FeatureView],
                 columns.append(fv_select)
             else:
                 columns.append(f"NULL::BIGINT[] AS {_fv.name}")
-        columns = ',\n  '.join(columns)        
+        columns = ',\n  '.join(columns)
 
         query = f"""
         select 

@@ -96,7 +96,7 @@ def migrate():
             typer.echo(f"Applied migration {version}")
 
 @app.command("rollback")
-def rollback():
+def rollback(version: str | None = None):
     conn = get_connection()
     ensure_migration_table(conn)
     applied = get_applied_migrations(conn)
@@ -107,10 +107,8 @@ def rollback():
         migration_dir = Path(path)
 
         for file in reversed(sorted(migration_dir.glob("*.sql"))):
-            version = file.stem
-            
-            # if version not in applied:
-            #     continue
+            if version is not None and version != file.stem:
+                continue
             
             with open(file, 'r') as f:
                 sql = env_substitute(f.read(), context)
@@ -118,11 +116,12 @@ def rollback():
             _, down_sql = parse_migration(sql)
 
             with conn.cursor() as cur:
+                print(down_sql)
                 cur.execute(down_sql)
-                cur.execute("DELETE FROM _migrations WHERE version = %s;", (version,))
+                cur.execute("DELETE FROM _migrations WHERE version = %s;", (file.stem,))
                 conn.commit()
 
-            typer.echo(f"Rolled back migration {version}")
+            typer.echo(f"Rolled back migration {file.stem}")
 
 @app.command("update")
 def update(version: str):
@@ -160,7 +159,6 @@ def update(version: str):
                             continue
                         print(query)
                         raise e
-                    print(query)
                 cur.execute("INSERT INTO _migrations (version) VALUES (%s);", (version,))
                 conn.commit()
 

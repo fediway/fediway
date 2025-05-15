@@ -54,18 +54,17 @@ FEATURES = [
 def _make_engagement_fv(
     group, 
     entities, 
-    specs: list[str], 
+    spec: str, 
     infix: str, 
     engagement_type: str,
     fields: list[str]
 ) -> FeatureView:
-    view_name = f"{group}_{infix}_{engagement_type}"
+    view_name = f"{group}_{infix}_{engagement_type}_{spec}"
 
     schema = []
 
-    for spec in specs:
-        for field in fields:
-            schema.append(Field(name=f"{field}_{spec}", dtype=Int64))
+    for field in fields:
+        schema.append(Field(name=f"{field}_{spec}", dtype=Int64))
 
     return make_feature_view(
         view_name,
@@ -78,19 +77,20 @@ def _make_engagement_fv(
 for group, entities, specs in GROUPS:
     for feats in FEATURES:
         for engagement_type in feats['types']:
+            
+            for spec in specs:
+                _fv = _make_engagement_fv(
+                    group,
+                    entities=entities,
+                    spec=spec,
+                    engagement_type=engagement_type,
+                    infix=feats['infix'],
+                    fields=feats['fields']
+                )
 
-            _fv = _make_engagement_fv(
-                group,
-                entities=entities,
-                specs=specs,
-                engagement_type=engagement_type,
-                infix=feats['infix'],
-                fields=feats['fields']
-            )
-
-            if group == 'account':
-                account_features.append(_fv)
-            if group == 'author':
-                author_features.append(_fv)
-            if group == 'account_author':
-                account_author_features.append(_fv)
+                if group == 'account':
+                    account_features.append(_fv)
+                if group == 'author':
+                    author_features.append(_fv)
+                if group == 'account_author':
+                    account_author_features.append(_fv)
