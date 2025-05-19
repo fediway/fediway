@@ -70,7 +70,7 @@ def train_kirby(
     path: str = config.fediway.datasets_path,
     seed: int = 42
 ) -> int:
-    from modules.fediway.rankers.kirby import Kirby
+    from modules.fediway.rankers.kirby import Kirby, get_feature_views
     from shared.core.feast import feature_store
     from dask import dataframe as dd
     import pandas as pd
@@ -89,7 +89,13 @@ def train_kirby(
         storage_options=storage_options,
     ).compute()
 
-    features = [c for c in train.columns if '__' in c]
+    features = []
+
+    for fv in get_feature_views(feature_store):
+        for field in fv.schema:
+            if field in fv.entities:
+                continue
+            features.append(f"{fv.name}__{field.name}")
 
     logger.info(f"[Train] size: {len(train)}")
     for label in labels:

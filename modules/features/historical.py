@@ -1,4 +1,5 @@
 
+import json
 import pandas as pd
 from feast import FeatureView
 from dask.base import normalize_token
@@ -31,7 +32,7 @@ def _get_historical_features_query(entity_table: str, feature_views: list[Featur
     queries = []
     for fv in feature_views:
         table = f"{fv.name}_features"
-        schema_select_clause = ', '.join([f'f.{f.name}' for f in fv.schema])
+        schema_select_clause = ', '.join([f'f.{f.name}' for f in fv.schema if f.name not in fv.entities])
         entities_select_clause = ', '.join([f'f.{e}' for e in fv.entities])
         entities_and_clause = ' AND '.join([f'f.{e} = ds.{e}' for e in fv.entities])
         null_columns = ', '.join([f"NULL AS {_fv.name}" for _fv in feature_views if _fv.name != fv.name])
@@ -41,14 +42,14 @@ def _get_historical_features_query(entity_table: str, feature_views: list[Featur
             FROM {table} f 
             WHERE {entities_and_clause} AND f.event_time = latest.event_time
             LIMIT 1
-        )::BIGINT[] AS {fv.name}"""
+        )::REAL[] AS {fv.name}"""
 
         columns = []
         for _fv in feature_views:
             if _fv.name == fv.name:
                 columns.append(fv_select)
             else:
-                columns.append(f"NULL::BIGINT[] AS {_fv.name}")
+                columns.append(f"NULL::REAL[] AS {_fv.name}")
         columns = ',\n  '.join(columns)        
 
         query = f"""
@@ -101,7 +102,7 @@ class FlattenFeatureViews:
         }
         for fv in self.feature_views:
             for f in fv.schema:
-                self.schema[f"{fv.name}__{f.name}"] = pd.Series([], dtype="int64")
+                self.schema[f"{fv.name}__{f.name}"] = pd.Series([], dtype="float32")
 
     def __call__(self, df):
         if type(df[self.feature_views[0].name].values[0]) == str:
@@ -113,10 +114,13 @@ class FlattenFeatureViews:
 
             feats = {}
             for fv in self.feature_views:
-                if type(row[fv.name]) != list:
+                if pd.isna(row[fv.name]):
                     feats |= {f"{fv.name}__{f.name}": None for f in fv.schema}
                 else:
-                    feats |= {f"{fv.name}__{f.name}": value for f, value in zip(fv.schema, row[fv.name])}
+                    if type(row[fv.name]) == str:
+                        row[fv.name] = json.loads(row[fv.name])
+                    feature_names = [f.name for f in fv.schema if f not in fv.entities]
+                    feats |= {f"{fv.name}__{f}": value for f, value in zip(feature_names, row[fv.name])}
             entities = {e: row[e] for e in ['account_id', 'status_id']}
 
             row = entities | {
@@ -127,14 +131,13 @@ class FlattenFeatureViews:
             } | feats
 
             rows.append(row)
+            
 
         df = (
             pd.DataFrame(rows)[list(self.schema.keys())]
             .fillna(0.)
             .astype({f: s.dtype for f, s in self.schema.items()})
         )
-
-        print(df)
 
         return df
 
@@ -153,7 +156,7 @@ def get_historical_features_ddf(entity_table: str, feature_views: list[FeatureVi
         "is_reply_engaged_by_author": pd.Series([], dtype="boolean"),
     }
     for fv in feature_views:
-        schema[fv.name] = "object"
+        schema[fv.name] = pd.Series([], dtype="object")
 
     ddf = read_sql_join_query(
         sql=query,

@@ -9,9 +9,9 @@ SELECT
 	SUM(ss.favourites_count)::INT as favourites_count_90d,
 	SUM(ss.reblogs_count)::INT as reblogs_count_90d,
 	SUM(ss.replies_count)::INT as replies_count_90d,
-	AVG(ss.favourites_count)::INT as avg_favourites_90d,
-	AVG(ss.reblogs_count)::INT as avg_reblogs_90d,
-	AVG(ss.replies_count)::INT as avg_replies_90d,
+	AVG(ss.favourites_count)::REAL as avg_favourites_90d,
+	AVG(ss.reblogs_count)::REAL as avg_reblogs_90d,
+	AVG(ss.replies_count)::REAL as avg_replies_90d,
 	MAX(ss.favourites_count)::INT as max_favourites_90d,
 	MAX(ss.reblogs_count)::INT as max_reblogs_90d,
 	MAX(ss.replies_count)::INT as max_replies_90d

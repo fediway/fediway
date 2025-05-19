@@ -9,5 +9,5 @@ LABELS = [
 ]
 
 def get_feature_views(feature_store: FeatureStore) -> list[FeatureView]:
-    projections = feature_store.get_feature_service('kirby').feature_view_projections[:1]
+    projections = feature_store.get_feature_service('kirby').feature_view_projections
     return [feature_store.get_feature_view(projection.name) for projection in projections]
