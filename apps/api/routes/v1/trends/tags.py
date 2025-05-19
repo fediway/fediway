@@ -20,39 +20,6 @@ from config import config
 
 router = APIRouter()
 
-def public_timeline_sources(
-    trending_statuses_by_influential_accounts: list[Source] = Depends(get_trending_statuses_by_influential_accounts_source),
-):
-    return trending_statuses_by_influential_accounts
-
-@router.get('/statuses')
-async def status_trends(
-    request: Request,
-    offset: int = 0,
-    feed: FeedService = Depends(get_feed),
-    sources = Depends(public_timeline_sources),
-    db: DBSession = Depends(get_db_session),
-) -> list[StatusItem]:
-    max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
-
-    pipeline = (
-        feed
-        .name('trends/statuses')
-        .select('status_id')
-        .sources([(source, max_candidates_per_source) for source in sources])
-        .rank(ranker)
-        .remember()
-        .diversify(by='status:account_id', penalty=0.1)
-        .sample(config.fediway.feed_batch_size, sampler=InverseTransformSampler())
-        .paginate(config.fediway.feed_batch_size, offset=offset)
-    )
-
-    recommendations = await feed.execute()
-
-    statuses = db.exec(Status.select_by_ids(recommendations)).all()
-
-    return [StatusItem.from_model(status) for status in statuses]
-
 @router.get('/tags')
 async def tag_trends(
     sources = Depends(get_trending_tags_sources),
