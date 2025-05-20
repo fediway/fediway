@@ -1,4 +1,5 @@
 import pandas as pd
+from datetime import datetime
 from arango.database import StandardDatabase
 from arango.graph import Graph
 from arango.collection import VertexCollection
@@ -13,6 +14,8 @@ from modules.mastodon.models import (
     Follow,
     Favourite,
 )
+
+from .utils import parse_datetime
 
 
 def default(value, fallback):
@@ -83,6 +86,7 @@ class Herde:
             {
                 "_from": f"accounts/{follow.account_id}",
                 "_to": f"accounts/{follow.target_account_id}",
+                "created_at": parse_timestamp(follow.created_at),
             }
         )
 
@@ -92,6 +96,7 @@ class Herde:
                 {
                     "_from": f"accounts/{follow.account_id}",
                     "_to": f"accounts/{follow.target_account_id}",
+                    "created_at": parse_datetime(follow.created_at),
                 }
                 for follow in follows
             ],
@@ -111,6 +116,7 @@ class Herde:
             {
                 "_from": f"accounts/{favourite.account_id}",
                 "_to": f"statuses/{favourite.status_id}",
+                "created_at": parse_datetime(favourite.created_at),
             },
             silent=True,
         )
@@ -121,6 +127,7 @@ class Herde:
                 {
                     "_from": f"accounts/{favourite.account_id}",
                     "_to": f"statuses/{favourite.status_id}",
+                    "created_at": parse_datetime(favourite.created_at),
                 }
                 for favourite in favourites
             ],
@@ -168,6 +175,7 @@ class Herde:
             {
                 "_from": f"accounts/{status.account_id}",
                 "_to": f"status/{status.reblog_of_id}",
+                "created_at": parse_datetime(status.created_at),
             },
             overwrite=True,
         )
@@ -187,9 +195,7 @@ class Herde:
             {
                 "_key": str(status.id),
                 "language": status.language,
-                "created_at": status.created_at
-                if type(status.created_at) == int
-                else int(status.created_at.timestamp() * 1000),
+                "created_at": parse_datetime(status.created_at),
             },
             overwrite=True,
             silent=True,
@@ -209,6 +215,7 @@ class Herde:
                 {
                     "_from": f"accounts/{status.account_id}",
                     "_to": f"statuses/{status.in_reply_to_id}",
+                    "created_at": parse_datetime(status.created_at),
                 },
                 overwrite=True,
                 silent=True,
@@ -225,9 +232,7 @@ class Herde:
                     {
                         "_key": str(status.id),
                         "language": default(status.language, ""),
-                        "created_at": status.created_at
-                        if type(status.created_at) == int
-                        else int(status.created_at.timestamp() * 1000),
+                        "created_at": parse_datetime(status.created_at),
                     }
                     for status in statuses
                 ],
@@ -251,6 +256,7 @@ class Herde:
                     {
                         "_from": f"accounts/{reblog.account_id}",
                         "_to": f"statuses/{reblog.reblog_of_id}",
+                        "created_at": parse_datetime(reblog.created_at),
                     }
                     for reblog in reblogs
                 ],
@@ -263,6 +269,7 @@ class Herde:
                     {
                         "_from": f"accounts/{reply.account_id}",
                         "_to": f"statuses/{reply.reblog_of_id}",
+                        "created_at": parse_datetime(reply.created_at),
                     }
                     for reply in replies
                 ],

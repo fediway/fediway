@@ -47,3 +47,5 @@ class TriangularLoopsSource(Source):
 
         for result in cursor:
             yield result["target"]
+
+        cursor.close()

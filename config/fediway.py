@@ -9,11 +9,15 @@ from modules.fediway.heuristics import Heuristic
 
 
 class FediwayConfig(BaseConfig):
+    # feed
     feed_max_age_in_days: int = 3
     feed_max_sourced_candidates: int = 500
     feed_max_heavy_candidates: int = 100
     feed_batch_size: int = 20
     feed_decay_rate: float = 1.0
+
+    # sources
+    follows_source_recently_engaged_age_in_days: int = 7
 
     schwarm_max_status_age_in_days: int = 7
 
