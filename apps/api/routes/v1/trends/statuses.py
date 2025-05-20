@@ -1,4 +1,3 @@
-
 import random
 from sqlmodel import select, Session as DBSession
 from fastapi import APIRouter, Depends, Request
@@ -10,7 +9,7 @@ from apps.api.core.ranker import ranker
 from apps.api.services.feed_service import FeedService
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
-    get_popular_by_influential_accounts_sources
+    get_popular_by_influential_accounts_sources,
 )
 from shared.core.db import get_db_session
 from modules.mastodon.models import Tag, Status
@@ -19,29 +18,32 @@ from config import config
 
 router = APIRouter()
 
+
 def statuses_trend_sources(
-    popular_by_influential_accounts: list[Source] = Depends(get_popular_by_influential_accounts_sources),
+    popular_by_influential_accounts: list[Source] = Depends(
+        get_popular_by_influential_accounts_sources
+    ),
 ):
     return popular_by_influential_accounts
 
-@router.get('/statuses')
+
+@router.get("/statuses")
 async def status_trends(
     request: Request,
     offset: int = 0,
     feed: FeedService = Depends(get_feed),
-    sources = Depends(statuses_trend_sources),
+    sources=Depends(statuses_trend_sources),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
 
     pipeline = (
-        feed
-        .name('trends/statuses')
-        .select('status_id')
+        feed.name("trends/statuses")
+        .select("status_id")
         .sources([(source, max_candidates_per_source) for source in sources])
         .rank(ranker)
         .remember()
-        .diversify(by='status:account_id', penalty=0.1)
+        .diversify(by="status:account_id", penalty=0.1)
         .sample(config.fediway.feed_batch_size, sampler=InverseTransformSampler())
         .paginate(config.fediway.feed_batch_size, offset=offset)
     )

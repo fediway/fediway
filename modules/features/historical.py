@@ -1,4 +1,3 @@
-
 import json
 import pandas as pd
 from feast import FeatureView
@@ -9,33 +8,45 @@ from sqlalchemy import text
 from modules.utils import compile_sql, read_sql_join_query
 from tqdm import tqdm
 
+
 def create_entities_table(name: str, db: Session) -> Table:
-    table = Table(name, MetaData(),
-        Column('account_id', BigInteger, primary_key=True),
-        Column('status_id', BigInteger, primary_key=True),
-        Column('author_id', BigInteger, primary_key=True),
-        Column('time', DateTime),
+    table = Table(
+        name,
+        MetaData(),
+        Column("account_id", BigInteger, primary_key=True),
+        Column("status_id", BigInteger, primary_key=True),
+        Column("author_id", BigInteger, primary_key=True),
+        Column("time", DateTime),
     )
 
     db.exec(text(f"DROP TABLE IF EXISTS {table.name};"))
-    db.exec(text(
-        compile_sql(CreateTable(table), db.get_bind())
-        .replace(" NOT NULL", "")
-        .replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS")
-    ))
+    db.exec(
+        text(
+            compile_sql(CreateTable(table), db.get_bind())
+            .replace(" NOT NULL", "")
+            .replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS")
+        )
+    )
     db.exec(text(f"DELETE FROM {table.name};"))
     db.commit()
 
     return table
 
-def _get_historical_features_query(entity_table: str, feature_views: list[FeatureView]) -> str:
+
+def _get_historical_features_query(
+    entity_table: str, feature_views: list[FeatureView]
+) -> str:
     queries = []
     for fv in feature_views:
         table = f"{fv.name}_features"
-        schema_select_clause = ', '.join([f'f.{f.name}' for f in fv.schema if f.name not in fv.entities])
-        entities_select_clause = ', '.join([f'f.{e}' for e in fv.entities])
-        entities_and_clause = ' AND '.join([f'f.{e} = ds.{e}' for e in fv.entities])
-        null_columns = ', '.join([f"NULL AS {_fv.name}" for _fv in feature_views if _fv.name != fv.name])
+        schema_select_clause = ", ".join(
+            [f"f.{f.name}" for f in fv.schema if f.name not in fv.entities]
+        )
+        entities_select_clause = ", ".join([f"f.{e}" for e in fv.entities])
+        entities_and_clause = " AND ".join([f"f.{e} = ds.{e}" for e in fv.entities])
+        null_columns = ", ".join(
+            [f"NULL AS {_fv.name}" for _fv in feature_views if _fv.name != fv.name]
+        )
 
         fv_select = f"""(
             SELECT ARRAY[{schema_select_clause}]
@@ -50,7 +61,7 @@ def _get_historical_features_query(entity_table: str, feature_views: list[Featur
                 columns.append(fv_select)
             else:
                 columns.append(f"NULL::REAL[] AS {_fv.name}")
-        columns = ',\n  '.join(columns)        
+        columns = ",\n  ".join(columns)
 
         query = f"""
         SELECT 
@@ -65,16 +76,19 @@ def _get_historical_features_query(entity_table: str, feature_views: list[Featur
             ON {entities_and_clause} AND f.event_time < ds.time
             GROUP BY {entities_select_clause}
         ) AS latest
-        ON {entities_and_clause.replace('f', 'latest')}
+        ON {entities_and_clause.replace("f", "latest")}
         """
         queries.append(query)
 
-    entities_and_clause = ' AND '.join([f'data.{e} = ds.{e}' for e in ['account_id', 'status_id']])
-    features_clause = ' AND '.join([f"{fv.name} IS NOT NULL" for fv in feature_views])
+    entities_and_clause = " AND ".join(
+        [f"data.{e} = ds.{e}" for e in ["account_id", "status_id"]]
+    )
+    features_clause = " AND ".join([f"{fv.name} IS NOT NULL" for fv in feature_views])
     entties_select = ", ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
     fv_select = ", ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
 
-    query = select(text(f"""ds.account_id, 
+    query = select(
+        text(f"""ds.account_id, 
         ds.status_id, 
         COALESCE(BOOL_OR(l.is_favourited), FALSE) AS is_favourited,
         COALESCE(BOOL_OR(l.is_replied), FALSE) AS is_replied,
@@ -82,12 +96,14 @@ def _get_historical_features_query(entity_table: str, feature_views: list[Featur
         COALESCE(BOOL_OR(l.is_reply_engaged_by_author), FALSE) AS is_reply_engaged_by_author,
         {fv_select}
     FROM {entity_table} as ds
-    LEFT JOIN ({' UNION ALL '.join(queries)}) data ON {entities_and_clause}
+    LEFT JOIN ({" UNION ALL ".join(queries)}) data ON {entities_and_clause}
     LEFT JOIN account_status_labels l
       ON l.account_id = ds.account_id AND l.status_id = ds.status_id
-    """))
+    """)
+    )
 
     return query
+
 
 class FlattenFeatureViews:
     def __init__(self, feature_views):
@@ -107,10 +123,10 @@ class FlattenFeatureViews:
     def __call__(self, df):
         if type(df[self.feature_views[0].name].values[0]) == str:
             return pd.DataFrame(self.schema)
-        
+
         rows = []
         for status_id, row in df.iterrows():
-            row['status_id'] = status_id
+            row["status_id"] = status_id
 
             feats = {}
             for fv in self.feature_views:
@@ -120,22 +136,28 @@ class FlattenFeatureViews:
                     if type(row[fv.name]) == str:
                         row[fv.name] = json.loads(row[fv.name])
                     feature_names = [f.name for f in fv.schema if f not in fv.entities]
-                    feats |= {f"{fv.name}__{f}": value for f, value in zip(feature_names, row[fv.name])}
-            entities = {e: row[e] for e in ['account_id', 'status_id']}
+                    feats |= {
+                        f"{fv.name}__{f}": value
+                        for f, value in zip(feature_names, row[fv.name])
+                    }
+            entities = {e: row[e] for e in ["account_id", "status_id"]}
 
-            row = entities | {
-                'label.is_favourited': row.is_favourited,
-                'label.is_replied': row.is_replied,
-                'label.is_reblogged': row.is_reblogged,
-                'label.is_reply_engaged_by_author': row.is_reply_engaged_by_author,
-            } | feats
+            row = (
+                entities
+                | {
+                    "label.is_favourited": row.is_favourited,
+                    "label.is_replied": row.is_replied,
+                    "label.is_reblogged": row.is_reblogged,
+                    "label.is_reply_engaged_by_author": row.is_reply_engaged_by_author,
+                }
+                | feats
+            )
 
             rows.append(row)
-            
 
         df = (
             pd.DataFrame(rows)[list(self.schema.keys())]
-            .fillna(0.)
+            .fillna(0.0)
             .astype({f: s.dtype for f, s in self.schema.items()})
         )
 
@@ -144,7 +166,10 @@ class FlattenFeatureViews:
     def __dask_tokenize__(self):
         return normalize_token(type(self))
 
-def get_historical_features_ddf(entity_table: str, feature_views: list[FeatureView], db: Session):
+
+def get_historical_features_ddf(
+    entity_table: str, feature_views: list[FeatureView], db: Session
+):
     total = db.scalar(text(f"SELECT COUNT(*) FROM {entity_table}"))
     query = _get_historical_features_query(entity_table, feature_views)
 

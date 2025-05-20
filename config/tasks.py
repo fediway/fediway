@@ -1,4 +1,3 @@
-
 from urllib.parse import quote
 from datetime import timedelta
 from pydantic import SecretStr
@@ -9,10 +8,11 @@ from .base import BaseConfig
 from modules.fediway.sources import Source
 from modules.fediway.heuristics import Heuristic
 
-class TasksConfig(BaseConfig):    
-    worker_host: str        = 'localhost'
-    worker_port: int        = 6379
-    worker_pass: SecretStr  = ''
+
+class TasksConfig(BaseConfig):
+    worker_host: str = "localhost"
+    worker_port: int = 6379
+    worker_pass: SecretStr = ""
 
     compute_account_ranks_every_n_seconds: int = 10 * 60
     compute_tag_ranks_every_n_seconds: int = 10 * 60

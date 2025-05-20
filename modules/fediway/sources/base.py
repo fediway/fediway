@@ -1,14 +1,15 @@
-
 from datetime import timedelta
 from redis import Redis
 import json
 
-class Source():
+
+class Source:
     def collect(self, limit: int, offset: int | None = None):
         raise NotImplemented
 
     def __str__(self):
         return str(type(self))
+
 
 class RedisSource(Source):
     def __init__(self, key: str, r: Redis, ttl: timedelta):

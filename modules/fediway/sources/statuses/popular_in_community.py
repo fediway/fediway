@@ -1,5 +1,5 @@
-
 from ..base import Source
+
 
 class PopularInCommunitySource(Source):
     def __init__(self, driver, account_id: int, alpha: float = 0.1):
@@ -31,11 +31,8 @@ class PopularInCommunitySource(Source):
 
         with self.driver.session() as session:
             results = session.run(
-                query, 
-                account_id=self.account_id, 
-                limit=limit, 
-                alpha=self.alpha
+                query, account_id=self.account_id, limit=limit, alpha=self.alpha
             )
 
             for result in list(results):
-                yield result['status_id']
+                yield result["status_id"]

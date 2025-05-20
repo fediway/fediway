@@ -1,9 +1,9 @@
-
 from sqlmodel import Session, select, func, desc
 from datetime import datetime, timedelta
 
 from modules.mastodon.models import Status, StatusStats
 from .base import Source
+
 
 class DatabaseSource(Source):
     def __init__(self, db: Session, query_callbacks: list[callable] = []):
@@ -28,11 +28,15 @@ class DatabaseSource(Source):
         for candidate in self.db.exec(self.query(max_n)).all():
             yield candidate
 
+
 class HotStatuses(DatabaseSource):
-    def __init__(self, 
-                 decay_lambda: float = 2.0, 
-                 max_age: timedelta = timedelta(days=7), 
-                 *pargs, **kwargs):
+    def __init__(
+        self,
+        decay_lambda: float = 2.0,
+        max_age: timedelta = timedelta(days=7),
+        *pargs,
+        **kwargs,
+    ):
         super().__init__(*pargs, **kwargs)
 
         self.decay_lambda = decay_lambda
@@ -40,7 +44,7 @@ class HotStatuses(DatabaseSource):
 
     def priority_query(self):
         # Calculate age in days using PostgreSQL's NOW()
-        age_in_days = func.extract('epoch', func.now() - Status.created_at) / 86400
+        age_in_days = func.extract("epoch", func.now() - Status.created_at) / 86400
 
         favourites_count = func.coalesce(StatusStats.favourites_count, 0)
         reblogs_count = func.coalesce(StatusStats.reblogs_count, 0)
@@ -48,10 +52,10 @@ class HotStatuses(DatabaseSource):
 
         # Weight calculation formula
         weight = (
-            (favourites_count + 1) * 0.5 +
-            (reblogs_count + 1) * 2 +
-            (replies_count + 1) * 5 +
-            func.exp(-self.decay_lambda * age_in_days) * 100
+            (favourites_count + 1) * 0.5
+            + (reblogs_count + 1) * 2
+            + (replies_count + 1) * 5
+            + func.exp(-self.decay_lambda * age_in_days) * 100
         )
 
         # Priority calculation using exponential distribution trick
@@ -71,12 +75,11 @@ class HotStatuses(DatabaseSource):
         )
 
     def __str__(self):
-        return f'hot_statuses'
+        return f"hot_statuses"
+
 
 class HotStatusesByLanguage(HotStatuses):
-    def __init__(self, 
-                 language: str = 'en',
-                 *pargs, **kwargs):
+    def __init__(self, language: str = "en", *pargs, **kwargs):
         super().__init__(*pargs, **kwargs)
 
         self.language = language
@@ -85,28 +88,24 @@ class HotStatusesByLanguage(HotStatuses):
         return super().base_query(limit).where(Status.language == self.language)
 
     def __str__(self):
-        return f'hot_statuses_in_a_language[{self.language}]'
+        return f"hot_statuses_in_a_language[{self.language}]"
+
 
 class NewStatuses(DatabaseSource):
     def base_query(self, limit: int):
-        return (
-            select(Status.id)
-            .order_by(desc(Status.created_at))
-            .limit(limit)
-        )
+        return select(Status.id).order_by(desc(Status.created_at)).limit(limit)
+
 
 class NewStatusesByLanguage(NewStatuses):
-    def __init__(self, 
-                 language: str | list = 'en',
-                 *pargs, **kwargs):
+    def __init__(self, language: str | list = "en", *pargs, **kwargs):
         super().__init__(*pargs, **kwargs)
 
         self.language = language
 
     def base_query(self, limit: int):
         q = super().base_query(limit)
-        
+
         if type(self.language) is list:
-            return q.where(Status.language._in( self.language))
+            return q.where(Status.language._in(self.language))
         else:
             return q.where(Status.language == self.language)

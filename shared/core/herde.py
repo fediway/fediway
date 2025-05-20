@@ -1,4 +1,3 @@
-
 from neo4j import GraphDatabase
 from arango import ArangoClient, ServerConnectionError
 from loguru import logger
@@ -10,10 +9,10 @@ client = ArangoClient(hosts=config.fediway.arango_hosts)
 db = None
 try:
     db = client.db(
-        config.fediway.arango_name, 
+        config.fediway.arango_name,
         username=config.fediway.arango_user,
         password=config.fediway.arango_pass,
-        verify=True
+        verify=True,
     )
 except ServerConnectionError as e:
     logger.error(e)

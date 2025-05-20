@@ -1,14 +1,14 @@
-
 from .base import Item
 from .preview_card_author import PreviewCardAuthorItem
 from ..models import PreviewCard
 
 PREVIEW_CARD_TYPES = {
-    0: 'link',
-    1: 'photo',
-    2: 'video',
-    3: 'rich',
+    0: "link",
+    1: "photo",
+    2: "video",
+    3: "rich",
 }
+
 
 class PreviewCardItem(Item):
     url: str
@@ -41,7 +41,7 @@ class PreviewCardItem(Item):
             html=card.html,
             width=card.width,
             height=card.height,
-            image='',
+            image="",
             embed_url=card.embed_url,
             blurhash=card.blurhash,
         )

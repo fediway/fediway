@@ -1,4 +1,3 @@
-
 from .collaborative_filtering import CollaborativeFilteringSource
 from .popular_by_influential_accounts import PouplarStatusesByInfluentialAccountsSource
 from .popular_in_community import PopularInCommunitySource

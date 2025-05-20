@@ -1,11 +1,11 @@
-
 from typing import List
 from datetime import datetime
 from sqlalchemy import Column, ARRAY, Integer, String
 from sqlmodel import SQLModel, Field
-    
+
+
 class Tag(SQLModel, table=True):
-    __tablename__ = 'tags'
+    __tablename__ = "tags"
 
     id: int = Field(primary_key=True)
     name: str = Field(nullable=False)
@@ -19,8 +19,9 @@ class Tag(SQLModel, table=True):
     last_status_at: datetime = Field()
     display_name: str = Field()
 
+
 class StatusTag(SQLModel, table=True):
-    __tablename__ = 'statuses_tags'
+    __tablename__ = "statuses_tags"
 
     status_id: int = Field(primary_key=True)
     tag_id: str = Field(primary_key=True)

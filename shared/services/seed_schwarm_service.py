@@ -1,4 +1,3 @@
-
 import pandas as pd
 from dask import dataframe as dd
 from dask.base import normalize_token
@@ -13,19 +12,30 @@ from tqdm import tqdm
 import shutil
 
 from config import config
-from modules.mastodon.models import Account, Status, StatusStats, Follow, Favourite, Tag, StatusTag, Mention
+from modules.mastodon.models import (
+    Account,
+    Status,
+    StatusStats,
+    Follow,
+    Favourite,
+    Tag,
+    StatusTag,
+    Mention,
+)
 from modules.schwarm import Schwarm
 import modules.utils as utils
+
 
 class SeedSchwarmService:
     def __init__(self, db: DBSession, driver: Driver):
         self.db = db
         self.driver = driver
         self.schwarm = Schwarm(self.driver)
-        self.max_age = datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)
+        self.max_age = datetime.now() - timedelta(
+            days=config.fediway.feed_max_age_in_days
+        )
 
     def seed(self):
-
         with utils.duration("Set up memgraph in {:.3f} seconds"):
             self.schwarm.setup()
 
@@ -62,10 +72,10 @@ class SeedSchwarmService:
     def seed_statuses(self, batch_size: int = 100):
         query = (
             select(
-                Status.id, 
-                Status.account_id, 
-                Status.language, 
-                Status.created_at, 
+                Status.id,
+                Status.account_id,
+                Status.language,
+                Status.created_at,
             )
             .where(Status.created_at > self.max_age)
             .where(Status.reblog_of_id.is_(None))
@@ -84,11 +94,13 @@ class SeedSchwarmService:
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
                 index_col="id",
                 npartitions=max(1, total // 1_000),
-                meta=pd.DataFrame({
-                    "account_id": pd.Series([], dtype="int64"),
-                    "language": pd.Series([], dtype="string"),
-                    "created_at": pd.Series([], dtype="datetime64[ms]"),
-                })
+                meta=pd.DataFrame(
+                    {
+                        "account_id": pd.Series([], dtype="int64"),
+                        "language": pd.Series([], dtype="string"),
+                        "created_at": pd.Series([], dtype="datetime64[ms]"),
+                    }
+                ),
             )
             .map_partitions(InsertStatuses(self.db, self.schwarm))
             .compute()
@@ -97,10 +109,10 @@ class SeedSchwarmService:
     def seed_reblogs(self, batch_size: int = 100):
         query = (
             select(
-                Status.id, 
-                Status.account_id, 
-                Status.language, 
-                Status.created_at, 
+                Status.id,
+                Status.account_id,
+                Status.language,
+                Status.created_at,
             )
             .where(Status.created_at > self.max_age)
             .where(~Status.reblog_of_id.is_(None))
@@ -123,37 +135,35 @@ class SeedSchwarmService:
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
                 index_col="id",
                 npartitions=max(1, total // 1_000),
-                meta=pd.DataFrame({
-                    "account_id": pd.Series([], dtype="int64"),
-                    "language": pd.Series([], dtype="string"),
-                    "created_at": pd.Series([], dtype="datetime64[ms]"),
-                })
+                meta=pd.DataFrame(
+                    {
+                        "account_id": pd.Series([], dtype="int64"),
+                        "language": pd.Series([], dtype="string"),
+                        "created_at": pd.Series([], dtype="datetime64[ms]"),
+                    }
+                ),
             )
             .map_partitions(InsertReblogs(self.db, self.schwarm))
             .compute()
         )
 
     def seed_favourites(self, batch_size: int = 100):
-        query = (
-            select(
-                Favourite.id, 
-                Favourite.account_id, 
-                Favourite.status_id
-            )
-            .where(
-                exists(Status).where(and_(
-                    Status.id.label('sid') == Favourite.status_id,
-                    Status.created_at > self.max_age
-                ))
+        query = select(Favourite.id, Favourite.account_id, Favourite.status_id).where(
+            exists(Status).where(
+                and_(
+                    Status.id.label("sid") == Favourite.status_id,
+                    Status.created_at > self.max_age,
+                )
             )
         )
 
         total = self.db.scalar(
-            select(func.count(Favourite.id))
-            .join(Status, and_(
-                Status.id == Favourite.status_id,
-                Status.created_at > self.max_age
-            ))
+            select(func.count(Favourite.id)).join(
+                Status,
+                and_(
+                    Status.id == Favourite.status_id, Status.created_at > self.max_age
+                ),
+            )
         )
 
         if total == 0:
@@ -167,37 +177,41 @@ class SeedSchwarmService:
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
                 index_col="id",
                 npartitions=max(1, total // 1_000),
-                meta=pd.DataFrame({
-                    "account_id": pd.Series([], dtype="int64"),
-                    "status_id": pd.Series([], dtype="int64"),
-                })
+                meta=pd.DataFrame(
+                    {
+                        "account_id": pd.Series([], dtype="int64"),
+                        "status_id": pd.Series([], dtype="int64"),
+                    }
+                ),
             )
             .map_partitions(InsertFavourites(self.db, self.schwarm))
             .compute()
         )
 
     def seed_status_stats(self, batch_size: int = 100):
-        query = (
-            select(
-                StatusStats.status_id, 
-                StatusStats.replies_count, 
-                StatusStats.reblogs_count, 
-                StatusStats.favourites_count
-            )
-            .join(Status, and_(
+        query = select(
+            StatusStats.status_id,
+            StatusStats.replies_count,
+            StatusStats.reblogs_count,
+            StatusStats.favourites_count,
+        ).join(
+            Status,
+            and_(
                 Status.id == StatusStats.status_id,
                 Status.created_at > self.max_age,
-                Status.reblog_of_id.is_(None)
-            ))
+                Status.reblog_of_id.is_(None),
+            ),
         )
 
         total = self.db.scalar(
-            select(func.count(StatusStats.status_id))
-            .join(Status, and_(
-                Status.id == StatusStats.status_id,
-                Status.created_at > self.max_age,
-                Status.reblog_of_id.is_(None)
-            ))
+            select(func.count(StatusStats.status_id)).join(
+                Status,
+                and_(
+                    Status.id == StatusStats.status_id,
+                    Status.created_at > self.max_age,
+                    Status.reblog_of_id.is_(None),
+                ),
+            )
         )
 
         logger.info(f"Inserting {total} status stats.")
@@ -208,34 +222,36 @@ class SeedSchwarmService:
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
                 index_col="status_id",
                 npartitions=max(1, total // 1_000),
-                meta=pd.DataFrame({
-                    "replies_count": pd.Series([], dtype="int64"),
-                    "reblogs_count": pd.Series([], dtype="int64"),
-                    "favourites_count": pd.Series([], dtype="int64"),
-                })
+                meta=pd.DataFrame(
+                    {
+                        "replies_count": pd.Series([], dtype="int64"),
+                        "reblogs_count": pd.Series([], dtype="int64"),
+                        "favourites_count": pd.Series([], dtype="int64"),
+                    }
+                ),
             )
             .map_partitions(InsertStatusStats(self.db, self.schwarm))
             .compute()
         )
 
     def seed_statuses_tags(self, batch_size: int = 100):
-        query = (
-            select(StatusTag.status_id, StatusTag.tag_id)
-            .where(
-                exists(Status).where(and_(
-                    Status.id.label('sid') == StatusTag.status_id,
-                    Status.created_at > self.max_age
-                ))
+        query = select(StatusTag.status_id, StatusTag.tag_id).where(
+            exists(Status).where(
+                and_(
+                    Status.id.label("sid") == StatusTag.status_id,
+                    Status.created_at > self.max_age,
+                )
             )
         )
-        
+
         total = self.db.scalar(
-            select(func.count(StatusTag.status_id))
-            .where(
-                exists(Status).where(and_(
-                    Status.id.label('sid') == StatusTag.status_id,
-                    Status.created_at > self.max_age
-                ))
+            select(func.count(StatusTag.status_id)).where(
+                exists(Status).where(
+                    and_(
+                        Status.id.label("sid") == StatusTag.status_id,
+                        Status.created_at > self.max_age,
+                    )
+                )
             )
         )
 
@@ -247,32 +263,34 @@ class SeedSchwarmService:
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
                 index_col="status_id",
                 npartitions=max(1, total // 1_000),
-                meta=pd.DataFrame({
-                    "tag_id": pd.Series([], dtype="int64"),
-                })
+                meta=pd.DataFrame(
+                    {
+                        "tag_id": pd.Series([], dtype="int64"),
+                    }
+                ),
             )
             .map_partitions(InsertStatusTags(self.db, self.schwarm))
             .compute()
         )
 
     def seed_mentions(self, batch_size: int = 100):
-        query = (
-            select(Mention.id, Mention.status_id, Mention.account_id)
-            .where(
-                exists(Status).where(and_(
-                    Status.id.label('sid') == Mention.status_id,
-                    Status.created_at > self.max_age
-                ))
+        query = select(Mention.id, Mention.status_id, Mention.account_id).where(
+            exists(Status).where(
+                and_(
+                    Status.id.label("sid") == Mention.status_id,
+                    Status.created_at > self.max_age,
+                )
             )
         )
 
         total = self.db.scalar(
-            select(func.count(Mention.id))
-            .where(
-                exists(Status).where(and_(
-                    Status.id.label('sid') == Mention.status_id,
-                    Status.created_at > self.max_age
-                ))
+            select(func.count(Mention.id)).where(
+                exists(Status).where(
+                    and_(
+                        Status.id.label("sid") == Mention.status_id,
+                        Status.created_at > self.max_age,
+                    )
+                )
             )
         )
 
@@ -284,14 +302,17 @@ class SeedSchwarmService:
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
                 index_col="id",
                 npartitions=max(1, total // 1_000),
-                meta=pd.DataFrame({
-                    "status_id": pd.Series([], dtype="int64"),
-                    "account_id": pd.Series([], dtype="int64"),
-                })
+                meta=pd.DataFrame(
+                    {
+                        "status_id": pd.Series([], dtype="int64"),
+                        "account_id": pd.Series([], dtype="int64"),
+                    }
+                ),
             )
             .map_partitions(InsertMentions(self.db, self.schwarm))
             .compute()
         )
+
 
 class InsertBatch:
     def __init__(self, db, schwarm):
@@ -301,11 +322,12 @@ class InsertBatch:
     def __dask_tokenize__(self):
         return normalize_token(type(self))
 
+
 class InsertStatuses(InsertBatch):
     def __call__(self, rows) -> None:
         if len(rows) == 0:
             return
-        
+
         statuses = [Status(id=id, **data) for id, data in rows.iterrows()]
 
         if statuses[0].id in (0, 1):
@@ -313,35 +335,44 @@ class InsertStatuses(InsertBatch):
 
         self.schwarm.add_statuses(statuses)
 
+
 class InsertStatusStats(InsertBatch):
     def __call__(self, rows) -> None:
         if len(rows) == 0:
             return
-        
-        stats = [StatusStats(status_id=status_id, **data) for status_id, data in rows.iterrows()]
+
+        stats = [
+            StatusStats(status_id=status_id, **data)
+            for status_id, data in rows.iterrows()
+        ]
 
         if stats[0].status_id in (0, 1):
             return
 
         self.schwarm.add_status_stats_batch(stats)
 
+
 class InsertStatusTags(InsertBatch):
     def __call__(self, rows) -> None:
         if len(rows) == 0:
             return
-        
-        status_tags = [StatusTag(status_id=status_id, **data) for status_id, data in rows.iterrows()]
+
+        status_tags = [
+            StatusTag(status_id=status_id, **data)
+            for status_id, data in rows.iterrows()
+        ]
 
         if status_tags[0].status_id == 1:
             return
 
         self.schwarm.add_status_tags(status_tags)
 
+
 class InsertReblogs(InsertBatch):
     def __call__(self, rows) -> None:
         if len(rows) == 0:
             return
-        
+
         reblogs = [Status(id=id, **data) for id, data in rows.iterrows()]
 
         if reblogs[0].id in (0, 1):
@@ -349,11 +380,12 @@ class InsertReblogs(InsertBatch):
 
         self.schwarm.add_reblogs(reblogs)
 
+
 class InsertFavourites(InsertBatch):
     def __call__(self, rows) -> None:
         if len(rows) == 0:
             return
-        
+
         favourites = [Favourite(id=id, **data) for id, data in rows.iterrows()]
 
         if favourites[0].account_id in (0, 1):
@@ -361,11 +393,12 @@ class InsertFavourites(InsertBatch):
 
         self.schwarm.add_favourites(favourites)
 
+
 class InsertMentions(InsertBatch):
     def __call__(self, rows) -> None:
         if len(rows) == 0:
             return
-        
+
         mentions = [Mention(id=id, **data) for id, data in rows.iterrows()]
 
         if mentions[0].account_id in (0, 1):

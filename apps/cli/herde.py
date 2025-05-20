@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta
 from loguru import logger
 import typer
@@ -8,18 +7,21 @@ from config import config
 
 app = typer.Typer(help="Schwarm commands.")
 
+
 def get_client():
     from arango import ArangoClient
-    return ArangoClient(hosts=config.fediway.arango_hosts)    
+
+    return ArangoClient(hosts=config.fediway.arango_hosts)
+
 
 @app.command("migrate")
 def migrate():
     client = get_client()
 
     sys_db = client.db(
-        "_system", 
-        username=config.fediway.arango_user, 
-        password=config.fediway.arango_pass
+        "_system",
+        username=config.fediway.arango_user,
+        password=config.fediway.arango_pass,
     )
 
     if not sys_db.has_database(config.fediway.arango_name):
@@ -29,10 +31,10 @@ def migrate():
         typer.echo(f"Arango database {config.fediway.arango_name} already exists.")
 
     db = client.db(
-        config.fediway.arango_name, 
+        config.fediway.arango_name,
         username=config.fediway.arango_user,
         password=config.fediway.arango_pass,
-        verify=True
+        verify=True,
     )
 
     if not db.has_graph(config.fediway.arango_graph):
@@ -53,39 +55,40 @@ def migrate():
         tags = graph.create_vertex_collection("tags")
         typer.echo(f"✅ Created vertex 'tags'.")
 
-    if not graph.has_edge_definition('follows'):
+    if not graph.has_edge_definition("follows"):
         graph.create_edge_definition(
-            edge_collection='follows',
-            from_vertex_collections=['accounts'],
-            to_vertex_collections=['accounts']
+            edge_collection="follows",
+            from_vertex_collections=["accounts"],
+            to_vertex_collections=["accounts"],
         )
         typer.echo(f"✅ Created edge 'follows'.")
 
-    if not graph.has_edge_definition('tagged'):
+    if not graph.has_edge_definition("tagged"):
         graph.create_edge_definition(
-            edge_collection='tagged',
-            from_vertex_collections=['statuses'],
-            to_vertex_collections=['tags']
+            edge_collection="tagged",
+            from_vertex_collections=["statuses"],
+            to_vertex_collections=["tags"],
         )
         typer.echo(f"✅ Created edge 'tagged'.")
 
-    if not graph.has_edge_definition('mentioned'):
+    if not graph.has_edge_definition("mentioned"):
         graph.create_edge_definition(
-            edge_collection='mentioned',
-            from_vertex_collections=['statuses'],
-            to_vertex_collections=['accounts']
+            edge_collection="mentioned",
+            from_vertex_collections=["statuses"],
+            to_vertex_collections=["accounts"],
         )
         typer.echo(f"✅ Created edge 'mentioned'.")
 
-    for edge in ['favourited', 'reblogged', 'replied', 'created']:
+    for edge in ["favourited", "reblogged", "replied", "created"]:
         if graph.has_edge_definition(edge):
             continue
         graph.create_edge_definition(
             edge_collection=edge,
-            from_vertex_collections=['accounts'],
-            to_vertex_collections=['statuses']
+            from_vertex_collections=["accounts"],
+            to_vertex_collections=["statuses"],
         )
         typer.echo(f"✅ Created edge '{edge}'.")
+
 
 @app.command("seed")
 def seed():
@@ -97,6 +100,7 @@ def seed():
         SeedHerdeService(db, graph).seed()
 
     typer.echo("✅ Seeding completed!")
+
 
 @app.command("similar-accounts")
 def similar_accounts(account_id: int):
@@ -148,22 +152,19 @@ def similar_accounts(account_id: int):
 
     cursor = db.aql.execute(
         similar_accounts_query,
-        bind_vars={
-            "account_id": str(account_id),
-            "min_overlap": 1,
-            "limit": 50
-        }
+        bind_vars={"account_id": str(account_id), "min_overlap": 1, "limit": 50},
     )
 
     for result in cursor:
         print(result)
+
 
 @app.command("compute-affinities")
 def compute_affinities():
     from shared.core.herde import graph, db
     from modules.herde import Herde
     import modules.utils as utils
-    
+
     herde = Herde(graph)
 
     with utils.duration("✅ Computed affinities in {:.3f} seconds."):

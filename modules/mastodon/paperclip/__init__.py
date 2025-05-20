@@ -1,4 +1,3 @@
-
 def id_partition(instance_id: int) -> str:
     """
     Mimics Paperclip's partitioning of the id.
@@ -7,4 +6,4 @@ def id_partition(instance_id: int) -> str:
     """
 
     id_str = str(instance_id)
-    return "/".join([id_str[i:i+3] for i in range(0, 18, 3)])
+    return "/".join([id_str[i : i + 3] for i in range(0, 18, 3)])

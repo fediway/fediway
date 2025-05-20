@@ -1,4 +1,3 @@
-
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, Response, BackgroundTasks, Depends
 
@@ -14,18 +13,20 @@ from modules.fediway.heuristics import Heuristic
 
 from .features import get_feature_service
 
-def get_feed(request: Request, 
-             response: Response, 
-             tasks: BackgroundTasks,
-             db: DBSession = Depends(get_db_session),
-             feature_service: FeatureService = Depends(get_feature_service)) -> FeedService:
 
+def get_feed(
+    request: Request,
+    response: Response,
+    tasks: BackgroundTasks,
+    db: DBSession = Depends(get_db_session),
+    feature_service: FeatureService = Depends(get_feature_service),
+) -> FeedService:
     return FeedService(
-        db=db, 
-        session=request.state.session, 
+        db=db,
+        session=request.state.session,
         request=request,
         response=response,
         tasks=tasks,
         redis=redis,
-        feature_service=feature_service
+        feature_service=feature_service,
     )

@@ -1,4 +1,3 @@
-
 from .account import AccountItem
 from .emoji import EmojiItem
 from .media_attachment import MediaAttachmentItem

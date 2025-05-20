@@ -1,4 +1,3 @@
-
 from neo4j import Driver
 from loguru import logger
 
@@ -6,6 +5,7 @@ from modules.mastodon.models import Favourite
 from modules.schwarm import Schwarm
 
 from modules.debezium import DebeziumEventHandler
+
 
 class FavouriteEventHandler(DebeziumEventHandler):
     def __init__(self, schwarm: Schwarm):
@@ -16,11 +16,15 @@ class FavouriteEventHandler(DebeziumEventHandler):
 
     async def created(self, favourite: Favourite):
         self.schwarm.add_favourite(favourite)
-        logger.debug(f"Added favourite by {favourite.account_id} to {favourite.status_id} to memgraph.")
+        logger.debug(
+            f"Added favourite by {favourite.account_id} to {favourite.status_id} to memgraph."
+        )
 
     async def updated(self, old: Favourite, new: Favourite):
         pass
 
     async def deleted(self, favourite: Favourite):
         self.schwarm.remove_favourite(favourite)
-        logger.debug(f"Removed favourite by {favourite.account_id} to {favourite.status_id} from memgraph.")
+        logger.debug(
+            f"Removed favourite by {favourite.account_id} to {favourite.status_id} from memgraph."
+        )

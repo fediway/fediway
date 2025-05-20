@@ -1,4 +1,3 @@
-
 from .api import ApiConfig
 from .app import AppConfig
 from .cors import CorsConfig
@@ -14,9 +13,11 @@ from .qdrant import QdrantConfig
 from .session import SessionConfig
 from .tasks import TasksConfig
 
+
 class classproperty(property):
     def __get__(self, obj, cls):
         return self.fget(cls)
+
 
 class config:
     api = ApiConfig()

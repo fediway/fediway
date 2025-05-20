@@ -1,9 +1,9 @@
-
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
 
+
 class AccountStatusLabel(SQLModel, table=True):
-    __tablename__ = 'account_status_labels'
+    __tablename__ = "account_status_labels"
 
     account_id: int = Field(primary_key=True)
     status_id: int = Field(primary_key=True)

@@ -1,4 +1,3 @@
-
 from feast import FeatureStore
 from feast.data_source import PushMode
 from qdrant_client import QdrantClient, models
@@ -14,10 +13,12 @@ import modules.utils as utils
 from modules.fediway.embedding import Embedder, MultimodalEmbedder
 from modules.debezium import DebeziumBatchHandler, DebeziumEventHandler
 
+
 class StatusEmbeddings(BaseModel):
     status_id: int
     embedding: list[float]
     created_at: datetime
+
 
 class TextEmbeddingsBatchHandler(DebeziumBatchHandler):
     def __init__(self, embedder: Embedder, min_chars: int = 4):
@@ -31,27 +32,29 @@ class TextEmbeddingsBatchHandler(DebeziumBatchHandler):
         return self._embed(new)
 
     def _filtered_texts(self, data: list[dict]):
-        return [item['text'] for item in data if len(item['text']) >= self.min_chars]
+        return [item["text"] for item in data if len(item["text"]) >= self.min_chars]
 
     def _embed(self, data):
-        status_ids = [item['status_id'] for item in data]
+        status_ids = [item["status_id"] for item in data]
         texts = self._filtered_texts(data)
 
         if len(texts) == 0:
             return []
 
-        with utils.duration("Generated "+str(len(texts))+" text embeddings in {:.3f} seconds."):
+        with utils.duration(
+            "Generated " + str(len(texts)) + " text embeddings in {:.3f} seconds."
+        ):
             if isinstance(self.embedder, MultimodalEmbedder):
                 embeddings = self.embedder.texts(texts)
             else:
                 embeddings = self.embedder(texts)
         created_at = datetime.now()
-        
-        return [StatusEmbeddings(
-            status_id=sid, 
-            embedding=emb,
-            created_at=created_at
-        ) for sid, emb in zip(status_ids, embeddings)]
+
+        return [
+            StatusEmbeddings(status_id=sid, embedding=emb, created_at=created_at)
+            for sid, emb in zip(status_ids, embeddings)
+        ]
+
 
 class AccountEmbeddingsEventHandler(DebeziumEventHandler):
     client: QdrantClient
@@ -70,22 +73,21 @@ class AccountEmbeddingsEventHandler(DebeziumEventHandler):
         pass
 
     def _push(self, data):
-        if data.get('embeddings') is None:
+        if data.get("embeddings") is None:
             return
-        
-        if len(data['embeddings']) == 0:
+
+        if len(data["embeddings"]) == 0:
             return
-        
+
         # aggregate embeddings
-        embeddings = np.array(data['embeddings'])
+        embeddings = np.array(data["embeddings"])
         embeddings = np.mean(embeddings, axis=0)
 
         self.client.upsert(
             collection_name=self.topic,
-            points=[models.PointStruct(
-                id=data['account_id'],
-                vector=embeddings
-            )]
+            points=[models.PointStruct(id=data["account_id"], vector=embeddings)],
         )
 
-        logger.info(f"Updated account embeddings for {data['account_id']} in '{self.topic}' collection.")
+        logger.info(
+            f"Updated account embeddings for {data['account_id']} in '{self.topic}' collection."
+        )

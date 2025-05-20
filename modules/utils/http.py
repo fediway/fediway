@@ -1,9 +1,8 @@
-
 def parse_accept_language(accept_language: str) -> str | None:
     """
     Parse the Accept-Language header and return the highest-priority language code.
     """
-    
+
     if not accept_language:
         return None
 
@@ -25,4 +24,4 @@ def parse_accept_language(accept_language: str) -> str | None:
     # Sort by quality descending
     parsed.sort(key=lambda x: x[1], reverse=True)
 
-    return parsed[0][0].split('-')[0] if parsed else None
+    return parsed[0][0].split("-")[0] if parsed else None

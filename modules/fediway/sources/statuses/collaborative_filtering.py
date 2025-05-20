@@ -1,10 +1,12 @@
-
 from datetime import timedelta, datetime
 
 from ..base import Source, RedisSource
 
+
 class CollaborativeFilteringSource(Source):
-    def __init__(self, driver, account_id: int, language: str = 'en', max_age = timedelta(days=3)):
+    def __init__(
+        self, driver, account_id: int, language: str = "en", max_age=timedelta(days=3)
+    ):
         self.driver = driver
         self.language = language
         self.account_id = account_id
@@ -27,7 +29,9 @@ class CollaborativeFilteringSource(Source):
         """
 
         with self.driver.session() as session:
-            results = session.run(query, language=self.language, account_id=self.account_id, limit=limit)
+            results = session.run(
+                query, language=self.language, account_id=self.account_id, limit=limit
+            )
 
             for result in list(results):
-                yield result['status_id']
+                yield result["status_id"]

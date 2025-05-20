@@ -1,5 +1,5 @@
-
 from .base import Item
+
 
 class EmojiItem(Item):
     shortcode: str

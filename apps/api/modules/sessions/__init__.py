@@ -1,4 +1,3 @@
-
 from uuid import uuid4
 from fastapi import FastAPI, Request, Response
 from cachetools import TLRUCache
@@ -9,10 +8,12 @@ import threading
 import json
 import time
 
+
 def request_key(request: Request):
     return hashlib.sha256(
-        f"{request.client.host}.{request.headers.get('User-Agent')}".encode('utf-8')
+        f"{request.client.host}.{request.headers.get('User-Agent')}".encode("utf-8")
     ).hexdigest()
+
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -25,10 +26,11 @@ class NumpyEncoder(json.JSONEncoder):
         else:
             return super(NumpyEncoder, self).default(obj)
 
-class Session():
+
+class Session:
     data: dict = {}
 
-    def __init__(self, id, key, ipv4_address, user_agent, data = {}):
+    def __init__(self, id, key, ipv4_address, user_agent, data={}):
         self.id = id
         self.key = key
         self.ipv4_address = ipv4_address
@@ -37,19 +39,19 @@ class Session():
         self._modified = False
 
     @classmethod
-    def from_request(cls, request: Request, id: str = uuid4()): 
+    def from_request(cls, request: Request, id: str = uuid4()):
         return cls(
             id=str(id),
             key=request_key(request),
             ipv4_address=request.client.host,
-            user_agent=request.headers.get('User-Agent'),
+            user_agent=request.headers.get("User-Agent"),
         )
 
     @classmethod
     def from_dict(cls, id: str, data):
-        return cls(id, data['ipv4_address'], data[''])
+        return cls(id, data["ipv4_address"], data[""])
 
-    def get(self, key, default = None):
+    def get(self, key, default=None):
         return self.data.get(key, default)
 
     def has_changed(self):
@@ -63,25 +65,26 @@ class Session():
         del self.data[key]
         self._modified = True
 
-class SessionManager():
+
+class SessionManager:
     def __init__(
-        self, 
-        redis_prefix: str = 'session',
-        redis_host: str = 'localhost',
+        self,
+        redis_prefix: str = "session",
+        redis_host: str = "localhost",
         redis_port: int = 6379,
         redis_name: str | int = 0,
         redis_pass: str | None = None,
-        maxsize: int = 10_000, 
-        ttl: int = 600
+        maxsize: int = 10_000,
+        ttl: int = 600,
     ):
         self.ttl = ttl
         self.prefix = redis_prefix
         self.redis = Redis(
-            host=redis_host, 
-            port=redis_port, 
-            db=redis_name, 
-            password=redis_pass, 
-            decode_responses=True
+            host=redis_host,
+            port=redis_port,
+            db=redis_name,
+            password=redis_pass,
+            decode_responses=True,
         )
 
     async def get(self, request: Request):
@@ -103,9 +106,9 @@ class SessionManager():
     async def update(self, session: Session):
         if not session.has_changed():
             return
-        
+
         await self.redis.set(
             f"{self.prefix}.{session.key}",
             json.dumps(session.data, cls=NumpyEncoder),
-            ex=self.ttl
+            ex=self.ttl,
         )

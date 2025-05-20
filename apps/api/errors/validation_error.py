@@ -9,6 +9,7 @@ from starlette.responses import JSONResponse
 from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 from loguru import logger
 
+
 async def http422_error_handler(
     request: Request,
     exc: RequestValidationError | ValidationError,
@@ -16,14 +17,15 @@ async def http422_error_handler(
     errors = exc.errors()
     if type(errors) == list:
         for i in range(len(errors)):
-            if 'input' in errors[i]:
-                del errors[i]['input']
+            if "input" in errors[i]:
+                del errors[i]["input"]
             logger.error(errors[i])
 
     return JSONResponse(
-        content={'message': 'invalid request'},
+        content={"message": "invalid request"},
         status_code=HTTP_422_UNPROCESSABLE_ENTITY,
     )
+
 
 validation_error_response_definition["properties"] = {
     "errors": {

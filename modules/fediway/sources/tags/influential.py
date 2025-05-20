@@ -1,10 +1,10 @@
-
 from datetime import datetime, timedelta
 
 from ..base import Source
 
+
 class InfluentialSource(Source):
-    def __init__(self, driver, language: str = 'en', max_age = timedelta(days=3)):
+    def __init__(self, driver, language: str = "en", max_age=timedelta(days=3)):
         self.driver = driver
         self.language = language
         self.max_age = max_age
@@ -23,7 +23,9 @@ class InfluentialSource(Source):
         max_age = int((datetime.now() - self.max_age).timestamp() * 1000)
 
         with self.driver.session() as session:
-            results = session.run(query, language=self.language, limit=limit, max_age=max_age)
+            results = session.run(
+                query, language=self.language, limit=limit, max_age=max_age
+            )
 
             for result in list(results):
-                yield result['tag_id']
+                yield result["tag_id"]

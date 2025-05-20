@@ -1,6 +1,3 @@
-
-
-
 def on_demand_feature_view(
     *,
     name: Optional[str] = None,

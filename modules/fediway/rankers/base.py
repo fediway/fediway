@@ -1,5 +1,4 @@
-
-class Ranker():
+class Ranker:
     features: list[str] = []
 
     @property

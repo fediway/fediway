@@ -1,4 +1,3 @@
-
 from .account import AccountEventHandler
 from .enriched_account_stats import EnrichedAccountStatsEventHandler
 from .status import StatusEventHandler

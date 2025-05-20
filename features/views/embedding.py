@@ -1,4 +1,3 @@
-
 from feast import Field
 from feast.types import Array, Float32
 
@@ -8,9 +7,9 @@ from ..utils import make_feature_view
 
 account_embedding_features = []
 account_embedding_types = [
-    'latest_account_favourites_embeddings',
-    'latest_account_reblogs_embeddings',
-    'latest_account_replies_embeddings',
+    "latest_account_favourites_embeddings",
+    "latest_account_reblogs_embeddings",
+    "latest_account_replies_embeddings",
 ]
 
 for embedding_type in account_embedding_types:
@@ -21,7 +20,7 @@ for embedding_type in account_embedding_types:
         entities=[account],
         schema=schema,
         online=False,
-        offline_store_path=config.feast.feast_offline_store_path
+        offline_store_path=config.feast.feast_offline_store_path,
     )
 
     account_embedding_features.append(_fv)

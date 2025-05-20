@@ -1,4 +1,3 @@
-
 from datetime import datetime, timedelta
 from loguru import logger
 import typer
@@ -9,25 +8,29 @@ import modules.utils as utils
 
 app = typer.Typer(help="Schwarm commands.")
 
+
 def get_driver():
     from neo4j import GraphDatabase
+
     return GraphDatabase.driver(
-        config.fediway.memgraph_url, 
-        auth=config.fediway.memgraph_auth
+        config.fediway.memgraph_url, auth=config.fediway.memgraph_auth
     )
+
 
 def get_async_driver():
     from neo4j import AsyncGraphDatabase
+
     return AsyncGraphDatabase.driver(
-        config.fediway.memgraph_url, 
-        auth=config.fediway.memgraph_auth
+        config.fediway.memgraph_url, auth=config.fediway.memgraph_auth
     )
+
 
 @app.command("verify-connection")
 def verify_connection():
     with get_driver() as client:
         client.verify_connectivity()
         typer.echo("✅ Connection verified!")
+
 
 @app.command("migrate")
 def migrate():
@@ -36,6 +39,7 @@ def migrate():
     Schwarm(get_driver()).setup()
 
     typer.echo("✅ Migration completed!")
+
 
 @app.command("purge")
 def purge():
@@ -47,14 +51,15 @@ def purge():
 
     typer.echo("✅ Purged memgraph!")
 
+
 @app.command("collect")
-def collect(language: str = 'en'):
+def collect(language: str = "en"):
     from modules.fediway.sources.schwarm import (
-        TrendingStatusesByInfluentialUsers, 
+        TrendingStatusesByInfluentialUsers,
         MostInteractedByAccountsSource,
         CollaborativeFilteringSource,
         TrendingStatusesInCommunity,
-        TrendingStatusesByTagsInCommunity
+        TrendingStatusesByTagsInCommunity,
     )
 
     # source = MostInteractedByAccountsSource(
@@ -64,33 +69,34 @@ def collect(language: str = 'en'):
     #     # language='en',
     #     # max_age=timedelta(days=14)
     # )
-    
+
     source = TrendingStatusesByInfluentialUsers(
-        driver=get_driver(),
-        language=language,
-        max_age=timedelta(days=28)
+        driver=get_driver(), language=language, max_age=timedelta(days=28)
     )
 
     # source = TrendingStatusesByTagsInCommunity(
     #     driver=get_driver(),
     #     account_id=114398075274349836
     # )
-    
+
     with utils.duration("Collected in {:3f} seconds"):
         for status_id in source.collect(10):
             print(status_id)
     exit(())
 
     from modules.schwarm import Schwarm
+
     schwarm = Schwarm(get_driver())
 
     print("start")
     for record in schwarm.get_relevant_statuses(language=language):
         print(record)
 
+
 @app.command("rank")
 def rank():
     from modules.schwarm import Schwarm
+
     schwarm = Schwarm(get_driver())
 
     logger.info("Start computing account ranks...")
@@ -101,14 +107,17 @@ def rank():
     with utils.duration("Computed tag ranks in {:.3f} seconds"):
         schwarm.compute_tag_rank()
 
+
 @app.command("clean")
 def clean():
     from modules.schwarm import Schwarm
+
     schwarm = Schwarm(get_driver())
 
     logger.info("Purging old statuses...")
     with utils.duration("Purged old statuses in {:.3f} seconds"):
         schwarm.purge_old_statuses(config.fediway.schwarm_max_status_age)
+
 
 @app.command("seed")
 def seed():

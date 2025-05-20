@@ -1,4 +1,3 @@
-
 from redis import Redis
 
 from config import config
@@ -8,5 +7,5 @@ redis = Redis(
     port=config.session.redis_port,
     db=config.session.redis_name,
     password=config.session.redis_pass,
-    decode_responses=True
+    decode_responses=True,
 )

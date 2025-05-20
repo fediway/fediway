@@ -1,14 +1,16 @@
-
 import numpy as np
 import random
 
-class Sampler():
+
+class Sampler:
     def sample(self, scores) -> int:
         raise NotImplementedError
+
 
 class TopKSampler(Sampler):
     def sample(self, scores) -> int:
         return np.argsort(scores)[-1]
+
 
 class InverseTransformSampler(Sampler):
     def sample(self, scores) -> int:

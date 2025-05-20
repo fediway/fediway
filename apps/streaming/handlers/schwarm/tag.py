@@ -1,10 +1,10 @@
-
 from neo4j import Driver
 from loguru import logger
 
 from modules.schwarm import Schwarm
 from modules.mastodon.models import Tag
 from modules.debezium import DebeziumEventHandler
+
 
 class TagEventHandler(DebeziumEventHandler):
     def __init__(self, schwarm: Schwarm):

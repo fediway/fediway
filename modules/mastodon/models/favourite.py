@@ -1,4 +1,3 @@
-
 from typing import List
 from datetime import datetime
 from sqlalchemy import Column, ARRAY, Integer, BigInteger, String
@@ -6,8 +5,9 @@ from sqlmodel import Field, Relationship
 
 from .base import ReadOnlyModel
 
+
 class Favourite(ReadOnlyModel, table=True):
-    __tablename__ = 'favourites'
+    __tablename__ = "favourites"
 
     id: int = Field(primary_key=True)
     created_at: datetime = Field(nullable=False)

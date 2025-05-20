@@ -1,6 +1,7 @@
-
 from feast import RequestSource, Field
-from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import PostgreSQLSource
+from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import (
+    PostgreSQLSource,
+)
 from feast.on_demand_feature_view import on_demand_feature_view
 from feast.types import Int64, Array
 
@@ -17,8 +18,9 @@ account_favourites_request = RequestSource(
     schema=[Field(name="account_id", dtype=Int64)],
 )
 
+
 @on_demand_feature_view(
-    name='account_favourites',
+    name="account_favourites",
     sources=[account_favourites_request],
     schema=[
         Field(name="favourites", dtype=Array(Int64)),
@@ -26,7 +28,7 @@ account_favourites_request = RequestSource(
 )
 def account_favourites(account_ids: pd.DataFrame) -> pd.DataFrame:
     from shared.core.db import db_session
-    
+
     results = []
     with db_session() as db:
         for account_id in account_ids.values[:, 0]:
@@ -37,9 +39,7 @@ def account_favourites(account_ids: pd.DataFrame) -> pd.DataFrame:
                 .limit(20)
             ).all()
             results.append(favourites)
-    
-    df = pd.DataFrame({
-        'favourites': results
-    })
-    
+
+    df = pd.DataFrame({"favourites": results})
+
     return df

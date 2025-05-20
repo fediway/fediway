@@ -1,11 +1,11 @@
-
 from ..models import Account
 from .base import Item
 
+
 class AccountItem(Item):
-    '''
+    """
     see: https://docs.joinmastodon.org/entities/Account/
-    '''
+    """
 
     id: str
     username: str
@@ -49,5 +49,5 @@ class AccountItem(Item):
             statuses_count=account.stats.statuses_count,
             followers_count=account.stats.followers_count,
             following_count=account.stats.following_count,
-            last_status_at=account.stats.last_status_at.date().isoformat()
+            last_status_at=account.stats.last_status_at.date().isoformat(),
         )

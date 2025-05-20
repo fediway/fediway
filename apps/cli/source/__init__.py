@@ -1,4 +1,3 @@
-
 import typer
 
 from .follows import app as follows_app

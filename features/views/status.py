@@ -1,6 +1,7 @@
-
 from feast import RequestSource, Field
-from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import PostgreSQLSource
+from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import (
+    PostgreSQLSource,
+)
 from feast.on_demand_feature_view import on_demand_feature_view
 from feast.types import Int64
 
@@ -20,8 +21,9 @@ status_request = RequestSource(
     schema=[Field(name="status_id", dtype=Int64)],
 )
 
+
 @on_demand_feature_view(
-    name='status',
+    name="status",
     sources=[status_request],
     schema=[
         Field(name="account_id", dtype=Int64),
@@ -33,11 +35,11 @@ status_request = RequestSource(
 )
 def status_features(status_ids: pd.DataFrame) -> pd.DataFrame:
     from shared.core.db import db_session
-    
+
     with db_session() as db:
         rows = db.exec(
             select(
-                Status.id, 
+                Status.id,
                 Status.account_id,
                 Status.created_at,
                 StatusStats.favourites_count,
@@ -57,20 +59,25 @@ def status_features(status_ids: pd.DataFrame) -> pd.DataFrame:
             results.append(zero)
         else:
             row = rows_map[status_id]
-            results.append([
-                row.account_id,
-                row.favourites_count,
-                row.reblogs_count,
-                row.replies_count,
-                (datetime.now() - row.created_at).total_seconds()
-            ])
+            results.append(
+                [
+                    row.account_id,
+                    row.favourites_count,
+                    row.reblogs_count,
+                    row.replies_count,
+                    (datetime.now() - row.created_at).total_seconds(),
+                ]
+            )
 
-    df = pd.DataFrame(results, columns=[
-        'account_id', 
-        'favourites_count', 
-        'reblogs_count', 
-        'replies_count', 
-        'age_in_seconds'
-    ])
-    
+    df = pd.DataFrame(
+        results,
+        columns=[
+            "account_id",
+            "favourites_count",
+            "reblogs_count",
+            "replies_count",
+            "age_in_seconds",
+        ],
+    )
+
     return df

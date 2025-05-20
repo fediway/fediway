@@ -1,14 +1,14 @@
-
 from arango.database import StandardDatabase
 
 from ..base import Source
 
+
 class TriangularLoopsSource(Source):
-    '''
-    In the follow graph u -> v -> w -> u, whenever there isn't an 
-    edge v -> u, the Triangular Loops Candidate Source will suggest 
+    """
+    In the follow graph u -> v -> w -> u, whenever there isn't an
+    edge v -> u, the Triangular Loops Candidate Source will suggest
     u as a potential new follow for v.”
-    '''
+    """
 
     def __init__(self, db: StandardDatabase, account_id: int):
         self.db = db
@@ -42,12 +42,8 @@ class TriangularLoopsSource(Source):
         """
 
         cursor = self.db.aql.execute(
-            query,
-            bind_vars={
-                "limit": limit,
-                "source": f"accounts/{self.account_id}"
-            }
+            query, bind_vars={"limit": limit, "source": f"accounts/{self.account_id}"}
         )
 
         for result in cursor:
-            yield result['target']
+            yield result["target"]

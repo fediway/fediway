@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
@@ -9,61 +8,70 @@ from sklearn.metrics import roc_auc_score
 from .scalers import get_scaler
 from .features import LABELS
 
-class Kirby():
+
+class Kirby:
     label: str
     model: BaseEstimator
 
     MODELS = [
-        'linear',
-        'random_forest',
-        'xgboost',
-        'lightgbm',
+        "linear",
+        "random_forest",
+        "xgboost",
+        "lightgbm",
     ]
 
-    def __init__(self, 
-                 model: BaseEstimator, 
-                 scaler: TransformerMixin, 
-                 features: list[str], 
-                 labels: list[str] = LABELS):
+    def __init__(
+        self,
+        model: BaseEstimator,
+        scaler: TransformerMixin,
+        features: list[str],
+        labels: list[str] = LABELS,
+    ):
         self.features = features
         self.labels = labels
         self.model = model
         self.scaler = scaler
 
     @classmethod
-    def linear(cls, 
-               features: list[str], 
-               labels: list[str], 
-               scaler: str = 'standard', 
-               max_iter: int = 1000, 
-               random_state: int = None):
+    def linear(
+        cls,
+        features: list[str],
+        labels: list[str],
+        scaler: str = "standard",
+        max_iter: int = 1000,
+        random_state: int = None,
+    ):
         model = LogisticRegression(max_iter=max_iter)
         scaler = get_scaler(scaler)
 
         return cls(model, scaler, features, labels)
 
     @classmethod
-    def random_forest(cls, 
-                      features: list[str], 
-                      labels: str, 
-                      scaler: str = 'standard', 
-                      n_estimators: int = 1500, 
-                      random_state: int = None):
+    def random_forest(
+        cls,
+        features: list[str],
+        labels: str,
+        scaler: str = "standard",
+        n_estimators: int = 1500,
+        random_state: int = None,
+    ):
         model = RandomForestClassifier(n_estimators=n_estimators)
         scaler = get_scaler(scaler)
 
         return cls(model, scaler, features, labels)
 
     @classmethod
-    def xgboost(cls, 
-                features: list[str], 
-                labels: list[str], 
-                scaler: str = 'standard', 
-                random_state: int = None):
+    def xgboost(
+        cls,
+        features: list[str],
+        labels: list[str],
+        scaler: str = "standard",
+        random_state: int = None,
+    ):
         from xgboost import XGBClassifier
 
         model = XGBClassifier(
-            objective='multi:softprob',
+            objective="multi:softprob",
             num_class=len(labels),
         )
         scaler = get_scaler(scaler)
@@ -71,22 +79,24 @@ class Kirby():
         return cls(model, scaler, features, labels)
 
     @classmethod
-    def lightgbm(cls, 
-                 features: list[str], 
-                 labels: list[str], 
-                 scaler: str = 'standard', 
-                 n_estimators: int = 1000, 
-                 random_state: int = None):
+    def lightgbm(
+        cls,
+        features: list[str],
+        labels: list[str],
+        scaler: str = "standard",
+        n_estimators: int = 1000,
+        random_state: int = None,
+    ):
         from lightgbm import LGBMClassifier
 
         model = LGBMClassifier(
-            objective='multiclass',
+            objective="multiclass",
             num_class=len(labels),
-            metric='multi_logloss',
+            metric="multi_logloss",
             n_estimators=n_estimators,
             num_leaves=50,
             learning_rate=0.1,
-            max_depth=10
+            max_depth=10,
         )
         scaler = get_scaler(scaler)
 
@@ -111,6 +121,6 @@ class Kirby():
 
         for label, y_pred, y_true in zip(self.labels, y_pred_all.T, y_true_all.T):
             auroc = roc_auc_score(y_true, y_pred)
-            results[label] = {'auroc': auroc}
+            results[label] = {"auroc": auroc}
 
         return results

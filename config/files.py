@@ -1,4 +1,3 @@
-
 from .base import BaseConfig
 
 from modules.mastodon import paperclip
@@ -7,20 +6,23 @@ from modules.mastodon import paperclip
 # For more details, refer to the Mastodon configuration:
 # https://github.com/mastodon/mastodon/blob/e74d682b218096578d59f9a310a85e315dac1b6a/config/initializers/paperclip.rb#L6
 
+
 class FilesConfig(BaseConfig):
-    paperclip_root_url: str = '/system'
+    paperclip_root_url: str = "/system"
 
-    s3_alias_host: str      = ""
-    s3_protocol: str        = "https"
-    s3_region: str | None   = None
-    s3_enabled: bool        = False
+    s3_alias_host: str = ""
+    s3_protocol: str = "https"
+    s3_region: str | None = None
+    s3_enabled: bool = False
 
-    def build_file_url(self, 
-                       class_name: str,
-                       attachment: str,
-                       instance_id: int, 
-                       file_name: str, 
-                       style: str = "original") -> str:
+    def build_file_url(
+        self,
+        class_name: str,
+        attachment: str,
+        instance_id: int,
+        file_name: str,
+        style: str = "original",
+    ) -> str:
         """
         Given the file name and attachment details, build the complete URL.
         Adjusts based on whether S3 is enabled.
@@ -31,7 +33,9 @@ class FilesConfig(BaseConfig):
 
         # Get the interpolated path, e.g.
         # "cache/accounts/avatar/000/000/123/original/my_avatar.png" or without prefix for local.
-        path = self.interpolate_file_path(class_name, file_name, attachment, instance_id, style)
+        path = self.interpolate_file_path(
+            class_name, file_name, attachment, instance_id, style
+        )
 
         if self.s3_enabled:
             if self.s3_alias_host:
@@ -49,12 +53,14 @@ class FilesConfig(BaseConfig):
     def prefix_url(self) -> str:
         return "cache/" if self.s3_enabled else ""
 
-    def interpolate_file_path(self, 
-                              class_name: str, 
-                              file_name: str, 
-                              attachment: str, 
-                              instance_id: int, 
-                              style: str = "original") -> str:
+    def interpolate_file_path(
+        self,
+        class_name: str,
+        file_name: str,
+        attachment: str,
+        instance_id: int,
+        style: str = "original",
+    ) -> str:
         """
         Interpolate a file path matching the Mastodon Paperclip config:
         ':prefix_url:class/:attachment/:id_partition/:style/:filename'

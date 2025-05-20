@@ -1,4 +1,3 @@
-
 from confluent_kafka.admin import AdminClient, NewTopic
 from confluent_kafka import KafkaException
 import asyncio
@@ -10,15 +9,16 @@ app = typer.Typer(help="Kafka commands.")
 
 TOPICS = [
     NewTopic(
-        "status_text_embeddings", 
-        num_partitions=config.kafka.kafka_num_partitions, 
-        replication_factor=config.kafka.kafka_replication_factor
+        "status_text_embeddings",
+        num_partitions=config.kafka.kafka_num_partitions,
+        replication_factor=config.kafka.kafka_replication_factor,
     )
 ]
 
+
 @app.command("create-topics")
 def create_topics():
-    admin = AdminClient({'bootstrap.servers': config.kafka.kafka_bootstrap_servers})
+    admin = AdminClient({"bootstrap.servers": config.kafka.kafka_bootstrap_servers})
     existing_topics = admin.list_topics().topics.keys()
 
     topics = [topic for topic in TOPICS if topic.topic not in existing_topics]

@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 
@@ -12,6 +11,7 @@ from dask.delayed import delayed, tokenize
 from dask.utils import parse_bytes
 
 import modules.utils as utils
+
 
 def read_sql_join_query(
     sql,
@@ -115,7 +115,7 @@ def read_sql_join_query(
         else sa.Column(index_col.name, index_col.type)
     )
 
-    kwargs["index_col"] = index.name.split('.')[-1]
+    kwargs["index_col"] = index.name.split(".")[-1]
 
     if head_rows > 0:
         # derive metadata from first few rows
@@ -143,8 +143,8 @@ def read_sql_join_query(
             with utils.duration("limits: {:.3f}"):
                 q = str(sql.compile(engine, compile_kwargs={"literal_binds": True}))
                 q = sa.sql.select(
-                    sa.sql.func.max(sa.Column(index_col.split('.')[-1])), 
-                    sa.sql.func.min(sa.Column(index_col.split('.')[-1]))
+                    sa.sql.func.max(sa.Column(index_col.split(".")[-1])),
+                    sa.sql.func.min(sa.Column(index_col.split(".")[-1])),
                 ).select_from(sa.text("(" + q + f" {sql_append})"))
                 minmax = pd.read_sql(q, engine)
                 maxi, mini = minmax.iloc[0]
@@ -157,11 +157,12 @@ def read_sql_join_query(
             with utils.duration("npartitions: {:.3f}"):
                 q = str(sql.compile(engine, compile_kwargs={"literal_binds": True}))
                 q = sa.sql.select(
-                    sa.sql.func.count(sa.Column(index_col.split('.')[-1]))
+                    sa.sql.func.count(sa.Column(index_col.split(".")[-1]))
                 ).select_from(sa.text("(" + q + f" {sql_append})"))
                 count = pd.read_sql(q, engine)["count_1"][0]
                 npartitions = (
-                    int(round(count * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
+                    int(round(count * bytes_per_row / parse_bytes(bytes_per_chunk)))
+                    or 1
                 )
         if dtype.kind == "M":
             divisions = methods.tolist(

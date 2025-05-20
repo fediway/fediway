@@ -1,9 +1,9 @@
-
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
 
+
 class StatusEngagement(SQLModel, table=True):
-    __tablename__ = 'enriched_status_engagements'
+    __tablename__ = "enriched_status_engagements"
 
     account_id: int = Field(primary_key=True)
     status_id: int = Field(primary_key=True)

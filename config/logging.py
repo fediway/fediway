@@ -1,4 +1,3 @@
-
 import sys
 import logging
 from loguru import logger
@@ -7,11 +6,12 @@ from typing import cast
 
 from .base import BaseConfig
 
+
 class InterceptHandler(logging.Handler):
     def emit(self, record: logging.LogRecord) -> None:
-        '''
+        """
         Map the record's level to Loguru's level and log the message.
-        '''
+        """
         # Get corresponding Loguru level if it exists
         try:
             level = logger.level(record.levelname).name
@@ -25,7 +25,9 @@ class InterceptHandler(logging.Handler):
             depth += 1
 
         logger.opt(depth=depth, exception=record.exc_info).log(
-            level, record.getMessage())
+            level, record.getMessage()
+        )
+
 
 class LoggingConfig(BaseConfig):
     logging_level: int = logging.INFO

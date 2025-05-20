@@ -1,4 +1,3 @@
-
 from sqlmodel import Session as DBSession
 from fastapi import APIRouter, Depends, Request, BackgroundTasks
 
@@ -14,40 +13,39 @@ from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
     get_collaborative_filtering_sources,
     get_popular_in_community_sources,
-    get_similar_to_favourited_sources
+    get_similar_to_favourited_sources,
 )
 
 from config import config
 
 router = APIRouter()
 
+
 def home_sources(
     popular_in_community: list[Source] = Depends(get_popular_in_community_sources),
-    collaborative_filtering: list[Source] = Depends(get_collaborative_filtering_sources),
+    collaborative_filtering: list[Source] = Depends(
+        get_collaborative_filtering_sources
+    ),
     similar_to_favourited: list[Source] = Depends(get_similar_to_favourited_sources),
 ):
-    return (
-        popular_in_community +
-        collaborative_filtering +
-        similar_to_favourited
-    )
+    return popular_in_community + collaborative_filtering + similar_to_favourited
 
-@router.get('/home')
+
+@router.get("/home")
 async def home_timeline(
     request: Request,
     feed: FeedService = Depends(get_feed),
-    sources = Depends(home_sources),
+    sources=Depends(home_sources),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
 
     pipeline = (
-        feed
-        .name('timelines/home')
-        .select('status_id')
+        feed.name("timelines/home")
+        .select("status_id")
         .sources([(source, max_candidates_per_source) for source in sources])
         .rank(ranker)
-        .diversify(by='status:account_id', penalty=0.1)
+        .diversify(by="status:account_id", penalty=0.1)
         .sample(config.fediway.feed_batch_size)
         .paginate(config.fediway.feed_batch_size, offset=0)
     )

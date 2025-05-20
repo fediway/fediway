@@ -1,4 +1,3 @@
-
 from feast import FeatureStore
 import pandas as pd
 import numpy as np
@@ -8,6 +7,7 @@ import time
 from shared.core.feast import feature_store
 from modules.mastodon.models import Status, StatusStats
 from modules.fediway.feed.features import Features
+
 
 class FeatureService(Features):
     cache = {}
@@ -32,19 +32,23 @@ class FeatureService(Features):
             if not feature in self.cache[cache_key]:
                 return None, entities
             feat = self.cache[cache_key][feature].reindex(entity_ids).dropna()
-            cached.append(feat[~feat.index.duplicated(keep='last')])
+            cached.append(feat[~feat.index.duplicated(keep="last")])
 
-        cached = pd.concat(cached, axis=1, join='inner')
+        cached = pd.concat(cached, axis=1, join="inner")
         cached_entities = set(cached.index)
 
-        return cached, [{cache_key: entity} for entity in entity_ids if not entity in cached_entities]
+        return cached, [
+            {cache_key: entity}
+            for entity in entity_ids
+            if not entity in cached_entities
+        ]
 
     def _remember(self, entities, df, features):
         cache_key = self._cache_key(entities)
 
         if "," in cache_key:
             return
-        
+
         entity_ids = pd.DataFrame(entities).values[:, 0]
 
         if not cache_key in self.cache:
@@ -54,12 +58,18 @@ class FeatureService(Features):
             feat = df[column]
             feat.index = entity_ids
             if not feature_name in self.cache[cache_key]:
-                self.cache[cache_key][feature_name] = feat[~feat.index.duplicated(keep='last')]
+                self.cache[cache_key][feature_name] = feat[
+                    ~feat.index.duplicated(keep="last")
+                ]
             else:
                 feat = pd.concat([self.cache[cache_key][feature_name], feat])
-                self.cache[cache_key][feature_name] = feat[~feat.index.duplicated(keep='last')]
+                self.cache[cache_key][feature_name] = feat[
+                    ~feat.index.duplicated(keep="last")
+                ]
 
-    def get(self, entities: list[dict[str, int]], features: list[str]) -> np.ndarray | None:
+    def get(
+        self, entities: list[dict[str, int]], features: list[str]
+    ) -> np.ndarray | None:
         if len(features) == 0:
             return []
 
@@ -74,8 +84,7 @@ class FeatureService(Features):
             return cached_df.reindex(pd.DataFrame(entities).values[:, 0]).values
 
         df = self.fs.get_online_features(
-            features=features,
-            entity_rows=missing_entities
+            features=features, entity_rows=missing_entities
         ).to_df()
 
         self._remember(missing_entities, df, features)
@@ -85,6 +94,8 @@ class FeatureService(Features):
             df = pd.concat([df, cached_df])
             df = df[~df.index.duplicated()].reindex(pd.DataFrame(entities).values[:, 0])
 
-        logger.info(f"Fetched features for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds.")
+        logger.info(
+            f"Fetched features for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds."
+        )
 
         return df.values

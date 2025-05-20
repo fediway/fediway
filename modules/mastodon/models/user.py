@@ -1,13 +1,13 @@
-
 from typing import List
 from datetime import datetime
 from sqlalchemy import Column, ARRAY, Integer, String
 from sqlmodel import SQLModel, Field, Relationship
 
+
 class User(SQLModel, table=True):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id: int = Field(primary_key=True)
-    account_id: int = Field(foreign_key='accounts.id')
+    account_id: int = Field(foreign_key="accounts.id")
 
-    account: "Account" = Relationship(back_populates='user')
+    account: "Account" = Relationship(back_populates="user")

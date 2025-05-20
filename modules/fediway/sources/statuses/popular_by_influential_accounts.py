@@ -1,16 +1,16 @@
-
 from datetime import timedelta, datetime
 
 from ..base import Source
 
+
 class PouplarStatusesByInfluentialAccountsSource(Source):
     def __init__(
-        self, 
-        driver, 
-        language: str = 'en', 
+        self,
+        driver,
+        language: str = "en",
         max_age: timedelta = timedelta(days=3),
         top_n: int = 5000,
-        alpha: float = 1.0
+        alpha: float = 1.0,
     ):
         self.driver = driver
         self.language = language
@@ -39,13 +39,13 @@ class PouplarStatusesByInfluentialAccountsSource(Source):
 
         with self.driver.session() as session:
             results = session.run(
-                query, 
-                language=self.language, 
+                query,
+                language=self.language,
                 alpha=self.alpha,
-                limit=limit, 
+                limit=limit,
                 top_n=self.top_n,
                 max_age=max_age,
             )
 
             for result in results:
-                yield result['status_id']
+                yield result["status_id"]

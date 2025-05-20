@@ -1,11 +1,11 @@
-
 from typing import List
 from datetime import datetime
 from sqlalchemy import Column, ARRAY, Integer, String
 from sqlmodel import SQLModel, Field
-    
+
+
 class Mention(SQLModel, table=True):
-    __tablename__ = 'mentions'
+    __tablename__ = "mentions"
 
     id: int = Field(primary_key=True)
     status_id: int = Field()

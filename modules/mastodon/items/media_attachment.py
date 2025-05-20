@@ -1,14 +1,14 @@
-
 from .base import Item
 from ..models import MediaAttachment
 
 MEDIA_TYPES = {
-    0: 'image',
-    1: 'givf',
-    2: 'audio',
-    3: 'unknown',
-    4: 'video',
+    0: "image",
+    1: "givf",
+    2: "audio",
+    3: "unknown",
+    4: "video",
 }
+
 
 class MediaAttachmentItem(Item):
     id: int

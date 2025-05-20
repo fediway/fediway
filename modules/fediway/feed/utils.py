@@ -1,10 +1,9 @@
-
 import heapq
 from itertools import count
 from typing import Iterator
 
-class BatchIterator:
 
+class BatchIterator:
     def __init__(self, iter: Iterator[any], batch_size: int):
         self.iter = iter
         self.batch_size = batch_size
@@ -16,11 +15,12 @@ class BatchIterator:
     def __next__(self):
         if self.index >= self.batch_size:
             raise StopIteration
-        
+
         item = next(self.iter)
         self.index += 1
 
         return item
+
 
 class TopKPriorityQueue:
     def __init__(self, k=20):
@@ -30,16 +30,16 @@ class TopKPriorityQueue:
 
     def to_dict(self):
         return {
-            'k': self.k,
-            'heap': self.heap,
-            'counter': next(self.counter),
+            "k": self.k,
+            "heap": self.heap,
+            "counter": next(self.counter),
         }
 
     @classmethod
     def from_dict(cls, data):
-        queue = cls(data['k'])
-        queue.heap = [tuple(item) for item in data['heap']]
-        queue.counter = count(data['counter'])
+        queue = cls(data["k"])
+        queue.heap = [tuple(item) for item in data["heap"]]
+        queue.counter = count(data["counter"])
         return queue
 
     def add(self, item, score):
@@ -68,9 +68,9 @@ class TopKPriorityQueue:
 
             if item != entry[2]:
                 continue
-            
+
             self.heap.remove(entry)
-            heapq.heapify(self.heap) 
+            heapq.heapify(self.heap)
             break
 
     def reset(self):
@@ -88,7 +88,7 @@ class TopKPriorityQueue:
         """
         Retrieve the top items sorted descending by score, then by insertion order.
         """
-        
+
         # Extract items sorted by highest score first, using insertion order for ties
         sorted_items = sorted(self.heap, key=lambda x: (-x[0], x[1]))
         return [(item, score) for (score, cnt, item) in sorted_items]

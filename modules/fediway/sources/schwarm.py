@@ -1,17 +1,17 @@
-
 from neo4j.exceptions import ServiceUnavailable
 from datetime import timedelta, datetime
 
 from .base import Source, RedisSource
 
+
 class TrendingStatusesByInfluentialUsers(Source):
     def __init__(
-        self, 
-        driver, 
-        language: str = 'en', 
+        self,
+        driver,
+        language: str = "en",
         max_age: timedelta = timedelta(days=3),
         top_n: int = 5000,
-        alpha: float = 1.0
+        alpha: float = 1.0,
     ):
         self.driver = driver
         self.language = language
@@ -40,25 +40,26 @@ class TrendingStatusesByInfluentialUsers(Source):
 
         with self.driver.session() as session:
             results = session.run(
-                query, 
-                language=self.language, 
+                query,
+                language=self.language,
                 alpha=self.alpha,
-                limit=limit, 
+                limit=limit,
                 top_n=self.top_n,
                 max_age=max_age,
             )
 
             for result in results:
-                yield result['status_id']
+                yield result["status_id"]
+
 
 class TrendingStatusesByInfluentialUsers(Source):
     def __init__(
-        self, 
-        driver, 
-        language: str = 'en', 
+        self,
+        driver,
+        language: str = "en",
         max_age: timedelta = timedelta(days=3),
         top_n: int = 5000,
-        alpha: float = 1.0
+        alpha: float = 1.0,
     ):
         self.driver = driver
         self.language = language
@@ -87,16 +88,17 @@ class TrendingStatusesByInfluentialUsers(Source):
 
         with self.driver.session() as session:
             results = session.run(
-                query, 
-                language=self.language, 
+                query,
+                language=self.language,
                 alpha=self.alpha,
-                limit=limit, 
+                limit=limit,
                 top_n=self.top_n,
                 max_age=max_age,
             )
 
             for result in results:
-                yield result['status_id']
+                yield result["status_id"]
+
 
 class TrendingStatusesByTagsInCommunity(Source):
     def __init__(self, driver, account_id: int, alpha: float = 0.1):
@@ -128,17 +130,15 @@ class TrendingStatusesByTagsInCommunity(Source):
 
         with self.driver.session() as session:
             results = session.run(
-                query, 
-                account_id=self.account_id, 
-                limit=limit, 
-                alpha=self.alpha
+                query, account_id=self.account_id, limit=limit, alpha=self.alpha
             )
 
             for result in list(results):
-                yield result['status_id']
+                yield result["status_id"]
+
 
 class TrendingTagsSource(Source):
-    def __init__(self, driver, language: str = 'en', max_age = timedelta(days=3)):
+    def __init__(self, driver, language: str = "en", max_age=timedelta(days=3)):
         self.driver = driver
         self.language = language
         self.max_age = max_age
@@ -162,13 +162,18 @@ class TrendingTagsSource(Source):
         max_age = int((datetime.now() - self.max_age).timestamp() * 1000)
 
         with self.driver.session() as session:
-            results = session.run(query, language=self.language, limit=limit, max_age=max_age)
+            results = session.run(
+                query, language=self.language, limit=limit, max_age=max_age
+            )
 
             for result in list(results):
-                yield result['tag_id']
+                yield result["tag_id"]
+
 
 class CollaborativeFilteringSource(Source):
-    def __init__(self, driver, account_id: int, language: str = 'en', max_age = timedelta(days=3)):
+    def __init__(
+        self, driver, account_id: int, language: str = "en", max_age=timedelta(days=3)
+    ):
         self.driver = driver
         self.language = language
         self.account_id = account_id
@@ -191,13 +196,16 @@ class CollaborativeFilteringSource(Source):
         """
 
         with self.driver.session() as session:
-            results = session.run(query, language=self.language, account_id=self.account_id, limit=limit)
+            results = session.run(
+                query, language=self.language, account_id=self.account_id, limit=limit
+            )
 
             for result in list(results):
-                yield result['status_id']
+                yield result["status_id"]
+
 
 class FolloweeActivitySource(Source):
-    def __init__(self, driver, language: str = 'en'):
+    def __init__(self, driver, language: str = "en"):
         self.driver = driver
         self.language = language
 
@@ -210,22 +218,20 @@ class FolloweeActivitySource(Source):
         """
 
         with self.driver.session() as session:
-            results = session.run(query, language=self.language, account_id=account_id, limit=limit)
+            results = session.run(
+                query, language=self.language, account_id=account_id, limit=limit
+            )
 
             for result in list(results):
-                yield result['status_id']
+                yield result["status_id"]
+
 
 class MostInteractedByAccountsSource(Source):
-    '''
+    """
     Collects statuses that where most interacted with by a list of accounts.
-    '''
+    """
 
-    def __init__(
-        self, 
-        driver, 
-        account_ids: list[int],
-        alpha: float = 0.1
-    ):
+    def __init__(self, driver, account_ids: list[int], alpha: float = 0.1):
         self.driver = driver
         self.account_ids = account_ids
         self.alpha = alpha
@@ -244,11 +250,11 @@ class MostInteractedByAccountsSource(Source):
 
         with self.driver.session() as session:
             results = session.run(
-                query, 
-                account_ids=self.account_ids, 
+                query,
+                account_ids=self.account_ids,
                 alpha=self.alpha,
-                limit=limit, 
+                limit=limit,
             )
 
             for result in list(results):
-                yield result['status_id']
+                yield result["status_id"]

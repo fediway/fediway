@@ -1,4 +1,3 @@
-
 from starlette.datastructures import URL
 from sqlmodel import Session as DBSession, select
 from fastapi import Request, BackgroundTasks, Depends, Response
@@ -22,8 +21,10 @@ from modules.fediway.models.postgres import Feed as FeedModel, FeedRecommendatio
 import modules.utils as utils
 from config import config
 
+
 def _generate_feed_id(length: int = 8):
-    return str(uuid.uuid4()).replace('-', '')[:length]
+    return str(uuid.uuid4()).replace("-", "")[:length]
+
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -36,17 +37,20 @@ class NumpyEncoder(json.JSONEncoder):
         else:
             return super(NumpyEncoder, self).default(obj)
 
-class FeedService():
+
+class FeedService:
     feed: Feed
 
-    def __init__(self, 
-                 db: DBSession,
-                 request: Request,
-                 response: Response,
-                 tasks: BackgroundTasks,
-                 session: Session, 
-                 redis: Redis,
-                 feature_service: FeatureService):
+    def __init__(
+        self,
+        db: DBSession,
+        request: Request,
+        response: Response,
+        tasks: BackgroundTasks,
+        session: Session,
+        redis: Redis,
+        feature_service: FeatureService,
+    ):
         self.r = redis
         self.db = db
         self.tasks = tasks
@@ -57,7 +61,7 @@ class FeedService():
         self.pipeline = Feed(feature_service)
 
         self._next_offset = 0
-        self.id = request.query_params.get('feed', _generate_feed_id())
+        self.id = request.query_params.get("feed", _generate_feed_id())
         self.redis_key = f"feed:{self.id}"
 
     def name(self, name: str):
@@ -111,7 +115,7 @@ class FeedService():
         self.pipeline.diversify(by, penalty)
 
         return self
-    
+
     # async def init(self):
     #     '''
     #     Initialize feed.
@@ -141,21 +145,25 @@ class FeedService():
     #     # await collecting
 
     def _set_link_header(self):
-        next_url = URL(f"{config.app.api_url}{self.request.url.path}").include_query_params(
-            feed=self.id,
-            offset=self._next_offset
-        )
+        next_url = URL(
+            f"{config.app.api_url}{self.request.url.path}"
+        ).include_query_params(feed=self.id, offset=self._next_offset)
 
-        self.response.headers['link'] = f'<{next_url}>; rel="next"'
+        self.response.headers["link"] = f'<{next_url}>; rel="next"'
 
     def _save_recommendations(self, recommendations):
-        self.db.bulk_save_objects([FeedRecommendation(
-            feed_id=self.feed.id,
-            status_id=recommendation.item,
-            source=recommendation.sources[0],
-            score=float(recommendation.score),
-            adjusted_score=float(recommendation.adjusted_score),
-        ) for recommendation in recommendations])
+        self.db.bulk_save_objects(
+            [
+                FeedRecommendation(
+                    feed_id=self.feed.id,
+                    status_id=recommendation.item,
+                    source=recommendation.sources[0],
+                    score=float(recommendation.score),
+                    adjusted_score=float(recommendation.adjusted_score),
+                )
+                for recommendation in recommendations
+            ]
+        )
 
         self.db.commit()
 
@@ -165,12 +173,16 @@ class FeedService():
 
         # store feed state in redis cache
         state = self.pipeline.get_state()
-        self.r.setex(self.redis_key, config.session.session_ttl, json.dumps(state, cls=NumpyEncoder))
+        self.r.setex(
+            self.redis_key,
+            config.session.session_ttl,
+            json.dumps(state, cls=NumpyEncoder),
+        )
 
     def _load_cached(self):
         if not self.r.exists(self.redis_key):
             return
-        
+
         state = json.loads(self.r.get(self.redis_key))
         self.pipeline.set_state(state)
 
@@ -180,7 +192,7 @@ class FeedService():
 
             if self.pipeline.is_new():
                 await self._execute()
-                
+
             recommendations = self.pipeline.results()
 
             self._set_link_header()
@@ -191,7 +203,9 @@ class FeedService():
             # self.tasks.add_task(self._save_recommendations, recommendations)
 
             # load new candidates
-            if not isinstance(self.pipeline[-1], PaginationStep) or len(self.pipeline[-1]) < (self._next_offset + self.pipeline[-1].limit):
+            if not isinstance(self.pipeline[-1], PaginationStep) or len(
+                self.pipeline[-1]
+            ) < (self._next_offset + self.pipeline[-1].limit):
                 self.tasks.add_task(self._execute)
 
             return recommendations

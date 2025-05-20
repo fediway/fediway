@@ -1,4 +1,3 @@
-
 import pandas as pd
 from dask import dataframe as dd
 from dask.base import normalize_token
@@ -14,9 +13,19 @@ from tqdm import tqdm
 import shutil
 
 from config import config
-from modules.mastodon.models import Account, Status, StatusStats, Follow, Favourite, Tag, StatusTag, Mention
+from modules.mastodon.models import (
+    Account,
+    Status,
+    StatusStats,
+    Follow,
+    Favourite,
+    Tag,
+    StatusTag,
+    Mention,
+)
 from modules.herde import Herde
 import modules.utils as utils
+
 
 class SeedHerdeService:
     def __init__(self, db: DBSession, graph: Graph):
@@ -58,7 +67,7 @@ class SeedHerdeService:
         with utils.duration("Computed tag ranks in {:.3f} seconds"):
             self.schwarm.compute_tag_rank()
 
-    def seed_table(self, model_cls, herde_fn = None):
+    def seed_table(self, model_cls, herde_fn=None):
         map_fn = InsertRows(self.db, self.herde, model_cls, herde_fn)
 
         ddf = dd.read_sql_table(
@@ -73,10 +82,10 @@ class SeedHerdeService:
     def seed_statuses(self, batch_size: int = 100):
         query = (
             select(
-                Status.id, 
-                Status.account_id, 
-                Status.language, 
-                Status.created_at, 
+                Status.id,
+                Status.account_id,
+                Status.language,
+                Status.created_at,
                 Status.in_reply_to_id,
                 Status.reblog_of_id,
             )
@@ -88,28 +97,35 @@ class SeedHerdeService:
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             index_col="id",
             bytes_per_chunk="64 MiB",
-        ).map_partitions(InsertRows(self.db, self.herde, Status, ))
+        ).map_partitions(
+            InsertRows(
+                self.db,
+                self.herde,
+                Status,
+            )
+        )
 
         with ProgressBar():
             ddf.compute()
 
     def seed_statuses_tags(self, batch_size: int = 100):
-        query = (
-            select(StatusTag.status_id, StatusTag.tag_id)
-        )
-        
+        query = select(StatusTag.status_id, StatusTag.tag_id)
+
         ddf = dd.read_sql_query(
             sql=query,
             con=self.db.get_bind().url.render_as_string(hide_password=False),
             index_col="status_id",
             bytes_per_chunk="64 MiB",
-            meta=pd.DataFrame({
-                "tag_id": pd.Series([], dtype="int64"),
-            })
+            meta=pd.DataFrame(
+                {
+                    "tag_id": pd.Series([], dtype="int64"),
+                }
+            ),
         ).map_partitions(InsertStatusTags(self.db, self.herde))
 
         with ProgressBar():
             ddf.compute()
+
 
 class InsertBatch:
     def __init__(self, db: DBSession, herde: Herde):
@@ -119,17 +135,20 @@ class InsertBatch:
     def __dask_tokenize__(self):
         return normalize_token(type(self))
 
+
 class InsertRows(InsertBatch):
-    def __init__(self, db: DBSession, herde: Herde, model_cls, herde_fn: str | None = None):
+    def __init__(
+        self, db: DBSession, herde: Herde, model_cls, herde_fn: str | None = None
+    ):
         self.db = db
         self.herde = herde
         self.model_cls = model_cls
-        self.herde_fn = herde_fn or f'add_{model_cls.__tablename__}'
+        self.herde_fn = herde_fn or f"add_{model_cls.__tablename__}"
 
     def __call__(self, rows: pd.DataFrame) -> None:
         if len(rows) == 0:
             return
-        
+
         models = [self.model_cls(id=id, **data) for id, data in rows.iterrows()]
 
         id_column = "id"
@@ -138,15 +157,19 @@ class InsertRows(InsertBatch):
 
         if getattr(models[0], id_column) in (0, 1):
             return
-        
+
         getattr(self.herde, self.herde_fn)(models)
+
 
 class InsertStatusTags(InsertBatch):
     def __call__(self, rows) -> None:
         if len(rows) == 0:
             return
-        
-        status_tags = [StatusTag(status_id=status_id, **data) for status_id, data in rows.iterrows()]
+
+        status_tags = [
+            StatusTag(status_id=status_id, **data)
+            for status_id, data in rows.iterrows()
+        ]
 
         if status_tags[0].status_id == 1:
             return

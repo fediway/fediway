@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, Depends
 from fastapi.exceptions import RequestValidationError
 from fastapi.security import HTTPBearer
@@ -14,20 +13,21 @@ from .errors.validation_error import http422_error_handler
 from .routes.api import router as api_router
 from config import config
 
+
 def get_application() -> FastAPI:
     config.logging.configure_logging()
 
     application = FastAPI(**config.fastapi_kwargs)
-    
+
     application.add_middleware(
         CORSMiddleware,
         allow_origins=config.cors.allow_origins,
         allow_credentials=config.cors.allow_credentials,
-        expose_headers=['link'],
+        expose_headers=["link"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     application.add_middleware(BaseHTTPMiddleware, dispatch=OAuthMiddleware())
     application.add_middleware(BaseHTTPMiddleware, dispatch=SessionMiddleware())
 
@@ -37,5 +37,6 @@ def get_application() -> FastAPI:
     application.include_router(api_router, prefix=config.api.api_prefix)
 
     return application
+
 
 app = get_application()

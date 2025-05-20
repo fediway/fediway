@@ -1,6 +1,6 @@
-
 from .base import Item
 from ..models import Tag
+
 
 class TagItem(Item):
     name: str

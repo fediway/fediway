@@ -1,5 +1,4 @@
-
-class Embedder():
+class Embedder:
     def __init__(self):
         pass
 
@@ -9,7 +8,8 @@ class Embedder():
     def dim(self) -> int:
         raise NotImplementedError
 
-class MultimodalEmbedder():
+
+class MultimodalEmbedder:
     def __init__(self):
         pass
 

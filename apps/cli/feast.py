@@ -1,9 +1,9 @@
-
 import typer
 
 from config import config
 
 app = typer.Typer(help="Feast commands.")
+
 
 @app.command("apply")
 def apply():
