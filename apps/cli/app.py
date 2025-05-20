@@ -8,8 +8,14 @@ from .qdrant import app as qdrant_app
 from .kirby import app as kirby_app
 from .risingwave import app as risingwave_app
 from .schwarm import app as schwarm_app
+from .source import app as source_app
 
 app = typer.Typer()
+
+app.add_typer(
+    source_app,
+    name="source"
+)
 
 app.add_typer(
     feast_app,
