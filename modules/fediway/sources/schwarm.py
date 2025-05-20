@@ -211,7 +211,7 @@ class FolloweeActivitySource(Source):
 
     def collect(self, limit: int, account_id: int):
         query = """
-        MATCH (me:Account {id: $account_id})-[:FOLLOWS]->(followed:Account)-[:FAVOURITES|CREATED_BY]->(s:Status)
+        MATCH (me:Account {id: $account_id})-[:FOLLOWS]->(followed:Account)-[:FAVOURITES|CREATED]->(s:Status)
         WHERE NOT (me)-[:LIKES]->(s)
         RETURN s.id as status_id
         LIMIT $limit;

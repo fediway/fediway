@@ -13,7 +13,7 @@ class SchwarmInteractionFeatures:
 
     def get_num_mentions(self, source_id: int, target_ids: list[int]) -> list[int]:
         query = """
-        MATCH (source:Account {id: $source_id})<-[:CREATED_BY]-(s:Status)-[:MENTIONS]->(target:Account)
+        MATCH (source:Account {id: $source_id})<-[:CREATED]-(s:Status)-[:MENTIONS]->(target:Account)
         WHERE target.id IN $target_ids
         RETURN target.id AS target_id, COUNT(*) AS mentions
         """
@@ -25,7 +25,7 @@ class SchwarmInteractionFeatures:
 
     def get_num_reblogs(self, source_id: int, target_ids: list[int]) -> list[int]:
         query = """
-        MATCH (source:Account {id: $source_id})-[:REBLOGS]->(s:Status)-[:CREATED_BY]->(target:Account)
+        MATCH (source:Account {id: $source_id})-[:REBLOGS]->(s:Status)-[:CREATED]->(target:Account)
         WHERE target.id IN $target_ids
         RETURN target.id AS target_id, COUNT(*) AS reblogs
         """
@@ -76,8 +76,8 @@ class SchwarmTwoHopFeatures:
 
     def get_num_favourites(self, source_id: int, target_ids: list[int]) -> list[int]:
         query = """
-        MATCH (source:Account {id: source_id})-[:FAVORITED]->(s1:Status)-[:CREATED_BY]->(middle:Account),
-              (middle)-[:FAVORITED]->(s2:Status)-[:CREATED_BY]->(target:Account)
+        MATCH (source:Account {id: source_id})-[:FAVORITED]->(s1:Status)-[:CREATED]->(middle:Account),
+              (middle)-[:FAVORITED]->(s2:Status)-[:CREATED]->(target:Account)
         WHERE target.id IN $target_ids
         RETURN target.id AS target_id, COUNT(*) AS two_hop_favourites
         """

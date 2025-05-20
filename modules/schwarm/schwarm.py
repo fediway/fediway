@@ -108,7 +108,7 @@ class Schwarm:
 
     def add_status_stats(self, stats: StatusStats):
         query = """
-        MATCH (a:Account)-[:CREATED_BY]->(s:Status {id: $id})
+        MATCH (a:Account)-[:CREATED]->(s:Status {id: $id})
         SET 
             s.num_favs = $num_favs,
             s.num_replies = $num_replies,
@@ -127,7 +127,7 @@ class Schwarm:
     def add_status_stats_batch(self, stats: list[StatusStats]):
         query = """
         UNWIND $stats as row
-        MATCH (a:Account)-[:CREATED_BY]->(s:Status {id: row.id})
+        MATCH (a:Account)-[:CREATED]->(s:Status {id: row.id})
         SET 
             s.num_favs = row.num_favs,
             s.num_replies = row.num_replies,
@@ -155,7 +155,7 @@ class Schwarm:
         ON CREATE SET 
             s.language = $language, 
             s.created_at = $created_at
-        CREATE (a)-[:CREATED_BY]->(s)
+        CREATE (a)-[:CREATED]->(s)
         """
 
         created_at = (
@@ -196,7 +196,7 @@ class Schwarm:
         ON CREATE SET 
             s.language = status.language, 
             s.created_at = status.created_at
-        CREATE (a)-[:CREATED_BY]->(s)
+        CREATE (a)-[:CREATED]->(s)
         """
 
         self._run_query(
@@ -409,7 +409,7 @@ class Schwarm:
 
     # def get_relevant_statuses(self, language, limit=10):
     #     query = """
-    #     MATCH (a:Account)-[:CREATED_BY]->(s:Status {language: $language})
+    #     MATCH (a:Account)-[:CREATED]->(s:Status {language: $language})
     #     // MATCH (c:Community {id: a.community_id})
 
     #     WITH
@@ -434,7 +434,7 @@ class Schwarm:
     def get_relevant_statuses(self, language, limit=10):
         query = """
         WITH timestamp() / 1000 AS now
-        MATCH (a:Account)-[:CREATED_BY]->(s:Status)
+        MATCH (a:Account)-[:CREATED]->(s:Status)
         WHERE 
             a.rank IS NOT NULL 
         RETURN s.created_at, now
@@ -443,7 +443,7 @@ class Schwarm:
 
         # query = """
         # WITH timestamp() AS now
-        # MATCH (a:Account)-[:CREATED_BY]->(s:Status {language: $language})
+        # MATCH (a:Account)-[:CREATED]->(s:Status {language: $language})
         # WITH a, s, (now - s.created_at) / 86400 AS age_days
         # WITH
         #     a.id as account_id,
@@ -514,7 +514,7 @@ class Schwarm:
 
     # def compute_engagement_baselines(self):
     #     query = """
-    #     MATCH (a:Account)-[:CREATED_BY]->(s:Status)
+    #     MATCH (a:Account)-[:CREATED]->(s:Status)
     #     OPTIONAL MATCH (s)<-[fav:FAVOURITES]-()
     #     WITH a, s, COUNT(fav) AS fav_count
     #     WITH a, AVG(fav_count) AS avg_fav

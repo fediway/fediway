@@ -14,7 +14,7 @@ class PopularInCommunitySource(Source):
         query = """
         WITH timestamp() / 1000 AS now
         MATCH (u:Account {id: $account_id})
-        MATCH (a:Account)-[:CREATED_BY]->(s:Status {community_id: u.community_id})
+        MATCH (a:Account)-[:CREATED]->(s:Status {community_id: u.community_id})
         WHERE 
             a.rank IS NOT NULL 
         AND s.num_favs > 0 

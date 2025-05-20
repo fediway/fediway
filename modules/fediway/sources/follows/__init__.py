@@ -1,2 +1,3 @@
 from .recently_engaged import RecentlyEngagedSource
+from .recently_popular import RecentlyPopularSource
 from .triangular_loops import TriangularLoopsSource

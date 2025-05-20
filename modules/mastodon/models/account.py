@@ -105,3 +105,10 @@ class Account(SQLModel, table=True):
     @property
     def group(self):
         return self.actor_type == "Group"
+
+    @classmethod
+    def select_by_ids(cls, ids):
+        from sqlmodel import select
+        from sqlalchemy.orm import selectinload
+
+        return select(cls).options(selectinload(cls.stats)).where(cls.id.in_(ids))

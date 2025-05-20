@@ -1,6 +1,5 @@
-import random
 from sqlmodel import select, Session as DBSession
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
 from modules.fediway.feed.sampling import InverseTransformSampler
 from modules.fediway.feed.pipeline import Feed
@@ -29,7 +28,6 @@ def statuses_trend_sources(
 
 @router.get("/statuses")
 async def status_trends(
-    request: Request,
     offset: int = 0,
     feed: FeedService = Depends(get_feed),
     sources=Depends(statuses_trend_sources),
