@@ -31,7 +31,10 @@ class PopularInCommunitySource(Source):
 
         with self.driver.session() as session:
             results = session.run(
-                query, account_id=self.account_id, limit=limit, decay_rate=self.decay_rate
+                query,
+                account_id=self.account_id,
+                limit=limit,
+                decay_rate=self.decay_rate,
             )
 
             for result in list(results):
