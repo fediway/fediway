@@ -1,7 +1,7 @@
 
 -- :up
 
-{% for hop_size, window_size, spec in [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('1 DAY', '60 DAYS', '60d')] %}
+{% for hop_size, window_size, spec in [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('7 DAY', '60 DAYS', '60d')] %}
     CREATE MATERIALIZED VIEW IF NOT EXISTS combined_status_tag_engagement_all_{{ spec }}_features AS
     SELECT
         window_start, 
