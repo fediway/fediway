@@ -6,7 +6,6 @@ from sqlmodel import Session, Table, MetaData, BigInteger, DateTime, Column, sel
 from sqlalchemy.schema import CreateTable
 from sqlalchemy import text
 from modules.utils import compile_sql, read_sql_join_query
-from tqdm import tqdm
 
 
 def create_entities_table(name: str, db: Session) -> Table:

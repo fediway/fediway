@@ -1,10 +1,8 @@
 from datetime import timedelta, datetime
 from pydantic import SecretStr
-from sqlalchemy import URL
 
 from .base import BaseConfig
 
-from modules.fediway.sources import Source
 from modules.fediway.heuristics import Heuristic
 
 

@@ -1,6 +1,5 @@
 from confluent_kafka.admin import AdminClient, NewTopic
 from confluent_kafka import KafkaException
-import asyncio
 import typer
 
 from config import config

@@ -1,4 +1,3 @@
-from neo4j import GraphDatabase
 from arango import ArangoClient, ServerConnectionError
 from loguru import logger
 

@@ -1,12 +1,8 @@
 import pandas as pd
-from datetime import datetime
-from arango.database import StandardDatabase
 from arango.graph import Graph
-from arango.collection import VertexCollection
 
 from modules.mastodon.models import (
     Status,
-    StatusStats,
     Account,
     Tag,
     StatusTag,

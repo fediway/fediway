@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlmodel import select, Session as DBSession
+from sqlmodel import Session as DBSession
 
 from modules.mastodon.items import AccountItem
 from modules.mastodon.models import Account

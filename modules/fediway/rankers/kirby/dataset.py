@@ -1,45 +1,24 @@
 from feast import FeatureStore
 from dask import dataframe as dd
-from dask import array as da
-from dask.distributed import Client, as_completed
 from dask.diagnostics import ProgressBar
 from dask.base import normalize_token
 from dask.utils import parse_bytes
 
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 import pandas as pd
-import numpy as np
 
 import time
-import random
-from tqdm import tqdm
-from sqlmodel import Session, func, select, exists
-from sqlmodel.sql._expression_select_cls import Select
-from sqlalchemy.orm import selectinload, joinedload, aliased
-from sqlalchemy.schema import CreateTable
+from sqlmodel import Session, select
 from sqlalchemy import (
-    label,
-    and_,
     text,
-    MetaData,
-    Table,
-    DateTime,
-    Column,
-    Integer,
-    BigInteger,
-    String,
-    Float,
     insert,
 )
-from datetime import datetime, timedelta, date
-from tqdm import tqdm
+from datetime import datetime, date
 
 import modules.utils as utils
 from modules.fediway.models.risingwave import AccountStatusLabel
 from modules.features import get_historical_features_ddf, create_entities_table
 from .features import get_feature_views
-from config import config
 
 
 class InsertPositives:

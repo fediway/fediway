@@ -1,7 +1,4 @@
-from datetime import datetime, timedelta
-from loguru import logger
 import typer
-import time
 
 from config import config
 
@@ -104,8 +101,7 @@ def seed():
 
 @app.command("similar-accounts")
 def similar_accounts(account_id: int):
-    from shared.services.seed_herde_service import SeedHerdeService
-    from shared.core.herde import graph, db
+    from shared.core.herde import db
 
     similar_accounts_query = """
         LET targetAccount = DOCUMENT("accounts", @account_id)

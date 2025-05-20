@@ -1,8 +1,7 @@
-from sqlmodel import select, Session as DBSession
+from sqlmodel import Session as DBSession
 from fastapi import APIRouter, Depends
 
 from modules.fediway.feed.sampling import InverseTransformSampler
-from modules.fediway.feed.pipeline import Feed
 from modules.fediway.sources import Source
 from apps.api.core.ranker import ranker
 from apps.api.services.feed_service import FeedService
@@ -11,8 +10,8 @@ from apps.api.dependencies.sources.statuses import (
     get_popular_by_influential_accounts_sources,
 )
 from shared.core.db import get_db_session
-from modules.mastodon.models import Tag, Status
-from modules.mastodon.items import TagItem, StatusItem
+from modules.mastodon.models import Status
+from modules.mastodon.items import StatusItem
 from config import config
 
 router = APIRouter()

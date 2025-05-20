@@ -1,14 +1,8 @@
 from feast import RequestSource, Field
-from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import (
-    PostgreSQLSource,
-)
 from feast.on_demand_feature_view import on_demand_feature_view
 from feast.types import Int64, Array
 
 from sqlmodel import select, desc
-from datetime import datetime
-from psycopg2.extensions import register_adapter, AsIs
-import numpy as np
 import pandas as pd
 
 from modules.mastodon.models import Favourite

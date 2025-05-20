@@ -1,5 +1,4 @@
 from celery import Celery
-from celery.schedules import crontab
 from loguru import logger
 
 import modules.utils as utils

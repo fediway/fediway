@@ -48,7 +48,6 @@ def purge():
 @app.command("create-embeddings")
 def create_embeddings(batch_size: int = 16):
     from sqlmodel import select, func
-    from datetime import datetime, timedelta
     from qdrant_client.http import models
 
     from modules.mastodon.models import Status

@@ -2,23 +2,16 @@ import pandas as pd
 from dask import dataframe as dd
 from dask.base import normalize_token
 from sqlmodel import Session as DBSession, select, func, exists
-from sqlalchemy.orm import selectinload, aliased
-from sqlalchemy import or_, and_
+from sqlalchemy import and_
 from neo4j import Driver
 from datetime import datetime, timedelta
-from pathlib import Path
 from loguru import logger
-from tqdm import tqdm
-import shutil
 
 from config import config
 from modules.mastodon.models import (
-    Account,
     Status,
     StatusStats,
-    Follow,
     Favourite,
-    Tag,
     StatusTag,
     Mention,
 )

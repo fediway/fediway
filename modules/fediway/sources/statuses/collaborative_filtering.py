@@ -1,6 +1,6 @@
-from datetime import timedelta, datetime
+from datetime import timedelta
 
-from ..base import Source, RedisSource
+from ..base import Source
 
 
 class CollaborativeFilteringSource(Source):

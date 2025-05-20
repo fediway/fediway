@@ -1,7 +1,4 @@
 from feast import RequestSource, Field
-from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import (
-    PostgreSQLSource,
-)
 from feast.on_demand_feature_view import on_demand_feature_view
 from feast.types import Int64
 

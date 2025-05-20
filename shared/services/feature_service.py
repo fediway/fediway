@@ -5,7 +5,6 @@ from loguru import logger
 import time
 
 from shared.core.feast import feature_store
-from modules.mastodon.models import Status, StatusStats
 from modules.fediway.feed.features import Features
 
 

@@ -4,11 +4,8 @@ from feast.infra.offline_stores.contrib.postgres_offline_store.postgres import (
     PostgreSQLOfflineStoreConfig,
 )
 
-from enum import Enum
 
-import os
 from pydantic import SecretStr
-from sqlalchemy import URL
 
 from .base import BaseConfig
 

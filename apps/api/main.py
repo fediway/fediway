@@ -1,6 +1,5 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
-from fastapi.security import HTTPBearer
 
 from starlette.exceptions import HTTPException
 from starlette.middleware.cors import CORSMiddleware

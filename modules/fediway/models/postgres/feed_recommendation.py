@@ -1,6 +1,4 @@
-from typing import List
 from datetime import datetime
-from sqlalchemy import Column, ARRAY, Integer, BigInteger, String
 from sqlmodel import SQLModel, Field, Relationship
 
 from modules.mastodon.models.status import Status

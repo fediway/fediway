@@ -1,7 +1,5 @@
-from typing import List
 from datetime import datetime
-from sqlalchemy import Column, ARRAY, Integer, BigInteger, String
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field
 
 
 class Feed(SQLModel, table=True):

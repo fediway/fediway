@@ -1,7 +1,6 @@
-from neo4j.exceptions import ServiceUnavailable
 from datetime import timedelta, datetime
 
-from .base import Source, RedisSource
+from .base import Source
 
 
 class TrendingStatusesByInfluentialUsers(Source):

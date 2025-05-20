@@ -1,6 +1,5 @@
 from datetime import timedelta
 from neo4j import Driver
-import numpy as np
 import time
 
 from modules.mastodon.models import (
@@ -10,7 +9,6 @@ from modules.mastodon.models import (
     Tag,
     StatusTag,
     Mention,
-    Follow,
     Favourite,
 )
 

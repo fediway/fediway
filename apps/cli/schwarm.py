@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from loguru import logger
 import typer
-import time
 
 from config import config
 import modules.utils as utils
@@ -56,10 +55,6 @@ def purge():
 def collect(language: str = "en"):
     from modules.fediway.sources.schwarm import (
         TrendingStatusesByInfluentialUsers,
-        MostInteractedByAccountsSource,
-        CollaborativeFilteringSource,
-        TrendingStatusesInCommunity,
-        TrendingStatusesByTagsInCommunity,
     )
 
     # source = MostInteractedByAccountsSource(

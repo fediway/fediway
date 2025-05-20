@@ -1,4 +1,3 @@
-from fastapi import Request
 import maxminddb
 import os
 

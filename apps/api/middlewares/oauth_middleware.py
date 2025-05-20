@@ -1,4 +1,4 @@
-from fastapi import Request, Response
+from fastapi import Request
 from sqlmodel import select
 
 from shared.core.db import db_session

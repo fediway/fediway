@@ -1,12 +1,10 @@
 from fastapi import Depends
-from datetime import timedelta
 
 from modules.fediway.sources import Source
 from modules.fediway.sources.follows import RecentlyPopularSource
 from modules.mastodon.models import Account
 
 from shared.core.schwarm import driver as schwarm_driver
-from config import config
 
 from ..lang import get_languages
 from ..auth import get_authenticated_account_or_fail

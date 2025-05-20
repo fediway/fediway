@@ -1,5 +1,4 @@
 import numpy as np
-from sqlmodel import Session, select
 
 from .base import Ranker
 

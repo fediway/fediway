@@ -1,15 +1,10 @@
-from sqlmodel import Session as DBSession, select
+from sqlmodel import Session as DBSession
 from fastapi import Request, Response, BackgroundTasks, Depends
 
 from ..core.redis import redis
-from ..core.ranker import ranker
 from ..services.feed_service import FeedService
 from shared.core.db import get_db_session
-from shared.core.feast import feature_store
 from shared.services.feature_service import FeatureService
-from modules.fediway.sources import Source
-from modules.fediway.feed import Feed, Sampler, TopKSampler
-from modules.fediway.heuristics import Heuristic
 
 from .features import get_feature_service
 

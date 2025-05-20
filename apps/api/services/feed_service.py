@@ -1,23 +1,19 @@
 from starlette.datastructures import URL
-from sqlmodel import Session as DBSession, select
-from fastapi import Request, BackgroundTasks, Depends, Response
-from loguru import logger
+from sqlmodel import Session as DBSession
+from fastapi import Request, BackgroundTasks, Response
 from redis import Redis
 import numpy as np
-import asyncio
 import json
 import uuid
-import time
 
 from modules.fediway.feed.pipeline import Feed, PaginationStep
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.sources import Source
 from modules.fediway.rankers import Ranker
-from modules.fediway.heuristics import Heuristic, DiversifyHeuristic
+from modules.fediway.heuristics import Heuristic
 from shared.services.feature_service import FeatureService
 from ..modules.sessions import Session
-from modules.mastodon.models import Status
-from modules.fediway.models.postgres import Feed as FeedModel, FeedRecommendation
+from modules.fediway.models.postgres import FeedRecommendation
 import modules.utils as utils
 from config import config
 

@@ -2,21 +2,13 @@ import pandas as pd
 from dask import dataframe as dd
 from dask.base import normalize_token
 from dask.diagnostics import ProgressBar
-from sqlmodel import Session as DBSession, select, func, exists
-from sqlalchemy.orm import selectinload, aliased
-from sqlalchemy import or_, and_
-from datetime import datetime, timedelta
+from sqlmodel import Session as DBSession, select
 from arango.graph import Graph
-from pathlib import Path
 from loguru import logger
-from tqdm import tqdm
-import shutil
 
-from config import config
 from modules.mastodon.models import (
     Account,
     Status,
-    StatusStats,
     Follow,
     Favourite,
     Tag,

@@ -1,4 +1,3 @@
-from neo4j import Driver
 from loguru import logger
 
 from modules.mastodon.models import Follow

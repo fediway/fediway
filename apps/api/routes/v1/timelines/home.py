@@ -1,5 +1,5 @@
 from sqlmodel import Session as DBSession
-from fastapi import APIRouter, Depends, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, Request
 
 from modules.fediway.sources import Source
 from modules.mastodon.items import StatusItem

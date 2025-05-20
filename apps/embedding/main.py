@@ -3,13 +3,11 @@ from faststream.confluent import KafkaBroker
 
 from .handlers.embeddings import (
     TextEmbeddingsBatchHandler,
-    AccountEmbeddingsEventHandler,
 )
 from shared.core.embed import embedder
 from modules.debezium import (
     DebeziumEvent,
     process_debezium_batch,
-    make_debezium_handler,
 )
 from config import config
 

@@ -1,7 +1,5 @@
-from neo4j import Driver
 from loguru import logger
 
-from modules.mastodon.models import Account
 from modules.schwarm import Schwarm
 
 from modules.debezium import DebeziumEventHandler

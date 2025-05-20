@@ -1,4 +1,3 @@
-from sqlalchemy import event
 from sqlmodel import SQLModel
 
 

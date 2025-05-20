@@ -1,7 +1,5 @@
 from .base import BaseConfig
 
-from pydantic import SecretStr
-
 
 class SessionConfig(BaseConfig):
     session_max_size: int = 10_000

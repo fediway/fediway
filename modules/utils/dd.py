@@ -2,12 +2,10 @@ import numpy as np
 import pandas as pd
 
 import dask.dataframe as dd
-from dask.base import compute as dask_compute
 from dask.dataframe.io.sql import _read_sql_chunk
 from dask.dataframe import methods
-from dask.dataframe._compat import PANDAS_GE_300
 from dask.dataframe.utils import pyarrow_strings_enabled
-from dask.delayed import delayed, tokenize
+from dask.delayed import delayed
 from dask.utils import parse_bytes
 
 import modules.utils as utils

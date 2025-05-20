@@ -1,5 +1,3 @@
-from redis import Redis
-
 from .base import Source
 
 

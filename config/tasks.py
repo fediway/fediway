@@ -1,12 +1,7 @@
 from urllib.parse import quote
-from datetime import timedelta
 from pydantic import SecretStr
-from sqlalchemy import URL
 
 from .base import BaseConfig
-
-from modules.fediway.sources import Source
-from modules.fediway.heuristics import Heuristic
 
 
 class TasksConfig(BaseConfig):

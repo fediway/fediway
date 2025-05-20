@@ -1,8 +1,5 @@
-from fastapi import Request, Response
-from loguru import logger
-from uuid import uuid4
+from fastapi import Request
 
-from ..modules.sessions import Session
 from ..core.session import session_manager, init_session
 from config import config
 

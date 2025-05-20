@@ -1,5 +1,5 @@
 from modules.fediway.rankers.kirby.features import LABELS
-from datetime import datetime, date
+from datetime import datetime
 from loguru import logger
 import typer
 
@@ -16,10 +16,8 @@ def create_dataset(
     end_date: datetime = datetime.now(),
 ) -> int:
     from modules.fediway.rankers.kirby.dataset import create_dataset
-    from shared.core.rw import rw_session, engine
+    from shared.core.rw import rw_session
     from shared.core.feast import feature_store
-
-    from pathlib import Path
 
     typer.echo(f"Creating dataset...")
 
@@ -78,7 +76,6 @@ def train_kirby(
     from modules.fediway.rankers.kirby import Kirby, get_feature_views
     from shared.core.feast import feature_store
     from dask import dataframe as dd
-    import pandas as pd
     import numpy as np
 
     np.random.seed(seed)

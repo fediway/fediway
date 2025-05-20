@@ -1,14 +1,9 @@
-from feast import FeatureStore
-from feast.data_source import PushMode
 from qdrant_client import QdrantClient, models
 from datetime import datetime
 from pydantic import BaseModel
 from loguru import logger
-import pandas as pd
 import numpy as np
-import time
 
-from config import config
 import modules.utils as utils
 from modules.fediway.embedding import Embedder, MultimodalEmbedder
 from modules.debezium import DebeziumBatchHandler, DebeziumEventHandler

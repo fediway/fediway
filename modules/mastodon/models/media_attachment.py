@@ -1,4 +1,3 @@
-from typing import Annotated, Union
 from datetime import datetime
 from sqlalchemy import JSON, Column
 from sqlmodel import SQLModel, Field, Relationship

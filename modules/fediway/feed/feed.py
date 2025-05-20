@@ -1,7 +1,5 @@
 import asyncio
-from datetime import timedelta
 import numpy as np
-import time
 
 from ..rankers import Ranker
 from ..heuristics import Heuristic

@@ -4,7 +4,6 @@ from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source i
 
 # from feast.infra.offline_stores.contrib.spark_offline_store.spark_source import SparkSource
 from feast import FeatureView, PushSource, Entity, Field
-from feast.data_format import ParquetFormat
 from feast.types import (
     Int64,
     Float32,
@@ -18,13 +17,9 @@ from feast.types import (
 )
 
 import pyarrow as pa
-from pyarrow.parquet import ParquetDataset, write_table
 from datetime import timedelta
-from pathlib import Path
 from functools import reduce
 import operator
-
-from config import config
 
 
 def make_feature_view(

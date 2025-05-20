@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import PostgresDsn, SecretStr, HttpUrl, RedisDsn
+from pydantic import SecretStr
 
 from .base import BaseConfig
 

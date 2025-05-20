@@ -1,7 +1,5 @@
-from feast import FeatureStore
 from faststream import FastStream
 from faststream.confluent import KafkaBroker
-from loguru import logger
 
 from modules.schwarm import Schwarm
 
@@ -19,7 +17,6 @@ from modules.debezium import (
     process_debezium_event,
 )
 from shared.core.feast import feature_store
-from shared.core.qdrant import client
 from shared.core.schwarm import driver
 from config import config
 
