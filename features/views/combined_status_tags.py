@@ -31,7 +31,7 @@ def _make_engagement_fv(entities, spec: str, fields: list[str]) -> FeatureView:
     )
 
 
-SPECS = ["1d", "7d", "30d"]
+SPECS = ["1d", "7d", "60d"]
 
 FEATURES = [
     "fav_count",
