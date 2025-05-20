@@ -9,9 +9,8 @@ from modules.fediway.sources import Source
 from apps.api.core.ranker import ranker
 from apps.api.services.feed_service import FeedService
 from apps.api.dependencies.feeds import get_feed
-from apps.api.dependencies.sources import (
-    get_trending_statuses_by_influential_accounts_source,
-    get_trending_tags_sources,
+from apps.api.dependencies.sources.tags import (
+    get_influential_sources
 )
 from shared.core.db import get_db_session
 from modules.mastodon.models import Tag, Status
@@ -22,7 +21,7 @@ router = APIRouter()
 
 @router.get('/tags')
 async def tag_trends(
-    sources = Depends(get_trending_tags_sources),
+    sources = Depends(get_influential_sources),
     db: DBSession = Depends(get_db_session),
 ) -> list[TagItem]:
     

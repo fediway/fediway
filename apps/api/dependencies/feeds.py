@@ -12,10 +12,13 @@ from modules.fediway.sources import Source
 from modules.fediway.feed import Feed, Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
 
+from .features import get_feature_service
+
 def get_feed(request: Request, 
              response: Response, 
              tasks: BackgroundTasks,
-             db: DBSession = Depends(get_db_session)) -> FeedService:
+             db: DBSession = Depends(get_db_session),
+             feature_service: FeatureService = Depends(get_feature_service)) -> FeedService:
 
     return FeedService(
         db=db, 
@@ -24,5 +27,5 @@ def get_feed(request: Request,
         response=response,
         tasks=tasks,
         redis=redis,
-        feature_service=FeatureService(feature_store)
+        feature_service=feature_service
     )

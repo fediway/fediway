@@ -3,15 +3,15 @@ from datetime import timedelta, datetime
 from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, Range
 
-from shared.services.feature_service import FeatureService
-from .base import Source
+from modules.fediway.feed.features import Features
+from ..base import Source
 
 class SimilarToFavourited(Source):
     def __init__(
         self, 
         client: QdrantClient, 
         account_id: int, 
-        feature_service: FeatureService,
+        feature_service: Features,
         language: str = 'en', 
         max_age = timedelta(days=3)
     ):

@@ -11,24 +11,26 @@ from shared.core.db import get_db_session
 
 from apps.api.services.feed_service import FeedService
 from apps.api.dependencies.feeds import get_feed
-from apps.api.dependencies.sources import (
-    get_hot_statuses_by_language_source, 
-    get_trending_statuses_by_influential_accounts_source,
-    get_trending_statuses_in_community_source,
-    get_collaborative_filtering_source,
+from apps.api.dependencies.sources.statuses import (
+    get_collaborative_filtering_sources,
+    get_popular_in_community_sources,
+    get_similar_to_favourited_sources
 )
 
 from config import config
 
+router = APIRouter()
+
 def home_sources(
-    trending_statuses_in_community: Source = Depends(get_trending_statuses_in_community_source),
-    collaborative_filtering: list[Source] = Depends(get_collaborative_filtering_source),
+    popular_in_community: list[Source] = Depends(get_popular_in_community_sources),
+    collaborative_filtering: list[Source] = Depends(get_collaborative_filtering_sources),
+    similar_to_favourited: list[Source] = Depends(get_similar_to_favourited_sources),
 ):
     return (
-        [trending_statuses_in_community] + 
-        collaborative_filtering
+        popular_in_community +
+        collaborative_filtering +
+        similar_to_favourited
     )
-
 
 @router.get('/home')
 async def home_timeline(

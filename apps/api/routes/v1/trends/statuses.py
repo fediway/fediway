@@ -9,9 +9,8 @@ from modules.fediway.sources import Source
 from apps.api.core.ranker import ranker
 from apps.api.services.feed_service import FeedService
 from apps.api.dependencies.feeds import get_feed
-from apps.api.dependencies.sources import (
-    get_trending_statuses_by_influential_accounts_source,
-    get_trending_tags_sources,
+from apps.api.dependencies.sources.statuses import (
+    get_popular_by_influential_accounts_sources
 )
 from shared.core.db import get_db_session
 from modules.mastodon.models import Tag, Status
@@ -20,17 +19,17 @@ from config import config
 
 router = APIRouter()
 
-def public_timeline_sources(
-    trending_statuses_by_influential_accounts: list[Source] = Depends(get_trending_statuses_by_influential_accounts_source),
+def statuses_trend_sources(
+    popular_by_influential_accounts: list[Source] = Depends(get_popular_by_influential_accounts_sources),
 ):
-    return trending_statuses_by_influential_accounts
+    return popular_by_influential_accounts
 
 @router.get('/statuses')
 async def status_trends(
     request: Request,
     offset: int = 0,
     feed: FeedService = Depends(get_feed),
-    sources = Depends(public_timeline_sources),
+    sources = Depends(statuses_trend_sources),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))

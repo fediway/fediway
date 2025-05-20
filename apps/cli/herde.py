@@ -10,10 +10,10 @@ app = typer.Typer(help="Schwarm commands.")
 
 def get_client():
     from arango import ArangoClient
-    return ArangoClient(hosts=config.fediway.arango_hosts)
+    return ArangoClient(hosts=config.fediway.arango_hosts)    
 
-@app.command("create-db")
-def create_db():
+@app.command("migrate")
+def migrate():
     client = get_client()
 
     sys_db = client.db(
@@ -28,9 +28,12 @@ def create_db():
     else:
         typer.echo(f"Arango database {config.fediway.arango_name} already exists.")
 
-@app.command("migrate")
-def migrate():
-    from shared.core.herde import db
+    db = client.db(
+        config.fediway.arango_name, 
+        username=config.fediway.arango_user,
+        password=config.fediway.arango_pass,
+        verify=True
+    )
 
     if not db.has_graph(config.fediway.arango_graph):
         graph = db.create_graph(config.fediway.arango_graph)

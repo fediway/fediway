@@ -1,7 +1,7 @@
 
 from datetime import timedelta, datetime
 
-from .base import Source, RedisSource
+from ..base import Source, RedisSource
 
 class CollaborativeFilteringSource(Source):
     def __init__(self, driver, account_id: int, language: str = 'en', max_age = timedelta(days=3)):

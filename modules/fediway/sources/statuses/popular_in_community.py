@@ -1,7 +1,7 @@
 
 from ..base import Source
 
-class TrendingInCommunitySource(Source):
+class PopularInCommunitySource(Source):
     def __init__(self, driver, account_id: int, alpha: float = 0.1):
         self.driver = driver
         self.account_id = account_id

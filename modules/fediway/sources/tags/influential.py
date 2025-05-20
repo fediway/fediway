@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 from ..base import Source
 
-class RecentlyPopularSource(Source):
+class InfluentialSource(Source):
     def __init__(self, driver, language: str = 'en', max_age = timedelta(days=3)):
         self.driver = driver
         self.language = language

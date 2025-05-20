@@ -133,12 +133,12 @@ class InsertRows(InsertBatch):
         models = [self.model_cls(id=id, **data) for id, data in rows.iterrows()]
 
         id_column = "id"
-        if self.model_cls in [Favourite, Mention]:
+        if self.model_cls in [Favourite, Mention, Follow]:
             id_column = "account_id"
 
         if getattr(models[0], id_column) in (0, 1):
             return
-
+        
         getattr(self.herde, self.herde_fn)(models)
 
 class InsertStatusTags(InsertBatch):
