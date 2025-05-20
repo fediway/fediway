@@ -58,8 +58,7 @@ def get_popular_in_community_sources(
         PopularInCommunitySource(
             driver=schwarm_driver,
             account_id=account.id,
-            language=lang,
-            max_age=MAX_AGE,
+            decay_rate=config.fediway.feed_decay_rate,
         )
     ]
 

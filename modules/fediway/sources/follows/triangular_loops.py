@@ -5,9 +5,9 @@ from ..base import Source
 
 class TriangularLoopsSource(Source):
     """
-    In the follow graph u -> v -> w -> u, whenever there isn't an
-    edge v -> u, the Triangular Loops Candidate Source will suggest
-    u as a potential new follow for v.”
+    In the follow graph u -> v -> w -> u, whenever there isn't an edge v -> u, 
+    the Triangular Loops Candidate Source will suggest u as a potential new 
+    follow for v.
     """
 
     def __init__(self, db: StandardDatabase, account_id: int):
