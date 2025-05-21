@@ -5,8 +5,9 @@ from sqlmodel import SQLModel, Field, Relationship
 class Recommendation(SQLModel, table=True):
     __tablename__ = "recommendations"
 
-    id: int = Field(primary_key=True)
-    feed_id: int | None = Field(nullable=True)
+    id: str = Field(primary_key=True)
+    feed_id: str | None = Field(nullable=True)
+    rec_run_id: str = Field(nullable=False)
     entity: str = Field()
     entity_id: str = Field(nullable=False)
     score: float = Field(nullable=False)

@@ -11,4 +11,5 @@ class Feed(SQLModel, table=True):
     ip: str = Field(nullable=False)
     name: str = Field(nullable=False)
     entity: str = Field(nullable=False)
+    account_id: int = Field(nullable=True)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

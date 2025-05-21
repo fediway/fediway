@@ -27,7 +27,7 @@ class SimilarToFavourited(Source):
         return "similar_to_favourited"
 
     def name(self):
-        return f"similar_to_favourited[l={self.language},a={self.max_age.total_seconds}]"
+        return f"similar_to_favourited[l={self.language},a={self.max_age.total_seconds()}]"
 
     def collect(self, limit: int):
         favourites = self.feature_service.get(

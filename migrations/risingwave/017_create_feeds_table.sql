@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS feeds (
     entity VARCHAR,
     account_id BIGINT,
     created_at TIMESTAMP,
-)
+);
 
 -- :down
 DROP TABLE IF EXISTS feeds CASCADE;

@@ -109,6 +109,7 @@ class SourcingStep(PipelineStep):
     def __init__(self, sources: list[(Source, int)] = []):
         self.sources = sources
         self._durations = []
+        self._counts = []
 
     def add(self, source: Source, n: int):
         self.sources.append((source, n))
@@ -116,12 +117,16 @@ class SourcingStep(PipelineStep):
     def get_durations(self):
         return self._durations
 
+    def get_counts(self):
+        return self._counts
+
     async def _collect_source(self, idx, source: Source, args):
         start_time = time.perf_counter_ns()
 
         candidates = [c for c in source.collect(*args)]
 
         self._durations[idx] = time.perf_counter_ns() - start_time
+        self._counts[idx] = len(candidates)
 
         return candidates
 
@@ -129,6 +134,7 @@ class SourcingStep(PipelineStep):
         self, candidates: list[int], scores: np.ndarray
     ) -> tuple[list[int], np.ndarray]:
         self._durations = [None for _ in range(len(self.sources))]
+        self._counts = [0 for _ in range(len(self.sources))]
         jobs = []
 
         for i, (source, n) in enumerate(self.sources):

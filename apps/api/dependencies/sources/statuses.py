@@ -29,7 +29,7 @@ def get_popular_by_influential_accounts_sources(
         PouplarByInfluentialAccountsSource(
             driver=schwarm_driver,
             language=lang,
-            alpha=config.fediway.feed_decay_rate,
+            decay_rate=config.fediway.feed_decay_rate,
         )
         for lang in languages
     ]

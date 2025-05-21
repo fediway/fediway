@@ -12,7 +12,8 @@ from datetime import datetime
 
 import modules.utils as utils
 from config import config
-from modules.fediway.feed.pipeline import Feed, PaginationStep
+from modules.mastodon.models import Account
+from modules.fediway.feed.pipeline import Feed, PaginationStep, SourcingStep
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
 from modules.fediway.models.risingwave import (
@@ -68,6 +69,7 @@ class FeedService:
         session: Session,
         redis: Redis,
         feature_service: FeatureService,
+        account: Account | None,
     ):
         self.r = redis
         self.db = db
@@ -77,6 +79,7 @@ class FeedService:
         self.session = session
         self.feature_service = feature_service
         self.pipeline = Feed(feature_service)
+        self.account = account
 
         self._next_offset = 0
         self.key = request.query_params.get("feed", _generate_feed_key(request))
@@ -150,6 +153,7 @@ class FeedService:
                 id=self.id,
                 user_agent=self.request.headers.get("User-Agent"),
                 ip=self.request.client.host,
+                account_id=self.account.id if self.account else None,
                 name=self._name,
                 entity=self.pipeline.entity,
                 created_at=now,
@@ -167,10 +171,11 @@ class FeedService:
             )
         )
 
+        rec_step_ids = [str(uuid.uuid4()) for _ in range(len(self.pipeline.steps))]
         self.db.bulk_save_objects(
             [
                 RecPipelineStep(
-                    id=str(uuid.uuid4()),
+                    id=step_id,
                     feed_id=self.id,
                     run_id=run_id,
                     group_name=str(step.__class__.__name__),
@@ -178,17 +183,40 @@ class FeedService:
                     duration_ns=duration_ns,
                     executed_at=now,
                 )
-                for step, duration_ns in zip(
-                    self.pipeline.steps, self.pipeline.get_durations()
+                for step_id, step, duration_ns in zip(
+                    rec_step_ids, self.pipeline.steps, self.pipeline.get_durations()
                 )
             ]
         )
+
+        for step_id, step in zip(rec_step_ids, self.pipeline.steps):
+            if not isinstance(step, SourcingStep):
+                continue
+            self.db.bulk_save_objects(
+                [
+                    SourcingRun(
+                        id=str(uuid.uuid4()),
+                        feed_id=self.id,
+                        step_id=step_id,
+                        group_name=source.group(),
+                        source=source.name(),
+                        candidates_limit=limit,
+                        candidates_count=count,
+                        duration_ns=duration_ns,
+                        executed_at=now,
+                    )
+                    for (source, limit), duration_ns, count in zip(
+                        step.sources, step.get_durations(), step.get_counts()
+                    )
+                ]
+            )
 
         self.db.bulk_save_objects(
             [
                 Recommendation(
                     id=str(uuid.uuid4()),
                     feed_id=self.id,
+                    run_id=run_id,
                     entity=self.pipeline.entity,
                     entity_id=recommendation,
                     score=score,
@@ -198,7 +226,7 @@ class FeedService:
             ]
         )
 
-        # self.db.commit()
+        self.db.commit()
 
     def _save_pipeline_state(self):
         state = self.pipeline.get_state()

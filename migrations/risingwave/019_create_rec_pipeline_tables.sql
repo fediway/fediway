@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS rec_pipeline_runs (
     iteration INT,
     duration_ns BIGINT,
     executed_at TIMESTAMP
-)
+);
 
 CREATE TABLE IF NOT EXISTS rec_pipeline_steps (
     id VARCHAR PRIMARY KEY,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS rec_pipeline_steps (
     params JSONB,
     duration_ns BIGINT,
     executed_at TIMESTAMP
-)
+);
 
 -- :down
 DROP TABLE IF EXISTS rec_pipeline_runs CASCADE;

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS ranking_runs (
     params JSONB,
     duration_ns BIGINT,
     executed_at TIMESTAMP
-)
+);
 
 CREATE TABLE IF NOT EXISTS ranked_entities (
     id VARCHAR PRIMARY KEY,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS ranked_entities (
     score REAL,
     meta JSONB,
     created_at TIMESTAMP
-)
+);
 
 -- :down
 DROP TABLE IF EXISTS ranking_runs CASCADE;
