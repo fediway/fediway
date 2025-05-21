@@ -1,12 +1,12 @@
-import asyncio
-
 import numpy as np
+import asyncio
+import time
 
-from ..heuristics import DiversifyHeuristic, Heuristic
 from ..rankers import Ranker
 from ..sources import Source
+from ..heuristics import Heuristic, DiversifyHeuristic
+from .sampling import TopKSampler, Sampler
 from .features import Features
-from .sampling import Sampler, TopKSampler
 
 
 class PipelineStep:
@@ -108,20 +108,31 @@ class SourcingStep(PipelineStep):
 
     def __init__(self, sources: list[(Source, int)] = []):
         self.sources = sources
+        self._durations = []
 
     def add(self, source: Source, n: int):
         self.sources.append((source, n))
 
-    async def _collect_source(self, source: Source, args):
-        return [c for c in source.collect(*args)]
+    def get_durations(self):
+        return self._durations
+
+    async def _collect_source(self, idx, source: Source, args):
+        start_time = time.perf_counter_ns()
+
+        candidates = [c for c in source.collect(*args)]
+
+        self._durations[idx] = time.perf_counter_ns() - start_time
+
+        return candidates
 
     async def __call__(
         self, candidates: list[int], scores: np.ndarray
     ) -> tuple[list[int], np.ndarray]:
+        self._durations = [None for _ in range(len(self.sources))]
         jobs = []
 
-        for source, n in self.sources:
-            jobs.append(self._collect_source(source, (n,)))
+        for i, (source, n) in enumerate(self.sources):
+            jobs.append(self._collect_source(i, source, (n,)))
 
         results = await asyncio.gather(*jobs)
 
@@ -224,38 +235,43 @@ class SamplingStep(PipelineStep):
 
 
 class Feed:
-    pipeline: list[PipelineStep] = []
+    steps: list[PipelineStep] = []
     entity: str
 
     def __init__(self, feature_service: Features):
         self.feature_service = feature_service
         self.pipeline = []
         self._heuristics = []
-        self._is_new = True
+        self.counter = 0
+        self._durations = []
+        self._running = False
+
+    def get_durations(self) -> list[int]:
+        return self._durations
 
     def is_new(self) -> bool:
-        return self._is_new
+        return self.counter == 0
 
     def get_state(self) -> list[any]:
         return {
-            "is_new": self._is_new,
-            "pipeline": [
+            "counter": self.counter,
+            "steps": [
                 step.get_state() if hasattr(step, "get_state") else None
-                for step in self.pipeline
+                for step in self.steps
             ],
         }
 
     def set_state(self, state):
-        self._is_new = state.get("is_new", True)
-        for step, _state in zip(self.pipeline, state["pipeline"]):
+        self.counter = state.get("counter", True)
+        for step, _state in zip(self.steps, state["steps"]):
             if hasattr(step, "set_state"):
                 step.set_state(_state)
 
     def _is_current_step_type(self, type):
-        return len(self.pipeline) > 0 and isinstace(self.pipeline[-1], type)
+        return len(self.steps) > 0 and isinstance(self.steps[-1], type)
 
     def step(self, step: PipelineStep):
-        self.pipeline.append(step)
+        self.steps.append(step)
 
     def select(self, entity: str):
         self.entity = entity
@@ -267,19 +283,19 @@ class Feed:
             candidates, indices = np.unique(candidates, return_index=True)
             return candidates, scores[indices]
 
-        self.pipeline.append(step_fn)
+        self.steps.append(step_fn)
 
         return self
 
     def remember(self):
-        self.pipeline.append(RememberStep())
+        self.steps.append(RememberStep())
 
         return self
 
     def source(self, source: Source, n: int):
         if not self._is_current_step_type(SourcingStep):
             self.step(SourcingStep())
-        self.pipeline[-1].add(source, n)
+        self.steps[-1].add(source, n)
 
         return self
 
@@ -287,7 +303,7 @@ class Feed:
         if not self._is_current_step_type(SourcingStep):
             self.step(SourcingStep())
         for source, n in sources:
-            self.pipeline[-1].add(source, n)
+            self.steps[-1].add(source, n)
 
         return self
 
@@ -338,7 +354,7 @@ class Feed:
         # for candidate in candidates:
         #     self.seen[idx].add(candidate)
 
-        candidates, scores = await self.pipeline[idx](candidates, scores)
+        candidates, scores = await self.steps[idx](candidates, scores)
 
         # for candidate, score in zip(candidates, scores):
         #     self.cache[i][candidate] = score
@@ -346,22 +362,31 @@ class Feed:
         return candidates, scores
 
     async def execute(self) -> list[int]:
+        assert not self._running, "Pipeline is already running"
+        self._running = True
         candidates = []
         scores = np.array([], dtype=np.float32)
 
-        for i in range(len(self.pipeline)):
+        self._durations = []
+
+        for i in range(len(self.steps)):
+            start_time = time.perf_counter_ns()
+
             candidates, scores = await self._execute_step(i, candidates, scores)
 
-        self._is_new = False
+            self._durations.append(time.perf_counter_ns() - start_time)
+
+        self.counter += 1
+        self._running = False
 
         return self
 
     def results(self, step_idx=None):
-        step_idx = step_idx or len(self.pipeline) - 1
+        step_idx = step_idx or len(self.steps) - 1
 
-        candidates, _ = self.pipeline[step_idx].results()
+        candidates, _ = self.steps[step_idx].results()
 
         return candidates
 
     def __getitem__(self, idx):
-        return self.pipeline[idx]
+        return self.steps[idx]
