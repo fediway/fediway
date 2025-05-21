@@ -17,6 +17,3 @@ class FeedRecommendation(SQLModel, table=True):
     score: float = Field(nullable=False)
     adjusted_score: float = Field(nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-
-    feed: Feed = Relationship()
-    status: Status = Relationship()

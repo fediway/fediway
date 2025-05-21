@@ -149,33 +149,80 @@ class FeedService:
 
         self.response.headers["link"] = f'<{next_url}>; rel="next"'
 
-    def _save_recommendations(self, recommendations):
-        self.db.bulk_save_objects(
-            [
-                FeedRecommendation(
-                    feed_id=self.feed.id,
-                    status_id=recommendation.item,
-                    source=recommendation.sources[0],
-                    score=float(recommendation.score),
-                    adjusted_score=float(recommendation.adjusted_score),
-                )
-                for recommendation in recommendations
-            ]
-        )
+    # def _save_recommendations(self, recommendations):
+    #     self.db.bulk_save_objects(
+    #         [
+    #             FeedRecommendation(
+    #                 feed_id=self.feed.id,
+    #                 status_id=recommendation.item,
+    #                 source=recommendation.sources[0],
+    #                 score=float(recommendation.score),
+    #                 adjusted_score=float(recommendation.adjusted_score),
+    #             )
+    #             for recommendation in recommendations
+    #         ]
+    #     )
 
-        self.db.commit()
+    #     self.db.commit()
+
+    async def _save_pipeline_run(self):
+        pass
+        # now = pd.to_datetime(datetime.now(config.app.timezone))
+
+        # run = pd.DataFrame([{
+        #     'feed_id': self.id,
+        #     'index': self.pipeline.counter-1,
+        #     'duration_ns': sum(self.pipeline.get_durations()),
+        #     'executed_at': now
+        # }])
+        # steps = pd.DataFrame([{
+        #     'feed_id': self.id,
+        #     'run_index': self.pipeline.counter-1,
+        #     'type': str(step.__class__.__name__),
+        #     'duration_ns': duration_ns,
+        #     'executed_at': now
+        # } for step, duration_ns in zip(self.pipeline.steps, self.pipeline.get_durations())])
+        
+        # steps = pd.DataFrame([{
+        #     'feed_id': self.id,
+        #     'run_index': self.pipeline.counter-1,
+        #     'type': str(step),
+        #     'duration_ns': duration_ns,
+        #     'executed_at': now
+        # } for step, duration_ns in zip(self.pipeline.steps, self.pipeline.get_durations())])
+        
+        # recs = pd.DataFrame([{
+        #     'feed_id': self.id,
+        #     'entity': self.pipeline.entity,
+        #     'entity_id': result,
+        #     'created_at': now,
+        # } for result in self.pipeline.results()])
+
+        # with get_sender() as sender:
+        #     sender.dataframe(run, table_name='pipeine_runs', at='executed_at')
+        #     sender.dataframe(steps, table_name='pipeline_steps', at='executed_at')
+        #     sender.dataframe(recs, table_name='feed_recommendations', at='created_at')
+
+        # steps['duration_ns'] = steps['duration_ns'] / 1_000_000
+        # print(steps)
+        
+    def _save_pipeline_state(self):
+        state = self.pipeline.get_state()
+        self.r.setex(
+            self.redis_key, 
+            config.session.session_ttl, 
+            json.dumps(state, cls=NumpyEncoder)
+        )
 
     async def _execute(self):
         with utils.duration("Executed pipeline in {:.3f} seconds."):
             await self.pipeline.execute()
 
         # store feed state in redis cache
-        state = self.pipeline.get_state()
-        self.r.setex(
-            self.redis_key,
-            config.session.session_ttl,
-            json.dumps(state, cls=NumpyEncoder),
-        )
+        self._save_pipeline_state()
+
+        # store pipeline execution data
+        self.tasks.add_task(self._save_pipeline_run)
 
     def _load_cached(self):
         if not self.r.exists(self.redis_key):

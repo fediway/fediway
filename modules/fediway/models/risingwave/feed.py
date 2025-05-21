@@ -12,4 +12,3 @@ class Feed(SQLModel, table=True):
     ip: str = Field(nullable=False)
     name: str = Field(nullable=False)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
-    user_id: datetime = Field(nullable=False)
