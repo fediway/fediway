@@ -5,11 +5,17 @@ from ..base import Source
 
 class CollaborativeFilteringSource(Source):
     def __init__(
-        self, driver, account_id: int, language: str = "en", max_age=timedelta(days=3)
+        self, driver, account_id: int, language: str = "en"
     ):
         self.driver = driver
         self.language = language
         self.account_id = account_id
+    
+    def group(self):
+        return "collaborative_filtering"
+
+    def name(self):
+        return f"collaborative_filtering[l={self.language}]"
 
     def compute_scores(self):
         pass

@@ -384,9 +384,7 @@ class Feed:
     def results(self, step_idx=None):
         step_idx = step_idx or len(self.steps) - 1
 
-        candidates, _ = self.steps[step_idx].results()
-
-        return candidates
+        return self.steps[step_idx].results()
 
     def __getitem__(self, idx):
         return self.steps[idx]

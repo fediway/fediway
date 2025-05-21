@@ -7,8 +7,11 @@ class PopularInCommunitySource(Source):
         self.account_id = account_id
         self.decay_rate = decay_rate
 
-    def compute_scores(self):
-        pass
+    def group(self):
+        return "popular_in_community"
+
+    def name(self):
+        return f"popular_in_community[d={self.decay_rate}]"
 
     def collect(self, limit: int):
         query = """

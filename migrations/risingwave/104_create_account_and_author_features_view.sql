@@ -1,9 +1,9 @@
 
 -- :up
 {% for group_id, group, specs in [
-  ('account_id', 'account', [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('7 DAYS', '60 DAYS', '60d')]), 
-  ('author_id', 'author', [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('7 DAYS', '60 DAYS', '60d')]),
-  ('account_id,author_id', 'account_author', [('7 DAYS', '60 DAYS', '60d')]),
+  ('account_id', 'account', [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('7 DAYS', '56 DAYS', '56d')]), 
+  ('author_id', 'author', [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('7 DAYS', '56 DAYS', '56d')]),
+  ('account_id,author_id', 'account_author', [('7 DAYS', '56 DAYS', '56d')]),
 ] -%}
   {% for hop_size, window_size, spec in specs %}
     CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_all_{{ spec }}_features AS
@@ -237,7 +237,7 @@
 {% endfor -%}
 
 -- :down
-{% for group, specs in [('account', ['1d', '7d', '60d']), ('author', ['1d', '7d', '60d']), ('account_author', ['60d'])] -%}
+{% for group, specs in [('account', ['1d', '7d', '56d']), ('author', ['1d', '7d', '56d']), ('account_author', ['56d'])] -%}
   {% for spec in specs -%}
     DROP VIEW IF EXISTS {{ group }}_engagement_all_{{ spec }}_features;
     DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_{{ spec }}_features;

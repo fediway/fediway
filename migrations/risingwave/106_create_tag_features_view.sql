@@ -1,7 +1,7 @@
 
 -- :up
 
-{% for hop_size, window_size, spec in [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('7 DAY', '60 DAYS', '60d')] %}
+{% for hop_size, window_size, spec in [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('7 DAYS', '56 DAYS', '56d')] %}
     CREATE MATERIALIZED VIEW IF NOT EXISTS tag_engagement_all_{{ spec }}_features AS
     SELECT
         window_start, 
@@ -28,6 +28,6 @@
 
 -- :down
 
-{% for spec in ['1d', '7d', '60d'] %}
+{% for spec in ['1d', '7d', '56d'] %}
     DROP VIEW IF EXISTS tag_engagement_all_{{ spec }}_features;
 {% endfor %}

@@ -1,18 +1,30 @@
 import json
 import uuid
+import hashlib
 
 import numpy as np
 from fastapi import BackgroundTasks, Request, Response
+from faststream.confluent import KafkaBroker
 from redis import Redis
 from sqlmodel import Session as DBSession
 from starlette.datastructures import URL
+from datetime import datetime
 
 import modules.utils as utils
 from config import config
 from modules.fediway.feed.pipeline import Feed, PaginationStep
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
-from modules.fediway.models.postgres import FeedRecommendation
+from modules.fediway.models.risingwave import (
+    Feed as FeedModel,
+    Recommendation,
+    RecPipelineRun,
+    RecPipelineStep,
+    RankedEntity,
+    RankingRun,
+    SourcingRun,
+    RecommendationSource,
+)
 from modules.fediway.rankers import Ranker
 from modules.fediway.sources import Source
 from shared.services.feature_service import FeatureService
@@ -20,8 +32,16 @@ from shared.services.feature_service import FeatureService
 from ..modules.sessions import Session
 
 
-def _generate_feed_id(length: int = 8):
+def request_key(request: Request):
+    return f"{request.client.host}.{request.headers.get('User-Agent')}"
+
+
+def _generate_feed_key(request: Request, length: int = 8):
     return str(uuid.uuid4()).replace("-", "")[:length]
+
+
+def _get_feed_id(request: Request, feed_key: str, length: int = 32):
+    return hashlib.sha256((feed_key + request_key(request)).encode("utf-8")).hexdigest()[:length]
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -59,7 +79,8 @@ class FeedService:
         self.pipeline = Feed(feature_service)
 
         self._next_offset = 0
-        self.id = request.query_params.get("feed", _generate_feed_id())
+        self.key = request.query_params.get("feed", _generate_feed_key(request))
+        self.id = _get_feed_id(request, self.key)
         self.redis_key = f"feed:{self.id}"
 
     def name(self, name: str):
@@ -114,34 +135,6 @@ class FeedService:
 
         return self
 
-    # async def init(self):
-    #     '''
-    #     Initialize feed.
-    #     '''
-
-    #     state = self.session.get(self.session_key)
-
-    #     # if state is not None:
-    #     #     # self.feed.merge_dict(state)
-    #     #     self._set_link_header()
-    #     #     return
-
-    #     await self.collect_sources()
-
-    #     feed_model = FeedModel(
-    #         session_id=self.session.id,
-    #         ip=self.session.ipv4_address,
-    #         user_agent=self.session.user_agent,
-    #         name=self.name,
-    #     )
-    #     self.db.add(feed_model)
-    #     self.db.commit()
-
-    #     self.feed.id = feed_model.id
-    #     self._set_link_header()
-
-    #     # await collecting
-
     def _set_link_header(self):
         next_url = URL(
             f"{config.app.api_url}{self.request.url.path}"
@@ -149,69 +142,70 @@ class FeedService:
 
         self.response.headers["link"] = f'<{next_url}>; rel="next"'
 
-    # def _save_recommendations(self, recommendations):
-    #     self.db.bulk_save_objects(
-    #         [
-    #             FeedRecommendation(
-    #                 feed_id=self.feed.id,
-    #                 status_id=recommendation.item,
-    #                 source=recommendation.sources[0],
-    #                 score=float(recommendation.score),
-    #                 adjusted_score=float(recommendation.adjusted_score),
-    #             )
-    #             for recommendation in recommendations
-    #         ]
-    #     )
-
-    #     self.db.commit()
-
     async def _save_pipeline_run(self):
-        pass
-        # now = pd.to_datetime(datetime.now(config.app.timezone))
+        now = datetime.now()
 
-        # run = pd.DataFrame([{
-        #     'feed_id': self.id,
-        #     'index': self.pipeline.counter-1,
-        #     'duration_ns': sum(self.pipeline.get_durations()),
-        #     'executed_at': now
-        # }])
-        # steps = pd.DataFrame([{
-        #     'feed_id': self.id,
-        #     'run_index': self.pipeline.counter-1,
-        #     'type': str(step.__class__.__name__),
-        #     'duration_ns': duration_ns,
-        #     'executed_at': now
-        # } for step, duration_ns in zip(self.pipeline.steps, self.pipeline.get_durations())])
-        
-        # steps = pd.DataFrame([{
-        #     'feed_id': self.id,
-        #     'run_index': self.pipeline.counter-1,
-        #     'type': str(step),
-        #     'duration_ns': duration_ns,
-        #     'executed_at': now
-        # } for step, duration_ns in zip(self.pipeline.steps, self.pipeline.get_durations())])
-        
-        # recs = pd.DataFrame([{
-        #     'feed_id': self.id,
-        #     'entity': self.pipeline.entity,
-        #     'entity_id': result,
-        #     'created_at': now,
-        # } for result in self.pipeline.results()])
+        self.db.merge(
+            FeedModel(
+                id=self.id,
+                user_agent=self.request.headers.get("User-Agent"),
+                ip=self.request.client.host,
+                name=self._name,
+                entity=self.pipeline.entity,
+                created_at=now,
+            )
+        )
 
-        # with get_sender() as sender:
-        #     sender.dataframe(run, table_name='pipeine_runs', at='executed_at')
-        #     sender.dataframe(steps, table_name='pipeline_steps', at='executed_at')
-        #     sender.dataframe(recs, table_name='feed_recommendations', at='created_at')
+        run_id = str(uuid.uuid4())
+        self.db.add(
+            RecPipelineRun(
+                id=run_id,
+                feed_id=self.id,
+                iteration=self.pipeline.counter - 1,
+                duration_ns=sum(self.pipeline.get_durations()),
+                executed_at=now,
+            )
+        )
 
-        # steps['duration_ns'] = steps['duration_ns'] / 1_000_000
-        # print(steps)
-        
+        self.db.bulk_save_objects(
+            [
+                RecPipelineStep(
+                    id=str(uuid.uuid4()),
+                    feed_id=self.id,
+                    run_id=run_id,
+                    group_name=str(step.__class__.__name__),
+                    name=str(step),
+                    duration_ns=duration_ns,
+                    executed_at=now,
+                )
+                for step, duration_ns in zip(
+                    self.pipeline.steps, self.pipeline.get_durations()
+                )
+            ]
+        )
+
+        self.db.bulk_save_objects(
+            [
+                Recommendation(
+                    id=str(uuid.uuid4()),
+                    feed_id=self.id,
+                    entity=self.pipeline.entity,
+                    entity_id=recommendation,
+                    score=score,
+                    created_at=now,
+                )
+                for recommendation, score in zip(*self.pipeline.results())
+            ]
+        )
+
+        # self.db.commit()
+
     def _save_pipeline_state(self):
         state = self.pipeline.get_state()
         self.r.setex(
-            self.redis_key, 
-            config.session.session_ttl, 
-            json.dumps(state, cls=NumpyEncoder)
+            self.redis_key,
+            config.session.session_ttl,
+            json.dumps(state, cls=NumpyEncoder),
         )
 
     async def _execute(self):
@@ -238,7 +232,7 @@ class FeedService:
             if self.pipeline.is_new():
                 await self._execute()
 
-            recommendations = self.pipeline.results()
+            recommendations, _ = self.pipeline.results()
 
             self._set_link_header()
 

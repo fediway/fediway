@@ -11,9 +11,9 @@ account_features = []
 account_author_features = []
 
 GROUPS = [
-    ("account", [account], ["1d", "7d", "60d"]),
-    ("author", [author], ["1d", "7d", "60d"]),
-    ("account_author", [account, author], ["60d"]),
+    ("account", [account], ["1d", "7d", "56d"]),
+    ("author", [author], ["1d", "7d", "56d"]),
+    ("account_author", [account, author], ["56d"]),
 ]
 
 FEATURES = [

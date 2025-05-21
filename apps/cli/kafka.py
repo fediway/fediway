@@ -6,13 +6,16 @@ from config import config
 
 app = typer.Typer(help="Kafka commands.")
 
-TOPICS = [
-    NewTopic(
-        "status_text_embeddings",
+def _topic(topic):
+    return NewTopic(
+        topic,
         num_partitions=config.kafka.kafka_num_partitions,
         replication_factor=config.kafka.kafka_replication_factor,
     )
-]
+
+TOPICS = [_topic(topic) for topic in [
+    "status_text_embeddings",
+]]
 
 
 @app.command("create-topics")
@@ -34,4 +37,4 @@ def create_topics():
             future.result()
             typer.echo(f"✅ Topic '{topic}' created")
         except KafkaException as e:
-            typer.error(f"Topic creation failed: {e}")
+            typer.echo(f"Topic creation failed: {e}")

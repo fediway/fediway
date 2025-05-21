@@ -7,7 +7,7 @@ from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
     CollaborativeFilteringSource,
     PopularInCommunitySource,
-    PouplarStatusesByInfluentialAccountsSource,
+    PouplarByInfluentialAccountsSource,
     SimilarToFavourited,
 )
 from modules.mastodon.models import Account
@@ -26,10 +26,9 @@ def get_popular_by_influential_accounts_sources(
     languages: list[str] = Depends(get_languages),
 ) -> list[Source]:
     return [
-        PouplarStatusesByInfluentialAccountsSource(
+        PouplarByInfluentialAccountsSource(
             driver=schwarm_driver,
             language=lang,
-            max_age=MAX_AGE,
             alpha=config.fediway.feed_decay_rate,
         )
         for lang in languages
@@ -45,7 +44,6 @@ def get_collaborative_filtering_sources(
             driver=schwarm_driver,
             account_id=account.id,
             language=lang,
-            max_age=MAX_AGE,
         )
         for lang in languages
     ]

@@ -8,7 +8,10 @@ class Source:
     def collect(self, limit: int, offset: int | None = None):
         raise NotImplemented
 
-    def __str__(self):
+    def group(self):
+        return str(type(self))
+
+    def name(self):
         return str(type(self))
 
 

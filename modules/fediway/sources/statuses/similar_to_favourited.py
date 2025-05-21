@@ -23,6 +23,12 @@ class SimilarToFavourited(Source):
         self.max_age = max_age
         self.feature_service = feature_service
 
+    def group(self):
+        return "similar_to_favourited"
+
+    def name(self):
+        return f"similar_to_favourited[l={self.language},a={self.max_age.total_seconds}]"
+
     def collect(self, limit: int):
         favourites = self.feature_service.get(
             entities=[{"account_id": self.account_id}],

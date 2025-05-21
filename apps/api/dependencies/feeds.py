@@ -1,7 +1,7 @@
 from fastapi import BackgroundTasks, Depends, Request, Response
 from sqlmodel import Session as DBSession
 
-from shared.core.db import get_db_session
+from shared.core.rw import get_rw_session
 from shared.services.feature_service import FeatureService
 
 from ..core.redis import redis
@@ -13,7 +13,7 @@ def get_feed(
     request: Request,
     response: Response,
     tasks: BackgroundTasks,
-    db: DBSession = Depends(get_db_session),
+    db: DBSession = Depends(get_rw_session),
     feature_service: FeatureService = Depends(get_feature_service),
 ) -> FeedService:
     return FeedService(
