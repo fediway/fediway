@@ -1,15 +1,16 @@
 from datetime import datetime
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import JSON, Column
-
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column
 
 class RankedEntity(SQLModel, table=True):
     __tablename__ = "ranked_entities"
 
-    id: int = Field(primary_key=True)
-    feed_id: int | None = Field(nullable=True)
+    id: str = Field(primary_key=True)
+    ranking_run_id: str = Field(nullable=False)
     entity: str = Field(nullable=False)
     entity_id: int = Field(nullable=False)
-    input: dict = Field(sa_column=Column(JSON()))
+    features: dict = Field(sa_column=Column(JSONB()))
     score: float = Field(nullable=False)
-    meta: dict = Field(sa_column=Column(JSON()))
+    meta: dict = Field(sa_column=Column(JSONB()))
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

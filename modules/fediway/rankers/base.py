@@ -1,3 +1,6 @@
+
+import pandas as pd
+
 class Ranker:
     features: list[str] = []
 
@@ -5,5 +8,5 @@ class Ranker:
     def name(self) -> str:
         return self.__name__
 
-    def predict(self, X):
+    def predict(self, X: pd.DataFrame):
         raise NotImplementedError

@@ -33,7 +33,7 @@ class SimilarToFavourited(Source):
         favourites = self.feature_service.get(
             entities=[{"account_id": self.account_id}],
             features=["account_favourites:favourites"],
-        )[0][0]
+        ).values[0][0]
 
         max_age = int((datetime.now() - self.max_age).timestamp())
 

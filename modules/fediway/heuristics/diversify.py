@@ -28,7 +28,7 @@ class DiversifyHeuristic(Heuristic):
             return scores
 
         mask = np.array(
-            [(seen_ids in self.seen_ids) for seen_ids in features[:, 0]], dtype=bool
+            [(seen_ids in self.seen_ids) for seen_ids in features.values[:, 0]], dtype=bool
         )
 
         scores[mask] *= self.penalty

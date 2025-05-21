@@ -30,17 +30,47 @@ class RankingStep(PipelineStep):
         self.ranker = ranker
         self.feature_service = feature_service
         self.entity = entity
+        self._features = []
+        self._feature_retrieval_duration = []
+        self._ranking_duration = []
+        self._scores = []
+        self._candidates = []
+
+    def get_feature_retrieval_duration(self):
+        return self._feature_retrieval_duration
+
+    def get_ranking_duration(self):
+        return self._ranking_duration
+
+    def get_features(self):
+        return self._features
+
+    def get_candidates(self):
+        return self._candidates
+
+    def get_scores(self):
+        return self._scores
 
     async def __call__(
         self, candidates: list[int], scores: np.ndarray
     ) -> tuple[list[int], np.ndarray]:
         if len(candidates) == 0:
             return candidates, scores
-
+        
+        start_time = time.perf_counter_ns()
         entities = [{self.entity: c} for c in candidates]
         X = self.feature_service.get(entities, self.ranker.features)
+        self._feature_retrieval_duration = time.perf_counter_ns() - start_time
 
-        return candidates, self.ranker.predict(X)
+        start_time = time.perf_counter_ns()
+        scores = self.ranker.predict(X)
+        self._ranking_duration = time.perf_counter_ns() - start_time
+
+        self._features = X
+        self._candidates = candidates
+        self._scores = scores
+
+        return candidates, scores
 
 
 class RememberStep(PipelineStep):
@@ -86,8 +116,6 @@ class PaginationStep(PipelineStep):
 
     def results(self):
         start, end = self.offset, self.offset + self.limit
-
-        print(len(self.items), len(np.unique(self.items)))
 
         return (self.items[start:end], np.array(self.scores[start:end]))
 
@@ -232,7 +260,7 @@ class SamplingStep(PipelineStep):
                 for heuristic in self.heuristics:
                     features = self.feature_service.get(
                         [{self.entity: candidate}], heuristic.features
-                    )[0]
+                    ).values[0]
                     heuristic.update_seen(candidate, features)
 
                 break

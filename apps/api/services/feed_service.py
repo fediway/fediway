@@ -13,7 +13,7 @@ from datetime import datetime
 import modules.utils as utils
 from config import config
 from modules.mastodon.models import Account
-from modules.fediway.feed.pipeline import Feed, PaginationStep, SourcingStep
+from modules.fediway.feed.pipeline import Feed, PaginationStep, SourcingStep, RankingStep
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
 from modules.fediway.models.risingwave import (
@@ -225,6 +225,40 @@ class FeedService:
                 for recommendation, score in zip(*self.pipeline.results())
             ]
         )
+
+        for step_id, step in zip(rec_step_ids, self.pipeline.steps):
+            if not isinstance(step, RankingStep):
+                continue
+            ranking_run_id = str(uuid.uuid4())
+            self.db.add(
+                RankingRun(
+                    id=ranking_run_id,
+                    feed_id=self.id,
+                    rec_run_id=run_id,
+                    rec_step_id=step_id,
+                    ranker=step.ranker.name,
+                    feature_retrival_duration_ns=step.get_feature_retrieval_duration(),
+                    ranking_duration_ns=step.get_ranking_duration(),
+                    candidates_count=len(step.get_candidates()),
+                    executed_at=now,
+                )
+            )
+            self.db.bulk_save_objects(
+                [
+                    RankedEntity(
+                        id=str(uuid.uuid4()),
+                        ranking_run_id=ranking_run_id,
+                        entity=self.pipeline.entity,
+                        entity_id=candidate,
+                        features=features.to_dict(),
+                        score=np.clip(score, 1e-10, None),
+                        created_at=now,
+                    )
+                    for candidate, score, features in zip(
+                        step.get_candidates(), step.get_scores(), step.get_features().iloc
+                    )
+                ]
+            )
 
         self.db.commit()
 

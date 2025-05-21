@@ -69,19 +69,19 @@ class FeatureService(Features):
 
     def get(
         self, entities: list[dict[str, int]], features: list[str]
-    ) -> np.ndarray | None:
+    ) -> pd.DataFrame | None:
         if len(features) == 0:
-            return []
+            return None
 
         if len(entities) == 0:
-            return []
+            return None
 
         start = time.time()
 
         cached_df, missing_entities = self._get_cached(entities, features)
 
         if len(missing_entities) == 0 and cached_df is not None:
-            return cached_df.reindex(pd.DataFrame(entities).values[:, 0]).values
+            return cached_df.reindex(pd.DataFrame(entities).values[:, 0])
 
         df = self.fs.get_online_features(
             features=features, entity_rows=missing_entities
@@ -98,4 +98,4 @@ class FeatureService(Features):
             f"Fetched features for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds."
         )
 
-        return df.values
+        return df

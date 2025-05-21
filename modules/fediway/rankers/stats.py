@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 from .base import Ranker
 
@@ -7,6 +8,7 @@ class SimpleStatsRanker(Ranker):
     """
     A simple linear regression ranking model based on status stats and age.
     """
+    __name__ = "simple_stats_ranker"
 
     features = [
         "status:favourites_count",
@@ -25,7 +27,7 @@ class SimpleStatsRanker(Ranker):
         self.alpha = np.array([coef_fav, coef_reb, coef_rep])
         self.decay = decay
 
-    def predict(self, stats: np.ndarray):
-        return (stats[:, :3] * self.alpha.T).sum(axis=1) * np.exp(
-            -self.decay * stats[:, 3] / 86400
+    def predict(self, stats: pd.DataFrame):
+        return (stats.values[:, :3] * self.alpha.T).sum(axis=1) * np.exp(
+            -self.decay * stats.values[:, 3] / 86400
         )
