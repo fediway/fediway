@@ -1,7 +1,9 @@
-from sqlmodel import Session, select, func, desc
 from datetime import datetime, timedelta
 
+from sqlmodel import Session, desc, func, select
+
 from modules.mastodon.models import Status, StatusStats
+
 from .base import Source
 
 

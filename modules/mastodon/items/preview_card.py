@@ -1,6 +1,6 @@
+from ..models import PreviewCard
 from .base import Item
 from .preview_card_author import PreviewCardAuthorItem
-from ..models import PreviewCard
 
 PREVIEW_CARD_TYPES = {
     0: "link",

@@ -1,5 +1,5 @@
-from modules.fediway.embedding import SentenceTransformerEmbedder, ClipEmbedder
 from config import config
+from modules.fediway.embedding import ClipEmbedder, SentenceTransformerEmbedder
 
 
 def get_embedder():

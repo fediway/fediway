@@ -1,10 +1,10 @@
 from .entities import account, author, status
-from .views.combined_status_tags import combined_status_tags_features
-from .views.engagement import account_features, author_features, account_author_features
-from .views.embedding import account_embedding_features
-from .views.status import status_features
-from .views.favourites import account_favourites
 from .services.kirby import kirby_features
+from .views.combined_status_tags import combined_status_tags_features
+from .views.embedding import account_embedding_features
+from .views.engagement import account_author_features, account_features, author_features
+from .views.favourites import account_favourites
+from .views.status import status_features
 
 ENTITIES = [account, author, status]
 

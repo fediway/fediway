@@ -1,22 +1,23 @@
 import pandas as pd
+from arango.graph import Graph
 from dask import dataframe as dd
 from dask.base import normalize_token
 from dask.diagnostics import ProgressBar
-from sqlmodel import Session as DBSession, select
-from arango.graph import Graph
 from loguru import logger
+from sqlmodel import Session as DBSession
+from sqlmodel import select
 
+import modules.utils as utils
+from modules.herde import Herde
 from modules.mastodon.models import (
     Account,
-    Status,
-    Follow,
     Favourite,
-    Tag,
-    StatusTag,
+    Follow,
     Mention,
+    Status,
+    StatusTag,
+    Tag,
 )
-from modules.herde import Herde
-import modules.utils as utils
 
 
 class SeedHerdeService:

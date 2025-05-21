@@ -1,7 +1,8 @@
-from sqlmodel import Session, text
-from sqlmodel.sql._expression_select_cls import Select, SelectOfScalar
 from contextlib import contextmanager
 from uuid import uuid4
+
+from sqlmodel import Session, text
+from sqlmodel.sql._expression_select_cls import Select, SelectOfScalar
 
 
 def compile_sql(query, engine):

@@ -1,5 +1,6 @@
 from datetime import datetime
-from sqlmodel import SQLModel, Field, Relationship
+
+from sqlmodel import Field, Relationship, SQLModel
 
 
 class PreviewCardStatus(SQLModel, table=True):

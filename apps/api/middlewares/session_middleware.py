@@ -1,7 +1,8 @@
 from fastapi import Request
 
-from ..core.session import session_manager, init_session
 from config import config
+
+from ..core.session import init_session, session_manager
 
 
 class SessionMiddleware:

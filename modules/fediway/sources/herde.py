@@ -1,5 +1,6 @@
+from datetime import datetime, timedelta
+
 from arango.database import StandardDatabase
-from datetime import timedelta, datetime
 
 from .base import Source
 

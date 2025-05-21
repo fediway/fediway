@@ -1,4 +1,5 @@
 from urllib.parse import quote
+
 from pydantic import SecretStr
 
 from .base import BaseConfig

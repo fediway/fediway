@@ -4,6 +4,16 @@ from config import config
 
 app = typer.Typer(help="Follow sources.")
 
+@app.command("most-followed-by-follows")
+def triangular_loop(account_id: int, limit: int = 10):
+    from modules.fediway.sources.follows import MostFollowedByFollowsSource
+    from shared.core.herde import db
+
+    source = MostFollowedByFollowsSource(db, account_id)
+
+    for account_id in source.collect(limit):
+        print(account_id)
+
 
 @app.command("triangular-loop")
 def triangular_loop(account_id: int, limit: int = 10):

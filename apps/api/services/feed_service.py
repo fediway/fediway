@@ -1,21 +1,23 @@
-from starlette.datastructures import URL
-from sqlmodel import Session as DBSession
-from fastapi import Request, BackgroundTasks, Response
-from redis import Redis
-import numpy as np
 import json
 import uuid
 
-from modules.fediway.feed.pipeline import Feed, PaginationStep
-from modules.fediway.feed.sampling import Sampler, TopKSampler
-from modules.fediway.sources import Source
-from modules.fediway.rankers import Ranker
-from modules.fediway.heuristics import Heuristic
-from shared.services.feature_service import FeatureService
-from ..modules.sessions import Session
-from modules.fediway.models.postgres import FeedRecommendation
+import numpy as np
+from fastapi import BackgroundTasks, Request, Response
+from redis import Redis
+from sqlmodel import Session as DBSession
+from starlette.datastructures import URL
+
 import modules.utils as utils
 from config import config
+from modules.fediway.feed.pipeline import Feed, PaginationStep
+from modules.fediway.feed.sampling import Sampler, TopKSampler
+from modules.fediway.heuristics import Heuristic
+from modules.fediway.models.postgres import FeedRecommendation
+from modules.fediway.rankers import Ranker
+from modules.fediway.sources import Source
+from shared.services.feature_service import FeatureService
+
+from ..modules.sessions import Session
 
 
 def _generate_feed_id(length: int = 8):

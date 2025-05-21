@@ -1,9 +1,8 @@
-from feast import RequestSource, Field
-from feast.on_demand_feature_view import on_demand_feature_view
-from feast.types import Int64, Array
-
-from sqlmodel import select, desc
 import pandas as pd
+from feast import Field, RequestSource
+from feast.on_demand_feature_view import on_demand_feature_view
+from feast.types import Array, Int64
+from sqlmodel import desc, select
 
 from modules.mastodon.models import Favourite
 

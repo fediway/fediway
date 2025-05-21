@@ -1,16 +1,16 @@
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
-
 from starlette.exceptions import HTTPException
-from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.cors import CORSMiddleware
 
-from .middlewares.oauth_middleware import OAuthMiddleware
-from .middlewares.session_middleware import SessionMiddleware
+from config import config
+
 from .errors.http_error import http_error_handler
 from .errors.validation_error import http422_error_handler
+from .middlewares.oauth_middleware import OAuthMiddleware
+from .middlewares.session_middleware import SessionMiddleware
 from .routes.api import router as api_router
-from config import config
 
 
 def get_application() -> FastAPI:

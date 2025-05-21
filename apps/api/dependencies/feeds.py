@@ -1,11 +1,11 @@
+from fastapi import BackgroundTasks, Depends, Request, Response
 from sqlmodel import Session as DBSession
-from fastapi import Request, Response, BackgroundTasks, Depends
 
-from ..core.redis import redis
-from ..services.feed_service import FeedService
 from shared.core.db import get_db_session
 from shared.services.feature_service import FeatureService
 
+from ..core.redis import redis
+from ..services.feed_service import FeedService
 from .features import get_feature_service
 
 

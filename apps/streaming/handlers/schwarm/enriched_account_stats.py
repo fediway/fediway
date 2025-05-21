@@ -1,8 +1,7 @@
 from loguru import logger
 
-from modules.schwarm import Schwarm
-
 from modules.debezium import DebeziumEventHandler
+from modules.schwarm import Schwarm
 
 
 class EnrichedAccountStatsEventHandler(DebeziumEventHandler):

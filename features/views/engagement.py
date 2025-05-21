@@ -2,8 +2,9 @@ from feast import FeatureView, Field
 from feast.types import Int64
 
 from config import config
-from ..utils import make_feature_view
+
 from ..entities import account, author
+from ..utils import make_feature_view
 
 author_features = []
 account_features = []

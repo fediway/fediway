@@ -1,9 +1,10 @@
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
+
 from pydantic import SecretStr
 
-from .base import BaseConfig
-
 from modules.fediway.heuristics import Heuristic
+
+from .base import BaseConfig
 
 
 class FediwayConfig(BaseConfig):

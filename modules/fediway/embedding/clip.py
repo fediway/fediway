@@ -3,8 +3,8 @@ from .base import MultimodalEmbedder
 
 class ClipEmbedder(MultimodalEmbedder):
     def __init__(self, model_id: str, cache_dir: str = "data"):
-        from multilingual_clip import pt_multilingual_clip
         import transformers
+        from multilingual_clip import pt_multilingual_clip
 
         self.model = pt_multilingual_clip.MultilingualCLIP.from_pretrained(
             model_id, cache_dir=f"{cache_dir}/{model_id}"

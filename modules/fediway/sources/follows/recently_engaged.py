@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+
 from arango.database import StandardDatabase
 
 from modules.herde.utils import parse_datetime

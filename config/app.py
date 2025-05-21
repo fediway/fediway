@@ -1,4 +1,5 @@
 from enum import Enum
+
 from pydantic import SecretStr
 
 from .base import BaseConfig

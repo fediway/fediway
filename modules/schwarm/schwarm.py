@@ -1,15 +1,16 @@
-from datetime import timedelta
-from neo4j import Driver
 import time
+from datetime import timedelta
+
+from neo4j import Driver
 
 from modules.mastodon.models import (
+    Account,
+    Favourite,
+    Mention,
     Status,
     StatusStats,
-    Account,
-    Tag,
     StatusTag,
-    Mention,
-    Favourite,
+    Tag,
 )
 
 

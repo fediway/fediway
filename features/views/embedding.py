@@ -2,6 +2,7 @@ from feast import Field
 from feast.types import Array, Float32
 
 from config import config
+
 from ..entities import account
 from ..utils import make_feature_view
 

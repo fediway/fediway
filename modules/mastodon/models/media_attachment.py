@@ -1,6 +1,7 @@
 from datetime import datetime
+
 from sqlalchemy import JSON, Column
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship, SQLModel
 
 from config import config
 

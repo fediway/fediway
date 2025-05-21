@@ -1,5 +1,6 @@
-import maxminddb
 import os
+
+import maxminddb
 
 from config import config
 

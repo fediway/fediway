@@ -1,5 +1,5 @@
-from .base import Item
 from ..models import MediaAttachment
+from .base import Item
 
 MEDIA_TYPES = {
     0: "image",

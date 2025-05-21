@@ -1,11 +1,11 @@
-from fastapi import Depends
 from datetime import timedelta
 
+from fastapi import Depends
+
+from config import config
 from modules.fediway.sources import Source
 from modules.fediway.sources.tags import InfluentialSource
-
 from shared.core.schwarm import driver as schwarm_driver
-from config import config
 
 from ..lang import get_languages
 

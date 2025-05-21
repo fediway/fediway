@@ -1,14 +1,12 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session as DBSession
 
-from modules.mastodon.items import AccountItem
-from modules.mastodon.models import Account
-from modules.fediway.sources import Source
-
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.follows import get_recently_popular_sources
 from apps.api.services.feed_service import FeedService
-
+from modules.fediway.sources import Source
+from modules.mastodon.items import AccountItem
+from modules.mastodon.models import Account
 from shared.core.db import get_db_session
 
 router = APIRouter()

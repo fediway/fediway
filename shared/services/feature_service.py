@@ -1,11 +1,12 @@
-from feast import FeatureStore
-import pandas as pd
-import numpy as np
-from loguru import logger
 import time
 
-from shared.core.feast import feature_store
+import numpy as np
+import pandas as pd
+from feast import FeatureStore
+from loguru import logger
+
 from modules.fediway.feed.features import Features
+from shared.core.feast import feature_store
 
 
 class FeatureService(Features):

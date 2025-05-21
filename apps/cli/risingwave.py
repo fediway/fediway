@@ -1,8 +1,9 @@
-import psycopg2
-from jinja2 import Template
-from pathlib import Path
-import typer
 import re
+from pathlib import Path
+
+import psycopg2
+import typer
+from jinja2 import Template
 
 from config import config
 

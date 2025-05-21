@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from sqlmodel import Field, Relationship
 
 from .base import ReadOnlyModel

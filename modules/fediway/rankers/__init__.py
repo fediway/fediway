@@ -1,2 +1,2 @@
-from .kirby import Kirby
 from .base import Ranker
+from .kirby import Kirby

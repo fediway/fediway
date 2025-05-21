@@ -1,12 +1,12 @@
-from feast import RequestSource, Field
-from feast.on_demand_feature_view import on_demand_feature_view
-from feast.types import Int64
-
-from sqlmodel import select
 from datetime import datetime
-from psycopg2.extensions import register_adapter, AsIs
+
 import numpy as np
 import pandas as pd
+from feast import Field, RequestSource
+from feast.on_demand_feature_view import on_demand_feature_view
+from feast.types import Int64
+from psycopg2.extensions import AsIs, register_adapter
+from sqlmodel import select
 
 from modules.mastodon.models import Status, StatusStats
 

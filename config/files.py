@@ -1,6 +1,6 @@
-from .base import BaseConfig
-
 from modules.mastodon import paperclip
+
+from .base import BaseConfig
 
 # We need to construct the url to media files which are handled by the package Paperclip in Mastodon.
 # For more details, refer to the Mastodon configuration:

@@ -1,10 +1,12 @@
 import json
+
 import pandas as pd
-from feast import FeatureView
 from dask.base import normalize_token
-from sqlmodel import Session, Table, MetaData, BigInteger, DateTime, Column, select
-from sqlalchemy.schema import CreateTable
+from feast import FeatureView
 from sqlalchemy import text
+from sqlalchemy.schema import CreateTable
+from sqlmodel import BigInteger, Column, DateTime, MetaData, Session, Table, select
+
 from modules.utils import compile_sql, read_sql_join_query
 
 

@@ -1,8 +1,10 @@
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
+
 from qdrant_client import QdrantClient
-from qdrant_client.models import Filter, FieldCondition, Range
+from qdrant_client.models import FieldCondition, Filter, Range
 
 from modules.fediway.feed.features import Features
+
 from ..base import Source
 
 

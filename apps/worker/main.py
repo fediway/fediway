@@ -2,8 +2,8 @@ from celery import Celery
 from loguru import logger
 
 import modules.utils as utils
-from shared.core.schwarm import driver
 from config import config
+from shared.core.schwarm import driver
 
 config.logging.configure_logging()
 

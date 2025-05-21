@@ -1,8 +1,8 @@
 from fastapi import Request
 from sqlmodel import select
 
+from modules.mastodon.models import AccessToken, Account, User
 from shared.core.db import db_session
-from modules.mastodon.models import AccessToken, User, Account
 
 
 class OAuthMiddleware:

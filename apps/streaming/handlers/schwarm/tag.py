@@ -1,8 +1,8 @@
 from loguru import logger
 
-from modules.schwarm import Schwarm
-from modules.mastodon.models import Tag
 from modules.debezium import DebeziumEventHandler
+from modules.mastodon.models import Tag
+from modules.schwarm import Schwarm
 
 
 class TagEventHandler(DebeziumEventHandler):

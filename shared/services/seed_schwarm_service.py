@@ -1,22 +1,24 @@
+from datetime import datetime, timedelta
+
 import pandas as pd
 from dask import dataframe as dd
 from dask.base import normalize_token
-from sqlmodel import Session as DBSession, select, func, exists
-from sqlalchemy import and_
-from neo4j import Driver
-from datetime import datetime, timedelta
 from loguru import logger
+from neo4j import Driver
+from sqlalchemy import and_
+from sqlmodel import Session as DBSession
+from sqlmodel import exists, func, select
 
+import modules.utils as utils
 from config import config
 from modules.mastodon.models import (
+    Favourite,
+    Mention,
     Status,
     StatusStats,
-    Favourite,
     StatusTag,
-    Mention,
 )
 from modules.schwarm import Schwarm
-import modules.utils as utils
 
 
 class SeedSchwarmService:

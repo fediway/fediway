@@ -1,12 +1,13 @@
-from uuid import uuid4
-from fastapi import FastAPI, Request, Response
-from cachetools import TLRUCache
-from aioredis import Redis
-import numpy as np
 import hashlib
-import threading
 import json
+import threading
 import time
+from uuid import uuid4
+
+import numpy as np
+from aioredis import Redis
+from cachetools import TLRUCache
+from fastapi import FastAPI, Request, Response
 
 
 def request_key(request: Request):

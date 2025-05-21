@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from .timelines import router as timelines_router
 from .fediway import router as fediway_router
+from .timelines import router as timelines_router
 from .trends import router as trends_router
 
 router = APIRouter(prefix="/v1", tags=["v1"])

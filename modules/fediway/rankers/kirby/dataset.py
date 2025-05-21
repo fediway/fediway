@@ -1,23 +1,23 @@
-from feast import FeatureStore
-from dask import dataframe as dd
-from dask.diagnostics import ProgressBar
-from dask.base import normalize_token
-from dask.utils import parse_bytes
-
-from sklearn.model_selection import train_test_split
-import pandas as pd
-
 import time
-from sqlmodel import Session, select
+from datetime import date, datetime
+
+import pandas as pd
+from dask import dataframe as dd
+from dask.base import normalize_token
+from dask.diagnostics import ProgressBar
+from dask.utils import parse_bytes
+from feast import FeatureStore
+from sklearn.model_selection import train_test_split
 from sqlalchemy import (
-    text,
     insert,
+    text,
 )
-from datetime import datetime, date
+from sqlmodel import Session, select
 
 import modules.utils as utils
+from modules.features import create_entities_table, get_historical_features_ddf
 from modules.fediway.models.risingwave import AccountStatusLabel
-from modules.features import get_historical_features_ddf, create_entities_table
+
 from .features import get_feature_views
 
 

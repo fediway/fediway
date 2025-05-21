@@ -1,8 +1,8 @@
 from loguru import logger
 
-from modules.schwarm import Schwarm
-from modules.mastodon.models import StatusTag
 from modules.debezium import DebeziumEventHandler
+from modules.mastodon.models import StatusTag
+from modules.schwarm import Schwarm
 
 
 class StatusTagEventHandler(DebeziumEventHandler):

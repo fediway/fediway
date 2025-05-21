@@ -1,25 +1,25 @@
+import operator
+from datetime import timedelta
+from functools import reduce
+
+import pyarrow as pa
+
+# from feast.infra.offline_stores.contrib.spark_offline_store.spark_source import SparkSource
+from feast import Entity, FeatureView, Field, PushSource
 from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import (
     PostgreSQLSource,
 )
-
-# from feast.infra.offline_stores.contrib.spark_offline_store.spark_source import SparkSource
-from feast import FeatureView, PushSource, Entity, Field
 from feast.types import (
-    Int64,
+    Array,
+    Bool,
+    Bytes,
     Float32,
     Float64,
-    String,
-    Bytes,
-    Bool,
     Int32,
+    Int64,
+    String,
     UnixTimestamp,
-    Array,
 )
-
-import pyarrow as pa
-from datetime import timedelta
-from functools import reduce
-import operator
 
 
 def make_feature_view(

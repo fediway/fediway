@@ -1,15 +1,16 @@
 from faststream import FastStream
 from faststream.confluent import KafkaBroker
 
-from .handlers.embeddings import (
-    TextEmbeddingsBatchHandler,
-)
-from shared.core.embed import embedder
+from config import config
 from modules.debezium import (
     DebeziumEvent,
     process_debezium_batch,
 )
-from config import config
+from shared.core.embed import embedder
+
+from .handlers.embeddings import (
+    TextEmbeddingsBatchHandler,
+)
 
 broker = KafkaBroker(config.kafka.kafka_bootstrap_servers)
 app = FastStream(broker)

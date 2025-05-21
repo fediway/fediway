@@ -1,9 +1,8 @@
 from loguru import logger
 
+from modules.debezium import DebeziumEventHandler
 from modules.mastodon.models import Account
 from modules.schwarm import Schwarm
-
-from modules.debezium import DebeziumEventHandler
 
 
 class AccountEventHandler(DebeziumEventHandler):

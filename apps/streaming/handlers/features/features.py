@@ -1,8 +1,9 @@
+import time
+
+import pandas as pd
 from feast import FeatureStore
 from feast.data_source import PushMode
 from loguru import logger
-import pandas as pd
-import time
 
 from modules.debezium import DebeziumEventHandler
 

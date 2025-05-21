@@ -1,22 +1,22 @@
-from fastapi import Depends
 from datetime import timedelta
 
-from modules.mastodon.models import Account
+from fastapi import Depends
+
+from config import config
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
     CollaborativeFilteringSource,
+    PopularInCommunitySource,
     PouplarStatusesByInfluentialAccountsSource,
     SimilarToFavourited,
-    PopularInCommunitySource,
 )
-
-from shared.services.feature_service import FeatureService
+from modules.mastodon.models import Account
 from shared.core.qdrant import client as qdrant_client
 from shared.core.schwarm import driver as schwarm_driver
-from config import config
+from shared.services.feature_service import FeatureService
 
-from ..features import get_feature_service
 from ..auth import get_authenticated_account_or_fail
+from ..features import get_feature_service
 from ..lang import get_languages
 
 MAX_AGE = timedelta(days=config.fediway.feed_max_age_in_days)

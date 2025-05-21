@@ -1,8 +1,9 @@
-import sys
 import logging
-from loguru import logger
+import sys
 from types import FrameType
 from typing import cast
+
+from loguru import logger
 
 from .base import BaseConfig
 

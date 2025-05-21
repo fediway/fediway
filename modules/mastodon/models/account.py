@@ -1,9 +1,11 @@
 from datetime import datetime
-from sqlmodel import SQLModel, Field, Relationship
 
-from .user import User
-from .favourite import Favourite
+from sqlmodel import Field, Relationship, SQLModel
+
 from config import config
+
+from .favourite import Favourite
+from .user import User
 
 AUTOMATED_ACTOR_TYPES = ["Service", "Application"]
 
@@ -107,7 +109,7 @@ class Account(SQLModel, table=True):
 
     @classmethod
     def select_by_ids(cls, ids):
-        from sqlmodel import select
         from sqlalchemy.orm import selectinload
+        from sqlmodel import select
 
         return select(cls).options(selectinload(cls.stats)).where(cls.id.in_(ids))

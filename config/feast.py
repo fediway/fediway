@@ -1,10 +1,8 @@
 from feast.feature_store import RepoConfig
-from feast.infra.online_stores.redis import RedisOnlineStoreConfig
 from feast.infra.offline_stores.contrib.postgres_offline_store.postgres import (
     PostgreSQLOfflineStoreConfig,
 )
-
-
+from feast.infra.online_stores.redis import RedisOnlineStoreConfig
 from pydantic import SecretStr
 
 from .base import BaseConfig

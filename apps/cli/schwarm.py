@@ -1,9 +1,10 @@
 from datetime import timedelta
-from loguru import logger
-import typer
 
-from config import config
+import typer
+from loguru import logger
+
 import modules.utils as utils
+from config import config
 
 app = typer.Typer(help="Schwarm commands.")
 
@@ -116,8 +117,8 @@ def clean():
 
 @app.command("seed")
 def seed():
-    from shared.services.seed_schwarm_service import SeedSchwarmService
     from shared.core.db import db_session
+    from shared.services.seed_schwarm_service import SeedSchwarmService
 
     with db_session() as db:
         SeedSchwarmService(db, get_driver()).seed()

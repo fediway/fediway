@@ -1,11 +1,11 @@
-from loguru import logger
 from datetime import datetime, timedelta
 
-from modules.mastodon.models import Status
-from modules.schwarm import Schwarm
-from modules.debezium import DebeziumEventHandler
+from loguru import logger
 
 from config import config
+from modules.debezium import DebeziumEventHandler
+from modules.mastodon.models import Status
+from modules.schwarm import Schwarm
 
 
 class StatusEventHandler(DebeziumEventHandler):

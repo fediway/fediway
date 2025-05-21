@@ -1,8 +1,8 @@
 from loguru import logger
 
+from modules.debezium import DebeziumEventHandler
 from modules.mastodon.models import Mention
 from modules.schwarm import Schwarm
-from modules.debezium import DebeziumEventHandler
 
 
 class MentionEventHandler(DebeziumEventHandler):

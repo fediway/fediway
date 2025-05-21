@@ -1,6 +1,6 @@
-from confluent_kafka.admin import AdminClient, NewTopic
-from confluent_kafka import KafkaException
 import typer
+from confluent_kafka import KafkaException
+from confluent_kafka.admin import AdminClient, NewTopic
 
 from config import config
 

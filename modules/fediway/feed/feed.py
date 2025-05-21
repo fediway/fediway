@@ -1,10 +1,11 @@
 import asyncio
+
 import numpy as np
 
-from ..rankers import Ranker
 from ..heuristics import Heuristic
-from .sampling import Sampler, TopKSampler
+from ..rankers import Ranker
 from .features import Features
+from .sampling import Sampler, TopKSampler
 from .utils import BatchIterator, TopKPriorityQueue
 
 

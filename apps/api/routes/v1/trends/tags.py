@@ -1,11 +1,13 @@
 import random
-from sqlmodel import select, Session as DBSession
+
 from fastapi import APIRouter, Depends
+from sqlmodel import Session as DBSession
+from sqlmodel import select
 
 from apps.api.dependencies.sources.tags import get_influential_sources
-from shared.core.db import get_db_session
-from modules.mastodon.models import Tag
 from modules.mastodon.items import TagItem
+from modules.mastodon.models import Tag
+from shared.core.db import get_db_session
 
 router = APIRouter()
 

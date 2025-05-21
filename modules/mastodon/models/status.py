@@ -1,13 +1,14 @@
-from typing import List, Optional
 from datetime import datetime
-from sqlalchemy import Column, ARRAY, Integer
-from sqlmodel import SQLModel, Field, Relationship
+from typing import List, Optional
+
+from sqlalchemy import ARRAY, Column, Integer
+from sqlmodel import Field, Relationship, SQLModel
 
 from .account import Account
+from .favourite import Favourite
 from .media_attachment import MediaAttachment
 from .preview_card import PreviewCard, PreviewCardStatus
-from .topic import Topic, StatusTopic
-from .favourite import Favourite
+from .topic import StatusTopic, Topic
 
 
 class StatusStats(SQLModel, table=True):
@@ -70,8 +71,8 @@ class Status(SQLModel, table=True):
 
     @classmethod
     def select_by_ids(cls, ids):
-        from sqlmodel import select
         from sqlalchemy.orm import selectinload
+        from sqlmodel import select
 
         return (
             select(cls)

@@ -1,9 +1,10 @@
 from feast import FeatureView, Field
-from feast.types import Int64, Float32
+from feast.types import Float32, Int64
 
 from config import config
-from ..utils import make_feature_view
+
 from ..entities import status
+from ..utils import make_feature_view
 
 combined_status_tags_features = []
 

@@ -1,9 +1,9 @@
 from fastapi import Request
 from loguru import logger
 
-from apps.api.modules.sessions import SessionManager, Session
-from config import config
 import modules.utils as utils
+from apps.api.modules.sessions import Session, SessionManager
+from config import config
 
 from .location import get_location
 

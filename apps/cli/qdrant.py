@@ -1,5 +1,5 @@
-from qdrant_client import models
 import typer
+from qdrant_client import models
 
 from config import config
 
@@ -47,14 +47,14 @@ def purge():
 
 @app.command("create-embeddings")
 def create_embeddings(batch_size: int = 16):
-    from sqlmodel import select, func
     from qdrant_client.http import models
+    from sqlmodel import func, select
+    from tqdm import tqdm
 
     from modules.mastodon.models import Status
+    from shared.core.db import db_session
     from shared.core.embed import embedder
     from shared.core.qdrant import client
-    from shared.core.db import db_session
-    from tqdm import tqdm
 
     with db_session() as db:
         query_select = select(Status.id, Status.text, Status.created_at).where(
@@ -93,10 +93,11 @@ def create_embeddings(batch_size: int = 16):
 @app.command("collect")
 def collect(language: str = "en"):
     from datetime import timedelta
-    from modules.fediway.sources.qdrant import SimilarToFavourited
+
     import modules.utils as utils
-    from shared.services.feature_service import FeatureService
+    from modules.fediway.sources.qdrant import SimilarToFavourited
     from shared.core.qdrant import client
+    from shared.services.feature_service import FeatureService
 
     # source = MostInteractedByAccountsSource(
     #     driver=get_driver(),

@@ -1,9 +1,10 @@
-from modules.fediway.rankers.kirby.features import LABELS
 from datetime import datetime
-from loguru import logger
+
 import typer
+from loguru import logger
 
 from config import config
+from modules.fediway.rankers.kirby.features import LABELS
 
 app = typer.Typer(help="Kirby commands.")
 
@@ -16,8 +17,8 @@ def create_dataset(
     end_date: datetime = datetime.now(),
 ) -> int:
     from modules.fediway.rankers.kirby.dataset import create_dataset
-    from shared.core.rw import rw_session
     from shared.core.feast import feature_store
+    from shared.core.rw import rw_session
 
     typer.echo(f"Creating dataset...")
 
@@ -73,10 +74,11 @@ def train_kirby(
     path: str = config.fediway.datasets_path,
     seed: int = 42,
 ) -> int:
+    import numpy as np
+    from dask import dataframe as dd
+
     from modules.fediway.rankers.kirby import Kirby, get_feature_views
     from shared.core.feast import feature_store
-    from dask import dataframe as dd
-    import numpy as np
 
     np.random.seed(seed)
     dataset_path = f"{path}/{dataset}"

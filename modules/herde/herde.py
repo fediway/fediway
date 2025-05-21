@@ -2,13 +2,13 @@ import pandas as pd
 from arango.graph import Graph
 
 from modules.mastodon.models import (
-    Status,
     Account,
-    Tag,
-    StatusTag,
-    Mention,
-    Follow,
     Favourite,
+    Follow,
+    Mention,
+    Status,
+    StatusTag,
+    Tag,
 )
 
 from .utils import parse_datetime

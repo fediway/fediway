@@ -1,22 +1,19 @@
-from sqlmodel import Session as DBSession
 from fastapi import APIRouter, Depends, Request
-
-from modules.fediway.sources import Source
-from modules.mastodon.items import StatusItem
-from modules.mastodon.models import Status
+from sqlmodel import Session as DBSession
 
 from apps.api.core.ranker import ranker
-from shared.core.db import get_db_session
-
-from apps.api.services.feed_service import FeedService
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
     get_collaborative_filtering_sources,
     get_popular_in_community_sources,
     get_similar_to_favourited_sources,
 )
-
+from apps.api.services.feed_service import FeedService
 from config import config
+from modules.fediway.sources import Source
+from modules.mastodon.items import StatusItem
+from modules.mastodon.models import Status
+from shared.core.db import get_db_session
 
 router = APIRouter()
 

@@ -89,9 +89,9 @@ def migrate():
 
 @app.command("seed")
 def seed():
-    from shared.services.seed_herde_service import SeedHerdeService
     from shared.core.db import db_session
     from shared.core.herde import graph
+    from shared.services.seed_herde_service import SeedHerdeService
 
     with db_session() as db:
         SeedHerdeService(db, graph).seed()
@@ -157,9 +157,9 @@ def similar_accounts(account_id: int):
 
 @app.command("compute-affinities")
 def compute_affinities():
-    from shared.core.herde import graph, db
-    from modules.herde import Herde
     import modules.utils as utils
+    from modules.herde import Herde
+    from shared.core.herde import db, graph
 
     herde = Herde(graph)
 

@@ -1,11 +1,12 @@
-import numpy as np
 import asyncio
 
+import numpy as np
+
+from ..heuristics import DiversifyHeuristic, Heuristic
 from ..rankers import Ranker
 from ..sources import Source
-from ..heuristics import Heuristic, DiversifyHeuristic
-from .sampling import TopKSampler, Sampler
 from .features import Features
+from .sampling import Sampler, TopKSampler
 
 
 class PipelineStep:

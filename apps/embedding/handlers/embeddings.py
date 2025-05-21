@@ -1,12 +1,13 @@
-from qdrant_client import QdrantClient, models
 from datetime import datetime
-from pydantic import BaseModel
-from loguru import logger
+
 import numpy as np
+from loguru import logger
+from pydantic import BaseModel
+from qdrant_client import QdrantClient, models
 
 import modules.utils as utils
-from modules.fediway.embedding import Embedder, MultimodalEmbedder
 from modules.debezium import DebeziumBatchHandler, DebeziumEventHandler
+from modules.fediway.embedding import Embedder, MultimodalEmbedder
 
 
 class StatusEmbeddings(BaseModel):
