@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session as DBSession
 
-from apps.api.core.ranker import ranker
+from apps.api.core.ranker import kirby
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
+    get_popular_by_influential_accounts_sources,
     get_collaborative_filtering_sources,
     get_popular_in_community_sources,
     get_similar_to_favourited_sources,
@@ -19,13 +20,21 @@ router = APIRouter()
 
 
 def home_sources(
+    popular_by_influential_accounts: list[Source] = Depends(
+        get_popular_by_influential_accounts_sources
+    ),
     popular_in_community: list[Source] = Depends(get_popular_in_community_sources),
     collaborative_filtering: list[Source] = Depends(
         get_collaborative_filtering_sources
     ),
     similar_to_favourited: list[Source] = Depends(get_similar_to_favourited_sources),
 ):
-    return popular_in_community + collaborative_filtering + similar_to_favourited
+    return (
+        popular_by_influential_accounts + 
+        popular_in_community + 
+        collaborative_filtering + 
+        similar_to_favourited
+    )
 
 
 @router.get("/home")
@@ -41,7 +50,7 @@ async def home_timeline(
         feed.name("timelines/home")
         .select("status_id")
         .sources([(source, max_candidates_per_source) for source in sources])
-        .rank(ranker)
+        .rank(kirby)
         .diversify(by="status:account_id", penalty=0.1)
         .sample(config.fediway.feed_batch_size)
         .paginate(config.fediway.feed_batch_size, offset=0)

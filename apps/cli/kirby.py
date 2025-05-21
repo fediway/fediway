@@ -72,9 +72,11 @@ def train_kirby(
     ),
     labels: list[str] = LABELS,
     path: str = config.fediway.datasets_path,
+    save_path: str | None = None,
     seed: int = 42,
 ) -> int:
     import numpy as np
+    from pathlib import Path
     from dask import dataframe as dd
 
     from modules.fediway.rankers.kirby import Kirby, get_feature_views
@@ -117,5 +119,53 @@ def train_kirby(
 
     print("train", train_metrics)
     print("test", test_metrics)
+
+    if save_path is not None:
+        save_path = Path(save_path)
+        save_path.mkdir(exist_ok=True, parents=True)
+        ranker.save(save_path)
+
+    return 0
+
+@app.command("test")
+def test_kirby(
+    model_path: str = typer.Argument(
+        ...,
+        help="Path to the pretrained model",
+    ),
+    dataset: str = typer.Argument(
+        ...,
+        help="Name of dataset used for training",
+    ),
+    labels: list[str] = LABELS,
+    path: str = config.fediway.datasets_path,
+    seed: int = 42,
+) -> int:
+    import numpy as np
+    from pathlib import Path
+    from dask import dataframe as dd
+
+    from modules.fediway.rankers.kirby import Kirby, get_feature_views
+    from shared.core.feast import feature_store
+
+    np.random.seed(seed)
+
+    ranker = Kirby.load(model_path)
+
+    dataset_path = f"{path}/{dataset}"
+
+    storage_options = {
+        "client_kwargs": {"endpoint_url": config.fediway.datasets_s3_endpoint}
+    }
+    test = dd.read_parquet(
+        f"{dataset_path}/test/",
+        storage_options=storage_options,
+    ).compute()
+
+    logger.info(f"[Test] size: {len(test)}")
+    for label in labels:
+        logger.info(f"[Test] {label} count: {test[label].values.sum()}")
+
+    print("test", ranker.evaluate(test))
 
     return 0

@@ -59,6 +59,7 @@ class RankingStep(PipelineStep):
         
         start_time = time.perf_counter_ns()
         entities = [{self.entity: c} for c in candidates]
+        print(self.ranker.features)
         X = self.feature_service.get(entities, self.ranker.features)
         self._feature_retrieval_duration = time.perf_counter_ns() - start_time
 

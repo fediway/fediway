@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlmodel import Session as DBSession
 
-from apps.api.core.ranker import ranker
+from apps.api.core.ranker import stats_ranker
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
     get_popular_by_influential_accounts_sources,
@@ -38,7 +38,7 @@ async def status_trends(
         feed.name("trends/statuses")
         .select("status_id")
         .sources([(source, max_candidates_per_source) for source in sources])
-        .rank(ranker)
+        .rank(stats_ranker)
         .remember()
         .diversify(by="status:account_id", penalty=0.1)
         .sample(config.fediway.feed_batch_size, sampler=InverseTransformSampler())

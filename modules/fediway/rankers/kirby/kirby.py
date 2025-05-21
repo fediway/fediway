@@ -1,15 +1,22 @@
+import json
+import pickle
+
 import numpy as np
 import pandas as pd
+from pathlib import Path
+from lightgbm import LGBMClassifier, Booster
+from xgboost import XGBClassifier
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 
+from ..base import Ranker
 from .features import LABELS
 from .scalers import get_scaler
 
 
-class Kirby:
+class Kirby(Ranker):
     label: str
     model: BaseEstimator
 
@@ -26,11 +33,18 @@ class Kirby:
         scaler: TransformerMixin,
         features: list[str],
         labels: list[str] = LABELS,
+        version = 'v0.1'
     ):
         self.features = features
         self.labels = labels
         self.model = model
         self.scaler = scaler
+        self.version = version
+        self.label_weights = np.ones(len(labels)) / len(labels)
+
+    @property
+    def name(self) -> str:
+        return f"kirby-{self.version}"
 
     @classmethod
     def linear(
@@ -68,8 +82,6 @@ class Kirby:
         scaler: str = "standard",
         random_state: int = None,
     ):
-        from xgboost import XGBClassifier
-
         model = XGBClassifier(
             objective="multi:softprob",
             num_class=len(labels),
@@ -83,20 +95,22 @@ class Kirby:
         cls,
         features: list[str],
         labels: list[str],
+        num_leaves: int = 32,
+        max_depth: int = 6,
         scaler: str = "standard",
         n_estimators: int = 1000,
         random_state: int = None,
+        n_jobs: int = -1
     ):
-        from lightgbm import LGBMClassifier
-
         model = LGBMClassifier(
             objective="multiclass",
             num_class=len(labels),
             metric="multi_logloss",
             n_estimators=n_estimators,
-            num_leaves=50,
+            num_leaves=num_leaves,
             learning_rate=0.1,
-            max_depth=10,
+            max_depth=max_depth,
+            n_jobs=n_jobs
         )
         scaler = get_scaler(scaler)
 
@@ -113,6 +127,9 @@ class Kirby:
         X = self.scaler.transform(X)
         return self.model.predict_proba(X)
 
+    def predict(self, dataset: pd.DataFrame):
+        return (self.predict_proba(dataset) * self.label_weights).sum(axis=1)
+
     def evaluate(self, dataset: pd.DataFrame):
         y_true_all = dataset[self.labels].values.astype(int)
         y_pred_all = self.predict_proba(dataset)
@@ -124,3 +141,36 @@ class Kirby:
             results[label] = {"auroc": auroc}
 
         return results
+
+    def save(self, path: Path | str):
+        if type(path) != Path:
+            path = Path(path)
+
+        with open(path / 'model.pkl', 'wb') as f:
+            pickle.dump(self.model, f)
+        
+        with open(path / 'scaler.pkl', 'wb') as f:
+            pickle.dump(self.scaler, f)
+
+        with open(path / 'params.json', 'w') as f:
+            json.dump({
+                'features': self.features,
+                'labels': self.labels,
+                'version': self.version
+            }, f, indent=4)
+
+    @classmethod
+    def load(cls, path: Path | str):
+        if type(path) != Path:
+            path = Path(path)
+
+        with open(path / 'model.pkl', 'rb') as f:
+            model = pickle.load(f)
+        
+        with open(path / 'scaler.pkl', 'rb') as f:
+            scaler = pickle.load(f)
+
+        with open(path / 'params.json', 'r') as f:
+            params = json.load(f)
+
+        return cls(model, scaler, **params)

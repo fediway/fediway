@@ -22,12 +22,12 @@ class SimpleStatsRanker(Ranker):
         coef_fav: float = 0.5,
         coef_reb: float = 2.0,
         coef_rep: float = 2.0,
-        decay: float = 0.5,
+        decay_rate: float = 0.5,
     ):
         self.alpha = np.array([coef_fav, coef_reb, coef_rep])
-        self.decay = decay
+        self.decay_rate = decay_rate
 
     def predict(self, stats: pd.DataFrame):
         return (stats.values[:, :3] * self.alpha.T).sum(axis=1) * np.exp(
-            -self.decay * stats.values[:, 3] / 86400
+            -self.decay_rate * stats.values[:, 3] / 86400
         )
