@@ -1,4 +1,15 @@
 -- :up
+CREATE TABLE IF NOT EXISTS status_engagement_events (
+  account_id BIGINT,
+  status_id BIGINT,
+  type VARCHAR,
+  favourite_id BIGINT,
+  reblog_id BIGINT,
+  reply_id BIGINT,
+  event_time TIMESTAMP,
+  WATERMARK FOR event_time AS event_time - INTERVAL '5 seconds'
+) APPEND ONLY;
+
 CREATE MATERIALIZED VIEW IF NOT EXISTS status_engagements AS
 (
   -- favourites
@@ -41,5 +52,12 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS status_engagements AS
   WHERE s.in_reply_to_id IS NOT NULL 
 );
 
+CREATE SINK IF NOT EXISTS status_engagements_sink
+INTO status_engagement_events
+FROM status_engagements
+WITH (type = 'append-only', force_append_only='true');
+
 -- :down
 DROP VIEW IF EXISTS status_engagements;
+DROP TABLE IF EXISTS status_engagement_events CASCADE;
+DROP SINK IF EXISTS status_engagements_sink;

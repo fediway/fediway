@@ -1,6 +1,6 @@
 
 -- :up
-CREATE MATERIALIZED VIEW IF NOT EXISTS enriched_status_engagements AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS enriched_status_engagement_events AS
 SELECT
   e.account_id,
   e.status_id,
@@ -21,7 +21,7 @@ SELECT
   bool_or(f.has_video) AS has_video,
   bool_or(f.has_audio) AS has_audio,
   MAX(f.num_mentions) AS num_mentions
-FROM status_engagements e
+FROM status_engagement_events e
 JOIN statuses s ON s.id = e.status_id
 JOIN status_features f ON f.status_id = e.status_id
 GROUP BY 
@@ -31,4 +31,4 @@ GROUP BY
   e.type;
 
 -- :down
-DROP VIEW IF EXISTS enriched_status_engagements;
+DROP VIEW IF EXISTS enriched_status_engagement_events;

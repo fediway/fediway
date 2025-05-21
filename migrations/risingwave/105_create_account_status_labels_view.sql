@@ -15,8 +15,8 @@ SELECT
     MIN(CASE WHEN se.type = 'reply' THEN se.event_time END) AS is_replied_at,
     BOOL_OR(author_se.status_id IS NOT NULL) as is_reply_engaged_by_author,
     MIN(author_se.event_time) AS is_reply_engaged_by_author_at
-FROM enriched_status_engagements se
-LEFT JOIN status_engagements author_se 
+FROM enriched_status_engagement_events se
+LEFT JOIN status_engagement_events author_se 
     ON author_se.account_id = se.author_id
     AND author_se.status_id = se.reply_id
     AND se.reply_id IS NOT NULL

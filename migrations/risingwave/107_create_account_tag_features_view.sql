@@ -18,7 +18,7 @@
         SUM(CASE WHEN has_audio THEN 1 ELSE 0 END) as num_audios_{{ spec }}
     FROM 
         HOP (
-            enriched_status_engagements, 
+            enriched_status_engagement_events, 
             event_time, 
             INTERVAL '{{ hop_size }}', 
             INTERVAL '{{ window_size }}'

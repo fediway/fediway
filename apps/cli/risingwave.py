@@ -164,6 +164,7 @@ def update(version: str):
 
             with conn.cursor() as cur:
                 for query in up_sql.split(";"):
+                    print(query)
                     try:
                         cur.execute(query + ";")
                         conn.commit()

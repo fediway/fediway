@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-
 from loguru import logger
 
 from config import config

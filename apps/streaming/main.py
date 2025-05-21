@@ -27,6 +27,7 @@ from .handlers.schwarm import (
 from .handlers.schwarm import (
     StatusTagEventHandler as SchwarmStatusTagEventHandler,
 )
+from .utils import make_handler
 
 broker = KafkaBroker(
     bootstrap_servers=config.kafka.kafka_bootstrap_servers,
@@ -34,7 +35,7 @@ broker = KafkaBroker(
 app = FastStream(broker)
 
 feature_topics = {
-    "author_engagement_all_features",
+    "author_engagement_all_7d",
     "author_engagement_is_favourite_features",
     "author_engagement_is_reblog_features",
     "author_engagement_is_reply_features",
@@ -66,9 +67,13 @@ feature_topics = {
 #         group_id="features",
 #     )
 
-@broker.subscriber("account_engagement_all_features")
-async def account_engagement_all_features(event):
-    print(event)
+make_handler(
+    broker, 
+    "account_engagement_all_56d", 
+    FeaturesEventHandler(feature_store, "account_engagement_all_56d"),
+    group_id="features",
+)
+
 
 # Schwarm consumers (responsible for pushing data to memgraph)
 
