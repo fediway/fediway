@@ -23,7 +23,7 @@ class StatusEventHandler(DebeziumEventHandler):
             * 1000
         )
 
-        if status.created_at > limit:
+        if status.created_at < limit:
             return
 
         if status.reblog_of_id is None:

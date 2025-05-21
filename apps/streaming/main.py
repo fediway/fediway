@@ -57,14 +57,18 @@ feature_topics = {
     "account_author_engagement_has_video_features",
 }
 
-for topic in feature_topics:
-    make_debezium_handler(
-        broker,
-        topic,
-        FeaturesEventHandler,
-        args=(feature_store, topic),
-        group_id="features",
-    )
+# for topic in feature_topics:
+#     make_debezium_handler(
+#         broker,
+#         topic,
+#         FeaturesEventHandler,
+#         args=(feature_store, topic),
+#         group_id="features",
+#     )
+
+@broker.subscriber("account_engagement_all_features")
+async def account_engagement_all_features(event):
+    print(event)
 
 # Schwarm consumers (responsible for pushing data to memgraph)
 

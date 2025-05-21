@@ -13,6 +13,8 @@ from modules.mastodon.models import (
     Tag,
 )
 
+from .utils import parse_datetime
+
 
 class Schwarm:
     driver: Driver
@@ -157,17 +159,11 @@ class Schwarm:
         CREATE (a)-[:CREATED]->(s)
         """
 
-        created_at = (
-            status.created_at
-            if type(status.created_at) == int
-            else int(status.created_at.timestamp() * 1000)
-        )
-
         params = {
             "id": status.id,
             "account_id": status.account_id,
             "language": status.language,
-            "created_at": created_at,
+            "created_at": parse_datetime(status.created_at),
         }
 
         self._run_query(query, **params)
@@ -205,9 +201,7 @@ class Schwarm:
                     "id": status.id,
                     "account_id": status.account_id,
                     "language": status.language,
-                    "created_at": status.created_at
-                    if type(status.created_at) == int
-                    else int(status.created_at.timestamp() * 1000),
+                    "created_at": parse_datetime(status.created_at),
                 }
                 for status in statuses
             ],

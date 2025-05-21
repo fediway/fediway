@@ -9,9 +9,9 @@ from modules.debezium import DebeziumEventHandler
 
 
 class FeaturesEventHandler(DebeziumEventHandler):
-    def __init__(self, fs: FeatureStore, source: str):
+    def __init__(self, fs: FeatureStore, feature_view: str):
         self.fs = fs
-        self.source = source
+        self.feature_view = feature_view
 
     async def created(self, data: dict):
         self._push(data)
@@ -34,7 +34,7 @@ class FeaturesEventHandler(DebeziumEventHandler):
         features["event_time"] = min(now, data["event_time"] * 1000)
 
         self.fs.push(
-            self.source.replace("_features", "_stream"),
+            self.feature_view,
             pd.DataFrame([features]),
             to=PushMode.ONLINE,
         )
