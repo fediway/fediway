@@ -84,7 +84,7 @@ class FeatureService(Features):
             return cached_df.reindex(pd.DataFrame(entities).values[:, 0])
 
         df = self.fs.get_online_features(
-            features=features, entity_rows=missing_entities
+            features=features, entity_rows=missing_entities, full_feature_names=True
         ).to_df()
 
         self._remember(missing_entities, df, features)
