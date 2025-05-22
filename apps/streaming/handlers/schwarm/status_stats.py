@@ -21,7 +21,7 @@ class StatusStatsEventHandler(DebeziumEventHandler):
         return StatusStats(**data)
 
     async def created(self, status_stats: StatusStats):
-        if new.created_at < _limit():
+        if status_stats.created_at < _limit():
             return
 
         self.schwarm.add_status_stats(status_stats)
