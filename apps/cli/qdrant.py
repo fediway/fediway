@@ -1,5 +1,4 @@
 import typer
-from qdrant_client import models
 
 from config import config
 
@@ -15,6 +14,7 @@ COLLECTIONS = [
 
 @app.command("migrate")
 def migrate():
+    from qdrant_client import models
     from shared.core.embed import embedder
     from shared.core.qdrant import client
 

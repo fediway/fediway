@@ -1,25 +1,30 @@
 import typer
-from confluent_kafka import KafkaException
-from confluent_kafka.admin import AdminClient, NewTopic
 
 from config import config
 
 app = typer.Typer(help="Kafka commands.")
 
 def _topic(topic):
+    from confluent_kafka.admin import NewTopic
+
     return NewTopic(
         topic,
         num_partitions=config.kafka.kafka_num_partitions,
         replication_factor=config.kafka.kafka_replication_factor,
     )
 
-TOPICS = [_topic(topic) for topic in [
+TOPICS = [
     "status_text_embeddings",
-]]
+]
 
 
 @app.command("create-topics")
 def create_topics():
+    from confluent_kafka import KafkaException
+    from confluent_kafka.admin import AdminClient
+
+    TOPICS = [_topic(topic) for topic in TOPICS]
+
     admin = AdminClient({"bootstrap.servers": config.kafka.kafka_bootstrap_servers})
     existing_topics = admin.list_topics().topics.keys()
 
