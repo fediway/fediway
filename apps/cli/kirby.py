@@ -4,7 +4,6 @@ import typer
 from loguru import logger
 
 from config import config
-from modules.fediway.rankers.kirby.features import LABELS
 
 app = typer.Typer(help="Kirby commands.")
 
@@ -70,7 +69,7 @@ def train_kirby(
     model: str = typer.Option(
         "linear", help="Model name", callback=validate_kirby_model
     ),
-    labels: list[str] = LABELS,
+    labels: list[str] | None = None,
     path: str = config.fediway.datasets_path,
     save_path: str | None = None,
     seed: int = 42,
@@ -79,8 +78,12 @@ def train_kirby(
     from pathlib import Path
     from dask import dataframe as dd
 
+    from modules.fediway.rankers.kirby.features import LABELS
     from modules.fediway.rankers.kirby import Kirby, get_feature_views
     from shared.core.feast import feature_store
+
+    if labels is None:
+        labels = LABELS
 
     np.random.seed(seed)
     dataset_path = f"{path}/{dataset}"
@@ -137,7 +140,7 @@ def test_kirby(
         ...,
         help="Name of dataset used for training",
     ),
-    labels: list[str] = LABELS,
+    labels: list[str] | None = None,
     path: str = config.fediway.datasets_path,
     seed: int = 42,
 ) -> int:
@@ -145,8 +148,12 @@ def test_kirby(
     from pathlib import Path
     from dask import dataframe as dd
 
+    from modules.fediway.rankers.kirby.features import LABELS
     from modules.fediway.rankers.kirby import Kirby, get_feature_views
     from shared.core.feast import feature_store
+
+    if labels is None:
+        labels = LABELS
 
     np.random.seed(seed)
 
