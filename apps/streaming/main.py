@@ -38,8 +38,8 @@ feature_topics = {fv.name for fv in feature_store.list_feature_views()}
 
 for topic in feature_topics:
     make_handler(
-        broker, 
-        topic, 
+        broker,
+        topic,
         FeaturesEventHandler(feature_store, topic),
         group_id="features",
     )

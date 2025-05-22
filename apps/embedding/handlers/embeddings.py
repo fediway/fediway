@@ -15,7 +15,7 @@ class StatusEmbeddings(BaseModel):
     created_at: datetime
 
 
-class TextEmbeddingsBatchHandler():
+class TextEmbeddingsBatchHandler:
     def __init__(self, embedder: Embedder, min_chars: int = 4):
         self.embedder = embedder
         self.min_chars = min_chars
@@ -45,7 +45,7 @@ class TextEmbeddingsBatchHandler():
         ]
 
 
-class AccountEmbeddingsEventHandler():
+class AccountEmbeddingsEventHandler:
     client: QdrantClient
 
     def __init__(self, client: QdrantClient, topic: str):

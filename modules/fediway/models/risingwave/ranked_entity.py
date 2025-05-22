@@ -3,6 +3,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Column
 
+
 class RankedEntity(SQLModel, table=True):
     __tablename__ = "ranked_entities"
 

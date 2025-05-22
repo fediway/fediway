@@ -14,7 +14,12 @@ import modules.utils as utils
 from config import config
 from modules.mastodon.models import Account
 from modules.fediway.feed import Features
-from modules.fediway.feed.pipeline import Feed, PaginationStep, SourcingStep, RankingStep
+from modules.fediway.feed.pipeline import (
+    Feed,
+    PaginationStep,
+    SourcingStep,
+    RankingStep,
+)
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
 from modules.fediway.models.risingwave import (
@@ -43,7 +48,9 @@ def _generate_feed_key(request: Request, length: int = 8):
 
 
 def _get_feed_id(request: Request, feed_key: str, length: int = 32):
-    return hashlib.sha256((feed_key + request_key(request)).encode("utf-8")).hexdigest()[:length]
+    return hashlib.sha256(
+        (feed_key + request_key(request)).encode("utf-8")
+    ).hexdigest()[:length]
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -256,7 +263,9 @@ class FeedService:
                         created_at=now,
                     )
                     for candidate, score, features in zip(
-                        step.get_candidates(), step.get_scores(), step.get_features().iloc
+                        step.get_candidates(),
+                        step.get_scores(),
+                        step.get_features().iloc,
                     )
                 ]
             )

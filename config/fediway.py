@@ -37,7 +37,7 @@ class FediwayConfig(BaseConfig):
     datasets_path: str = "data/datasets"
     datasets_s3_endpoint: str | None = None
 
-    kirby_path: str = 'models/kirby_v0.1'
+    kirby_path: str = "models/kirby_v0.1"
 
     def feed_max_age(self):
         return datetime.now() - timedelta(days=self.feed_max_age_in_days)

@@ -31,10 +31,10 @@ def home_sources(
     similar_to_favourited: list[Source] = Depends(get_similar_to_favourited_sources),
 ):
     return (
-        popular_by_influential_accounts + 
-        popular_in_community + 
-        collaborative_filtering + 
-        similar_to_favourited
+        popular_by_influential_accounts
+        + popular_in_community
+        + collaborative_filtering
+        + similar_to_favourited
     )
 
 
@@ -44,7 +44,7 @@ async def home_timeline(
     feed: FeedService = Depends(get_feed),
     sources=Depends(home_sources),
     db: DBSession = Depends(get_db_session),
-    kirby_features = Depends(get_kirby_feature_service)
+    kirby_features=Depends(get_kirby_feature_service),
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
 

@@ -24,7 +24,6 @@
       SUM(num_mentions) AS num_mentions_{{ spec }}
     FROM 
       HOP (enriched_status_engagement_events, event_time, INTERVAL '{{ hop_size }}', INTERVAL '{{ window_size }}')
-    WHERE event_time >= NOW() - INTERVAL '{{ max_age }}'
     GROUP BY {{ group_id }}, window_start, window_end;
 
     CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_all_{{ spec }} AS
@@ -101,7 +100,6 @@
       FROM 
         HOP (enriched_status_engagement_events, event_time, INTERVAL '{{ hop_size }}', INTERVAL '{{ window_size }}')
       WHERE has_{{ media }}
-        AND event_time >= NOW() - INTERVAL '{{ max_age }}'
       GROUP BY {{ group_id }}, window_start, window_end;
 
       CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_has_{{ media }}_{{ spec }} AS

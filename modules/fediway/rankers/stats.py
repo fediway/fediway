@@ -8,6 +8,7 @@ class SimpleStatsRanker(Ranker):
     """
     A simple linear regression ranking model based on status stats and age.
     """
+
     __name__ = "simple_stats_ranker"
 
     features = [

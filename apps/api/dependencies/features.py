@@ -13,6 +13,7 @@ def get_feature_service(request: Request):
         request.state.features = FeatureService()
     return request.state.features
 
+
 def get_kirby_feature_service(
     account: Account = Depends(get_authenticated_account_or_fail),
     feature_service: FeatureService = Depends(get_feature_service),
@@ -20,5 +21,5 @@ def get_kirby_feature_service(
     return KirbyFeatureService(
         feature_store=feature_store,
         feature_service=feature_service,
-        account_id=account.id
+        account_id=account.id,
     )

@@ -18,7 +18,7 @@ def get_feed(
     tasks: BackgroundTasks,
     db: DBSession = Depends(get_rw_session),
     feature_service: FeatureService = Depends(get_feature_service),
-    account: Account | None = Depends(get_authenticated_account)
+    account: Account | None = Depends(get_authenticated_account),
 ) -> FeedService:
     return FeedService(
         db=db,
@@ -28,5 +28,5 @@ def get_feed(
         tasks=tasks,
         redis=redis,
         feature_service=feature_service,
-        account=account
+        account=account,
     )

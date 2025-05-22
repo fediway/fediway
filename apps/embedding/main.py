@@ -19,6 +19,7 @@ embeddings_publisher = broker.publisher("status_text_embeddings")
 
 handler = TextEmbeddingsBatchHandler(embedder, config.embed.embed_text_min_chars)
 
+
 @broker.subscriber(
     "status_texts", batch=True, max_records=config.embed.embed_max_batch_size
 )

@@ -56,7 +56,7 @@ class RankingStep(PipelineStep):
     ) -> tuple[list[int], np.ndarray]:
         if len(candidates) == 0:
             return candidates, scores
-        
+
         start_time = time.perf_counter_ns()
         entities = [{self.entity: c} for c in candidates]
         print(self.ranker.features)
@@ -343,11 +343,9 @@ class Feed:
         return self
 
     def rank(self, ranker: Ranker, feature_service: Features | None = None):
-        self.step(RankingStep(
-            ranker, 
-            feature_service or self.feature_service, 
-            self.entity
-        ))
+        self.step(
+            RankingStep(ranker, feature_service or self.feature_service, self.entity)
+        )
 
         return self
 

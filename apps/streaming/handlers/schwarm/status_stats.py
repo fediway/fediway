@@ -5,6 +5,7 @@ from modules.debezium import DebeziumEventHandler
 from modules.mastodon.models import StatusStats
 from modules.schwarm import Schwarm
 
+
 def _limit():
     return int(
         (
@@ -12,6 +13,7 @@ def _limit():
         ).timestamp()
         * 1000
     )
+
 
 class StatusStatsEventHandler(DebeziumEventHandler):
     def __init__(self, schwarm: Schwarm):

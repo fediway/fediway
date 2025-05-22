@@ -4,6 +4,7 @@ from config import config
 
 app = typer.Typer(help="Kafka commands.")
 
+
 def _topic(topic):
     from confluent_kafka.admin import NewTopic
 
@@ -12,6 +13,7 @@ def _topic(topic):
         num_partitions=config.kafka.kafka_num_partitions,
         replication_factor=config.kafka.kafka_replication_factor,
     )
+
 
 TOPICS = [
     "status_text_embeddings",
@@ -23,18 +25,16 @@ def create_topics():
     from confluent_kafka import KafkaException
     from confluent_kafka.admin import AdminClient
 
-    TOPICS = [_topic(topic) for topic in TOPICS]
-
     admin = AdminClient({"bootstrap.servers": config.kafka.kafka_bootstrap_servers})
     existing_topics = admin.list_topics().topics.keys()
 
-    topics = [topic for topic in TOPICS if topic.topic not in existing_topics]
+    topics = [_topic(topic) for topic in TOPICS if topic not in existing_topics]
 
     if len(topics) == 0:
         typer.echo("No topics to create.")
         return 0
 
-    futures = admin.create_topics(TOPICS)
+    futures = admin.create_topics(topics)
 
     # Wait for results (blocking call)
     for topic, future in futures.items():

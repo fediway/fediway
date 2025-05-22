@@ -130,6 +130,7 @@ def train_kirby(
 
     return 0
 
+
 @app.command("test")
 def test_kirby(
     model_path: str = typer.Argument(

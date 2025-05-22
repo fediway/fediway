@@ -32,7 +32,7 @@ class Kirby(Ranker):
         scaler: TransformerMixin,
         features: list[str],
         labels: list[str] = LABELS,
-        version = 'v0.1'
+        version="v0.1",
     ):
         self.features = features
         self.labels = labels
@@ -82,6 +82,7 @@ class Kirby(Ranker):
         random_state: int = None,
     ):
         from xgboost import XGBClassifier
+
         model = XGBClassifier(
             objective="multi:softprob",
             num_class=len(labels),
@@ -100,7 +101,7 @@ class Kirby(Ranker):
         scaler: str = "standard",
         n_estimators: int = 1000,
         random_state: int = None,
-        n_jobs: int = -1
+        n_jobs: int = -1,
     ):
         model = LGBMClassifier(
             objective="multiclass",
@@ -110,7 +111,7 @@ class Kirby(Ranker):
             num_leaves=num_leaves,
             learning_rate=0.1,
             max_depth=max_depth,
-            n_jobs=n_jobs
+            n_jobs=n_jobs,
         )
         scaler = get_scaler(scaler)
 
@@ -146,31 +147,35 @@ class Kirby(Ranker):
         if type(path) != Path:
             path = Path(path)
 
-        with open(path / 'model.pkl', 'wb') as f:
+        with open(path / "model.pkl", "wb") as f:
             pickle.dump(self.model, f)
-        
-        with open(path / 'scaler.pkl', 'wb') as f:
+
+        with open(path / "scaler.pkl", "wb") as f:
             pickle.dump(self.scaler, f)
 
-        with open(path / 'params.json', 'w') as f:
-            json.dump({
-                'features': self.features,
-                'labels': self.labels,
-                'version': self.version
-            }, f, indent=4)
+        with open(path / "params.json", "w") as f:
+            json.dump(
+                {
+                    "features": self.features,
+                    "labels": self.labels,
+                    "version": self.version,
+                },
+                f,
+                indent=4,
+            )
 
     @classmethod
     def load(cls, path: Path | str):
         if type(path) != Path:
             path = Path(path)
 
-        with open(path / 'model.pkl', 'rb') as f:
+        with open(path / "model.pkl", "rb") as f:
             model = pickle.load(f)
-        
-        with open(path / 'scaler.pkl', 'rb') as f:
+
+        with open(path / "scaler.pkl", "rb") as f:
             scaler = pickle.load(f)
 
-        with open(path / 'params.json', 'r') as f:
+        with open(path / "params.json", "r") as f:
             params = json.load(f)
 
         return cls(model, scaler, **params)
