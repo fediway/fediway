@@ -6,7 +6,6 @@ from uuid import uuid4
 
 import numpy as np
 from aioredis import Redis
-from cachetools import TLRUCache
 from fastapi import FastAPI, Request, Response
 
 
