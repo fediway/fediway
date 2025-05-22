@@ -25,10 +25,29 @@
         ) e
     JOIN statuses_tags st ON e.status_id = st.status_id
     GROUP BY account_id, tag_id, window_start, window_end;
+
+    CREATE MATERIALIZED VIEW IF NOT EXISTS account_tag_engagement_all_{{ spec }} AS
+    SELECT *
+    FROM account_tag_engagement_all_{{ spec }}_historical
+    WHERE window_end >= NOW()
+      AND window_end <= NOW() + INTERVAL '{{ hop_size }}';
+    
+    CREATE SINK IF NOT EXISTS account_tag_engagement_all_{{ spec }}_sink
+    FROM account_tag_engagement_all_{{ spec }}
+    WITH (
+      connector='kafka',
+      properties.bootstrap.server='${bootstrap_server}',
+      topic='account_tag_engagement_all_{{ spec }}',
+      primary_key='{{ group_id }}',
+    ) FORMAT PLAIN ENCODE JSON (
+      force_append_only='true'
+    );
 {% endfor %}
 
 -- :down
 
 {% for spec in ['1d', '7d', '56d'] %}
+    DROP SINK IF EXISTS account_tag_engagement_all_{{ spec }}_sink;
+    DROP VIEW IF EXISTS account_tag_engagement_all_{{ spec }};
     DROP VIEW IF EXISTS account_tag_engagement_all_{{ spec }}_features;
 {% endfor %}

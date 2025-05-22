@@ -6,7 +6,6 @@ from pydantic import BaseModel
 from qdrant_client import QdrantClient, models
 
 import modules.utils as utils
-from modules.debezium import DebeziumBatchHandler, DebeziumEventHandler
 from modules.fediway.embedding import Embedder, MultimodalEmbedder
 
 
@@ -16,21 +15,15 @@ class StatusEmbeddings(BaseModel):
     created_at: datetime
 
 
-class TextEmbeddingsBatchHandler(DebeziumBatchHandler):
+class TextEmbeddingsBatchHandler():
     def __init__(self, embedder: Embedder, min_chars: int = 4):
         self.embedder = embedder
         self.min_chars = min_chars
 
-    async def created(self, data: list[dict]):
-        return self._embed(data)
-
-    async def updated(self, old: list[dict], new: list[dict]):
-        return self._embed(new)
-
     def _filtered_texts(self, data: list[dict]):
         return [item["text"] for item in data if len(item["text"]) >= self.min_chars]
 
-    def _embed(self, data):
+    def __call__(self, data):
         status_ids = [item["status_id"] for item in data]
         texts = self._filtered_texts(data)
 
@@ -52,23 +45,14 @@ class TextEmbeddingsBatchHandler(DebeziumBatchHandler):
         ]
 
 
-class AccountEmbeddingsEventHandler(DebeziumEventHandler):
+class AccountEmbeddingsEventHandler():
     client: QdrantClient
 
     def __init__(self, client: QdrantClient, topic: str):
         self.client = client
         self.topic = topic
 
-    async def created(self, data: dict):
-        self._push(data)
-
-    async def updated(self, old: dict, new: dict):
-        self._push(new)
-
-    async def deleted(self, data: dict):
-        pass
-
-    def _push(self, data):
+    def __call__(self, data):
         if data.get("embeddings") is None:
             return
 

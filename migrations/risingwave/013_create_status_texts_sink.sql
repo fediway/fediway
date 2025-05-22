@@ -1,6 +1,6 @@
 
 -- :up
-CREATE MATERIALIZED VIEW IF NOT EXISTS status_texts AS
+CREATE SINK IF NOT EXISTS status_texts_sink AS
 SELECT
     s.id as status_id,
     s.text as text,
@@ -8,16 +8,15 @@ SELECT
 FROM statuses s
 WHERE 
     s.reblog_of_id IS NULL
-AND s.text IS NOT NULL;
-
-CREATE SINK IF NOT EXISTS status_texts_sink
-FROM status_texts
+AND s.text IS NOT NULL
 WITH (
     connector='kafka',
     properties.bootstrap.server='${bootstrap_server}',
     topic='status_texts',
     primary_key='status_id',
-) FORMAT DEBEZIUM ENCODE JSON;
+) FORMAT PLAIN ENCODE JSON (
+    force_append_only='true'
+);
 
 -- :down
 DROP VIEW IF EXISTS status_texts;

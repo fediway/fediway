@@ -35,7 +35,7 @@ broker = KafkaBroker(
 app = FastStream(broker)
 
 feature_topics = {
-    "author_engagement_all_7d",
+    "author_engagement_all",
     "author_engagement_is_favourite_features",
     "author_engagement_is_reblog_features",
     "author_engagement_is_reply_features",
@@ -58,21 +58,13 @@ feature_topics = {
     "account_author_engagement_has_video_features",
 }
 
-# for topic in feature_topics:
-#     make_debezium_handler(
-#         broker,
-#         topic,
-#         FeaturesEventHandler,
-#         args=(feature_store, topic),
-#         group_id="features",
-#     )
-
-make_handler(
-    broker, 
-    "account_engagement_all_56d", 
-    FeaturesEventHandler(feature_store, "account_engagement_all_56d"),
-    group_id="features",
-)
+for topic in feature_topics:
+    make_handler(
+        broker, 
+        "account_engagement_all_56d", 
+        FeaturesEventHandler(feature_store, "account_engagement_all_56d"),
+        group_id="features",
+    )
 
 
 # Schwarm consumers (responsible for pushing data to memgraph)

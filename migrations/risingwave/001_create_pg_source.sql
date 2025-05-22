@@ -1,6 +1,6 @@
 
 -- :up
-CREATE SOURCE pg_source WITH (
+CREATE SOURCE IF NOT EXISTS pg_source WITH (
     connector = 'postgres-cdc',
     hostname = '${db_host}',
     port = '${db_port}',

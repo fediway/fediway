@@ -8,5 +8,10 @@ CREATE TABLE IF NOT EXISTS favourites (
     updated_at TIMESTAMP
 ) FROM pg_source TABLE 'public.favourites';
 
+CREATE INDEX idx_favourites_status_id ON favourites(status_id);
+CREATE INDEX idx_favourites_account_id ON favourites(account_id);
+
 -- :down
+DROP INDEX IF EXISTS idx_favourites_status_id;
+DROP INDEX IF EXISTS idx_favourites_account_id;
 DROP TABLE IF EXISTS favourites CASCADE;
