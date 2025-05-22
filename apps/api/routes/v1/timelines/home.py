@@ -3,6 +3,7 @@ from sqlmodel import Session as DBSession
 
 from apps.api.core.ranker import kirby
 from apps.api.dependencies.feeds import get_feed
+from apps.api.dependencies.features import get_kirby_feature_service
 from apps.api.dependencies.sources.statuses import (
     get_popular_by_influential_accounts_sources,
     get_collaborative_filtering_sources,
@@ -43,6 +44,7 @@ async def home_timeline(
     feed: FeedService = Depends(get_feed),
     sources=Depends(home_sources),
     db: DBSession = Depends(get_db_session),
+    kirby_features = Depends(get_kirby_feature_service)
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
 
@@ -50,7 +52,7 @@ async def home_timeline(
         feed.name("timelines/home")
         .select("status_id")
         .sources([(source, max_candidates_per_source) for source in sources])
-        .rank(kirby)
+        .rank(kirby, kirby_features)
         .diversify(by="status:account_id", penalty=0.1)
         .sample(config.fediway.feed_batch_size)
         .paginate(config.fediway.feed_batch_size, offset=0)

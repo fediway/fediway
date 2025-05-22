@@ -342,8 +342,12 @@ class Feed:
 
         return self
 
-    def rank(self, ranker: Ranker):
-        self.step(RankingStep(ranker, self.feature_service, self.entity))
+    def rank(self, ranker: Ranker, feature_service: Features | None = None):
+        self.step(RankingStep(
+            ranker, 
+            feature_service or self.feature_service, 
+            self.entity
+        ))
 
         return self
 

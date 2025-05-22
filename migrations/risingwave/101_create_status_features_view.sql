@@ -11,14 +11,14 @@ SELECT
   bool_or(m.type = 4) AS has_audio,
   COUNT(DISTINCT me.account_id) AS num_mentions,
   COUNT(DISTINCT st.tag_id) AS num_tags,
-  s.reblog_of_id IS NOT NULL AS is_reblog,
-  s.in_reply_to_id IS NOT NULL AS is_reply
+  MAX(s.reblog_of_id) IS NOT NULL AS is_reblog,
+  MAX(s.in_reply_to_id) IS NOT NULL AS is_reply
 FROM statuses s
 LEFT JOIN media_attachments m ON s.id = m.status_id
 LEFT JOIN mentions me ON s.id = me.status_id
 LEFT JOIN status_stats stats ON s.id = stats.status_id
 LEFT JOIN statuses_tags st ON s.id = st.status_id
-GROUP BY s.id, s.reblog_of_id, s.in_reply_to_id;
+GROUP BY s.id;
 
 -- :down
 DROP VIEW IF EXISTS status_features CASCADE;

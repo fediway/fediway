@@ -13,6 +13,7 @@ from datetime import datetime
 import modules.utils as utils
 from config import config
 from modules.mastodon.models import Account
+from modules.fediway.feed import Features
 from modules.fediway.feed.pipeline import Feed, PaginationStep, SourcingStep, RankingStep
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
@@ -111,8 +112,8 @@ class FeedService:
 
         return self
 
-    def rank(self, ranker: Ranker):
-        self.pipeline.rank(ranker)
+    def rank(self, ranker: Ranker, feature_service: Features | None = None):
+        self.pipeline.rank(ranker, feature_service)
 
         return self
 
