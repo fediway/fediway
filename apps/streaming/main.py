@@ -34,35 +34,13 @@ broker = KafkaBroker(
 )
 app = FastStream(broker)
 
-feature_topics = {
-    "author_engagement_all",
-    "author_engagement_is_favourite_features",
-    "author_engagement_is_reblog_features",
-    "author_engagement_is_reply_features",
-    "author_engagement_has_image_features",
-    "author_engagement_has_gifv_features",
-    "author_engagement_has_video_features",
-    "account_engagement_all_features",
-    "account_engagement_is_favourite_features",
-    "account_engagement_is_reblog_features",
-    "account_engagement_is_reply_features",
-    "account_engagement_has_image_features",
-    "account_engagement_has_gifv_features",
-    "account_engagement_has_video_features",
-    "account_author_engagement_all_features",
-    "account_author_engagement_is_favourite_features",
-    "account_author_engagement_is_reblog_features",
-    "account_author_engagement_is_reply_features",
-    "account_author_engagement_has_image_features",
-    "account_author_engagement_has_gifv_features",
-    "account_author_engagement_has_video_features",
-}
+feature_topics = {fv.name for fv in feature_store.list_feature_views()}
 
 for topic in feature_topics:
     make_handler(
         broker, 
-        "account_engagement_all_56d", 
-        FeaturesEventHandler(feature_store, "account_engagement_all_56d"),
+        topic, 
+        FeaturesEventHandler(feature_store, topic),
         group_id="features",
     )
 
