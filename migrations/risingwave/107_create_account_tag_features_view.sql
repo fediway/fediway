@@ -2,7 +2,7 @@
 -- :up
 
 {% for hop_size, window_size, spec in [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('7 DAYS', '56 DAYS', '56d')] %}
-    CREATE MATERIALIZED VIEW IF NOT EXISTS account_tag_engagement_all_{{ spec }}_features AS
+    CREATE MATERIALIZED VIEW IF NOT EXISTS account_tag_engagement_all_{{ spec }}_historical AS
     SELECT
         window_start, 
         window_end, 
