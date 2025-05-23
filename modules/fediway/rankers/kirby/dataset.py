@@ -79,35 +79,35 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
     def __call__(self):
         query = select(
             text(f"""
-            s.id,
-            n.account_id,
+            n.status_id as id,
+            d.account_id,
             n.status_id,
-            s.account_id AS author_id,
-            s.created_at AS time
-        FROM statuses s
-        JOIN (
-            SELECT 
+            d.author_id,
+            d.time AS time
+        FROM {self.table.name} d
+        asof JOIN (
+            SELECT
+                s.id,
                 d.account_id,
-                s.id AS status_id
+                s.id as status_id,
+                d.account_id AS author_id,
+                d.time AS time
             FROM {self.table.name} d
-            CROSS JOIN LATERAL (
-                SELECT s.id
+            INNER JOIN LATERAL (
+                SELECT * 
                 FROM statuses s
-                WHERE s.id < d.status_id
-                  AND s.account_id = d.author_id
-                  AND {self._get_date_clause()}
-                  AND NOT EXISTS (
-                    SELECT 1
-                    FROM {self.table.name} d2
-                    WHERE d2.status_id = s.id
-                      AND d2.account_id = d.account_id
-                )
-                ORDER BY s.id DESC
-                LIMIT 1
+                JOIN {self.table.name} d2
+                ON d.account_id = d2.account_id
+                AND d.author_id = d2.author_id
+                AND d2.status_id != s.id
+                AND {self._get_date_clause()}
             ) s
-        ) n ON s.id = n.status_id AND {self._get_date_clause()}
-        """)
-        )
+            ON s.account_id = d.author_id
+        ) n
+        ON n.account_id = d.account_id
+        AND n.author_id = d.author_id
+        AND n.status_id < d.status_id
+        """))
 
         min_id = self.db.scalar(
             text(f"SELECT MIN(s.id) FROM statuses s WHERE {self._get_date_clause()}")
@@ -152,38 +152,39 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
 class FollowingNegativeSampler(NegativeSampler):
     def __call__(self):
         query = select(
-            text(f""" 
-            s.id,
+            text(f"""
+            n.account_id as id,
             n.account_id,
-            n.status_id,
-            s.account_id AS author_id,
-            s.created_at AS time
-        FROM statuses s
-        JOIN (
-            SELECT 
-                d.account_id,
-                s.id AS status_id
+            d.status_id,
+            d.author_id,
+            d.time AS time
+        FROM {self.table.name} d
+        asof JOIN (
+            SELECT
+                a.id,
+                a.id as account_id,
+                d.status_id,
+                d.account_id AS author_id,
+                d.time AS time
             FROM {self.table.name} d
-            CROSS JOIN LATERAL (
-                SELECT s.id
-                FROM statuses s
-                JOIN follows f
-                  ON f.account_id = d.account_id
-                 AND f.target_account_id = s.account_id
-                WHERE s.id < d.status_id
-                  AND {self._get_date_clause()}
-                  AND NOT EXISTS (
-                    SELECT 1
-                    FROM {self.table.name} d2
-                    WHERE d2.status_id = s.id
-                      AND d2.account_id = d.account_id
-                )
-                ORDER BY s.id DESC
-                LIMIT 1
-            ) s
-        ) n ON s.id = n.status_id AND {self._get_date_clause()}
-        """)
-        )
+            INNER JOIN LATERAL (
+                select *
+                from accounts a
+                JOIN follows f 
+                on f.account_id = a.id
+                and f.target_account_id = d.author_id
+                JOIN {self.table.name} d2
+                on a.id != d2.account_id
+                and d.status_id = d2.status_id
+            ) a
+            on a.id != d.account_id
+        ) n
+        on n.status_id = d.status_id
+        and n.account_id < d.account_id
+        """))
+
+        # print(query)
+        # exit()
 
         min_id = self.db.scalar(
             text(f"SELECT MIN(s.id) FROM statuses s WHERE {self._get_date_clause()}")

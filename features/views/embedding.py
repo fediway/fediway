@@ -21,7 +21,6 @@ for embedding_type in account_embedding_types:
         entities=[account],
         schema=schema,
         online=False,
-        offline_store_path=config.feast.feast_offline_store_path,
     )
 
     account_embedding_features.append(_fv)

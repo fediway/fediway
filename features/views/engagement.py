@@ -1,3 +1,4 @@
+from datetime import timedelta
 from feast import FeatureView, Field
 from feast.types import Int64
 
@@ -57,8 +58,8 @@ def _make_engagement_fv(
         view_name,
         entities=entities,
         schema=schema,
-        offline_store_path=config.feast.feast_offline_store_path,
         online=True,
+        ttl=timedelta(days=int(spec.split('d')[0]))
     )
 
 

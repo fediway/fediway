@@ -27,7 +27,6 @@ def _make_engagement_fv(entities, spec: str, fields: list[str]) -> FeatureView:
         view_name,
         entities=entities,
         schema=schema,
-        offline_store_path=config.feast.feast_offline_store_path,
         online=True,
     )
 

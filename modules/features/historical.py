@@ -29,6 +29,7 @@ def create_entities_table(name: str, db: Session) -> Table:
         )
     )
     db.exec(text(f"DELETE FROM {table.name};"))
+    db.exec(text(f"CREATE INDEX idx_{table.name}_status_id_account_id ON {table.name}(status_id, account_id);"))
     db.commit()
 
     return table

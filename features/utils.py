@@ -26,14 +26,10 @@ def make_feature_view(
     name: str,
     entities: list[Entity],
     schema: list[Field],
-    offline_store_path: str,
     online: bool = True,
     ttl=timedelta(days=365),
 ) -> FeatureView:
-    source = get_push_source(
-        view_name=name,
-        offline_store_path=offline_store_path,
-    )
+    source = get_push_source(view_name=name)
 
     fv = FeatureView(
         name=name,
@@ -69,7 +65,7 @@ def _feast_type_to_pa_type(_type):
     return type_mapping[_type]
 
 
-def get_push_source(view_name: str, offline_store_path: str) -> PushSource:
+def get_push_source(view_name: str) -> PushSource:
     batch_source = PostgreSQLSource(
         name=f"{view_name}_source",
         table=f"offline_fs_{view_name}_features",
