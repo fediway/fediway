@@ -1,4 +1,4 @@
 from .collaborative_filtering import CollaborativeFilteringSource
 from .popular_by_influential_accounts import PouplarByInfluentialAccountsSource
 from .popular_in_community import PopularInCommunitySource
-from .similar_to_favourited import SimilarToFavourited
+from .similar_to_favourited import SimilarToFavouritedSource

@@ -39,22 +39,17 @@ def _get_historical_features_query(
 ) -> str:
     queries = []
     for fv in feature_views:
-        table = f"{fv.name}_features"
+        table = f"{fv.name}_historical"
         schema_select_clause = ", ".join(
             [f"f.{f.name}" for f in fv.schema if f.name not in fv.entities]
         )
-        entities_select_clause = ", ".join([f"f.{e}" for e in fv.entities])
         entities_and_clause = " AND ".join([f"f.{e} = ds.{e}" for e in fv.entities])
         null_columns = ", ".join(
             [f"NULL AS {_fv.name}" for _fv in feature_views if _fv.name != fv.name]
         )
 
-        fv_select = f"""(
-            SELECT ARRAY[{schema_select_clause}]
-            FROM {table} f 
-            WHERE {entities_and_clause} AND f.event_time = latest.event_time
-            LIMIT 1
-        )::REAL[] AS {fv.name}"""
+        entities_select = ",\n    ".join([f"ds.{e}" for e in fv.entities])
+        fv_select = f"(ARRAY[{schema_select_clause}])::REAL[] AS {fv.name}"
 
         columns = []
         for _fv in feature_views:
@@ -62,31 +57,25 @@ def _get_historical_features_query(
                 columns.append(fv_select)
             else:
                 columns.append(f"NULL::REAL[] AS {_fv.name}")
-        columns = ",\n  ".join(columns)
+        columns = ",\n   ".join(columns)
 
         query = f"""
         SELECT 
             ds.account_id,
             ds.status_id,
             {columns}
-        FROM {entity_table} ds
-        JOIN (
-            SELECT max(f.event_time) AS event_time, {entities_select_clause}
-            FROM {table} f 
-            JOIN {entity_table} ds
-            ON {entities_and_clause} AND f.event_time < ds.time
-            GROUP BY {entities_select_clause}
-        ) AS latest
-        ON {entities_and_clause.replace("f", "latest")}
+        FROM kirby_2025_05_23 ds
+        ASOF JOIN {table} f 
+        ON {entities_and_clause} AND f.event_time < ds.time
         """
+        
         queries.append(query)
 
     entities_and_clause = " AND ".join(
         [f"data.{e} = ds.{e}" for e in ["account_id", "status_id"]]
     )
     features_clause = " AND ".join([f"{fv.name} IS NOT NULL" for fv in feature_views])
-    entties_select = ", ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
-    fv_select = ", ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
+    fv_select = ",\n    ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
 
     query = select(
         text(f"""ds.account_id, 
@@ -107,8 +96,9 @@ def _get_historical_features_query(
 
 
 class FlattenFeatureViews:
-    def __init__(self, feature_views):
+    def __init__(self, feature_views, drop_all_nans: bool = True):
         self.feature_views = feature_views
+        self.drop_all_nans = drop_all_nans
         self.schema = schema = {
             "status_id": pd.Series([], dtype="int64"),
             "account_id": pd.Series([], dtype="int64"),
@@ -141,6 +131,10 @@ class FlattenFeatureViews:
                         f"{fv.name}__{f}": value
                         for f, value in zip(feature_names, row[fv.name])
                     }
+            all_nans = not any(feat is not None for feat in feats.values())
+            if all_nans and self.drop_all_nans:
+                continue
+            
             entities = {e: row[e] for e in ["account_id", "status_id"]}
 
             row = (
@@ -169,7 +163,7 @@ class FlattenFeatureViews:
 
 
 def get_historical_features_ddf(
-    entity_table: str, feature_views: list[FeatureView], db: Session
+    entity_table: str, feature_views: list[FeatureView], db: Session, drop_all_nans: bool = True
 ):
     total = db.scalar(text(f"SELECT COUNT(*) FROM {entity_table}"))
     query = _get_historical_features_query(entity_table, feature_views)
@@ -193,4 +187,4 @@ def get_historical_features_ddf(
         sql_append="GROUP BY ds.account_id, ds.status_id",
     )
 
-    return ddf.map_partitions(FlattenFeatureViews(feature_views))
+    return ddf.map_partitions(FlattenFeatureViews(feature_views, drop_all_nans=drop_all_nans))

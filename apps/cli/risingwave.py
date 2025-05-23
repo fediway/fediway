@@ -80,6 +80,8 @@ def migrate():
 
         for file in sorted(migration_dir.glob("*.sql")):
             version = file.stem
+            if version == "106_create_tag_features_view":
+                return
 
             if version in applied:
                 continue

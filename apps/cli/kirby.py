@@ -104,7 +104,7 @@ def train_kirby(
 
     for fv in get_feature_views(feature_store):
         for field in fv.schema:
-            if field in fv.entities:
+            if field.name in fv.entities:
                 continue
             features.append(f"{fv.name}__{field.name}")
 

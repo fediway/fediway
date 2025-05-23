@@ -8,7 +8,7 @@ from modules.fediway.sources.statuses import (
     CollaborativeFilteringSource,
     PopularInCommunitySource,
     PouplarByInfluentialAccountsSource,
-    SimilarToFavourited,
+    SimilarToFavouritedSource,
 )
 from modules.mastodon.models import Account
 from shared.core.qdrant import client as qdrant_client
@@ -67,7 +67,7 @@ def get_similar_to_favourited_sources(
     feature_service: FeatureService = Depends(get_feature_service),
 ) -> list[Source]:
     return [
-        SimilarToFavourited(
+        SimilarToFavouritedSource(
             client=qdrant_client,
             account_id=account.id,
             language=lang,

@@ -8,7 +8,7 @@ from modules.fediway.feed.features import Features
 from ..base import Source
 
 
-class SimilarToFavourited(Source):
+class SimilarToFavouritedSource(Source):
     def __init__(
         self,
         client: QdrantClient,

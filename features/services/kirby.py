@@ -13,6 +13,6 @@ kirby_features = FeatureService(
         account_features
         + author_features
         + account_author_features
-        + combined_status_tags_features
+        # + combined_status_tags_features
     ),
 )
