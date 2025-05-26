@@ -1,4 +1,4 @@
-from arango import ArangoClient, ServerConnectionError
+from arango import ArangoClient, ServerConnectionError, ArangoClientError
 from loguru import logger
 
 from config import config
@@ -14,6 +14,8 @@ try:
         verify=True,
     )
 except ServerConnectionError as e:
+    logger.error(e)
+except ArangoClientError as e:
     logger.error(e)
 
 graph = None
