@@ -5,6 +5,8 @@ from modules.debezium import DebeziumEventHandler
 from modules.mastodon.models import StatusStats
 from modules.schwarm import Schwarm
 
+from config import config
+
 
 def _limit():
     return int(
