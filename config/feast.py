@@ -12,7 +12,7 @@ class FeastConfig(BaseConfig):
     feast_registry: str = "data/features.db"
 
     feast_online_store_ttl: int = 3600 * 60 * 30
-    
+
     feast_redis_host: str = "localhost"
     feast_redis_port: int = 6379
     feast_redis_pass: SecretStr = ""

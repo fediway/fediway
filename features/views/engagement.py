@@ -59,7 +59,7 @@ def _make_engagement_fv(
         entities=entities,
         schema=schema,
         online=True,
-        ttl=timedelta(days=int(spec.split('d')[0]))
+        ttl=timedelta(days=int(spec.split("d")[0])),
     )
 
 

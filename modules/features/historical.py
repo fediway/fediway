@@ -29,7 +29,11 @@ def create_entities_table(name: str, db: Session) -> Table:
         )
     )
     db.exec(text(f"DELETE FROM {table.name};"))
-    db.exec(text(f"CREATE INDEX idx_{table.name}_status_id_account_id ON {table.name}(status_id, account_id);"))
+    db.exec(
+        text(
+            f"CREATE INDEX idx_{table.name}_status_id_account_id ON {table.name}(status_id, account_id);"
+        )
+    )
     db.commit()
 
     return table
@@ -69,7 +73,7 @@ def _get_historical_features_query(
         ASOF JOIN {table} f 
         ON {entities_and_clause} AND f.event_time < ds.time
         """
-        
+
         queries.append(query)
 
     entities_and_clause = " AND ".join(
@@ -135,7 +139,7 @@ class FlattenFeatureViews:
             all_nans = not any(feat is not None for feat in feats.values())
             if all_nans and self.drop_all_nans:
                 continue
-            
+
             entities = {e: row[e] for e in ["account_id", "status_id"]}
 
             row = (
@@ -164,7 +168,10 @@ class FlattenFeatureViews:
 
 
 def get_historical_features_ddf(
-    entity_table: str, feature_views: list[FeatureView], db: Session, drop_all_nans: bool = True
+    entity_table: str,
+    feature_views: list[FeatureView],
+    db: Session,
+    drop_all_nans: bool = True,
 ):
     total = db.scalar(text(f"SELECT COUNT(*) FROM {entity_table}"))
     query = _get_historical_features_query(entity_table, feature_views)
@@ -188,4 +195,6 @@ def get_historical_features_ddf(
         sql_append="GROUP BY ds.account_id, ds.status_id",
     )
 
-    return ddf.map_partitions(FlattenFeatureViews(feature_views, drop_all_nans=drop_all_nans))
+    return ddf.map_partitions(
+        FlattenFeatureViews(feature_views, drop_all_nans=drop_all_nans)
+    )

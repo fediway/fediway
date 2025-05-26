@@ -10,9 +10,7 @@ from ..views.engagement import (
 kirby_features = FeatureService(
     name="kirby",
     features=(
-        account_features
-        + author_features
-        + account_author_features
+        account_features + author_features + account_author_features
         # + combined_status_tags_features
     ),
 )

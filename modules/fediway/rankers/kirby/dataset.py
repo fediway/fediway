@@ -107,7 +107,8 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
         ON n.account_id = d.account_id
         AND n.author_id = d.author_id
         AND n.status_id < d.status_id
-        """))
+        """)
+        )
 
         min_id = self.db.scalar(
             text(f"SELECT MIN(s.id) FROM statuses s WHERE {self._get_date_clause()}")
@@ -181,7 +182,8 @@ class FollowingNegativeSampler(NegativeSampler):
         ) n
         on n.status_id = d.status_id
         and n.account_id < d.account_id
-        """))
+        """)
+        )
 
         # print(query)
         # exit()

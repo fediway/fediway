@@ -8,14 +8,14 @@ from ..base import Source
 
 class PopularInSocialCircleSource(Source):
     """
-    Collects statuses that are gaining traction within the near social circle of 
+    Collects statuses that are gaining traction within the near social circle of
     a user.
     """
 
     def __init__(
-        self, 
-        db: StandardDatabase, 
-        account_id: int, 
+        self,
+        db: StandardDatabase,
+        account_id: int,
         max_hops: int = 2,
         language: str = "en",
         max_age: timedelta = timedelta(days=3),
@@ -48,13 +48,14 @@ class PopularInSocialCircleSource(Source):
         """
 
         cursor = self.db.aql.execute(
-            query, bind_vars={
-                "limit": limit, 
+            query,
+            bind_vars={
+                "limit": limit,
                 "source": f"accounts/{self.account_id}",
                 "max_hops": self.max_hops,
                 "language": self.language,
                 "max_age": parse_datetime(datetime.now() - self.max_age),
-            }
+            },
         )
 
         for result in cursor:

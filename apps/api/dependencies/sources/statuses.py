@@ -6,6 +6,7 @@ from config import config
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
     CollaborativeFilteringSource,
+    NewestInNetworkSource,
     PopularInCommunitySource,
     PouplarByInfluentialAccountsSource,
     PopularInSocialCircleSource,
@@ -34,6 +35,17 @@ def get_popular_by_influential_accounts_sources(
             decay_rate=config.fediway.feed_decay_rate,
         )
         for lang in languages
+    ]
+
+
+def get_newest_in_network_sources(
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[Source]:
+    return [
+        NewestInNetworkSource(
+            driver=schwarm_driver,
+            account_id=account.id,
+        )
     ]
 
 

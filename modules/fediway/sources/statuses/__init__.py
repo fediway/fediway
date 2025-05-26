@@ -1,4 +1,5 @@
 from .collaborative_filtering import CollaborativeFilteringSource
+from .newest_in_network import NewestInNetworkSource
 from .popular_in_social_circle import PopularInSocialCircleSource
 from .popular_by_influential_accounts import PouplarByInfluentialAccountsSource
 from .popular_in_community import PopularInCommunitySource

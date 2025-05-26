@@ -1,4 +1,3 @@
-
 from feast import FeatureView, Field
 from feast.types import Int64, Array
 from datetime import timedelta

@@ -46,8 +46,8 @@ def migrate():
 
     if not graph.has_vertex_collection("statuses"):
         statuses = graph.create_vertex_collection("statuses")
-        statuses.add_index(fields=['created_at'], type='skiplist')
-        statuses.add_index(fields=['language'], type='hash')
+        statuses.add_index(fields=["created_at"], type="skiplist")
+        statuses.add_index(fields=["language"], type="hash")
         typer.echo(f"✅ Created vertex 'statuses'.")
 
     if not graph.has_vertex_collection("tags"):
@@ -92,8 +92,8 @@ def migrate():
             from_vertex_collections=["accounts"],
             to_vertex_collections=["statuses"],
         )
-        engaged.add_index(fields=['event_time'], type='skiplist')
-        engaged.add_index(fields=['type'], type='hash')
+        engaged.add_index(fields=["event_time"], type="skiplist")
+        engaged.add_index(fields=["type"], type="hash")
         typer.echo(f"✅ Created edge 'engaged'.")
 
 

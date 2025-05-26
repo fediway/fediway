@@ -14,3 +14,14 @@ def triangular_loop(account_id: int, limit: int = 10):
 
     for candidate in source.collect(limit):
         print(candidate)
+
+
+@app.command("newest-in-network")
+def triangular_loop(account_id: int, limit: int = 10):
+    from modules.fediway.sources.statuses import NewestInNetworkSource
+    from shared.core.herde import db
+
+    source = NewestInNetworkSource(db, account_id)
+
+    for candidate in source.collect(limit):
+        print(candidate)
