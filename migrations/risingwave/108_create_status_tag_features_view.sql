@@ -12,7 +12,7 @@
             SUM({{ feature }}_{{ spec }}) as sum_{{ feature }}_{{ spec }},
             AVG({{ feature }}_{{ spec }}) as avg_{{ feature }}_{{ spec }}{% if not loop.last %},{% endif %}
         {% endfor %}
-    FROM tag_engagement_all_{{ spec }}_features f
+    FROM tag_engagement_all_{{ spec }}_historical f
     JOIN statuses_tags st ON f.tag_id = st.tag_id
     GROUP BY status_id, window_start, window_end;
 
