@@ -23,15 +23,25 @@ from shared.core.db import get_db_session
 router = APIRouter()
 
 
-def home_sources(
-    popular_by_influential_accounts: list[Source] = Depends(
-        get_popular_by_influential_accounts_sources
-    ),
+def get_in_network_sources(
     newest_in_network: list[Source] = Depends(get_newest_in_network_sources),
-    popular_in_community: list[Source] = Depends(get_popular_in_community_sources),
+):
+    return newest_in_network
+
+
+def get_near_network_sources(
     popular_in_social_circle: list[Source] = Depends(
         get_popular_in_social_circle_sources
     ),
+):
+    return popular_in_social_circle
+
+
+def get_out_network_sources(
+    popular_by_influential_accounts: list[Source] = Depends(
+        get_popular_by_influential_accounts_sources
+    ),
+    popular_in_community: list[Source] = Depends(get_popular_in_community_sources),
     collaborative_filtering: list[Source] = Depends(
         get_collaborative_filtering_sources
     ),
@@ -39,9 +49,7 @@ def home_sources(
 ):
     return (
         popular_by_influential_accounts
-        + newest_in_network
         + popular_in_community
-        + popular_in_social_circle
         + collaborative_filtering
         + similar_to_favourited
     )
@@ -51,16 +59,36 @@ def home_sources(
 async def home_timeline(
     request: Request,
     feed: FeedService = Depends(get_feed),
+    in_network_sources=Depends(get_in_network_sources),
+    near_network_sources=Depends(get_near_network_sources),
+    out_network_sources=Depends(get_out_network_sources),
+    sources=Depends(home_sources),
     sources=Depends(home_sources),
     db: DBSession = Depends(get_db_session),
     kirby_features=Depends(get_kirby_feature_service),
 ) -> list[StatusItem]:
-    max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
+    max_candidates_per_source = config.fediway.max_candidates_per_source(
+        len(in_network_sources) + len(near_network_sources) + len(out_network_sources)
+    )
 
     pipeline = (
         feed.name("timelines/home")
         .select("status_id")
-        .sources([(source, max_candidates_per_source) for source in sources])
+        .sources(
+            sources=[
+                (source, max_candidates_per_source) for source in in_network_sources
+            ]
+        )
+        .sources(
+            sources=[
+                (source, max_candidates_per_source) for source in near_network_sources
+            ]
+        )
+        .sources(
+            sources=[
+                (source, max_candidates_per_source) for source in out_network_sources
+            ]
+        )
         .rank(kirby, kirby_features)
         .diversify(by="status:account_id", penalty=0.1)
         .sample(config.fediway.feed_batch_size)
