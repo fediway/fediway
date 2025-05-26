@@ -79,6 +79,9 @@ def get_popular_in_social_circle_sources(
     account: Account = Depends(get_authenticated_account_or_fail),
     languages: list[str] = Depends(get_languages),
 ) -> list[Source]:
+    if herde_db is None:
+        return []
+
     return [
         PopularInSocialCircleSource(
             db=herde_db,
