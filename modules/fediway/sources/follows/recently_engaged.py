@@ -19,26 +19,16 @@ class RecentlyEngagedSource(Source):
 
     def collect(self, limit: int):
         query = """
-        FOR engagement IN UNION(
-            FOR e IN favourited
-                FILTER e._from == @source
-                FILTER e.created_at >= @max_age
-                RETURN e,
-            FOR e IN reblogged
-                FILTER e._from == @source
-                FILTER e.created_at >= @max_age
-                RETURN e,
-            FOR e IN replied
-                FILTER e._from == @source
-                FILTER e.created_at >= @max_age
-                RETURN e
-        )
+        FOR engagement IN OUTBOUND @source engaged
+            FILTER e.event_time >= @max_age
+
             LET target = FIRST(
                 FOR v IN INBOUND engagement._to created
                     RETURN v
             )
 
             LIMIT @limit
+            
             RETURN { target: target._key }
         """
 

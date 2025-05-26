@@ -30,9 +30,7 @@ class Herde:
 
         self.follows = graph.edge_collection("follows")
         self.tagged = graph.edge_collection("tagged")
-        self.favourited = graph.edge_collection("favourited")
-        self.reblogged = graph.edge_collection("reblogged")
-        self.replied = graph.edge_collection("replied")
+        self.engaged = graph.edge_collection("engaged")
         self.created = graph.edge_collection("created")
         self.mentioned = graph.edge_collection("mentioned")
 
@@ -108,22 +106,24 @@ class Herde:
         )
 
     def add_favourite(self, favourite: Favourite):
-        self.favourited.insert(
+        self.engaged.insert(
             {
                 "_from": f"accounts/{favourite.account_id}",
                 "_to": f"statuses/{favourite.status_id}",
-                "created_at": parse_datetime(favourite.created_at),
+                "event_time": parse_datetime(favourite.created_at),
+                "type": "favourite",
             },
             silent=True,
         )
 
     def add_favourites(self, favourites: list[Favourite]):
-        self.favourited.import_bulk(
+        self.engaged.import_bulk(
             [
                 {
                     "_from": f"accounts/{favourite.account_id}",
                     "_to": f"statuses/{favourite.status_id}",
-                    "created_at": parse_datetime(favourite.created_at),
+                    "event_time": parse_datetime(favourite.created_at),
+                    "type": "favourite",
                 }
                 for favourite in favourites
             ],
@@ -178,10 +178,12 @@ class Herde:
 
     def add_status(self, status: Status):
         if not pd.isna(status.reblog_of_id):
-            self.reblog_of_id.insert(
+            self.engaged.insert(
                 {
                     "_from": f"accounts/{status.account_id}",
                     "_to": f"statuses/{status.id}",
+                    "event_time": parse_datetime(status.created_at),
+                    "type": "reblog",
                 }
             )
 
@@ -207,11 +209,12 @@ class Herde:
         )
 
         if not pd.isna(status.in_reply_to_id):
-            self.replied.insert(
+            self.engaged.insert(
                 {
                     "_from": f"accounts/{status.account_id}",
                     "_to": f"statuses/{status.in_reply_to_id}",
-                    "created_at": parse_datetime(status.created_at),
+                    "event_time": parse_datetime(status.created_at),
+                    "type": "reblog",
                 },
                 overwrite=True,
                 silent=True,
@@ -247,12 +250,13 @@ class Herde:
             )
 
         if len(reblogs) > 0:
-            self.reblogged.import_bulk(
+            self.engaged.import_bulk(
                 [
                     {
                         "_from": f"accounts/{reblog.account_id}",
                         "_to": f"statuses/{reblog.reblog_of_id}",
-                        "created_at": parse_datetime(reblog.created_at),
+                        "event_time": parse_datetime(reblog.created_at),
+                        "type": "reblog",
                     }
                     for reblog in reblogs
                 ],
@@ -260,12 +264,13 @@ class Herde:
             )
 
         if len(replies) > 0:
-            self.replied.import_bulk(
+            self.engaged.import_bulk(
                 [
                     {
                         "_from": f"accounts/{reply.account_id}",
                         "_to": f"statuses/{reply.reblog_of_id}",
-                        "created_at": parse_datetime(reply.created_at),
+                        "event_time": parse_datetime(reply.created_at),
+                        "type": "reply",
                     }
                     for reply in replies
                 ],

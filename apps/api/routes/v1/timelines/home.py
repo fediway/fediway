@@ -8,6 +8,7 @@ from apps.api.dependencies.sources.statuses import (
     get_popular_by_influential_accounts_sources,
     get_collaborative_filtering_sources,
     get_popular_in_community_sources,
+    get_popular_in_social_circle_sources,
     get_similar_to_favourited_sources,
 )
 from apps.api.services.feed_service import FeedService
@@ -25,6 +26,7 @@ def home_sources(
         get_popular_by_influential_accounts_sources
     ),
     popular_in_community: list[Source] = Depends(get_popular_in_community_sources),
+    popular_in_social_circle: list[Source] = Depends(get_popular_in_social_circle_sources),
     collaborative_filtering: list[Source] = Depends(
         get_collaborative_filtering_sources
     ),
@@ -33,6 +35,7 @@ def home_sources(
     return (
         popular_by_influential_accounts
         + popular_in_community
+        + popular_in_social_circle
         + collaborative_filtering
         + similar_to_favourited
     )

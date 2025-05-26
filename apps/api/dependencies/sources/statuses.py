@@ -8,11 +8,13 @@ from modules.fediway.sources.statuses import (
     CollaborativeFilteringSource,
     PopularInCommunitySource,
     PouplarByInfluentialAccountsSource,
+    PopularInSocialCircleSource,
     SimilarToFavouritedSource,
 )
 from modules.mastodon.models import Account
 from shared.core.qdrant import client as qdrant_client
 from shared.core.schwarm import driver as schwarm_driver
+from shared.core.herde import db as herde_db
 from shared.services.feature_service import FeatureService
 
 from ..auth import get_authenticated_account_or_fail
@@ -58,6 +60,21 @@ def get_popular_in_community_sources(
             account_id=account.id,
             decay_rate=config.fediway.feed_decay_rate,
         )
+    ]
+
+
+def get_popular_in_social_circle_sources(
+    account: Account = Depends(get_authenticated_account_or_fail),
+    languages: list[str] = Depends(get_languages),
+) -> list[Source]:
+    return [
+        PopularInSocialCircleSource(
+            db=herde_db,
+            account_id=account.id,
+            language=lang,
+            max_age=MAX_AGE,
+        )
+        for lang in languages
     ]
 
 

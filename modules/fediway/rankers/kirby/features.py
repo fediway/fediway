@@ -47,6 +47,4 @@ class KirbyFeatureService:
 
     def get(self, entities: list[dict[str, int]], *pargs):
         base_features = self._get_base_features(entities)
-        print(base_features)
-        print(list(base_features.columns))
         return base_features

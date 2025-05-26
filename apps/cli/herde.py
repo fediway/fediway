@@ -46,6 +46,8 @@ def migrate():
 
     if not graph.has_vertex_collection("statuses"):
         statuses = graph.create_vertex_collection("statuses")
+        statuses.add_index(fields=['created_at'], type='skiplist')
+        statuses.add_index(fields=['language'], type='hash')
         typer.echo(f"✅ Created vertex 'statuses'.")
 
     if not graph.has_vertex_collection("tags"):
@@ -76,15 +78,23 @@ def migrate():
         )
         typer.echo(f"✅ Created edge 'mentioned'.")
 
-    for edge in ["favourited", "reblogged", "replied", "created"]:
-        if graph.has_edge_definition(edge):
-            continue
+    if not graph.has_edge_definition("created"):
         graph.create_edge_definition(
-            edge_collection=edge,
+            edge_collection="created",
             from_vertex_collections=["accounts"],
             to_vertex_collections=["statuses"],
         )
-        typer.echo(f"✅ Created edge '{edge}'.")
+        typer.echo(f"✅ Created edge 'created'.")
+
+    if not graph.has_edge_definition("engaged"):
+        engaged = graph.create_edge_definition(
+            edge_collection="engaged",
+            from_vertex_collections=["accounts"],
+            to_vertex_collections=["statuses"],
+        )
+        engaged.add_index(fields=['event_time'], type='skiplist')
+        engaged.add_index(fields=['type'], type='hash')
+        typer.echo(f"✅ Created edge 'engaged'.")
 
 
 @app.command("seed")
