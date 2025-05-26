@@ -14,6 +14,7 @@ from apps.api.dependencies.sources.statuses import (
 )
 from apps.api.services.feed_service import FeedService
 from config import config
+from modules.fediway.rankers.kirby import KirbyFeatureService
 from modules.fediway.sources import Source
 from modules.mastodon.items import StatusItem
 from modules.mastodon.models import Status
@@ -59,13 +60,11 @@ def get_out_network_sources(
 async def home_timeline(
     request: Request,
     feed: FeedService = Depends(get_feed),
-    in_network_sources=Depends(get_in_network_sources),
-    near_network_sources=Depends(get_near_network_sources),
-    out_network_sources=Depends(get_out_network_sources),
-    sources=Depends(home_sources),
-    sources=Depends(home_sources),
+    in_network_sources: list[Source] = Depends(get_in_network_sources),
+    near_network_sources: list[Source] = Depends(get_near_network_sources),
+    out_network_sources: list[Source] = Depends(get_out_network_sources),
     db: DBSession = Depends(get_db_session),
-    kirby_features=Depends(get_kirby_feature_service),
+    kirby_features: KirbyFeatureService = Depends(get_kirby_feature_service),
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(
         len(in_network_sources) + len(near_network_sources) + len(out_network_sources)
