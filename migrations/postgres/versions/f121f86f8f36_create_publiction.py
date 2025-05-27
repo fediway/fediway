@@ -26,11 +26,17 @@ def upgrade() -> None:
                   public.statuses,
                   public.status_stats,
                   public.follows,
+                  public.follow_requests,
                   public.mentions,
                   public.favourites,
                   public.tags,
+                  public.tag_follows,
                   public.statuses_tags,
-                  public.media_attachments;
+                  public.media_attachments,
+                  public.users,
+                  public.polls,
+                  public.poll_votes,
+                  public.mutes;
     """)
 
 

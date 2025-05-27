@@ -15,8 +15,6 @@ from .handlers.embeddings import (
 broker = KafkaBroker(config.kafka.kafka_bootstrap_servers)
 app = FastStream(broker)
 
-embeddings_publisher = broker.publisher("status_text_embeddings")
-
 handler = TextEmbeddingsBatchHandler(embedder, config.embed.embed_text_min_chars)
 
 
@@ -24,7 +22,4 @@ handler = TextEmbeddingsBatchHandler(embedder, config.embed.embed_text_min_chars
     "status_texts", batch=True, max_records=config.embed.embed_max_batch_size
 )
 async def on_status_texts(events: list[dict]):
-    embeddings = handler(events)
-
-    for item in embeddings:
-        await embeddings_publisher.publish(item)
+    handler(events)

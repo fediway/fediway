@@ -21,10 +21,18 @@ TABLES = [
     "statuses",
     "status_stats",
     "follows",
+    "follow_requests",
     "mentions",
     "favourites",
     "tags",
+    "tag_follows",
     "statuses_tags",
+    "users",
+    "polls",
+    "poll_votes",
+    "mutes",
+    "lists",
+    "list_accounts"
 ]
 
 
