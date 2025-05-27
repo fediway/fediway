@@ -33,6 +33,7 @@ class InsertPositives:
                 "status_id": label.status_id,
                 "author_id": author_id,
                 "time": label.status_created_at,
+                "is_positive": True,
             }
             for author_id, label in labels.iterrows()
         ]
@@ -55,7 +56,7 @@ class NegativeSampler:
     def _get_date_clause(self):
         query = f"s.created_at < '{self.end_date.strftime('%Y-%m-%d')}'"
         if self.start_date is not None:
-            query += f" AND s.created_at >= '{self.end_date.strftime('%Y-%m-%d')}'"
+            query += f" AND s.created_at >= '{self.start_date.strftime('%Y-%m-%d')}'"
         return query
 
     def _insert_batch(self, batch):
@@ -65,6 +66,7 @@ class NegativeSampler:
                 "status_id": status_id,
                 "author_id": row.author_id,
                 "time": row.time,
+                "is_positive": False,
             }
             for status_id, row in batch.iterrows()
             if isinstance(row.time, datetime)
@@ -79,7 +81,7 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
     def __call__(self):
         query = select(
             text(f"""
-            n.status_id as id,
+            n.status_id::BIGINT as id,
             d.account_id,
             n.status_id,
             d.author_id,
@@ -160,7 +162,7 @@ class FollowingNegativeSampler(NegativeSampler):
             d.author_id,
             d.time AS time
         FROM {self.table.name} d
-        asof JOIN (
+        ASOF JOIN (
             SELECT
                 a.id,
                 a.id as account_id,
@@ -169,24 +171,21 @@ class FollowingNegativeSampler(NegativeSampler):
                 d.time AS time
             FROM {self.table.name} d
             INNER JOIN LATERAL (
-                select *
-                from accounts a
+                SELECT *
+                FROM accounts a
                 JOIN follows f 
-                on f.account_id = a.id
-                and f.target_account_id = d.author_id
+                ON f.account_id = a.id
+                AND f.target_account_id = d.author_id
                 JOIN {self.table.name} d2
-                on a.id != d2.account_id
-                and d.status_id = d2.status_id
+                ON a.id != d2.account_id
+                AND d.status_id != d2.status_id
             ) a
-            on a.id != d.account_id
+            ON a.id != d.account_id
         ) n
-        on n.status_id = d.status_id
-        and n.account_id < d.account_id
+        ON n.status_id = d.status_id
+        AND n.account_id < d.account_id
         """)
         )
-
-        # print(query)
-        # exit()
 
         min_id = self.db.scalar(
             text(f"SELECT MIN(s.id) FROM statuses s WHERE {self._get_date_clause()}")
@@ -232,32 +231,18 @@ class RandomNegativeSampler(NegativeSampler):
     def __call__(self):
         query = select(
             text(f""" 
-            s.id,
+            n.account_id AS id,
             n.account_id,
-            n.status_id,
-            s.account_id AS author_id,
-            s.created_at AS time
-        FROM statuses s
-        JOIN (
-            SELECT 
-                d.account_id,
-                s.id AS status_id
+            d.status_id,
+            d.author_id,
+            d.time AS time
+        FROM {self.table.name} d
+        ASOF JOIN (
+            SELECT *
             FROM {self.table.name} d
-            CROSS JOIN LATERAL (
-                SELECT s.id
-                FROM statuses s
-                WHERE s.id < d.status_id
-                  AND {self._get_date_clause()}
-                  AND NOT EXISTS (
-                    SELECT 1
-                    FROM {self.table.name} d2
-                    WHERE d2.status_id = s.id
-                      AND d2.account_id = d.account_id
-                )
-                ORDER BY s.id DESC
-                LIMIT 1
-            ) s
-        ) n ON s.id = n.status_id AND {self._get_date_clause()}
+        ) n
+        ON n.status_id = d.status_id
+        AND n.account_id < d.account_id
         """)
         )
 

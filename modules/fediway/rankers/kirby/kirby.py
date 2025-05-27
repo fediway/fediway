@@ -8,6 +8,7 @@ from lightgbm import LGBMClassifier, Booster
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.multioutput import MultiOutputClassifier
 from sklearn.metrics import roc_auc_score
 
 from ..base import Ranker
@@ -28,7 +29,7 @@ class Kirby(Ranker):
 
     def __init__(
         self,
-        model: BaseEstimator,
+        model: MultiOutputClassifier,
         scaler: TransformerMixin,
         features: list[str],
         labels: list[str] = LABELS,
@@ -57,7 +58,7 @@ class Kirby(Ranker):
         model = LogisticRegression(max_iter=max_iter)
         scaler = get_scaler(scaler)
 
-        return cls(model, scaler, features, labels)
+        return cls(MultiOutputClassifier(model), scaler, features, labels)
 
     @classmethod
     def random_forest(
@@ -71,7 +72,7 @@ class Kirby(Ranker):
         model = RandomForestClassifier(n_estimators=n_estimators)
         scaler = get_scaler(scaler)
 
-        return cls(model, scaler, features, labels)
+        return cls(MultiOutputClassifier(model), scaler, features, labels)
 
     @classmethod
     def xgboost(
@@ -84,12 +85,12 @@ class Kirby(Ranker):
         from xgboost import XGBClassifier
 
         model = XGBClassifier(
-            objective="multi:softprob",
-            num_class=len(labels),
+            objective="binary:logistic",
+            eval_metric="logloss",
         )
         scaler = get_scaler(scaler)
 
-        return cls(model, scaler, features, labels)
+        return cls(MultiOutputClassifier(model), scaler, features, labels)
 
     @classmethod
     def lightgbm(
@@ -104,9 +105,6 @@ class Kirby(Ranker):
         n_jobs: int = -1,
     ):
         model = LGBMClassifier(
-            objective="multiclass",
-            num_class=len(labels),
-            metric="multi_logloss",
             n_estimators=n_estimators,
             num_leaves=num_leaves,
             learning_rate=0.1,
@@ -115,18 +113,21 @@ class Kirby(Ranker):
         )
         scaler = get_scaler(scaler)
 
-        return cls(model, scaler, features, labels)
+        return cls(MultiOutputClassifier(model), scaler, features, labels)
+
+    def set_label_weights(self, label_weights):
+        self.label_weights = np.array([label_weights[label] for label in self.labels])
 
     def train(self, dataset: pd.DataFrame):
         X = self.scaler.fit_transform(dataset[self.features].values)
-        y = np.argmax(dataset[self.labels].values.astype(int), axis=1)
+        y = dataset[self.labels].values.astype(int)
 
         self.model.fit(X, y)
 
     def predict_proba(self, dataset: pd.DataFrame):
         X = dataset[self.features].values
         X = self.scaler.transform(X)
-        return self.model.predict_proba(X)
+        return np.stack(self.model.predict_proba(X), axis=1)[..., 1]
 
     def predict(self, dataset: pd.DataFrame):
         return (self.predict_proba(dataset) * self.label_weights).sum(axis=1)

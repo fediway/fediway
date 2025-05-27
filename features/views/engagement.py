@@ -60,6 +60,7 @@ def _make_engagement_fv(
         schema=schema,
         online=True,
         ttl=timedelta(days=int(spec.split("d")[0])),
+        tags={"stream": "kafka"},
     )
 
 

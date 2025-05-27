@@ -28,6 +28,7 @@ def make_feature_view(
     schema: list[Field],
     online: bool = True,
     ttl=timedelta(days=365),
+    tags=None,
 ) -> FeatureView:
     source = get_push_source(view_name=name)
 
@@ -38,6 +39,7 @@ def make_feature_view(
         schema=schema,
         online=online,
         source=source,
+        tags=tags,
     )
 
     return fv

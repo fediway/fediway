@@ -12,4 +12,5 @@ latest_engaged_statuses = FeatureView(
     schema=[Field(name=f"status_ids", dtype=Array(Int64))],
     online=True,
     source=get_push_source(view_name="latest_engaged_statuses"),
+    tags={"stream": "kafka"},
 )

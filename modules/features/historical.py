@@ -5,7 +5,16 @@ from dask.base import normalize_token
 from feast import FeatureView
 from sqlalchemy import text
 from sqlalchemy.schema import CreateTable
-from sqlmodel import BigInteger, Column, DateTime, MetaData, Session, Table, select
+from sqlmodel import (
+    BigInteger,
+    Column,
+    DateTime,
+    MetaData,
+    Session,
+    Table,
+    select,
+    Boolean,
+)
 
 from modules.utils import compile_sql, read_sql_join_query
 
@@ -18,9 +27,12 @@ def create_entities_table(name: str, db: Session) -> Table:
         Column("status_id", BigInteger, primary_key=True),
         Column("author_id", BigInteger, primary_key=True),
         Column("time", DateTime),
+        Column("is_positive", Boolean),
     )
 
     db.exec(text(f"DROP TABLE IF EXISTS {table.name};"))
+    db.commit()
+
     db.exec(
         text(
             compile_sql(CreateTable(table), db.get_bind())
@@ -69,7 +81,7 @@ def _get_historical_features_query(
             ds.account_id,
             ds.status_id,
             {columns}
-        FROM kirby_2025_05_23 ds
+        FROM {entity_table} ds
         ASOF JOIN {table} f 
         ON {entities_and_clause} AND f.event_time < ds.time
         """

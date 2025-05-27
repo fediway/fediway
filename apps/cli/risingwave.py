@@ -47,6 +47,7 @@ def ensure_migration_table(conn):
             version VARCHAR PRIMARY KEY,
             applied_at TIMESTAMP
         );
+        ALTER TABLE _migrations SET parallelism = 1;
         """)
         conn.commit()
 
@@ -128,7 +129,6 @@ def rollback(version: str | None = None):
             _, down_sql = parse_migration(sql)
 
             with conn.cursor() as cur:
-                print(down_sql)
                 cur.execute(down_sql)
                 cur.execute("DELETE FROM _migrations WHERE version = %s;", (file.stem,))
                 conn.commit()

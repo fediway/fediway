@@ -21,6 +21,7 @@ for embedding_type in account_embedding_types:
         entities=[account],
         schema=schema,
         online=False,
+        # tags=['kafka']
     )
 
     account_embedding_features.append(_fv)

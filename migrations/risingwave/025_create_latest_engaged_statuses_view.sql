@@ -7,8 +7,9 @@ an account previously engaged with.
 -- :up
 CREATE MATERIALIZED VIEW IF NOT EXISTS latest_engaged_statuses AS
 SELECT 
-	a.id as account_id,
-	array_agg(DISTINCT e.status_id) as status_ids
+	a.id AS account_id,
+	array_agg(DISTINCT e.status_id) AS status_ids,
+	MAX(e.event_time) AS event_time
 FROM accounts a
 INNER JOIN LATERAL (
 	SELECT * 
@@ -33,4 +34,5 @@ WITH (
 );
 
 -- :down
-DROP VIEW IF EXISTS latest_account_engagements;
+DROP SINK IF EXISTS latest_engaged_statuses_sink;
+DROP VIEW IF EXISTS latest_engaged_statuses;

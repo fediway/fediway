@@ -81,7 +81,7 @@ async def home_timeline(
         .rank(kirby, kirby_features)
         .diversify(by="status:account_id", penalty=0.1)
         .sample(config.fediway.feed_batch_size)
-        .paginate(config.fediway.feed_batch_size, offset=0)
+        .paginate(config.fediway.feed_batch_size, offset=0) 
     )
 
     recommendations = await feed.execute()

@@ -41,9 +41,12 @@ def get_popular_by_influential_accounts_sources(
 def get_newest_in_network_sources(
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[Source]:
+    if herde_db is None:
+        return []
+
     return [
         NewestInNetworkSource(
-            driver=schwarm_driver,
+            db=herde_db,
             account_id=account.id,
         )
     ]

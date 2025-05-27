@@ -23,7 +23,7 @@ class NewestInNetworkSource(Source):
         return "newest_in_network"
 
     def name(self):
-        return f"newest_in_network[l={self.language},h={self.max_hops},a={self.max_age.total_seconds()}]"
+        return f"newest_in_network"
 
     def collect(self, limit: int):
         query = """

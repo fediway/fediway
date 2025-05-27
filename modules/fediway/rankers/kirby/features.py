@@ -5,8 +5,8 @@ from modules.fediway.feed import Features
 LABELS = [
     "label.is_favourited",
     "label.is_reblogged",
-    # 'label.is_replied',
-    # 'label.is_reply_engaged_by_author',
+    "label.is_replied",
+    "label.is_reply_engaged_by_author",
 ]
 
 
@@ -47,4 +47,4 @@ class KirbyFeatureService:
 
     def get(self, entities: list[dict[str, int]], *pargs):
         base_features = self._get_base_features(entities)
-        return base_features
+        return base_features.fillna(0.0)

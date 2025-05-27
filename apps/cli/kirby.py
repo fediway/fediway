@@ -111,9 +111,15 @@ def train_kirby(
     logger.info(f"[Train] size: {len(train)}")
     for label in labels:
         logger.info(f"[Train] {label} count: {train[label].values.sum()}")
+    logger.info(
+        f"[Train] negatives count: {(train[labels].values.sum(axis=1) == 0).sum()}"
+    )
     logger.info(f"[Test] size: {len(test)}")
     for label in labels:
         logger.info(f"[Test] {label} count: {test[label].values.sum()}")
+    logger.info(
+        f"[Test] negatives count: {(test[labels].values.sum(axis=1) == 0).sum()}"
+    )
 
     ranker = getattr(Kirby, model)(features=features, labels=labels)
     ranker.train(train)
