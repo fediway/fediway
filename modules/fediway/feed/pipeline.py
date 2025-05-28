@@ -1,4 +1,5 @@
 from loguru import logger
+import pandas as pd
 import numpy as np
 import asyncio
 import time
@@ -31,7 +32,7 @@ class RankingStep(PipelineStep):
         self.ranker = ranker
         self.feature_service = feature_service
         self.entity = entity
-        self._features = []
+        self._features = pd.DataFrame([])
         self._feature_retrieval_duration = []
         self._ranking_duration = []
         self._scores = []
@@ -43,7 +44,7 @@ class RankingStep(PipelineStep):
     def get_ranking_duration(self):
         return self._ranking_duration
 
-    def get_features(self):
+    def get_features(self) -> pd.DataFrame:
         return self._features
 
     def get_candidates(self):
@@ -78,8 +79,9 @@ class RankingStep(PipelineStep):
 
 
 class RememberStep(PipelineStep):
-    items: list[int] = []
-    scores: list[float] = []
+    def __init__(self):
+        self.items = []
+        self.scores = []
 
     def get_state(self):
         return {
@@ -101,12 +103,12 @@ class RememberStep(PipelineStep):
 
 
 class PaginationStep(PipelineStep):
-    items: list[int] = []
-    scores: list[float] = []
-
-    def __init__(self, limit: int, offset: int = 0):
+    def __init__(self, limit: int, offset: int = 0, max_id: int | None = None):
+        self.items = []
+        self.scores = []
         self.limit = limit
         self.offset = offset
+        self.max_id = max_id
 
     def get_state(self):
         return {
@@ -119,7 +121,18 @@ class PaginationStep(PipelineStep):
         self.scores = state.get("scores", [])
 
     def results(self):
-        start, end = self.offset, self.offset + self.limit
+        start = 0
+
+        if self.offset is not None:
+            start = self.offset
+        elif self.max_id is not None:
+            try:
+                start = self.items.index(self.max_id)
+            except ValueError:
+                return [], np.array([])
+        
+        print("start", start)
+        end = start + self.limit
 
         return (self.items[start:end], np.array(self.scores[start:end]))
 
@@ -136,9 +149,8 @@ class PaginationStep(PipelineStep):
 
 
 class SourcingStep(PipelineStep):
-    collected = set()
-
     def __init__(self, sources: list[(Source, int)] = []):
+        self.collected = set()
         self.sources = sources
         self._duration = None
         self._durations = []
@@ -166,7 +178,7 @@ class SourcingStep(PipelineStep):
         self._durations[idx] = time.perf_counter_ns() - start_time
         self._counts[idx] = len(candidates)
 
-        logger.info(f"Collected {len(candidates)} candidates from {source.name()} in {self._durations[idx] / 1_000_000} ms")
+        # logger.info(f"Collected {len(candidates)} candidates from {source.name()} in {self._durations[idx] / 1_000_000} ms")
 
         return candidates
 
@@ -286,12 +298,10 @@ class SamplingStep(PipelineStep):
 
 
 class Feed:
-    steps: list[PipelineStep] = []
-    entity: str
-
     def __init__(self, feature_service: Features):
         self.feature_service = feature_service
-        self.pipeline = []
+        self.steps = []
+        self.entity = None
         self._heuristics = []
         self.counter = 0
         self._durations = []
@@ -380,8 +390,8 @@ class Feed:
 
         return self
 
-    def paginate(self, limit: int, offset: int = 0):
-        self.step(PaginationStep(limit, offset))
+    def paginate(self, limit: int, offset: int = 0, max_id: int | None = None):
+        self.step(PaginationStep(limit, offset, max_id))
 
         return self
 
@@ -415,7 +425,10 @@ class Feed:
         return candidates, scores
 
     async def execute(self) -> list[int]:
-        assert not self._running, "Pipeline is already running"
+        if self._running:
+            logger.error("Pipeline is already running.")
+            return
+
         self._running = True
         candidates = []
         scores = np.array([], dtype=np.float32)

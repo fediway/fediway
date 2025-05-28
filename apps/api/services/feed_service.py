@@ -7,7 +7,6 @@ from fastapi import BackgroundTasks, Request, Response
 from faststream.confluent import KafkaBroker
 from redis import Redis
 from sqlmodel import Session as DBSession
-from starlette.datastructures import URL
 from datetime import datetime
 
 import modules.utils as utils
@@ -43,14 +42,12 @@ def request_key(request: Request):
     return f"{request.client.host}.{request.headers.get('User-Agent')}"
 
 
-def _generate_feed_key(request: Request, length: int = 8):
+def _generate_feed_id(request: Request, length: int = 8):
     return str(uuid.uuid4()).replace("-", "")[:length]
 
 
-def _get_feed_id(request: Request, feed_key: str, length: int = 32):
-    return hashlib.sha256(
-        (feed_key + request_key(request)).encode("utf-8")
-    ).hexdigest()[:length]
+def _get_feed_key(request: Request, length: int = 32):
+    return hashlib.sha256(request_key(request).encode("utf-8")).hexdigest()[:length]
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -66,13 +63,10 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class FeedService:
-    feed: Feed
-
     def __init__(
         self,
         db: DBSession,
         request: Request,
-        response: Response,
         tasks: BackgroundTasks,
         session: Session,
         redis: Redis,
@@ -83,16 +77,16 @@ class FeedService:
         self.db = db
         self.tasks = tasks
         self.request = request
-        self.response = response
         self.session = session
         self.feature_service = feature_service
         self.pipeline = Feed(feature_service)
         self.account = account
 
-        self._next_offset = 0
-        self.key = request.query_params.get("feed", _generate_feed_key(request))
-        self.id = _get_feed_id(request, self.key)
-        self.redis_key = f"feed:{self.id}"
+        self.key = _get_feed_key(request)
+        self.id = _generate_feed_id(request)
+
+    def _redis_key(self):
+        return f"feed:{self._name}:{self.key}"
 
     def name(self, name: str):
         self._name = name
@@ -129,10 +123,8 @@ class FeedService:
 
         return self
 
-    def paginate(self, limit: int, offset: int):
-        self.pipeline.paginate(limit, offset)
-
-        self._next_offset = limit + offset
+    def paginate(self, limit: int, offset: int | None = None, max_id: int | None = None):
+        self.pipeline.paginate(limit, offset, max_id)
 
         return self
 
@@ -145,13 +137,6 @@ class FeedService:
         self.pipeline.diversify(by, penalty)
 
         return self
-
-    def _set_link_header(self):
-        next_url = URL(
-            f"{config.app.api_url}{self.request.url.path}"
-        ).include_query_params(feed=self.id, offset=self._next_offset)
-
-        self.response.headers["link"] = f'<{next_url}>; rel="next"'
 
     async def _save_pipeline_run(self):
         now = datetime.now()
@@ -272,51 +257,59 @@ class FeedService:
 
         self.db.commit()
 
-    def _save_pipeline_state(self):
-        state = self.pipeline.get_state()
+    def flush(self):
+        self.r.delete(self._redis_key())
+
+    def _save_state(self):
+        state = {
+            'id': self.id,
+            'pipeline': self.pipeline.get_state()
+        }
+
         self.r.setex(
-            self.redis_key,
+            self._redis_key(),
             config.session.session_ttl,
             json.dumps(state, cls=NumpyEncoder),
         )
+
+    def _load_state(self):
+        if not self.r.exists(self._redis_key()):
+            return
+
+        state = json.loads(self.r.get(self._redis_key()))
+        if 'pipeline' in state:
+            self.pipeline.set_state(state['pipeline'])
+        self.id = state.get('id', self.id)
 
     async def _execute(self):
         with utils.duration("Executed pipeline in {:.3f} seconds."):
             await self.pipeline.execute()
 
         # store feed state in redis cache
-        self._save_pipeline_state()
+        self._save_state()
 
         # store pipeline execution data
         self.tasks.add_task(self._save_pipeline_run)
 
-    def _load_cached(self):
-        if not self.r.exists(self.redis_key):
-            return
-
-        state = json.loads(self.r.get(self.redis_key))
-        self.pipeline.set_state(state)
-
     async def execute(self) -> list[int]:
         with utils.duration("Loaded recommendations in {:.3f} seconds."):
-            self._load_cached()
+            self._load_state()
 
             if self.pipeline.is_new():
                 await self._execute()
 
             recommendations, _ = self.pipeline.results()
 
-            self._set_link_header()
-
-            print(str(self.request.url), len(self.pipeline[-1]), len(recommendations))
-
-            # save recommendations
-            # self.tasks.add_task(self._save_recommendations, recommendations)
+            print(
+                str(self.request.url), 
+                len(self.pipeline[-1]), 
+                len(recommendations),
+                self.pipeline[-1].offset,
+                self.pipeline[-1].max_id,
+                self.pipeline.counter
+            )
 
             # load new candidates
-            if not isinstance(self.pipeline[-1], PaginationStep) or len(
-                self.pipeline[-1]
-            ) < (self._next_offset + self.pipeline[-1].limit):
-                self.tasks.add_task(self._execute)
+            self.tasks.add_task(self._execute)
 
             return recommendations

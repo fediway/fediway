@@ -59,6 +59,7 @@ def get_out_network_sources(
 @router.get("/home")
 async def home_timeline(
     request: Request,
+    max_id: int | None = None,
     feed: FeedService = Depends(get_feed),
     in_network_sources: list[Source] = Depends(get_in_network_sources),
     near_network_sources: list[Source] = Depends(get_near_network_sources),
@@ -73,7 +74,8 @@ async def home_timeline(
     _map_sources = lambda S: [(s, max_candidates_per_source) for s in S]
 
     pipeline = (
-        feed.name("timelines/home")
+        feed
+        .name("timelines/home")
         .select("status_id")
         .sources(_map_sources(in_network_sources))
         .sources(_map_sources(near_network_sources))
@@ -81,10 +83,13 @@ async def home_timeline(
         .rank(kirby, kirby_features)
         .diversify(by="status:account_id", penalty=0.1)
         .sample(config.fediway.feed_batch_size)
-        .paginate(config.fediway.feed_batch_size, offset=0)
+        .paginate(config.fediway.feed_batch_size, max_id=max_id)
     )
 
-    recommendations = await feed.execute()
+    if max_id is None:
+        feed.flush()
+
+    recommendations = await pipeline.execute()
 
     statuses = db.exec(Status.select_by_ids(recommendations)).all()
 

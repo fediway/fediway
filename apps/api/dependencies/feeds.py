@@ -14,7 +14,6 @@ from .auth import get_authenticated_account
 
 def get_feed(
     request: Request,
-    response: Response,
     tasks: BackgroundTasks,
     db: DBSession = Depends(get_rw_session),
     feature_service: FeatureService = Depends(get_feature_service),
@@ -24,7 +23,6 @@ def get_feed(
         db=db,
         session=request.state.session,
         request=request,
-        response=response,
         tasks=tasks,
         redis=redis,
         feature_service=feature_service,
