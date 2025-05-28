@@ -106,7 +106,9 @@ class Schwarm:
         DELETE s;
         """
 
-        self._run_query(query, max_age=int(time.time()) - max_age.total_seconds())
+        max_age = parse_datetime(datetime.now() - max_age)
+
+        self._run_query(query, max_age=max_age)
 
     def add_status_stats(self, stats: StatusStats):
         query = """
