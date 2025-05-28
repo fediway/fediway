@@ -14,7 +14,7 @@ class MediaAttachmentItem(Item):
     id: int
     type: str
     url: str
-    meta: dict
+    meta: dict | None
 
     @classmethod
     def from_model(cls, media_attachment: MediaAttachment):
