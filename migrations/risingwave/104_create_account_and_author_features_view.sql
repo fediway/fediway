@@ -110,10 +110,6 @@
 -- :down
 {% for group, specs in [('account', ['1d', '7d', '56d']), ('author', ['1d', '7d', '56d']), ('account_author', ['56d'])] -%}
   {% for spec in specs -%}
-    DROP VIEW IF EXISTS {{ group }}_engagement_all_{{ spec }}_historical;
-    DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_{{ spec }}_historical;
-    DROP VIEW IF EXISTS {{ group }}_engagement_has_{{ media }}_{{ spec }}_historical;
-
     DROP VIEW IF EXISTS {{ group }}_engagement_all_{{ spec }};
     DROP VIEW IF EXISTS {{ group }}_engagement_is_{{ type }}_{{ spec }};
     DROP VIEW IF EXISTS {{ group }}_engagement_has_{{ media }}_{{ spec }};

@@ -32,7 +32,7 @@ TABLES = [
     "poll_votes",
     "mutes",
     "lists",
-    "list_accounts"
+    "list_accounts",
 ]
 
 

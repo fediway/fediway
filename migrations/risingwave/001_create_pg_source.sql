@@ -13,4 +13,4 @@ CREATE SOURCE IF NOT EXISTS pg_source WITH (
 );
 
 -- :down
--- DROP SOURCE IF EXISTS pg_source;
+DROP SOURCE IF EXISTS pg_source;

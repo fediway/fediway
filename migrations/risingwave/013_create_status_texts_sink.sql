@@ -19,5 +19,4 @@ WITH (
 );
 
 -- :down
-DROP VIEW IF EXISTS status_texts;
 DROP SINK IF EXISTS status_texts_sink;

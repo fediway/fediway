@@ -35,5 +35,4 @@
 {% for spec in ['1d', '7d', '56d'] %}
     DROP SINK IF EXISTS tag_engagement_all_{{ spec }}_sink;
     DROP VIEW IF EXISTS tag_engagement_all_{{ spec }};
-    DROP VIEW IF EXISTS tag_engagement_all_{{ spec }}_histocial;
 {% endfor %}
