@@ -74,8 +74,7 @@ async def home_timeline(
     _map_sources = lambda S: [(s, max_candidates_per_source) for s in S]
 
     pipeline = (
-        feed
-        .name("timelines/home")
+        feed.name("timelines/home")
         .select("status_id")
         .sources(_map_sources(in_network_sources))
         .sources(_map_sources(near_network_sources))

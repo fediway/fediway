@@ -32,8 +32,7 @@ async def follow_suggestions(
     max_candidates_per_source = 20
 
     pipeline = (
-        feed
-        .name("v2/suggestions")
+        feed.name("v2/suggestions")
         .select("account_id")
         .sources([(source, max_candidates_per_source) for source in sources])
         .remember()
@@ -43,9 +42,7 @@ async def follow_suggestions(
 
     recommendations = await feed.execute()
 
-    set_next_link(request, response, {
-        'offset': len(recommendations)
-    })
+    set_next_link(request, response, {"offset": len(recommendations)})
 
     accounts = db.exec(Account.select_by_ids(recommendations)).all()
 

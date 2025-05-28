@@ -33,24 +33,24 @@ class RankingStep(PipelineStep):
         self.feature_service = feature_service
         self.entity = entity
         self._features = pd.DataFrame([])
-        self._feature_retrieval_duration = []
-        self._ranking_duration = []
-        self._scores = []
+        self._feature_retrieval_duration = 0
+        self._ranking_duration = 0
+        self._scores = np.array([])
         self._candidates = []
 
-    def get_feature_retrieval_duration(self):
+    def get_feature_retrieval_duration(self) -> int:
         return self._feature_retrieval_duration
 
-    def get_ranking_duration(self):
+    def get_ranking_duration(self) -> int:
         return self._ranking_duration
 
     def get_features(self) -> pd.DataFrame:
         return self._features
 
-    def get_candidates(self):
+    def get_candidates(self) -> list:
         return self._candidates
 
-    def get_scores(self):
+    def get_scores(self) -> np.ndarray:
         return self._scores
 
     async def __call__(
@@ -69,7 +69,9 @@ class RankingStep(PipelineStep):
         scores = self.ranker.predict(X)
         self._ranking_duration = time.perf_counter_ns() - start_time
 
-        logger.info(f"Ranked {len(candidates)} candidates by {self.ranker.name} in {self._ranking_duration / 1_000_000} ms")
+        logger.info(
+            f"Ranked {len(candidates)} candidates by {self.ranker.name} in {self._ranking_duration / 1_000_000} ms"
+        )
 
         self._features = X
         self._candidates = candidates
@@ -187,7 +189,7 @@ class SourcingStep(PipelineStep):
         self._durations = [None for _ in range(len(self.sources))]
         self._counts = [0 for _ in range(len(self.sources))]
         jobs = []
-        
+
         start_time = time.perf_counter_ns()
 
         for i, (source, n) in enumerate(self.sources):
@@ -203,7 +205,9 @@ class SourcingStep(PipelineStep):
 
         scores = np.concatenate([scores, np.zeros(n_new)])
 
-        logger.info(f"Collected {len(candidates)} candidates from {len(self.sources)} sources in {self._duration / 1_000_000} ms")
+        logger.info(
+            f"Collected {len(candidates)} candidates from {len(self.sources)} sources in {self._duration / 1_000_000} ms"
+        )
 
         return candidates, scores
 
@@ -355,7 +359,7 @@ class Feed:
     def source(self, source: Source, n: int):
         if not self._is_current_step_type(SourcingStep):
             self.step(SourcingStep())
-        
+
         self.steps[-1].add(source, n)
 
         return self
@@ -363,7 +367,7 @@ class Feed:
     def sources(self, sources: list[tuple[Source, int]]):
         if not self._is_current_step_type(SourcingStep):
             self.step(SourcingStep())
-        
+
         for source, n in sources:
             self.steps[-1].add(source, n)
 

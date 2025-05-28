@@ -22,7 +22,7 @@ class RedisSource(Source):
 
     def compute(self):
         raise NotImplemented
-    
+
     def redis_key(self):
         return "source:" + self.name()
 

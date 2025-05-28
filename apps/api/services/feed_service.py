@@ -123,7 +123,9 @@ class FeedService:
 
         return self
 
-    def paginate(self, limit: int, offset: int | None = None, max_id: int | None = None):
+    def paginate(
+        self, limit: int, offset: int | None = None, max_id: int | None = None
+    ):
         self.pipeline.paginate(limit, offset, max_id)
 
         return self
@@ -261,10 +263,7 @@ class FeedService:
         self.r.delete(self._redis_key())
 
     def _save_state(self):
-        state = {
-            'id': self.id,
-            'pipeline': self.pipeline.get_state()
-        }
+        state = {"id": self.id, "pipeline": self.pipeline.get_state()}
 
         self.r.setex(
             self._redis_key(),
@@ -277,9 +276,9 @@ class FeedService:
             return
 
         state = json.loads(self.r.get(self._redis_key()))
-        if 'pipeline' in state:
-            self.pipeline.set_state(state['pipeline'])
-        self.id = state.get('id', self.id)
+        if "pipeline" in state:
+            self.pipeline.set_state(state["pipeline"])
+        self.id = state.get("id", self.id)
 
     async def _execute(self):
         with utils.duration("Executed pipeline in {:.3f} seconds."):
@@ -301,12 +300,12 @@ class FeedService:
             recommendations, _ = self.pipeline.results()
 
             print(
-                str(self.request.url), 
-                len(self.pipeline[-1]), 
+                str(self.request.url),
+                len(self.pipeline[-1]),
                 len(recommendations),
                 self.pipeline[-1].offset,
                 self.pipeline[-1].max_id,
-                self.pipeline.counter
+                self.pipeline.counter,
             )
 
             # load new candidates

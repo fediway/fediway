@@ -100,15 +100,24 @@ class Schwarm:
         self._run_query(query, id=account.id)
 
     def purge_old_statuses(self, max_age: timedelta):
-        query = """
+        max_age = parse_datetime(datetime.now() - max_age)
+        self._run_query(
+            query="""
         MATCH (s:Status)
         WHERE s.created_at < $max_age
         DETACH DELETE s;
+        """,
+            max_age=max_age,
+        )
+
+        # remove nodes without a connection
+        self._run_query(
+            query="""
+        MATCH (n)
+        WHERE degree(n) = 0
+        DELETE n;
         """
-
-        max_age = parse_datetime(datetime.now() - max_age)
-
-        self._run_query(query, max_age=max_age)
+        )
 
     def add_status_stats(self, stats: StatusStats):
         query = """

@@ -2,7 +2,13 @@ from ..base import Source
 
 
 class PopularInCommunitySource(Source):
-    def __init__(self, driver, account_id: int, decay_rate: float = 0.1, top_n: int = 5000,):
+    def __init__(
+        self,
+        driver,
+        account_id: int,
+        decay_rate: float = 0.1,
+        top_n: int = 5000,
+    ):
         self.driver = driver
         self.account_id = account_id
         self.decay_rate = decay_rate

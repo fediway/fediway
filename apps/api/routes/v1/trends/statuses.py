@@ -38,8 +38,7 @@ async def status_trends(
     max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
 
     pipeline = (
-        feed
-        .name("trends/statuses")
+        feed.name("trends/statuses")
         .select("status_id")
         .sources([(source, max_candidates_per_source) for source in sources])
         .rank(stats_ranker)
@@ -48,15 +47,13 @@ async def status_trends(
         .sample(config.fediway.feed_batch_size, sampler=InverseTransformSampler())
         .paginate(config.fediway.feed_batch_size, offset=offset)
     )
-    
+
     if offset == 0:
         feed.flush()
 
     recommendations = await pipeline.execute()
 
-    set_next_link(request, response, {
-        'offset': offset + len(recommendations)
-    })
+    set_next_link(request, response, {"offset": offset + len(recommendations)})
 
     statuses = db.exec(Status.select_by_ids(recommendations)).all()
 
