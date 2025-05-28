@@ -227,7 +227,7 @@ class FeedService:
                     run_id=run_id,
                     entity=self.pipeline.entity,
                     entity_id=recommendation,
-                    score=score,
+                    score=np.clip(score, 1e-10, None),
                     created_at=now,
                 )
                 for recommendation, score in zip(*self.pipeline.results())

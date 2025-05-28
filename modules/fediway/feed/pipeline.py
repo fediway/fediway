@@ -156,7 +156,12 @@ class SourcingStep(PipelineStep):
     async def _collect_source(self, idx, source: Source, args):
         start_time = time.perf_counter_ns()
 
-        candidates = [c for c in source.collect(*args)]
+        candidates = []
+
+        try:
+            candidates = [c for c in source.collect(*args)]
+        except Exception as e:
+            logger.error(e)
 
         self._durations[idx] = time.perf_counter_ns() - start_time
         self._counts[idx] = len(candidates)
@@ -181,10 +186,9 @@ class SourcingStep(PipelineStep):
 
         self._duration = time.perf_counter_ns() - start_time
 
-        n_new = 0
-        for new_candidates in results:
-            candidates += new_candidates
-            n_new += len(new_candidates)
+        new_candidates = [c for batch in results for c in batch]
+        n_new = len(new_candidates)
+        candidates += list(new_candidates)
 
         scores = np.concatenate([scores, np.zeros(n_new)])
 

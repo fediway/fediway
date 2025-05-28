@@ -88,7 +88,8 @@ class FeatureService(Features):
         ).to_df()
 
         # drop entity columns
-        df.drop(columns=entities[0].keys(), inplace=True)
+        columns = set(df.columns)
+        df.drop(columns=[e for e in entities[0].keys() if e in columns], inplace=True)
 
         self._remember(missing_entities, df, features)
 

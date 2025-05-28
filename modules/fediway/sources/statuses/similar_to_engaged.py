@@ -37,6 +37,9 @@ class SimilarToEngagedSource(Source):
             features=["latest_engaged_statuses:status_ids"],
         ).values[0, 0]
 
+        if status_ids is None:
+            return
+
         max_age = int((datetime.now() - self.max_age).timestamp())
 
         results = self.client.recommend(
