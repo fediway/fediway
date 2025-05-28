@@ -65,7 +65,7 @@
       WITH (
         connector='kafka',
         properties.bootstrap.server='${bootstrap_server}',
-        topic='{{ group }}_engagement_all_{{ spec }}',
+        topic='{{ group }}_engagement_is_{{ type }}_{{ spec }}',
         primary_key='{{ group_id }}',
       ) FORMAT PLAIN ENCODE JSON (
         force_append_only='true'
@@ -98,7 +98,7 @@
       WITH (
         connector='kafka',
         properties.bootstrap.server='${bootstrap_server}',
-        topic='{{ group }}_engagement_all_{{ spec }}',
+        topic='{{ group }}_engagement_has_{{ media }}_{{ spec }}',
         primary_key='{{ group_id }}',
       ) FORMAT PLAIN ENCODE JSON (
         force_append_only='true'

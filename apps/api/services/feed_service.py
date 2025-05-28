@@ -224,6 +224,9 @@ class FeedService:
         for step_id, step in zip(rec_step_ids, self.pipeline.steps):
             if not isinstance(step, RankingStep):
                 continue
+            if step.get_ranking_duration() == 0:
+                continue
+            
             ranking_run_id = str(uuid.uuid4())
             self.db.add(
                 RankingRun(
