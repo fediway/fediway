@@ -87,6 +87,9 @@ class FeatureService(Features):
             features=features, entity_rows=missing_entities, full_feature_names=True
         ).to_df()
 
+        # drop entity columns
+        df.drop(columns=entities[0].keys(), inplace=True)
+
         self._remember(missing_entities, df, features)
 
         if cached_df is not None:
