@@ -54,6 +54,8 @@ async def status_trends(
 
     recommendations = await pipeline.execute()
 
+    print("trends", recommendations)
+
     set_next_link(request, response, {
         'offset': offset + len(len(recommendations))
     })

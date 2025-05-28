@@ -91,6 +91,8 @@ async def home_timeline(
 
     recommendations = await pipeline.execute()
 
+    print("home", recommendations)
+
     statuses = db.exec(Status.select_by_ids(recommendations)).all()
 
     print("REC_HOME", len(statuses))
