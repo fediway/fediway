@@ -30,7 +30,7 @@ class PopularInCommunitySource(Source):
         WITH s, now
         ORDER BY s.score DESC
         LIMIT $top_n
-        WITH s, (now - s.created_at) / 86400 AS age_days
+        WITH s, (now - s.created_at) / 86400000 AS age_days
         WITH s, EXP(-$decay_rate * age_days) * s.score as score
         ORDER BY score DESC
         RETURN s.id as status_id, score

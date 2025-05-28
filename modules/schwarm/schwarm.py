@@ -412,82 +412,6 @@ class Schwarm:
             query, account_id=favourite.account_id, status_id=favourite.status_id
         )
 
-    # def get_relevant_statuses(self, language, limit=10):
-    #     query = """
-    #     MATCH (a:Account)-[:CREATED]->(s:Status {language: $language})
-    #     // MATCH (c:Community {id: a.community_id})
-
-    #     WITH
-    #         a.community_id as community_id,
-    #         s.id as status_id,
-    #         a.rank * (s.num_favs + 2 * s.num_reblogs) / (a.avg_favs + 2 * a.avg_reblogs) AS score
-
-    #     ORDER BY community_id, score DESC
-    #     WITH community_id, COLLECT({status_id: status_id, score: score})[..5] AS community_top // 5 per community
-
-    #     UNWIND community_top AS top
-    #     RETURN top.status_id AS status_id, top.score
-    #     LIMIT $limit
-    #     """
-
-    #     return self.session.run(
-    #         query,
-    #         language=language,
-    #         limit=limit
-    #     )
-
-    def get_relevant_statuses(self, language, limit=10):
-        query = """
-        WITH timestamp() / 1000 AS now
-        MATCH (a:Account)-[:CREATED]->(s:Status)
-        WHERE 
-            a.rank IS NOT NULL 
-        RETURN s.created_at, now
-        LIMIT 10
-        """
-
-        # query = """
-        # WITH timestamp() AS now
-        # MATCH (a:Account)-[:CREATED]->(s:Status {language: $language})
-        # WITH a, s, (now - s.created_at) / 86400 AS age_days
-        # WITH
-        #     a.id as account_id,
-        #     s.id AS status_id,
-        #     // Content virality (60% weight)
-        #     0.6  * (s.num_favs + 2 * s.num_reblogs) * 10 / (a.avg_favs + 2 * a.avg_reblogs + 1) +
-        #     0.5 * a.rank
-        #     AS score
-        #     // Cross-community appeal (25% weight)
-        #     // 0.25 * COALESCE(s.diversity_score, 0)
-        #     // Author authority (15% weight)
-        #     // a.rank * (s.num_favs + 2 * s.num_reblogs) / (a.avg_favs + 2 * a.avg_reblogs) AS score
-        # ORDER BY account_id, score DESC
-        # WITH account_id, collect([status_id, score])[0] AS top_status
-        # RETURN account_id, top_status[0] AS status_id, top_status[1] AS score
-        # LIMIT $limit
-        # """
-
-        with self.driver.session() as session:
-            results = session.run(query, language=language, limit=limit)
-            for result in results:
-                yield result
-
-    def get_authorities(self):
-        query = """
-        MATCH (a:Account)-[:FOLLOWS]->(b:Account)
-        WITH gds.graph.project('follow_graph', 'Account', 'FOLLOWS') AS graph
-        CALL gds.pageRank.stream('follow_graph')
-        YIELD nodeId, score
-        RETURN gds.util.asNode(nodeId).id AS account_id, score
-        ORDER BY score DESC
-        LIMIT 10
-        """
-
-        with self.driver.session() as session:
-            result = session.run(query)
-
-            return [record for record in result]
-
     def compute_account_rank(self):
         query = """
         CALL pagerank.get()
@@ -506,7 +430,7 @@ class Schwarm:
 
         self._run_query(query)
 
-    def compute_tag_rank(self):
+    def compute_tag_rank(self): 
         query = """
         CALL pagerank.get()
         YIELD node, rank
@@ -524,17 +448,6 @@ class Schwarm:
         """
 
         self._run_query(query)
-
-    # def compute_engagement_baselines(self):
-    #     query = """
-    #     MATCH (a:Account)-[:CREATED]->(s:Status)
-    #     OPTIONAL MATCH (s)<-[fav:FAVOURITES]-()
-    #     WITH a, s, COUNT(fav) AS fav_count
-    #     WITH a, AVG(fav_count) AS avg_fav
-    #     SET a.avg_fav = avg_fav
-    #     """
-
-    #     self.driver.execute_query(query)
 
     def compute_diversity_scores(self):
         """Measure cross-community appeal using entropy"""

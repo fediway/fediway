@@ -226,7 +226,7 @@ class FeedService:
                 continue
             if step.get_ranking_duration() == 0:
                 continue
-            
+
             ranking_run_id = str(uuid.uuid4())
             self.db.add(
                 RankingRun(

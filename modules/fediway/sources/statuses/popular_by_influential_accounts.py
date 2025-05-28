@@ -33,7 +33,7 @@ class PouplarByInfluentialAccountsSource(RedisSource):
         WITH timestamp() / 1000 AS now
         MATCH (s:Status {language: $language})
         WHERE s.score IS NOT NULL
-        WITH s, (now - s.created_at) / 86400 AS age_days
+        WITH s, (now - s.created_at) / 86400000 AS age_days
         WITH s, EXP(-$decay_rate * age_days) * s.score as score
         ORDER BY score DESC
         RETURN s.id as status_id, score
