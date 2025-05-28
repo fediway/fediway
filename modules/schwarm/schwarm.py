@@ -430,7 +430,7 @@ class Schwarm:
 
         self._run_query(query)
 
-    def compute_tag_rank(self): 
+    def compute_tag_rank(self):
         query = """
         CALL pagerank.get()
         YIELD node, rank

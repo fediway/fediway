@@ -10,9 +10,8 @@ from shared.core.feast import feature_store
 
 
 class FeatureService(Features):
-    cache = {}
-
     def __init__(self, fs: FeatureStore = feature_store):
+        self.cache = {}
         self.fs = fs
 
     def _cache_key(self, entities: list[dict[str, int]]) -> str:

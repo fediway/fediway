@@ -53,20 +53,3 @@ class FeastConfig(BaseConfig):
             user=db.rw_user,
             password=db.rw_pass.get_secret_value(),
         )
-
-        # spark_conf = {
-        #     'spark.master': 'local[*]',
-        #     'spark.sql.session.timeZone': 'UTC'
-        # }
-
-        # if self.feast_offline_store_path.startswith("s3a://"):
-        #     spark_conf["spark.hadoop.fs.s3a.access.key"] = os.environ['AWS_ACCESS_KEY_ID']
-        #     spark_conf["spark.hadoop.fs.s3a.secret.key"] = os.environ['AWS_SECRET_ACCESS_KEY']
-        #     spark_conf["spark.hadoop.fs.s3a.impl"] = "org.apache.hadoop.fs.s3a.S3AFileSystem"
-        #     spark_conf["spark.hadoop.fs.s3a.path.style.access"] = "true"
-        #     spark_conf["spark.jars.packages"] = "org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.11.1026"
-
-        # return SparkOfflineStoreConfig(
-        #     spark_conf=spark_conf,
-        #     staging_location=self.feast_spark_staging_location
-        # )
