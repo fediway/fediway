@@ -52,36 +52,36 @@ for topic in feature_topics:
 # Schwarm consumers (responsible for pushing data to memgraph)
 
 
-# @broker.subscriber("statuses")
-# async def on_status(event: DebeziumEvent):
-#     await process_debezium_event(
-#         event, SchwarmStatusEventHandler, args=(Schwarm(driver),)
-#     )
+@broker.subscriber("statuses")
+async def on_status(event: DebeziumEvent):
+    await process_debezium_event(
+        event, SchwarmStatusEventHandler, args=(Schwarm(driver),)
+    )
 
 
-# @broker.subscriber("mentions")
-# async def on_mentions(event: DebeziumEvent):
-#     await process_debezium_event(
-#         event, SchwarmMentionEventHandler, args=(Schwarm(driver),)
-#     )
+@broker.subscriber("mentions")
+async def on_mentions(event: DebeziumEvent):
+    await process_debezium_event(
+        event, SchwarmMentionEventHandler, args=(Schwarm(driver),)
+    )
 
 
-# @broker.subscriber("favourites")
-# async def on_favourites(event: DebeziumEvent):
-#     await process_debezium_event(
-#         event, SchwarmFavouriteEventHandler, args=(Schwarm(driver),)
-#     )
+@broker.subscriber("favourites")
+async def on_favourites(event: DebeziumEvent):
+    await process_debezium_event(
+        event, SchwarmFavouriteEventHandler, args=(Schwarm(driver),)
+    )
 
 
-# @broker.subscriber("statuses_tags")
-# async def on_statuses_tags(event: DebeziumEvent):
-#     await process_debezium_event(
-#         event, SchwarmStatusTagEventHandler, args=(Schwarm(driver),)
-#     )
+@broker.subscriber("statuses_tags")
+async def on_statuses_tags(event: DebeziumEvent):
+    await process_debezium_event(
+        event, SchwarmStatusTagEventHandler, args=(Schwarm(driver),)
+    )
 
 
-# @broker.subscriber("status_stats")
-# async def on_statuses_tags(event: DebeziumEvent):
-#     await process_debezium_event(
-#         event, SchwarmStatusStatsEventHandler, args=(Schwarm(driver),)
-#     )
+@broker.subscriber("status_stats")
+async def on_statuses_tags(event: DebeziumEvent):
+    await process_debezium_event(
+        event, SchwarmStatusStatsEventHandler, args=(Schwarm(driver),)
+    )

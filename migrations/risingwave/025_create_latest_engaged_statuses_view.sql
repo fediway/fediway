@@ -11,6 +11,7 @@ SELECT
 	array_agg(DISTINCT e.status_id) AS status_ids,
 	MAX(e.event_time) AS event_time
 FROM accounts a
+JOIN users u ON u.account_id = a.id
 INNER JOIN LATERAL (
 	SELECT * 
 	FROM enriched_status_engagement_events e
