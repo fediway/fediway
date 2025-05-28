@@ -10,7 +10,7 @@ from modules.fediway.sources.statuses import (
     PopularInCommunitySource,
     PouplarByInfluentialAccountsSource,
     PopularInSocialCircleSource,
-    SimilarToFavouritedSource,
+    SimilarToEngagedSource,
 )
 from modules.mastodon.models import Account
 from shared.core.qdrant import client as qdrant_client
@@ -96,13 +96,13 @@ def get_popular_in_social_circle_sources(
     ]
 
 
-def get_similar_to_favourited_sources(
+def get_similar_to_engaged_sources(
     account: Account = Depends(get_authenticated_account_or_fail),
     languages: list[str] = Depends(get_languages),
     feature_service: FeatureService = Depends(get_feature_service),
 ) -> list[Source]:
     return [
-        SimilarToFavouritedSource(
+        SimilarToEngagedSource(
             client=qdrant_client,
             account_id=account.id,
             language=lang,

@@ -3,4 +3,4 @@ from .newest_in_network import NewestInNetworkSource
 from .popular_in_social_circle import PopularInSocialCircleSource
 from .popular_by_influential_accounts import PouplarByInfluentialAccountsSource
 from .popular_in_community import PopularInCommunitySource
-from .similar_to_favourited import SimilarToFavouritedSource
+from .similar_to_engaged import SimilarToEngagedSource

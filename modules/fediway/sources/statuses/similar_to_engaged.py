@@ -8,7 +8,7 @@ from modules.fediway.feed.features import Features
 from ..base import Source
 
 
-class SimilarToFavouritedSource(Source):
+class SimilarToEngagedSource(Source):
     def __init__(
         self,
         client: QdrantClient,
@@ -24,24 +24,24 @@ class SimilarToFavouritedSource(Source):
         self.feature_service = feature_service
 
     def group(self):
-        return "similar_to_favourited"
+        return "similar_to_engaged"
 
     def name(self):
         return (
-            f"similar_to_favourited[l={self.language},a={self.max_age.total_seconds()}]"
+            f"similar_to_engaged[l={self.language},a={self.max_age.total_seconds()}]"
         )
 
     def collect(self, limit: int):
-        favourites = self.feature_service.get(
+        status_ids = self.feature_service.get(
             entities=[{"account_id": self.account_id}],
-            features=["account_favourites:favourites"],
+            features=["latest_engaged_statuses:status_ids"],
         ).values[0][0]
 
         max_age = int((datetime.now() - self.max_age).timestamp())
 
         results = self.client.recommend(
             collection_name="status_embeddings",
-            positive=favourites,
+            positive=status_ids,
             limit=limit,
             query_filter=Filter(
                 must=FieldCondition(key="created_at", range=Range(gte=max_age))

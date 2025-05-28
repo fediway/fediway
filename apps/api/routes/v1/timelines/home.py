@@ -10,7 +10,7 @@ from apps.api.dependencies.sources.statuses import (
     get_collaborative_filtering_sources,
     get_popular_in_community_sources,
     get_popular_in_social_circle_sources,
-    get_similar_to_favourited_sources,
+    get_similar_to_engaged_sources,
 )
 from apps.api.services.feed_service import FeedService
 from config import config
@@ -46,13 +46,13 @@ def get_out_network_sources(
     collaborative_filtering: list[Source] = Depends(
         get_collaborative_filtering_sources
     ),
-    similar_to_favourited: list[Source] = Depends(get_similar_to_favourited_sources),
+    similar_to_engaged: list[Source] = Depends(get_similar_to_engaged_sources),
 ):
     return (
         popular_by_influential_accounts
         + popular_in_community
         + collaborative_filtering
-        + similar_to_favourited
+        + similar_to_engaged
     )
 
 

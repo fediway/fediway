@@ -3,7 +3,6 @@ from .services.kirby import kirby_features
 from .views.combined_status_tags import combined_status_tags_features
 from .views.embedding import account_embedding_features
 from .views.engagement import account_author_features, account_features, author_features
-from .views.favourites import account_favourites
 from .views.status import status_features
 from .views.latest_engaged_statuses import latest_engaged_statuses
 
@@ -13,7 +12,6 @@ FEATURE_VIEWS = (
     # account features
     account_features
     + account_embedding_features
-    + [account_favourites]
     + [latest_engaged_statuses]
     +
     # author features
