@@ -33,6 +33,7 @@ async def status_trends(
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
+    print("foo")
 
     pipeline = (
         feed.name("trends/statuses")

@@ -3,6 +3,7 @@ from datetime import timedelta
 from fastapi import Depends
 
 from config import config
+from apps.api.core.redis import redis
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
     CollaborativeFilteringSource,
@@ -30,6 +31,7 @@ def get_popular_by_influential_accounts_sources(
 ) -> list[Source]:
     return [
         PouplarByInfluentialAccountsSource(
+            r=redis,
             driver=schwarm_driver,
             language=lang,
             decay_rate=config.fediway.feed_decay_rate,

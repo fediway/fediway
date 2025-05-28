@@ -16,22 +16,26 @@ class Source:
 
 
 class RedisSource(Source):
-    def __init__(self, key: str, r: Redis, ttl: timedelta):
+    def __init__(self, r: Redis, ttl: timedelta):
         self.r = r
         self.ttl = ttl.seconds
-        self.key = key
 
     def compute(self):
         raise NotImplemented
+    
+    def redis_key(self):
+        return "source:" + self.name()
 
     def store(self):
-        candidates = self.compute()
+        candidates = [c for c in self.compute()]
 
-        self.r.setex(self.key, self.ttl, json.dumps(candidates))
+        self.r.setex(self.redis_key(), self.ttl, json.dumps(candidates))
 
         return candidates
 
     def collect(self, limit: int):
-        if not self.r.exists(self.key):
-            return self.store()
-        return json.loads(self.r.get(self.key))[:limit]
+        if not self.r.exists(self.redis_key()):
+            candidates = self.store()
+        else:
+            candidates = json.loads(self.r.get(self.redis_key()))
+        return candidates[:limit]
