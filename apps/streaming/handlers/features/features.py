@@ -15,6 +15,8 @@ class FeaturesEventHandler:
     async def __call__(self, data: dict):
         now = int(time.time())
 
+        print(data)
+
         features = {k: v for k, v in data.items() if k not in self._non_feature_keys}
         features["event_time"] = min(now, data["event_time"] * 1000)
 
