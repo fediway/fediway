@@ -115,7 +115,7 @@ class Schwarm:
             s.num_favs = $num_favs,
             s.num_replies = $num_replies,
             s.num_reblogs = $num_reblogs,
-            s.score = a.rank * ($num_favs * 0.5 + $num_replies * 2 + $num_reblogs);
+            s.score = a.rank * ($num_favs * 0.5 + $num_replies * 2 + $num_reblogs * 2);
         """
 
         self._run_query(
@@ -134,7 +134,7 @@ class Schwarm:
             s.num_favs = row.num_favs,
             s.num_replies = row.num_replies,
             s.num_reblogs = row.num_reblogs,
-            s.score = a.rank * (row.num_favs * 0.5 + row.num_replies * 2 + row.num_reblogs);
+            s.score = a.rank * (row.num_favs * 0.5 + row.num_replies * 2 + row.num_reblogs * 2);
         """
 
         self._run_query(
@@ -483,6 +483,14 @@ class Schwarm:
         YIELD node, rank
         MATCH (a:Account {id: node.id})
         SET a.rank = rank
+        """
+
+        self._run_query(query)
+
+        query = """
+        MATCH (a:Account)-[:CREATED]->(s:Status)
+        WHERE a.rank IS NOT NULL
+        SET s.score = a.rank * (s.num_favs * 0.5 + s.num_replies * 2 + s.num_reblogs * 2);
         """
 
         self._run_query(query)

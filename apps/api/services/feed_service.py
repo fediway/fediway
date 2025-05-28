@@ -308,7 +308,7 @@ class FeedService:
 
             self._set_link_header()
 
-            print(str(self.request.url), len(self.pipeline[-1]))
+            print(str(self.request.url), len(self.pipeline[-1]), len(recommendations))
 
             # save recommendations
             # self.tasks.add_task(self._save_recommendations, recommendations)
