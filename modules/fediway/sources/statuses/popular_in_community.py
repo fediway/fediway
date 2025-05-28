@@ -2,10 +2,11 @@ from ..base import Source
 
 
 class PopularInCommunitySource(Source):
-    def __init__(self, driver, account_id: int, decay_rate: float = 0.1):
+    def __init__(self, driver, account_id: int, decay_rate: float = 0.1, top_n: int = 5000,):
         self.driver = driver
         self.account_id = account_id
         self.decay_rate = decay_rate
+        self.top_n = top_n
 
     def group(self):
         return "popular_in_community"
@@ -17,18 +18,16 @@ class PopularInCommunitySource(Source):
         query = """
         WITH timestamp() / 1000 AS now
         MATCH (u:Account {id: $account_id})
-        MATCH (a:Account)-[:CREATED]->(s:Status {community_id: u.community_id})
+        MATCH (s:Status {community_id: u.community_id})
         WHERE 
-            a.rank IS NOT NULL 
-        AND s.num_favs > 0 
-        AND s.num_reblogs > 0
-        WITH a, s, (now - s.created_at) / 86400 AS age_days
-        WITH a, s, age_days,
-            a.rank * EXP(-$decay_rate * age_days) * ((s.num_favs + 1) * 0.5 + (s.num_reblogs + 1) * 2) as score
-        ORDER BY a.id, score DESC
-        WITH a.id AS account_id, collect([s.id, score])[0] AS top_status
-        RETURN account_id, top_status[0] AS status_id, top_status[1] AS score
+            s.score IS NOT NULL
+        WITH s, now
+        ORDER BY s.score DESC
+        LIMIT $top_n
+        WITH s, (now - s.created_at) / 86400 AS age_days
+        WITH s, EXP(-$decay_rate * age_days) * s.score as score
         ORDER BY score DESC
+        RETURN s.id as status_id, score
         LIMIT $limit;
         """
 
@@ -38,6 +37,7 @@ class PopularInCommunitySource(Source):
                 account_id=self.account_id,
                 limit=limit,
                 decay_rate=self.decay_rate,
+                top_n=self.top_n,
             )
 
             for result in list(results):

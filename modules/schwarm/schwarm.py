@@ -33,6 +33,7 @@ class Schwarm:
         CREATE INDEX ON :Account(indexable);
         CREATE INDEX ON :Status(id);
         CREATE INDEX ON :Status(language);
+        CREATE INDEX ON :Status(language, score);
         CREATE INDEX ON :Status(created_at);
         CREATE INDEX ON :Status(score);
         CREATE INDEX ON :Tag(id);

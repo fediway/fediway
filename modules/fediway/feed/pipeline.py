@@ -1,3 +1,4 @@
+from loguru import logger
 import numpy as np
 import asyncio
 import time
@@ -66,6 +67,8 @@ class RankingStep(PipelineStep):
         start_time = time.perf_counter_ns()
         scores = self.ranker.predict(X)
         self._ranking_duration = time.perf_counter_ns() - start_time
+
+        logger.info(f"Ranked {len(candidates)} candidates by {self.ranker.name} in {self._ranking_duration / 1_000_000} ms")
 
         self._features = X
         self._candidates = candidates
@@ -137,6 +140,7 @@ class SourcingStep(PipelineStep):
 
     def __init__(self, sources: list[(Source, int)] = []):
         self.sources = sources
+        self._duration = None
         self._durations = []
         self._counts = []
 
@@ -157,6 +161,8 @@ class SourcingStep(PipelineStep):
         self._durations[idx] = time.perf_counter_ns() - start_time
         self._counts[idx] = len(candidates)
 
+        logger.info(f"Collected {len(candidates)} candidates from {source.name()} in {self._durations[idx] / 1_000_000} ms")
+
         return candidates
 
     async def __call__(
@@ -165,11 +171,15 @@ class SourcingStep(PipelineStep):
         self._durations = [None for _ in range(len(self.sources))]
         self._counts = [0 for _ in range(len(self.sources))]
         jobs = []
+        
+        start_time = time.perf_counter_ns()
 
         for i, (source, n) in enumerate(self.sources):
             jobs.append(self._collect_source(i, source, (n,)))
 
         results = await asyncio.gather(*jobs)
+
+        self._duration = time.perf_counter_ns() - start_time
 
         n_new = 0
         for new_candidates in results:
@@ -177,6 +187,8 @@ class SourcingStep(PipelineStep):
             n_new += len(new_candidates)
 
         scores = np.concatenate([scores, np.zeros(n_new)])
+
+        logger.info(f"Collected {len(candidates)} candidates from {len(self.sources)} sources in {self._duration / 1_000_000} ms")
 
         return candidates, scores
 
