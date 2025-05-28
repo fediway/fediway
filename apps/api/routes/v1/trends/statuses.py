@@ -54,14 +54,10 @@ async def status_trends(
 
     recommendations = await pipeline.execute()
 
-    print("trends", recommendations)
-
     set_next_link(request, response, {
-        'offset': offset + len(len(recommendations))
+        'offset': offset + len(recommendations)
     })
 
     statuses = db.exec(Status.select_by_ids(recommendations)).all()
-
-    print("REC", len(statuses))
 
     return [StatusItem.from_model(status) for status in statuses]

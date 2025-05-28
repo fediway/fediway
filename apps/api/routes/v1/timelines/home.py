@@ -95,6 +95,4 @@ async def home_timeline(
 
     statuses = db.exec(Status.select_by_ids(recommendations)).all()
 
-    print("REC_HOME", len(statuses))
-
     return [StatusItem.from_model(status) for status in statuses]

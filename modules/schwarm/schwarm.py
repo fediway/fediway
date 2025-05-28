@@ -1,5 +1,5 @@
 import time
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from neo4j import Driver
 
@@ -103,7 +103,7 @@ class Schwarm:
         query = """
         MATCH (s:Status)
         WHERE s.created_at < $max_age
-        DELETE s;
+        DETACH DELETE s;
         """
 
         max_age = parse_datetime(datetime.now() - max_age)
