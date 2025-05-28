@@ -130,8 +130,7 @@ class PaginationStep(PipelineStep):
                 start = self.items.index(self.max_id)
             except ValueError:
                 return [], np.array([])
-        
-        print("start", start)
+
         end = start + self.limit
 
         return (self.items[start:end], np.array(self.scores[start:end]))
@@ -149,9 +148,9 @@ class PaginationStep(PipelineStep):
 
 
 class SourcingStep(PipelineStep):
-    def __init__(self, sources: list[(Source, int)] = []):
+    def __init__(self):
         self.collected = set()
-        self.sources = sources
+        self.sources = []
         self._duration = None
         self._durations = []
         self._counts = []
@@ -356,6 +355,7 @@ class Feed:
     def source(self, source: Source, n: int):
         if not self._is_current_step_type(SourcingStep):
             self.step(SourcingStep())
+        
         self.steps[-1].add(source, n)
 
         return self
@@ -363,6 +363,7 @@ class Feed:
     def sources(self, sources: list[tuple[Source, int]]):
         if not self._is_current_step_type(SourcingStep):
             self.step(SourcingStep())
+        
         for source, n in sources:
             self.steps[-1].add(source, n)
 
