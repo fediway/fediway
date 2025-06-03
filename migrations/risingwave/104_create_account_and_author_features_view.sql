@@ -34,6 +34,7 @@
       properties.bootstrap.server='${bootstrap_server}',
       topic='{{ group }}_engagement_all_{{ spec }}',
       primary_key='{{ group_id }}',
+      properties.linger.ms='30000',
     ) FORMAT PLAIN ENCODE JSON (
       force_append_only='true'
     );
@@ -67,6 +68,7 @@
         properties.bootstrap.server='${bootstrap_server}',
         topic='{{ group }}_engagement_is_{{ type }}_{{ spec }}',
         primary_key='{{ group_id }}',
+        properties.linger.ms='30000',
       ) FORMAT PLAIN ENCODE JSON (
         force_append_only='true'
       );
@@ -100,6 +102,7 @@
         properties.bootstrap.server='${bootstrap_server}',
         topic='{{ group }}_engagement_has_{{ media }}_{{ spec }}',
         primary_key='{{ group_id }}',
+        properties.linger.ms='30000',
       ) FORMAT PLAIN ENCODE JSON (
         force_append_only='true'
       );

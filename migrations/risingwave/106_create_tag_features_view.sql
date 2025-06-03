@@ -25,6 +25,7 @@
       properties.bootstrap.server='${bootstrap_server}',
       topic='tag_engagement_all_{{ spec }}',
       primary_key='{{ group_id }}',
+      properties.linger.ms='60000',
     ) FORMAT PLAIN ENCODE JSON (
       force_append_only='true'
     );
