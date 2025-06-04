@@ -1,9 +1,10 @@
 from datetime import timedelta
+from sqlmodel import Session as DBSession
 
 from fastapi import Depends
 
 from config import config
-from apps.api.core.redis import redis
+from shared.core.redis import redis_conn
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
     CollaborativeFilteringSource,
@@ -12,12 +13,14 @@ from modules.fediway.sources.statuses import (
     PouplarByInfluentialAccountsSource,
     PopularInSocialCircleSource,
     SimilarToEngagedSource,
+    UnusualPopularitySource
 )
 from modules.mastodon.models import Account
 from shared.core.qdrant import client as qdrant_client
 from shared.core.schwarm import driver as schwarm_driver
 from shared.core.herde import db as herde_db
 from shared.services.feature_service import FeatureService
+from shared.core.rw import get_rw_session
 
 from ..auth import get_authenticated_account_or_fail
 from ..features import get_feature_service
@@ -31,7 +34,7 @@ def get_popular_by_influential_accounts_sources(
 ) -> list[Source]:
     return [
         PouplarByInfluentialAccountsSource(
-            r=redis,
+            r=redis_conn(),
             driver=schwarm_driver,
             language=lang,
             decay_rate=config.fediway.feed_decay_rate,
@@ -39,6 +42,19 @@ def get_popular_by_influential_accounts_sources(
         for lang in languages
     ]
 
+def get_unusual_popularity_source(
+    languages: list[str] = Depends(get_languages),
+    rw: DBSession = Depends(get_rw_session),
+) -> list[Source]:
+    return [
+        UnusualPopularitySource(
+            r=redis_conn(),
+            rw=rw,
+            language=lang,
+            decay_rate=config.fediway.feed_decay_rate,
+        )
+        for lang in languages
+    ]
 
 def get_newest_in_network_sources(
     account: Account = Depends(get_authenticated_account_or_fail),

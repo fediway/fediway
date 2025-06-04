@@ -167,15 +167,19 @@ class Schwarm:
         MERGE (s:Status {id: $id})
         ON CREATE SET 
             s.language = $language, 
-            s.created_at = $created_at
+            s.created_at = $created_at,
+            s.score_v1 = $score_v1
+        ON MERGE SET
+            s.score_v1 = $score_v1
         CREATE (a)-[:CREATED]->(s)
         """
 
         params = {
             "id": status.id,
-            "account_id": status.account_id,
-            "language": status.language,
-            "created_at": parse_datetime(status.created_at),
+            "account_id": status["account_id"],
+            "language": status["language"],
+            "created_at": parse_datetime(status["created_at"]),
+            "score_v1": status["score_v1"],
         }
 
         self._run_query(query, **params)

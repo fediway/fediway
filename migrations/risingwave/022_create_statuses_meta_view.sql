@@ -1,5 +1,6 @@
 -- :up
-CREATE MATERIALIZED VIEW IF NOT EXISTS status_features AS
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS statuses_meta AS
 SELECT
   s.id as status_id,
   MAX(stats.favourites_count) AS fav_count,
@@ -21,4 +22,5 @@ LEFT JOIN statuses_tags st ON s.id = st.status_id
 GROUP BY s.id;
 
 -- :down
-DROP VIEW IF EXISTS status_features CASCADE;
+
+DROP VIEW IF EXISTS statuses_meta CASCADE;

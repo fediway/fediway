@@ -6,7 +6,7 @@ from modules.mastodon.models import Account
 from shared.core.rw import get_rw_session
 from shared.services.feature_service import FeatureService
 
-from ..core.redis import redis
+from ..core.redis import redis_conn
 from ..services.feed_service import FeedService
 from .features import get_feature_service
 from .auth import get_authenticated_account
@@ -24,7 +24,7 @@ def get_feed(
         session=request.state.session,
         request=request,
         tasks=tasks,
-        redis=redis,
+        redis=redis_conn(),
         feature_service=feature_service,
         account=account,
     )

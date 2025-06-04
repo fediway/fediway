@@ -1,7 +1,7 @@
 
 -- :up
 
-{% for hop_size, window_size, spec in [('1 HOUR', '24 HOURS', '1d'), ('1 DAY', '7 DAYS', '7d'), ('7 DAYS', '56 DAYS', '56d')] %}
+{% for window_size, spec in [('24 HOURS', '1d'), ('7 DAYS', '7d'), ('56 DAYS', '56d')] %}
     CREATE MATERIALIZED VIEW IF NOT EXISTS account_tag_engagement_all_{{ spec }} AS
     SELECT
         e.account_id,

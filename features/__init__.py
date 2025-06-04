@@ -1,5 +1,6 @@
 from .entities import account, author, status
 from .services.kirby import kirby_features
+from .views.account_status import account_status_features
 from .views.combined_status_tags import combined_status_tags_features
 from .views.embedding import account_embedding_features
 from .views.engagement import account_author_features, account_features, author_features
@@ -11,6 +12,7 @@ ENTITIES = [account, author, status]
 FEATURE_VIEWS = (
     # account features
     account_features
+    + account_status_features
     + account_embedding_features
     + [latest_engaged_statuses]
     +
