@@ -1,42 +1,42 @@
 
 -- :up
 
+CREATE MATERIALIZED VIEW IF NOT EXISTS account_status_ranks AS
+SELECT 
+	s.id,
+	s.account_id,
+	row_number() OVER (PARTITION BY s.account_id ORDER BY s.created_at) r
+FROM statuses s
+JOIN status_stats st ON st.status_id  = s.id;
+
 CREATE MATERIALIZED VIEW IF NOT EXISTS status_zscores AS
 SELECT
 	s.id AS status_id,
 	s.account_id,
 	COUNT(s2.id) AS num_preceding,
 	CASE 
-		WHEN stddev_pop(s2.favourites_count) > 0
-		THEN (max(st.favourites_count) - COALESCE(avg(s2.favourites_count), 0)) / stddev_pop(s2.favourites_count)
+		WHEN stddev_samp(s2.favourites_count) > 0
+		THEN (max(st.favourites_count) - COALESCE(avg(s2.favourites_count), 0)) / stddev_samp(s2.favourites_count)
 		ELSE 0
 	END AS favourites_count_zscore,
     CASE 
-		WHEN stddev_pop(s2.reblogs_count) > 0
-		THEN (max(st.reblogs_count) - COALESCE(avg(s2.reblogs_count), 0)) / stddev_pop(s2.reblogs_count)
+		WHEN stddev_samp(s2.reblogs_count) > 0
+		THEN (max(st.reblogs_count) - COALESCE(avg(s2.reblogs_count), 0)) / stddev_samp(s2.reblogs_count)
 		ELSE 0
 	END AS reblogs_count_zscore,
     CASE 
-		WHEN stddev_pop(s2.replies_count) > 0
-		THEN (max(st.replies_count) - COALESCE(avg(s2.replies_count), 0)) / stddev_pop(s2.replies_count)
+		WHEN stddev_samp(s2.replies_count) > 0
+		THEN (max(st.replies_count) - COALESCE(avg(s2.replies_count), 0)) / stddev_samp(s2.replies_count)
 		ELSE 0
 	END AS replies_count_zscore
-FROM (
-	SELECT 
-		s.id,
-		s.account_id,
-		row_number() OVER (PARTITION BY s.account_id ORDER BY s.id) r
-	FROM statuses s
-) s
+FROM account_status_ranks s
 JOIN (
 	SELECT 
-		s.id,
-		s.account_id,
-		row_number() OVER (PARTITION BY s.account_id ORDER BY s.id) r,
+		s.*,
 		st.favourites_count,
 		st.replies_count,
 		st.reblogs_count
-	FROM statuses s
+	FROM account_status_ranks s
 	JOIN status_stats st ON st.status_id  = s.id
 ) s2 ON s.account_id = s2.account_id AND s2.r < s.r AND s2.r >= s.r - 25
 JOIN status_stats st ON st.status_id  = s.id

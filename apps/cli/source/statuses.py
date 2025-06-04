@@ -28,7 +28,12 @@ def triangular_loop(account_id: int, limit: int = 10):
 
 
 @app.command("unusual-popularity")
-def unusual_popularity(limit: int = 10, language: str = 'en', decay_rate: float = 1.0, max_age_in_days: int = 3):
+def unusual_popularity(
+    limit: int = 10,
+    language: str = "en",
+    decay_rate: float = 1.0,
+    max_age_in_days: int = 3,
+):
     from modules.fediway.sources.statuses import UnusualPopularitySource
     from shared.core.rw import rw_session
     from shared.core.redis import redis_conn
@@ -37,7 +42,7 @@ def unusual_popularity(limit: int = 10, language: str = 'en', decay_rate: float 
     with rw_session() as rw:
         source = UnusualPopularitySource(
             r=redis_conn(),
-            rw=rw, 
+            rw=rw,
             language=language,
             decay_rate=decay_rate,
             max_age_in_days=max_age_in_days,

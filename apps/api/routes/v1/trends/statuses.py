@@ -6,6 +6,7 @@ from apps.api.core.ranker import stats_ranker
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
     get_popular_by_influential_accounts_sources,
+    get_unusual_popularity_source
 )
 from apps.api.services.feed_service import FeedService
 from config import config
@@ -19,11 +20,11 @@ router = APIRouter()
 
 
 def statuses_trend_sources(
-    popular_by_influential_accounts: list[Source] = Depends(
-        get_popular_by_influential_accounts_sources
+    unusual_popularity: list[Source] = Depends(
+        get_unusual_popularity_source
     ),
 ):
-    return popular_by_influential_accounts
+    return unusual_popularity
 
 
 @router.get("/statuses")

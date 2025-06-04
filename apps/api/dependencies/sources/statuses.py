@@ -13,7 +13,7 @@ from modules.fediway.sources.statuses import (
     PouplarByInfluentialAccountsSource,
     PopularInSocialCircleSource,
     SimilarToEngagedSource,
-    UnusualPopularitySource
+    UnusualPopularitySource,
 )
 from modules.mastodon.models import Account
 from shared.core.qdrant import client as qdrant_client
@@ -42,6 +42,7 @@ def get_popular_by_influential_accounts_sources(
         for lang in languages
     ]
 
+
 def get_unusual_popularity_source(
     languages: list[str] = Depends(get_languages),
     rw: DBSession = Depends(get_rw_session),
@@ -55,6 +56,7 @@ def get_unusual_popularity_source(
         )
         for lang in languages
     ]
+
 
 def get_newest_in_network_sources(
     account: Account = Depends(get_authenticated_account_or_fail),

@@ -36,15 +36,14 @@ def _make_engagement_fv(entities, spec: str, fields: list[str]) -> FeatureView:
 SPECS = ["7d", "56d"]
 
 FEATURES = [
-    ("reblogs_count", ["sum", "avg", "stddev_pop", "max"]),
-    ("replies_count", ["sum", "avg", "stddev_pop", "max"]),
-    ("fav_count", ["sum", "avg", "stddev_pop", "max"]),
+    ("reblogs_count", ["sum", "avg", "max"]),
+    ("replies_count", ["sum", "avg", "max"]),
+    ("fav_count", ["sum", "avg", "max"]),
     (
         "has_image",
         [
             "sum",
             "avg",
-            "stddev_pop",
         ],
     ),
     (
@@ -52,7 +51,6 @@ FEATURES = [
         [
             "sum",
             "avg",
-            "stddev_pop",
         ],
     ),
     (
@@ -60,7 +58,6 @@ FEATURES = [
         [
             "sum",
             "avg",
-            "stddev_pop",
         ],
     ),
     (
@@ -68,17 +65,15 @@ FEATURES = [
         [
             "sum",
             "avg",
-            "stddev_pop",
         ],
     ),
-    ("num_mentions", ["sum", "avg", "stddev_pop", "max"]),
-    ("num_tags", ["sum", "avg", "stddev_pop", "max"]),
+    ("num_mentions", ["sum", "avg", "max"]),
+    ("num_tags", ["sum", "avg", "max"]),
     (
         "is_reblog",
         [
             "sum",
             "avg",
-            "stddev_pop",
         ],
     ),
     (
@@ -86,7 +81,6 @@ FEATURES = [
         [
             "sum",
             "avg",
-            "stddev_pop",
         ],
     ),
 ]

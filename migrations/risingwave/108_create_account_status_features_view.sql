@@ -8,17 +8,17 @@
         MAX(s.created_at)::TIMESTAMP as created_at,
         COUNT(DISTINCT s.id) as statuses_count_{{ spec }},
         {% for column, aggregates in [
-          ('reblogs_count', ['sum', 'avg', 'stddev_pop', 'max']), 
-          ('replies_count', ['sum', 'avg', 'stddev_pop', 'max']), 
-          ('fav_count', ['sum', 'avg', 'stddev_pop', 'max']),
-          ('has_image', ['sum', 'avg', 'stddev_pop']), 
-          ('has_gifv', ['sum', 'avg', 'stddev_pop']), 
-          ('has_video', ['sum', 'avg', 'stddev_pop']), 
-          ('has_audio', ['sum', 'avg', 'stddev_pop']),
-          ('num_mentions', ['sum', 'avg', 'stddev_pop', 'max']), 
-          ('num_tags', ['sum', 'avg', 'stddev_pop', 'max']),
-          ('is_reblog', ['sum', 'avg', 'stddev_pop']),
-          ('is_reply', ['sum', 'avg', 'stddev_pop']),
+          ('reblogs_count', ['sum', 'avg', 'max']), 
+          ('replies_count', ['sum', 'avg', 'max']), 
+          ('fav_count', ['sum', 'avg', 'max']),
+          ('has_image', ['sum', 'avg']), 
+          ('has_gifv', ['sum', 'avg']), 
+          ('has_video', ['sum', 'avg']), 
+          ('has_audio', ['sum', 'avg']),
+          ('num_mentions', ['sum', 'avg', 'max']), 
+          ('num_tags', ['sum', 'avg', 'max']),
+          ('is_reblog', ['sum', 'avg']),
+          ('is_reply', ['sum', 'avg']),
         ] %}
           {% for method in aggregates %}
             {{ method }}(m.{{ column }}::INT) as {{ column }}_{{ method }}_{{ spec }}{% if not loop.last %}, {% endif %}

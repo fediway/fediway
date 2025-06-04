@@ -9,5 +9,6 @@ pool = ConnectionPool(
     password=config.session.redis_pass,
 )
 
+
 def redis_conn():
     return Redis(connection_pool=pool)
