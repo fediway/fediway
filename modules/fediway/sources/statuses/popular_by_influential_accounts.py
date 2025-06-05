@@ -11,7 +11,7 @@ class PouplarByInfluentialAccountsSource(RedisSource):
         r: Redis,
         driver: Driver,
         language: str = "en",
-        top_n: int = 5000,
+        top_n: int = 250,
         decay_rate: float = 1.0,
         ttl: timedelta = timedelta(seconds=60),
     ):

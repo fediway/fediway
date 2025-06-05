@@ -12,7 +12,7 @@ class UnusualPopularitySource(RedisSource):
         r: Redis,
         rw: Session | None = None,
         language: str = "en",
-        top_n: int = 5000,
+        top_n: int = 100,
         decay_rate: float = 1.0,
         max_age_in_days: int = 3,
         ttl: timedelta = timedelta(minutes=10),
