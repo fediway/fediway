@@ -18,7 +18,7 @@ BEAT_SCHEDULE = {
     },
     "popular-by-influential-accounts": {
         "task": "sources.popular_by_influential_accounts",
-        "schedule": 10,  # every 60 seconds
+        "schedule": 60,  # every 60 seconds
         "options": {"queue": "sources"},
     },
     # --- queue: schwarm ---
