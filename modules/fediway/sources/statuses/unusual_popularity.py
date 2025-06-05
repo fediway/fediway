@@ -10,12 +10,12 @@ class UnusualPopularitySource(RedisSource):
     def __init__(
         self,
         r: Redis,
-        rw: Session,
+        rw: Session | None = None,
         language: str = "en",
         top_n: int = 5000,
         decay_rate: float = 1.0,
         max_age_in_days: int = 3,
-        ttl: timedelta = timedelta(seconds=60),
+        ttl: timedelta = timedelta(minutes=10),
     ):
         super().__init__(r=r, ttl=ttl)
 

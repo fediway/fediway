@@ -36,12 +36,12 @@ def unusual_popularity(
 ):
     from modules.fediway.sources.statuses import UnusualPopularitySource
     from shared.core.rw import rw_session
-    from shared.core.redis import redis_conn
+    from shared.core.redis import get_redis
     import time
 
     with rw_session() as rw:
         source = UnusualPopularitySource(
-            r=redis_conn(),
+            r=get_redis(),
             rw=rw,
             language=language,
             decay_rate=decay_rate,

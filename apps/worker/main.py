@@ -1,56 +1,48 @@
 from celery import Celery
+from celery.schedules import crontab
 from loguru import logger
 
 import modules.utils as utils
 from config import config
-from shared.core.schwarm import driver
+from .config import Config
+
 
 config.logging.configure_logging()
 
-app = Celery(broker=config.tasks.worker_url)
+BEAT_SCHEDULE = {
+    # --- queue: sources ---
+    "unusual-popularity": {
+        "task": "sources.unusual_popularity",
+        "schedule": 60,  # every 60 seconds
+        "options": {"queue": "sources"},
+    },
+    "popular-by-influential-accounts": {
+        "task": "sources.popular_by_influential_accounts",
+        "schedule": 10,  # every 60 seconds
+        "options": {"queue": "sources"},
+    },
+    # --- queue: schwarm ---
+    "clearn-memgraph": {
+        "task": "schwarm.clean_memgraph",
+        "schedule": 60 * 5,  # every 5 minutes
+        "options": {"queue": "schwarm"},
+    },
+}
 
 
-@app.on_after_configure.connect
-def setup_periodic_tasks(sender: Celery, **kwargs):
-    sender.add_periodic_task(
-        config.tasks.compute_account_ranks_every_n_seconds, compute_account_ranks
+def create_app():
+    """Factory function to create Celery app"""
+    app = Celery(
+        include=[
+            "apps.worker.tasks.sources",
+            "apps.worker.tasks.schwarm",
+        ]
     )
-    sender.add_periodic_task(
-        config.tasks.compute_tag_ranks_every_n_seconds, compute_tag_ranks
-    )
-    sender.add_periodic_task(
-        config.tasks.clean_memgraph_every_n_seconds, clean_memgraph
-    )
+
+    app.config_from_object(Config)
+    app.conf.beat_schedule = BEAT_SCHEDULE
+
+    return app
 
 
-@app.task(name="schwarm.compute_account_ranks")
-def compute_account_ranks():
-    from modules.fediway.sources.schwarm import Schwarm
-
-    schwarm = Schwarm(driver)
-
-    logger.info("Start computing account ranks...")
-    with utils.duration("Computed account ranks in {:.3f} seconds"):
-        schwarm.compute_account_rank()
-
-
-@app.task(name="schwarm.compute_tag_ranks")
-def compute_tag_ranks():
-    from modules.fediway.sources.schwarm import Schwarm
-
-    schwarm = Schwarm(driver)
-
-    logger.info("Start computing tag ranks...")
-    with utils.duration("Computed tag ranks in {:.3f} seconds"):
-        schwarm.compute_tag_rank()
-
-
-@app.task(name="schwarm.clean_memgraph")
-def clean_memgraph():
-    from modules.fediway.sources.schwarm import Schwarm
-
-    schwarm = Schwarm(driver)
-
-    logger.info("Purging old statuses...")
-    with utils.duration("Purged old statuses in {:.3f} seconds"):
-        schwarm.purge_old_statuses(config.fediway.schwarm_max_status_age)
+app = create_app()

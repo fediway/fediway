@@ -10,5 +10,5 @@ pool = ConnectionPool(
 )
 
 
-def redis_conn():
+def get_redis():
     return Redis(connection_pool=pool)

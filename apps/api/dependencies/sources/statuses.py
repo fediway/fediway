@@ -4,7 +4,7 @@ from sqlmodel import Session as DBSession
 from fastapi import Depends
 
 from config import config
-from shared.core.redis import redis_conn
+from shared.core.redis import get_redis
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
     CollaborativeFilteringSource,
@@ -30,29 +30,31 @@ MAX_AGE = timedelta(days=config.fediway.feed_max_age_in_days)
 
 
 def get_popular_by_influential_accounts_sources(
+    r: Redis = Depends(get_redis),
     languages: list[str] = Depends(get_languages),
 ) -> list[Source]:
     return [
         PouplarByInfluentialAccountsSource(
-            r=redis_conn(),
+            r=r,
             driver=schwarm_driver,
             language=lang,
             decay_rate=config.fediway.feed_decay_rate,
+            ttl=timedelta(minutes=10),
         )
         for lang in languages
     ]
 
 
 def get_unusual_popularity_source(
+    r: Redis = Depends(get_redis),
     languages: list[str] = Depends(get_languages),
-    rw: DBSession = Depends(get_rw_session),
 ) -> list[Source]:
     return [
         UnusualPopularitySource(
-            r=redis_conn(),
-            rw=rw,
+            r=r,
             language=lang,
             decay_rate=config.fediway.feed_decay_rate,
+            ttl=timedelta(minutes=10),
         )
         for lang in languages
     ]

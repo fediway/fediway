@@ -10,10 +10,6 @@ class TasksConfig(BaseConfig):
     worker_port: int = 6379
     worker_pass: SecretStr = ""
 
-    compute_account_ranks_every_n_seconds: int = 10 * 60
-    compute_tag_ranks_every_n_seconds: int = 10 * 60
-    clean_memgraph_every_n_seconds: int = 10 * 60
-
     @property
     def worker_url(self):
         password = quote(self.worker_pass.get_secret_value())

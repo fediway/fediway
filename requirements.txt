@@ -24,3 +24,4 @@ dask[distributed]==2025.4.1
 s3fs==2024.9.0
 python-arango==8.1.6
 lightgbm==4.6.0
+rq==2.3.3
