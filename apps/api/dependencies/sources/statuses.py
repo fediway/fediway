@@ -1,7 +1,7 @@
 from datetime import timedelta
 from sqlmodel import Session as DBSession
-
 from fastapi import Depends
+from redis import Redis
 
 from config import config
 from shared.core.redis import get_redis

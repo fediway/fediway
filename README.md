@@ -193,6 +193,12 @@ uvicorn apps.api.main:app --reload
 
 # Run Kafka stream consumer
 faststream run apps.streaming.main:app
+
+# Run Celery worker for repeating tasks
+celery -A apps.worker.main worker --loglevel=info --queues=schwarm,sources
+
+# Run Celery beat scheduler
+celery -A apps.worker.main:app beat --loglevel=info
 ```
 
 ### Configuration
