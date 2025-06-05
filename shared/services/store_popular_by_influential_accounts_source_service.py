@@ -17,7 +17,11 @@ class StorePouplarByInfluentialAccountsSourceService:
         RETURN DISTINCT s.language AS language;
         """
         with self.driver.session() as session:
-            return [result['language'] for result in session.run(query) if result['language'] is not None]
+            return [
+                result["language"]
+                for result in session.run(query)
+                if result["language"] is not None
+            ]
 
     def __call__(self):
         for lang in self._get_languages():
