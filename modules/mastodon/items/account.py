@@ -30,6 +30,10 @@ class AccountItem(Item):
 
     @classmethod
     def from_model(cls, account: Account):
+        last_status_at = account.stats.last_status_at
+        if last_status_at is not None:
+            last_status_at = last_status_at.date().isoformat()
+        
         return cls(
             id=str(account.id),
             username=account.username,
@@ -49,5 +53,5 @@ class AccountItem(Item):
             statuses_count=account.stats.statuses_count,
             followers_count=account.stats.followers_count,
             following_count=account.stats.following_count,
-            last_status_at=account.stats.last_status_at.date().isoformat(),
+            last_status_at=last_status_at,
         )
