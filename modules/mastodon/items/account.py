@@ -33,7 +33,7 @@ class AccountItem(Item):
         last_status_at = account.stats.last_status_at
         if last_status_at is not None:
             last_status_at = last_status_at.date().isoformat()
-        
+
         return cls(
             id=str(account.id),
             username=account.username,
