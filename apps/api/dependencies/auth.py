@@ -10,6 +10,8 @@ def get_authenticated_account(request: Request) -> Account | None:
         account = request.state.account
     except KeyError:
         pass
+    except AttributeError:
+        pass
 
     return account
 
