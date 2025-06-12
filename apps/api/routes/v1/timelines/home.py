@@ -42,8 +42,12 @@ def get_near_network_sources(
 
 
 def get_out_network_sources(
-    account_based_collaborative_filtering: list[Source] = Depends(get_account_based_collaborative_filtering_source),
-    status_based_collaborative_filtering: list[Source] = Depends(get_status_based_collaborative_filtering_source),
+    account_based_collaborative_filtering: list[Source] = Depends(
+        get_account_based_collaborative_filtering_source
+    ),
+    status_based_collaborative_filtering: list[Source] = Depends(
+        get_status_based_collaborative_filtering_source
+    ),
     viral: list[Source] = Depends(get_viral_source),
 ):
     return (
