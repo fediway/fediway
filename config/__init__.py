@@ -11,7 +11,6 @@ from .kafka import KafkaConfig
 from .logging import LoggingConfig
 from .qdrant import QdrantConfig
 from .redis import RedisConfig
-from .session import SessionConfig
 from .tasks import TasksConfig
 
 
@@ -34,7 +33,6 @@ class config:
     logging = LoggingConfig()
     qdrant = QdrantConfig()
     redis = RedisConfig()
-    session = SessionConfig()
     tasks = TasksConfig()
 
     @classproperty
