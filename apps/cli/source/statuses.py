@@ -27,6 +27,29 @@ def triangular_loop(account_id: int, limit: int = 10):
         print(candidate)
 
 
+@app.command("viral")
+def viral(
+    limit: int = 10,
+    language: str = "en",
+):
+    from modules.fediway.sources.statuses import ViralSource
+    from shared.core.rw import rw_session
+    from shared.core.redis import get_redis
+    import time
+
+    with rw_session() as rw:
+        source = ViralSource(
+            r=get_redis(),
+            rw=rw,
+            language=language,
+        )
+
+        source.reset()
+
+        for candidate in source.collect(limit):
+            print(candidate)
+
+
 @app.command("unusual-popularity")
 def unusual_popularity(
     limit: int = 10,

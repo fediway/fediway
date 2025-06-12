@@ -11,7 +11,7 @@ from apps.api.dependencies.sources.statuses import (
     get_popular_in_community_sources,
     get_popular_in_social_circle_sources,
     get_similar_to_engaged_sources,
-    get_unusual_popularity_source,
+    get_viral_source,
 )
 from apps.api.services.feed_service import FeedService
 from config import config
@@ -43,7 +43,7 @@ def get_out_network_sources(
     popular_by_influential_accounts: list[Source] = Depends(
         get_popular_by_influential_accounts_sources
     ),
-    unusual_popularity: list[Source] = Depends(get_unusual_popularity_source),
+    viral: list[Source] = Depends(get_viral_source),
     popular_in_community: list[Source] = Depends(get_popular_in_community_sources),
     collaborative_filtering: list[Source] = Depends(
         get_collaborative_filtering_sources
@@ -52,7 +52,7 @@ def get_out_network_sources(
 ):
     return (
         popular_by_influential_accounts
-        + unusual_popularity
+        + viral
         + popular_in_community
         + collaborative_filtering
         + similar_to_engaged

@@ -26,6 +26,9 @@ class RedisSource(Source):
     def redis_key(self):
         return "source:" + self.name()
 
+    def reset(self):
+        self.r.delete(self.redis_key())
+
     def store(self):
         candidates = [c for c in self.compute()]
 
@@ -33,9 +36,12 @@ class RedisSource(Source):
 
         return candidates
 
-    def collect(self, limit: int):
+    def load(self):
         if not self.r.exists(self.redis_key()):
             candidates = self.store()
         else:
             candidates = json.loads(self.r.get(self.redis_key()))
-        return candidates[:limit]
+        return candidates
+
+    def collect(self, limit: int):
+        return self.load()[:limit]

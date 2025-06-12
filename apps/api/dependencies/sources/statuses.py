@@ -14,6 +14,7 @@ from modules.fediway.sources.statuses import (
     PopularInSocialCircleSource,
     SimilarToEngagedSource,
     UnusualPopularitySource,
+    ViralSource,
 )
 from modules.mastodon.models import Account
 from shared.core.qdrant import client as qdrant_client
@@ -54,6 +55,20 @@ def get_unusual_popularity_source(
             r=r,
             language=lang,
             decay_rate=config.fediway.feed_decay_rate,
+            ttl=timedelta(minutes=10),
+        )
+        for lang in languages
+    ]
+
+
+def get_viral_source(
+    r: Redis = Depends(get_redis),
+    languages: list[str] = Depends(get_languages),
+) -> list[Source]:
+    return [
+        ViralSource(
+            r=r,
+            language=lang,
             ttl=timedelta(minutes=10),
         )
         for lang in languages

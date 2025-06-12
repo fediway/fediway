@@ -6,7 +6,7 @@ from apps.api.core.ranker import stats_ranker
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
     get_popular_by_influential_accounts_sources,
-    get_unusual_popularity_source,
+    get_viral_source,
 )
 from apps.api.services.feed_service import FeedService
 from config import config
@@ -20,9 +20,9 @@ router = APIRouter()
 
 
 def statuses_trend_sources(
-    unusual_popularity: list[Source] = Depends(get_unusual_popularity_source),
+    viral: list[Source] = Depends(get_viral_source),
 ):
-    return unusual_popularity
+    return viral
 
 
 @router.get("/statuses")
@@ -34,14 +34,11 @@ async def status_trends(
     sources=Depends(statuses_trend_sources),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
-    max_candidates_per_source = config.fediway.max_candidates_per_source(len(sources))
-
     pipeline = (
         feed.name("trends/statuses")
         .select("status_id")
-        .sources([(source, max_candidates_per_source) for source in sources])
+        .sources([(source, 50) for source in sources])
         .rank(stats_ranker)
-        .remember()
         .diversify(by="status:account_id", penalty=0.1)
         .sample(config.fediway.feed_batch_size, sampler=InverseTransformSampler())
         .paginate(config.fediway.feed_batch_size, offset=offset)
@@ -55,5 +52,5 @@ async def status_trends(
     set_next_link(request, response, {"offset": offset + len(recommendations)})
 
     statuses = db.exec(Status.select_by_ids(recommendations)).all()
-
+    
     return [StatusItem.from_model(status) for status in statuses]

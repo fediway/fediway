@@ -5,3 +5,4 @@ from .popular_by_influential_accounts import PouplarByInfluentialAccountsSource
 from .popular_in_community import PopularInCommunitySource
 from .similar_to_engaged import SimilarToEngagedSource
 from .unusual_popularity import UnusualPopularitySource
+from .viral import ViralSource
