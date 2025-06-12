@@ -23,7 +23,6 @@ def get_feed(
 ) -> FeedService:
     return FeedService(
         db=db,
-        session=request.state.session,
         request=request,
         tasks=tasks,
         redis=redis,

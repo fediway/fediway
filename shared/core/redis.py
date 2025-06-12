@@ -3,10 +3,10 @@ from redis import ConnectionPool, Redis
 from config import config
 
 pool = ConnectionPool(
-    host=config.session.redis_host,
-    port=config.session.redis_port,
-    db=config.session.redis_name,
-    password=config.session.redis_pass,
+    host=config.redis.redis_host,
+    port=config.redis.redis_port,
+    db=config.redis.redis_name,
+    password=config.redis.redis_pass,
 )
 
 

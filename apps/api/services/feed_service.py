@@ -68,7 +68,6 @@ class FeedService:
         db: DBSession,
         request: Request,
         tasks: BackgroundTasks,
-        session: Session,
         redis: Redis,
         feature_service: FeatureService,
         account: Account | None,
@@ -77,7 +76,6 @@ class FeedService:
         self.db = db
         self.tasks = tasks
         self.request = request
-        self.session = session
         self.feature_service = feature_service
         self.pipeline = Feed(feature_service)
         self.account = account
@@ -270,7 +268,7 @@ class FeedService:
 
         self.r.setex(
             self._redis_key(),
-            config.session.session_ttl,
+            config.fediway.feed_session_ttl,
             json.dumps(state, cls=NumpyEncoder),
         )
 

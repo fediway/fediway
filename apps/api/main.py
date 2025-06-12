@@ -9,7 +9,6 @@ from config import config
 from .errors.http_error import http_error_handler
 from .errors.validation_error import http422_error_handler
 from .middlewares.oauth_middleware import OAuthMiddleware
-from .middlewares.session_middleware import SessionMiddleware
 from .routes.api import router as api_router
 
 
@@ -28,7 +27,6 @@ def get_application() -> FastAPI:
     )
 
     application.add_middleware(BaseHTTPMiddleware, dispatch=OAuthMiddleware())
-    application.add_middleware(BaseHTTPMiddleware, dispatch=SessionMiddleware())
 
     application.add_exception_handler(HTTPException, http_error_handler)
     application.add_exception_handler(RequestValidationError, http422_error_handler)
