@@ -5,12 +5,12 @@ SELECT
     e.status_id, 
     e.window_start, 
     e.window_end,
-    COUNT(*) * 2 AS engagement_speed,
+    COUNT(*) AS engagement_speed,
     COALESCE((
-    	COUNT(*) * 2 - 
-    	(LAG(COUNT(*)) OVER (PARTITION BY e.status_id ORDER BY e.window_start)) * 2
+    	COUNT(*) - 
+    	(LAG(COUNT(*)) OVER (PARTITION BY e.status_id ORDER BY e.window_start))
     ), 0) as engagement_velocity
-FROM TUMBLE(enriched_status_engagement_events, event_time, INTERVAL '30 MINUTES') e
+FROM TUMBLE(enriched_status_engagement_events, event_time, INTERVAL '60 MINUTES') e
 WHERE e.account_id != e.author_id -- ignore engagements by author on their own status
 GROUP BY e.status_id, e.window_start, e.window_end;
 
@@ -27,12 +27,13 @@ SELECT
 FROM statuses s
 JOIN status_engagement_features e_curr
 ON e_curr.status_id = s.id 
-AND e_curr.window_start < NOW() - INTERVAL '30 MINUTES'
-AND e_curr.window_start > NOW() - INTERVAL '60 MINUTES'
+AND e_curr.window_start < NOW() - INTERVAL '60 MINUTES'
+AND e_curr.window_start > NOW() - INTERVAL '120 MINUTES'
 JOIN status_engagement_features e_all
 ON e_all.status_id = s.id
 GROUP BY s.id;
 
 -- :down
 
-DROP VIEW IF EXISTS statuses_meta CASCADE;
+DROP VIEW IF EXISTS status_engagement_features CASCADE;
+DROP VIEW IF EXISTS status_virality CASCADE;

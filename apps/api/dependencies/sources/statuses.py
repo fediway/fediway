@@ -7,12 +7,14 @@ from config import config
 from shared.core.redis import get_redis
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
+    AccountBasedCollaborativeFilteringSource,
     CollaborativeFilteringSource,
     NewestInNetworkSource,
     PopularInCommunitySource,
     PouplarByInfluentialAccountsSource,
     PopularInSocialCircleSource,
     SimilarToEngagedSource,
+    StatusBasedCollaborativeFilteringSource,
     UnusualPopularitySource,
     ViralSource,
 )
@@ -111,6 +113,36 @@ def get_popular_in_community_sources(
             driver=schwarm_driver,
             account_id=account.id,
             decay_rate=config.fediway.feed_decay_rate,
+        )
+    ]
+
+
+def get_account_based_collaborative_filtering_source(
+    r: Redis = Depends(get_redis),
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[Source]:
+    if herde_db is None:
+        return []
+
+    return [
+        AccountBasedCollaborativeFilteringSource(
+            r=r,
+            account_id=account.id,
+        )
+    ]
+
+
+def get_status_based_collaborative_filtering_source(
+    r: Redis = Depends(get_redis),
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[Source]:
+    if herde_db is None:
+        return []
+
+    return [
+        StatusBasedCollaborativeFilteringSource(
+            r=r,
+            account_id=account.id,
         )
     ]
 

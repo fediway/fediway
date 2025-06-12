@@ -5,12 +5,14 @@ from apps.api.core.ranker import kirby
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.features import get_kirby_feature_service
 from apps.api.dependencies.sources.statuses import (
+    get_account_based_collaborative_filtering_source,
     get_popular_by_influential_accounts_sources,
     get_newest_in_network_sources,
     get_collaborative_filtering_sources,
     get_popular_in_community_sources,
     get_popular_in_social_circle_sources,
     get_similar_to_engaged_sources,
+    get_status_based_collaborative_filtering_source,
     get_viral_source,
 )
 from apps.api.services.feed_service import FeedService
@@ -40,22 +42,14 @@ def get_near_network_sources(
 
 
 def get_out_network_sources(
-    popular_by_influential_accounts: list[Source] = Depends(
-        get_popular_by_influential_accounts_sources
-    ),
+    account_based_collaborative_filtering: list[Source] = Depends(get_account_based_collaborative_filtering_source),
+    status_based_collaborative_filtering: list[Source] = Depends(get_status_based_collaborative_filtering_source),
     viral: list[Source] = Depends(get_viral_source),
-    popular_in_community: list[Source] = Depends(get_popular_in_community_sources),
-    collaborative_filtering: list[Source] = Depends(
-        get_collaborative_filtering_sources
-    ),
-    similar_to_engaged: list[Source] = Depends(get_similar_to_engaged_sources),
 ):
     return (
-        popular_by_influential_accounts
+        account_based_collaborative_filtering
+        + status_based_collaborative_filtering
         + viral
-        + popular_in_community
-        + collaborative_filtering
-        + similar_to_engaged
     )
 
 
