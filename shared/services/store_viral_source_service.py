@@ -3,10 +3,10 @@ from redis import Redis
 
 from config import config
 import modules.utils as utils
-from modules.fediway.sources.statuses import UnusualPopularitySource
+from modules.fediway.sources.statuses import ViralSource
 
 
-class StoreUnusualPopularitySourceService:
+class StoreViralSourceService:
     def __init__(self, r: Redis, db: Session):
         self.r = r
         self.db = db
@@ -24,11 +24,10 @@ class StoreUnusualPopularitySourceService:
 
     def __call__(self):
         for lang in self._get_languages():
-            source = UnusualPopularitySource(
+            source = ViralSource(
                 r=self.r,
                 rw=self.db,
                 language=lang,
-                decay_rate=config.fediway.feed_decay_rate,
             )
 
             with utils.duration(

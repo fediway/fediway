@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   account_id BIGINT,
   status_id BIGINT,
   author_id BIGINT,
+  domain VARCHAR,
   type VARCHAR,
   event_time TIMESTAMP,
   status_age_in_seconds BIGINT,
@@ -28,6 +29,7 @@ SELECT
   e.account_id,
   e.status_id,
   s.account_id as author_id,
+  a.domain,
   e.type,
   e.event_time,
   EXTRACT(EPOCH FROM (e.event_time - MAX(s.created_at)))::BIGINT AS status_age_in_seconds,
@@ -43,11 +45,13 @@ SELECT
   bool_or(m.has_audio) AS has_audio,
   MAX(m.num_mentions) AS num_mentions
 FROM status_engagements e
+JOIN accounts a ON e.account_id = a.id
 JOIN statuses s ON s.id = e.status_id
 JOIN statuses_meta m ON m.status_id = e.status_id
 GROUP BY 
   e.account_id, 
   e.status_id, 
+  a.domain,
   s.account_id,
   e.event_time, 
   e.type

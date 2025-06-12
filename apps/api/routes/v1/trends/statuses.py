@@ -52,5 +52,5 @@ async def status_trends(
     set_next_link(request, response, {"offset": offset + len(recommendations)})
 
     statuses = db.exec(Status.select_by_ids(recommendations)).all()
-    
+
     return [StatusItem.from_model(status) for status in statuses]
