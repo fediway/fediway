@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS media_attachments (
     scheduled_status_id BIGINT
 ) FROM pg_source TABLE 'public.media_attachments';
 
-CREATE INDEX idx_media_attachments_status_id ON media_attachments(status_id);
-CREATE INDEX idx_media_attachments_account_id ON media_attachments(account_id);
+CREATE INDEX IF NOT EXISTS idx_media_attachments_status_id ON media_attachments(status_id);
+CREATE INDEX IF NOT EXISTS idx_media_attachments_account_id ON media_attachments(account_id);
 
 -- :down
 DROP INDEX IF EXISTS idx_media_attachments_status_id;

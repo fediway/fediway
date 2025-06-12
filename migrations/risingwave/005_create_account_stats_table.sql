@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS account_stats (
     followers_count BIGINT
 ) FROM pg_source TABLE 'public.account_stats';
 
-CREATE INDEX idx_account_stats_account_id ON account_stats(account_id);
+CREATE INDEX IF NOT EXISTS idx_account_stats_account_id ON account_stats(account_id);
 
 -- :down
 DROP INDEX IF EXISTS idx_account_stats_account_id;

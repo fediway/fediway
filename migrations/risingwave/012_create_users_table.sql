@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     approved BOOLEAN
 ) FROM pg_source TABLE 'public.users';
 
-CREATE INDEX idx_users_account_id ON users(account_id);
+CREATE INDEX IF NOT EXISTS idx_users_account_id ON users(account_id);
 
 -- :down
 DROP INDEX IF EXISTS idx_users_account_id;

@@ -12,6 +12,7 @@
       {% for id in group_id.split(',') -%}
         e.{{ id }}::BIGINT,
       {% endfor %}
+      COUNT(DISTINCT e.domain) AS disinct_domains_{{ spec }},
       COUNT(*) FILTER (WHERE type = 'favourite') AS fav_count_{{ spec }},
       COUNT(*) FILTER (WHERE type = 'reblog') AS reblogs_count_{{ spec }},
       COUNT(*) FILTER (WHERE type = 'reply') AS replies_count_{{ spec }},
@@ -48,6 +49,7 @@
         {% for id in group_id.split(',') -%}
           e.{{ id }}::BIGINT,
         {% endfor %}
+        COUNT(DISTINCT e.domain) AS disinct_domains_{{ spec }},
         SUM(CASE WHEN has_image THEN 1 ELSE 0 END) as num_images_{{ spec }},
         SUM(CASE WHEN has_gifv THEN 1 ELSE 0 END) as num_gifvs_{{ spec }},
         SUM(CASE WHEN has_video THEN 1 ELSE 0 END) as num_videos_{{ spec }},
@@ -83,6 +85,7 @@
         {% for id in group_id.split(',') -%}
           e.{{ id }}::BIGINT,
         {% endfor %}
+        COUNT(DISTINCT e.domain) AS disinct_domains_{{ spec }},
         COUNT(*) FILTER (WHERE type = 'favourite') AS fav_count_{{ spec }},
         COUNT(*) FILTER (WHERE type = 'reblog') AS reblogs_count_{{ spec }},
         COUNT(*) FILTER (WHERE type = 'reply') AS replies_count_{{ spec }},

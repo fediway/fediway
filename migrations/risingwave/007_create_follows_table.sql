@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS follows (
     languages VARCHAR[]
 ) FROM pg_source TABLE 'public.follows';
 
-CREATE INDEX idx_follows_account_id ON follows(account_id);
-CREATE INDEX idx_follows_target_account_id ON follows(target_account_id);
+CREATE INDEX IF NOT EXISTS idx_follows_account_id ON follows(account_id);
+CREATE INDEX IF NOT EXISTS idx_follows_target_account_id ON follows(target_account_id);
 
 -- :down
 DROP INDEX IF EXISTS idx_follows_account_id;

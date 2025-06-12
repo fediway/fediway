@@ -29,10 +29,10 @@ class ViralSource(RedisSource):
 
     def compute(self):
         query = f"""
-        SELECT v.status_id, v.virality_score
-        FROM status_virality v
+        SELECT v.status_id, v.score
+        FROM status_viral_scores v
         JOIN statuses s ON s.id = v.status_id AND s.language = :language
-        ORDER BY v.virality_score DESC
+        ORDER BY v.score DESC
         LIMIT :limit;
         """
 
