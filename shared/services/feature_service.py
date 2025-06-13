@@ -66,7 +66,7 @@ class FeatureService(Features):
                     ~feat.index.duplicated(keep="last")
                 ]
 
-    def get(
+    async def get(
         self, entities: list[dict[str, int]], features: list[str]
     ) -> pd.DataFrame | None:
         if len(features) == 0:
@@ -82,9 +82,9 @@ class FeatureService(Features):
         if len(missing_entities) == 0 and cached_df is not None:
             return cached_df.reindex(pd.DataFrame(entities).values[:, 0])
 
-        df = self.fs.get_online_features(
+        df = (await self.fs.get_online_features_async(
             features=features, entity_rows=missing_entities, full_feature_names=True
-        ).to_df()
+        )).to_df()
 
         # drop entity columns
         columns = set(df.columns)

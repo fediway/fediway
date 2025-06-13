@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import asyncio
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import FieldCondition, Filter, Range
@@ -30,10 +31,10 @@ class SimilarToEngagedSource(Source):
         return f"similar_to_engaged[l={self.language},a={self.max_age.total_seconds()}]"
 
     def collect(self, limit: int):
-        status_ids = self.feature_service.get(
+        status_ids = asyncio.run(self.feature_service.get(
             entities=[{"account_id": self.account_id}],
             features=["latest_engaged_statuses:status_ids"],
-        ).values[0, 0]
+        ).values[0, 0])
 
         if status_ids is None:
             return

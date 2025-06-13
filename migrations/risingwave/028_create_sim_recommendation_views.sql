@@ -53,7 +53,7 @@ FROM (
 	FROM accounts a
 	JOIN enriched_status_engagement_events e ON a.id = e.account_id
 	JOIN status_similarities sim ON sim.status1 = e.status_id
-	JOIN statuses s ON s.id = e.status_id AND s.account_id != a.id AND s.created_at > NOW() - interval '3 DAYS'
+	JOIN statuses s ON s.id = e.status_id AND s.account_id != a.id AND s.created_at > NOW() - interval '7 DAYS'
 	WHERE NOT EXISTS (
 		SELECT * FROM enriched_status_engagement_events e_self WHERE e_self.status_id = sim.status2 AND e_self.account_id = a.id
 	)
@@ -66,7 +66,7 @@ FROM (
 	FROM accounts a
 	JOIN enriched_status_engagement_events e ON a.id = e.account_id
 	JOIN status_similarities sim ON sim.status2 = e.status_id
-	JOIN statuses s ON s.id = e.status_id AND s.account_id != a.id AND s.created_at > NOW() - interval '3 DAYS'
+	JOIN statuses s ON s.id = e.status_id AND s.account_id != a.id AND s.created_at > NOW() - interval '7 DAYS'
 	WHERE NOT EXISTS (
 		SELECT * FROM enriched_status_engagement_events e_self WHERE e_self.status_id = sim.status1 AND e_self.account_id = a.id
 	)

@@ -62,7 +62,7 @@ class RankingStep(PipelineStep):
         start_time = time.perf_counter_ns()
         entities = [{self.entity: c} for c in candidates]
 
-        X = self.feature_service.get(entities, self.ranker.features)
+        X = await self.feature_service.get(entities, self.ranker.features)
         self._feature_retrieval_duration = time.perf_counter_ns() - start_time
 
         start_time = time.perf_counter_ns()
@@ -241,14 +241,14 @@ class SamplingStep(PipelineStep):
         for heuristic, h_state in zip(self.heuristics, state.get("heuristics")):
             heuristic.set_state(h_state)
 
-    def _get_adjusted_scores(self, candidates, scores):
+    async def _get_adjusted_scores(self, candidates, scores):
         adjusted_scores = scores.copy()
 
         for heuristic in self.heuristics:
             features = None
             if heuristic.features and len(heuristic.features) > 0:
                 entities = [{self.entity: c} for c in candidates]
-                features = self.feature_service.get(entities, heuristic.features)
+                features = await self.feature_service.get(entities, heuristic.features)
 
             adjusted_scores = heuristic(candidates, adjusted_scores, features)
 
@@ -272,7 +272,7 @@ class SamplingStep(PipelineStep):
                 if len(candidates) == 0:
                     break
 
-                adjusted_scores = self._get_adjusted_scores(candidates, scores)
+                adjusted_scores = await self._get_adjusted_scores(candidates, scores)
 
                 idx = self.sampler.sample(adjusted_scores)
 
@@ -290,7 +290,7 @@ class SamplingStep(PipelineStep):
                 self.seen.add(candidate)
 
                 for heuristic in self.heuristics:
-                    features = self.feature_service.get(
+                    features = await self.feature_service.get(
                         [{self.entity: candidate}], heuristic.features
                     ).values[0]
                     heuristic.update_seen(candidate, features)
