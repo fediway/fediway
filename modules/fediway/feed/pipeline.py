@@ -207,18 +207,17 @@ class RankingStep(PipelineStep):
 
 class RememberStep(PipelineStep):
     def __init__(self):
-        self.candidates = CandidateList
+        self.candidates = CandidateList()
 
     def get_state(self):
         return {
-            "items": self.items,
-            "scores": self.scores,
+            "candidates": self.candidates,
         }
 
     def set_state(self, state):
-        # TODO:
-        self.items = state.get("items", [])
-        self.scores = state.get("scores", [])
+        if "candidates" not in self.candidates:
+            return
+        self.candidates.set_state(state["candidates"])
 
     async def __call__(self, candidates: CandidateList) -> CandidateList:
         self.candidates += candidates
