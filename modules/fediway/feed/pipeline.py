@@ -11,6 +11,116 @@ from .sampling import TopKSampler, Sampler
 from .features import Features
 
 
+class Candidate(self):
+    def __init__(self, entity, candidate, score, sources):
+        self.entity = entity
+        self.id = candidate
+        self.score = score
+        self.sources = sources
+
+
+class CandidateList:
+    def __init__(self, entity: str):
+        self.entity = entity
+        self._ids = []
+        self._scores = {}
+        self._sources = {}
+
+    def append(
+        self,
+        candidate,
+        score: float | None = None,
+        source: str | list[str] | None = None,
+        source_group: str | list[str] | None = None,
+    ):
+        if type(candidate) == Candidate:
+            source = candidate.sources
+            score = candidate.score
+            candidate = candidate.id
+
+        if candiates in self._sources:
+            if source is not None:
+                self._sources[candidate].add((source, source_group))
+            return
+        else:
+            self._sources[candidate] = (
+                set()
+                if source is None
+                else set(
+                    [(source, source_group)]
+                    if type(source) == str
+                    else list(zip(source, source_group))
+                )
+            )
+
+        self._ids.append(candidate)
+        self._scores.append(score)
+
+    def unique_groups(self) -> set[str]:
+        groups = set()
+        for (_, group) in self._sources.items():
+            groups.add(group)
+        return groups
+
+    def get_entity_rows(self):
+        return [{self.entity: c} for c in self._ids]
+
+    def get_scores(self):
+        return np.array(self._scores)
+
+    def set_scores(self, scores):
+        if type(scores) == np.ndarray:
+            self._scores = scores.tolist()
+        else:
+            self._scores = scores
+
+    def get_candidates(self) -> list:
+        return self._ids
+
+    def get_source(self, candidate) -> set[tuple[str, str | None]]:
+        return self._sources[candidate]
+
+    def __iadd__(self, other):
+        assert type(other) == type(self)
+
+        self._ids += other._ids
+        self._scores += other._scores
+
+        for candidate, sources in other._sources.items():
+            if canidate not in self._sources:
+                self._souces[candidate] = sources
+            else:
+                self._souces[candidate] |= sources
+
+        return self
+
+    def index(self, candidate):
+        return self._ids.index(candidate)
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            result = CandidateList(self.entity)
+            result._ids = self._ids[index]
+            result._scores = self._scores[index]
+            result._sources = {c: self._sources[c] for c in result._ids}
+
+            return result
+        else:
+            candidate = self._ids[index]
+            score = self._scores[index]
+            sources = self._sources[candidate]
+            raise Candidate(self.entity, candidate, score, sources)
+
+    def __delitem__(self, candidate):
+        try:
+            index = self._ids.index(candidate)
+            del self._scores[index]
+            del self._ids[index]
+            del self._sources[candidate]
+        except ValueError:
+            return
+
+
 class PipelineStep:
     def results(self) -> tuple[list[int], np.ndarray]:
         raise NotImplementedError
@@ -82,8 +192,7 @@ class RankingStep(PipelineStep):
 
 class RememberStep(PipelineStep):
     def __init__(self):
-        self.items = []
-        self.scores = []
+        self.candidates = CandidateList
 
     def get_state(self):
         return {
@@ -92,22 +201,21 @@ class RememberStep(PipelineStep):
         }
 
     def set_state(self, state):
+        # TODO:
         self.items = state.get("items", [])
         self.scores = state.get("scores", [])
 
-    async def __call__(
-        self, candidates: list[int], scores: np.ndarray
-    ) -> tuple[list[int], np.ndarray]:
-        self.items = candidates + self.items
-        self.scores = scores.tolist() + self.scores
+    async def __call__(self, candidates: CandidateList) -> CandidateList:
+        self.candidates += candidates
 
-        return self.items, np.array(self.scores, dtype=np.float32)
+        return self.candidates
 
 
 class PaginationStep(PipelineStep):
-    def __init__(self, limit: int, offset: int = 0, max_id: int | None = None):
-        self.items = []
-        self.scores = []
+    def __init__(
+        self, entity: str, limit: int, offset: int = 0, max_id: int | None = None
+    ):
+        self.candidates = CandidateList(entity)
         self.limit = limit
         self.offset = offset
         self.max_id = max_id
@@ -129,30 +237,28 @@ class PaginationStep(PipelineStep):
             start = self.offset
         elif self.max_id is not None:
             try:
-                start = self.items.index(self.max_id)
+                start = self.candidates.index(self.max_id)
             except ValueError:
                 return [], np.array([])
 
         end = start + self.limit
 
-        return (self.items[start:end], np.array(self.scores[start:end]))
+        return self.candidates[start:end]
 
     def __len__(self) -> int:
         return len(self.items)
 
-    async def __call__(
-        self, candidates: list[int], scores: np.ndarray
-    ) -> tuple[list[int], np.ndarray]:
-        self.items += candidates
-        self.scores += scores.tolist()
+    async def __call__(self, candidates: CandidateList) -> CandidateList:
+        self.candidates += candiates
 
         return self.results()
 
 
 class SourcingStep(PipelineStep):
-    def __init__(self):
+    def __init__(self, group: str | None = None):
         self.collected = set()
         self.sources = []
+        self.group = group
         self._duration = None
         self._durations = []
         self._counts = []
@@ -183,9 +289,7 @@ class SourcingStep(PipelineStep):
 
         return candidates
 
-    async def __call__(
-        self, candidates: list[int], scores: np.ndarray
-    ) -> tuple[list[int], np.ndarray]:
+    async def __call__(self, candidates: CandidateList) -> CandidateList:
         self._durations = [None for _ in range(len(self.sources))]
         self._counts = [0 for _ in range(len(self.sources))]
         jobs = []
@@ -199,17 +303,17 @@ class SourcingStep(PipelineStep):
 
         self._duration = time.perf_counter_ns() - start_time
 
-        new_candidates = [c for batch in results for c in batch]
-        n_new = len(new_candidates)
-        candidates += list(new_candidates)
-
-        scores = np.concatenate([scores, np.zeros(n_new)])
+        n_sourced = 0
+        for batch, source in zip(results, self.sources):
+            for candidate in batch:
+                candidates.push(candidate, source=source.name)
+                n_sourced += 1
 
         logger.info(
-            f"Collected {len(candidates)} candidates from {len(self.sources)} sources in {self._duration / 1_000_000} ms"
+            f"Collected {len(n_sourced)} candidates from {len(self.sources)} sources in {self._duration / 1_000_000} ms"
         )
 
-        return candidates, scores
+        return candidates
 
 
 class SamplingStep(PipelineStep):
@@ -241,28 +345,25 @@ class SamplingStep(PipelineStep):
         for heuristic, h_state in zip(self.heuristics, state.get("heuristics")):
             heuristic.set_state(h_state)
 
-    async def _get_adjusted_scores(self, candidates, scores):
-        adjusted_scores = scores.copy()
-
+    async def _get_adjusted_scores(self, candidates: CandidateList):
         for heuristic in self.heuristics:
             features = None
             if heuristic.features and len(heuristic.features) > 0:
-                entities = [{self.entity: c} for c in candidates]
-                features = await self.feature_service.get(entities, heuristic.features)
+                entity_rows = candidates.get_entity_rows()
+                features = await self.feature_service.get(
+                    entity_rows, heuristic.features
+                )
 
-            adjusted_scores = heuristic(candidates, adjusted_scores, features)
+            candidates.scores = heuristic(candidates, features)
 
-        return adjusted_scores
+        return candidates.scores
 
-    async def __call__(
-        self, candidates: list[int], scores: np.ndarray
-    ) -> tuple[list[int], np.ndarray]:
-        sampled_candidates = []
-        sampled_scores = []
+    async def __call__(self, candidates: CandidateList) -> CandidateList:
+        sampled_candidates = CandidateList(candidates.entity)
 
         if self.unique:
-            scores = scores[[i for i, c in enumerate(candidates) if c not in self.seen]]
-            candidates = [c for c in candidates if c not in self.seen]
+            for seen in self.seen:
+                del candidates[candidate]
 
         for _ in range(self.n):
             if len(candidates) == 0:
@@ -272,22 +373,20 @@ class SamplingStep(PipelineStep):
                 if len(candidates) == 0:
                     break
 
-                adjusted_scores = await self._get_adjusted_scores(candidates, scores)
+                adjusted_scores = await self._get_adjusted_scores(candidates.copy())
 
                 idx = self.sampler.sample(adjusted_scores)
 
                 candidate = candidates[idx]
-                score = adjusted_scores[idx]
+                candidate.score = adjusted_scores[idx]
 
                 del candidates[idx]
-                scores = np.delete(scores, idx)
 
-                if self.unique and candidate in self.seen:
+                if self.unique and candidate.id in self.seen:
                     continue
 
                 sampled_candidates.append(candidate)
-                sampled_scores.append(score)
-                self.seen.add(candidate)
+                self.seen.add(candidate.id)
 
                 for heuristic in self.heuristics:
                     features = await self.feature_service.get(
@@ -297,7 +396,7 @@ class SamplingStep(PipelineStep):
 
                 break
 
-        return sampled_candidates, np.array(sampled_scores)
+        return sampled_candidates
 
 
 class Feed:
@@ -356,20 +455,24 @@ class Feed:
 
         return self
 
-    def source(self, source: Source, n: int):
-        if not self._is_current_step_type(SourcingStep):
-            self.step(SourcingStep())
+    def source(self, source: Source, n: int, group: str | None = None):
+        current_step = self.steps[-1] if len(self.steps) > 0 else None
+
+        current_step_is_sourcing_step = self._is_current_step_type(SourcingStep)
+        is_different_group = (
+            lambda: current_step is not None and current_step.group != group
+        )
+
+        if not current_step_is_sourcing_step or is_different_group():
+            self.step(SourcingStep(group))
 
         self.steps[-1].add(source, n)
 
         return self
 
-    def sources(self, sources: list[tuple[Source, int]]):
-        if not self._is_current_step_type(SourcingStep):
-            self.step(SourcingStep())
-
+    def sources(self, sources: list[tuple[Source, int]], group: str | None = None):
         for source, n in sources:
-            self.steps[-1].add(source, n)
+            self.source(source, n, group)
 
         return self
 
@@ -410,9 +513,7 @@ class Feed:
 
         return self
 
-    async def _execute_step(
-        self, idx, candidates: list[int], scores: np.ndarray
-    ) -> tuple[list[int], np.ndarray]:
+    async def _execute_step(self, idx, candidates: CandidateList) -> CandidateList:
         # # filter seen
         # remove_indices = []
         # for candidate in candidates:
@@ -422,12 +523,12 @@ class Feed:
         # for candidate in candidates:
         #     self.seen[idx].add(candidate)
 
-        candidates, scores = await self.steps[idx](candidates, scores)
+        candidates = await self.steps[idx](candidates)
 
         # for candidate, score in zip(candidates, scores):
         #     self.cache[i][candidate] = score
 
-        return candidates, scores
+        return candidates
 
     async def execute(self) -> list[int]:
         if self._running:
@@ -435,15 +536,14 @@ class Feed:
             return
 
         self._running = True
-        candidates = []
-        scores = np.array([], dtype=np.float32)
+        candidates = CandidateList(self.entity)
 
         self._durations = []
 
         for i in range(len(self.steps)):
             start_time = time.perf_counter_ns()
 
-            candidates, scores = await self._execute_step(i, candidates, scores)
+            candidates = await self._execute_step(i, candidates)
 
             self._durations.append(time.perf_counter_ns() - start_time)
 

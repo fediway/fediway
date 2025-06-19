@@ -13,7 +13,5 @@ class Heuristic:
     def set_state(self, data):
         pass
 
-    def __call__(
-        self, candidates, scores: np.ndarray, features: np.ndarray | None = None
-    ) -> np.ndarray:
+    def __call__(self, candidates, features: np.ndarray | None = None) -> np.ndarray:
         raise NotImplemented

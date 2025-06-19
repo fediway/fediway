@@ -91,8 +91,8 @@ class FeedService:
 
         return self
 
-    def source(self, source: Source, n: int):
-        self.pipeline.source(source, n)
+    def source(self, source: Source, n: int, group: str | None = None):
+        self.pipeline.source(source, n, group)
 
         return self
 
@@ -101,8 +101,8 @@ class FeedService:
 
         return self
 
-    def sources(self, sources: list[tuple[Source, int]]):
-        self.pipeline.sources(sources)
+    def sources(self, sources: list[tuple[Source, int]], group: str | None = None):
+        self.pipeline.sources(sources, group)
 
         return self
 
