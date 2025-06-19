@@ -206,8 +206,8 @@ class RankingStep(PipelineStep):
 
 
 class RememberStep(PipelineStep):
-    def __init__(self):
-        self.candidates = CandidateList()
+    def __init__(self, entity):
+        self.candidates = CandidateList(entity)
 
     def get_state(self):
         return {
@@ -464,7 +464,7 @@ class Feed:
         return self
 
     def remember(self):
-        self.steps.append(RememberStep())
+        self.steps.append(RememberStep(self.entity))
 
         return self
 
