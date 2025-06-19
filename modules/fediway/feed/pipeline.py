@@ -11,7 +11,7 @@ from .sampling import TopKSampler, Sampler
 from .features import Features
 
 
-class Candidate(self):
+class Candidate:
     def __init__(self, entity, candidate, score, sources):
         self.entity = entity
         self.id = candidate
@@ -23,7 +23,7 @@ class CandidateList:
     def __init__(self, entity: str):
         self.entity = entity
         self._ids = []
-        self._scores = {}
+        self._scores = []
         self._sources = {}
 
     def append(
@@ -56,9 +56,21 @@ class CandidateList:
         self._ids.append(candidate)
         self._scores.append(score)
 
+    def get_state(self):
+        return {
+            "ids": self._ids,
+            "scores": self._scores,
+            "sources": {c: list(s) for c, s in self._sources.items()},
+        }
+
+    def set_state(self, state):
+        self._ids = state["ids"]
+        self._scores = state["scores"]
+        self._sources = {c: set(s) for c, s in state["ids"].items()}
+
     def unique_groups(self) -> set[str]:
         groups = set()
-        for (_, group) in self._sources.items():
+        for _, group in self._sources.items():
             groups.add(group)
         return groups
 
@@ -109,7 +121,10 @@ class CandidateList:
             candidate = self._ids[index]
             score = self._scores[index]
             sources = self._sources[candidate]
-            raise Candidate(self.entity, candidate, score, sources)
+            return Candidate(self.entity, candidate, score, sources)
+
+    def __len__(self):
+        return len(self._ids)
 
     def __delitem__(self, candidate):
         try:
@@ -163,14 +178,12 @@ class RankingStep(PipelineStep):
     def get_scores(self) -> np.ndarray:
         return self._scores
 
-    async def __call__(
-        self, candidates: list[int], scores: np.ndarray
-    ) -> tuple[list[int], np.ndarray]:
+    async def __call__(self, candidates: CandidateList) -> CandidateList:
         if len(candidates) == 0:
-            return candidates, scores
+            return candidates
 
         start_time = time.perf_counter_ns()
-        entities = [{self.entity: c} for c in candidates]
+        entities = candidates.get_entity_rows()
 
         X = await self.feature_service.get(entities, self.ranker.features)
         self._feature_retrieval_duration = time.perf_counter_ns() - start_time
@@ -187,7 +200,9 @@ class RankingStep(PipelineStep):
         self._candidates = candidates
         self._scores = scores
 
-        return candidates, scores
+        candidates.set_scores(scores)
+
+        return candidates
 
 
 class RememberStep(PipelineStep):
@@ -221,14 +236,12 @@ class PaginationStep(PipelineStep):
         self.max_id = max_id
 
     def get_state(self):
-        return {
-            "items": self.items,
-            "scores": self.scores,
-        }
+        return {"candidates": self.candidates.get_state()}
 
     def set_state(self, state):
-        self.items = state.get("items", [])
-        self.scores = state.get("scores", [])
+        if not "candidates" in state:
+            return
+        self.candidates = self.candidates.set_state(state["candidates"])
 
     def results(self):
         start = 0
@@ -241,15 +254,16 @@ class PaginationStep(PipelineStep):
             except ValueError:
                 return [], np.array([])
 
+        print("start:", start, self.limit)
         end = start + self.limit
 
         return self.candidates[start:end]
 
     def __len__(self) -> int:
-        return len(self.items)
+        return len(self.candidates)
 
     async def __call__(self, candidates: CandidateList) -> CandidateList:
-        self.candidates += candiates
+        self.candidates += candidates
 
         return self.results()
 
@@ -310,7 +324,7 @@ class SourcingStep(PipelineStep):
                 n_sourced += 1
 
         logger.info(
-            f"Collected {len(n_sourced)} candidates from {len(self.sources)} sources in {self._duration / 1_000_000} ms"
+            f"Collected {n_sourced} candidates from {len(self.sources)} sources in {self._duration / 1_000_000} ms"
         )
 
         return candidates
@@ -499,7 +513,7 @@ class Feed:
         return self
 
     def paginate(self, limit: int, offset: int = 0, max_id: int | None = None):
-        self.step(PaginationStep(limit, offset, max_id))
+        self.step(PaginationStep(int(limit), offset, max_id))
 
         return self
 

@@ -19,6 +19,7 @@ from modules.fediway.feed.pipeline import (
     SourcingStep,
     RankingStep,
 )
+from modules.fediway.feed.pipeline import CandidateList
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
 from modules.fediway.models.risingwave import (
@@ -121,9 +122,7 @@ class FeedService:
 
         return self
 
-    def paginate(
-        self, limit: int, offset: int | None = None, max_id: int | None = None
-    ):
+    def paginate(self, limit: int, offset: int = 0, max_id: int | None = None):
         self.pipeline.paginate(limit, offset, max_id)
 
         return self
@@ -289,16 +288,16 @@ class FeedService:
         self._save_state()
 
         # store pipeline execution data
-        self.tasks.add_task(self._save_pipeline_run)
+        # self.tasks.add_task(self._save_pipeline_run)
 
-    async def execute(self) -> list[int]:
+    async def execute(self) -> CandidateList:
         with utils.duration("Loaded recommendations in {:.3f} seconds."):
             self._load_state()
 
             if self.pipeline.is_new():
                 await self._execute()
 
-            recommendations, _ = self.pipeline.results()
+            recommendations = self.pipeline.results()
 
             print(
                 str(self.request.url),
@@ -312,4 +311,4 @@ class FeedService:
             # load new candidates
             self.tasks.add_task(self._execute)
 
-            return recommendations
+            return [c for c in recommendations.get_candidates()]

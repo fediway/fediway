@@ -17,6 +17,7 @@ def get_languages(
     request_lang = utils.http.parse_accept_language(
         request.headers.get("accept-language", "")
     )
+    print("location", location)
     location_lang = get_language_from_location(location)
 
     languages = [location_lang, request_lang, "en"]

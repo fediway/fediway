@@ -7,6 +7,7 @@ from loguru import logger
 from .db import *
 from .dd import *
 from .http import *
+from .redis import *
 
 
 @contextmanager

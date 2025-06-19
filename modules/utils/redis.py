@@ -1,28 +1,30 @@
 from redis import Redis
+from typing import Callable
+import functools
 
 
-def cache(client: Redis, key: str, ttl: int = 300):
-    """
-    Simpler version that uses first argument as key suffix
-    """
+def redis_cache(client: Redis | Callable[[], Redis], key: str, ttl: int = 300):
+    is_callable = callable(client)
 
     def decorator(func):
         @functools.wraps(func)
-        async def wrapper(*pargs, **kwargs):
+        def wrapper(*pargs, **kwargs):
+            redis_client = client() if is_callable else client
+
             # Use first argument for cache key
             cache_key = key.format(*pargs, **kwargs)
 
             try:
-                cached = await redis_client.get(cache_key)
+                cached = redis_client.get(cache_key)
                 if cached:
                     return json.loads(cached.decode())
             except:
                 pass
 
-            result = await func(*pargs, **kwargs)
+            result = func(*pargs, **kwargs)
 
             try:
-                await redis_client.setex(cache_key, ttl, json.dumps(result))
+                redis_client.setex(cache_key, ttl, json.dumps(result))
             except:
                 pass
 

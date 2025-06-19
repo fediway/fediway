@@ -17,6 +17,7 @@ from apps.api.dependencies.sources.statuses import (
 )
 from apps.api.services.feed_service import FeedService
 from config import config
+from modules.fediway.feed.sampling import WeightedGroupSampler
 from modules.fediway.rankers.kirby import KirbyFeatureService
 from modules.fediway.sources import Source
 from modules.mastodon.items import StatusItem
@@ -74,15 +75,27 @@ async def home_timeline(
 
     _map_sources = lambda S: [(s, max_candidates_per_source) for s in S]
 
+    print("config.fediway.feed_batch_size", config.fediway.feed_batch_size)
+    print("max_id", max_id)
+
     pipeline = (
         feed.name("timelines/home")
         .select("status_id")
-        .sources(_map_sources(in_network_sources))
-        .sources(_map_sources(near_network_sources))
-        .sources(_map_sources(out_network_sources))
+        .sources(_map_sources(in_network_sources), group="in-network")
+        .sources(_map_sources(near_network_sources), group="near-network")
+        .sources(_map_sources(out_network_sources), group="out-network")
         .rank(kirby, kirby_features)
         .diversify(by="status:account_id", penalty=0.1)
-        .sample(config.fediway.feed_batch_size)
+        .sample(
+            config.fediway.feed_batch_size,
+            sampler=WeightedGroupSampler(
+                {
+                    "in-network": 0.5,
+                    "near-network": 0.25,
+                    "out-network": 0.25,
+                }
+            ),
+        )
         .paginate(config.fediway.feed_batch_size, max_id=max_id)
     )
 
