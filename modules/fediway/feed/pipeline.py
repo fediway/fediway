@@ -317,7 +317,7 @@ class SourcingStep(PipelineStep):
         self._duration = time.perf_counter_ns() - start_time
 
         n_sourced = 0
-        for batch, source in zip(results, self.sources):
+        for batch, (source, _) in zip(results, self.sources):
             for candidate in batch:
                 candidates.append(
                     candidate, source=source.name, source_group=self.group
