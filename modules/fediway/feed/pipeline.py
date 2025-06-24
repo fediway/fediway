@@ -319,7 +319,9 @@ class SourcingStep(PipelineStep):
         n_sourced = 0
         for batch, source in zip(results, self.sources):
             for candidate in batch:
-                candidates.push(candidate, source=source.name)
+                candidates.append(
+                    candidate, source=source.name, source_group=self.group
+                )
                 n_sourced += 1
 
         logger.info(
