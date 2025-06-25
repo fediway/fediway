@@ -1,0 +1,21 @@
+[package]
+name = "orbit"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bloomfilter = "3"
+chrono = "0.4"
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+tokio-postgres = "0.7"
+dotenvy = "0.15"
+envy = "0.4"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+linked-hash-map = "0.5"
+petgraph = "0.8"
+nalgebra = "0.33.2"
+qdrant-client = "1.14.0"
+rand = "0.9.1"
+itertools = "0.14.0"
