@@ -1,15 +1,34 @@
-use petgraph::graph::{NodeIndex, UnGraph};
-use std::collections::HashMap;
 use itertools::{CombinationsWithReplacement, Itertools};
+use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
+use petgraph::graph::{NodeIndex, UnGraph};
 use rand::prelude::*;
+use std::collections::HashMap;
 
-pub struct Communities(HashMap<i64, usize>);
+pub struct Communities(pub HashMap<i64, usize>);
+
+impl Into<(CsrMatrix<f64>, HashMap<i64, usize>)> for Communities {
+    fn into(self) -> (CsrMatrix<f64>, HashMap<i64, usize>) {
+        let n_rows = self.0.len();
+        let n_cols = *self.0.iter().map(|(_, c)| c).max().unwrap() + 1;
+        let mut matrix: CooMatrix<f64> = CooMatrix::zeros(n_rows, n_cols);
+        let mut tag_indices: HashMap<i64, usize> = HashMap::new();
+
+        for (tag, c_idx) in self.0.iter() {
+            let next_idx = tag_indices.len();
+            let t_idx = tag_indices.entry(*tag).or_insert(next_idx);
+
+            matrix.push(*t_idx, *c_idx, 1.0);
+        }
+
+        (CsrMatrix::from(&matrix), tag_indices)
+    }
+}
 
 pub fn weighted_louvain(
-    graph: &UnGraph<i64, f64>, 
-    resolution: f64, 
+    graph: &UnGraph<i64, f64>,
+    resolution: f64,
     max_iterations: usize,
-    random_state: u64
+    random_state: u64,
 ) -> Communities {
     // Initialize random number generator
     let mut rng = StdRng::seed_from_u64(random_state);
@@ -26,17 +45,14 @@ pub fn weighted_louvain(
     let node_weights: HashMap<_, _> = graph
         .node_indices()
         .map(|node| {
-            let weight: f64 = graph
-                .edges(node)
-                .map(|edge| edge.weight())
-                .sum();
+            let weight: f64 = graph.edges(node).map(|edge| edge.weight()).sum();
             (node, weight)
         })
         .collect();
 
     let mut improved = true;
     let mut iteration = 0;
-    
+
     while improved && iteration < max_iterations {
         improved = false;
         iteration += 1;
@@ -50,10 +66,12 @@ pub fn weighted_louvain(
 
             // Calculate weight of edges from node to each neighboring community
             let mut neighbor_communities: HashMap<usize, f64> = HashMap::new();
-            
+
             for neighbor in graph.neighbors(node) {
                 let neighbor_comm = communities[&neighbor];
-                let edge_weight = *graph.edge_weight(graph.find_edge(node, neighbor).unwrap()).unwrap();
+                let edge_weight = *graph
+                    .edge_weight(graph.find_edge(node, neighbor).unwrap())
+                    .unwrap();
                 *neighbor_communities.entry(neighbor_comm).or_insert(0.0) += edge_weight;
             }
 
@@ -102,12 +120,17 @@ pub fn weighted_louvain(
         }
     }
 
-    Communities(communities
-        .iter()
-        .map(|(node, community)| {
-            (*graph.node_weight(*node).unwrap(), community_indices[community])
-        })
-        .collect())
+    Communities(
+        communities
+            .iter()
+            .map(|(node, community)| {
+                (
+                    *graph.node_weight(*node).unwrap(),
+                    community_indices[community],
+                )
+            })
+            .collect(),
+    )
 }
 
 /// Calculate the modularity gain from moving a node between communities.
@@ -126,11 +149,13 @@ fn calculate_modularity_gain(
     let mut weight_to_current: f64 = 0.0;
     for neighbor in graph.neighbors(node) {
         if communities[&neighbor] == from_comm && neighbor != node {
-            let edge_weight = *graph.edge_weight(graph.find_edge(node, neighbor).unwrap()).unwrap();
+            let edge_weight = *graph
+                .edge_weight(graph.find_edge(node, neighbor).unwrap())
+                .unwrap();
             weight_to_current += edge_weight;
         }
     }
-    
+
     // Total weight of edges in current and target communities
     let from_comm_weight: f64 = communities
         .iter()
