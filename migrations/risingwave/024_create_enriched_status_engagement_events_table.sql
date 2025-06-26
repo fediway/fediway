@@ -32,29 +32,22 @@ SELECT
   a.domain,
   e.type,
   e.event_time,
-  EXTRACT(EPOCH FROM (e.event_time - MAX(s.created_at)))::BIGINT AS status_age_in_seconds,
-  MAX(e.favourite_id) as favourite_id,
-  MAX(e.reblog_id) as reblog_id,
-  MAX(e.reply_id) as reply_id,
-  MAX(m.fav_count) as fav_count,
-  MAX(m.reblogs_count) as reblogs_count,
-  MAX(m.replies_count) as replies_count,
-  bool_or(m.has_image) AS has_image,
-  bool_or(m.has_gifv) AS has_gifv,
-  bool_or(m.has_video) AS has_video,
-  bool_or(m.has_audio) AS has_audio,
-  MAX(m.num_mentions) AS num_mentions
+  EXTRACT(EPOCH FROM (e.event_time - s.created_at))::BIGINT AS status_age_in_seconds,
+  e.favourite_id,
+  e.reblog_id,
+  e.reply_id,
+  m.fav_count,
+  m.reblogs_count,
+  m.replies_count,
+  m.has_image,
+  m.has_gifv,
+  m.has_video,
+  m.has_audio,
+  m.num_mentions
 FROM status_engagements e
 JOIN accounts a ON e.account_id = a.id
 JOIN statuses s ON s.id = e.status_id
 JOIN statuses_meta m ON m.status_id = e.status_id
-GROUP BY 
-  e.account_id, 
-  e.status_id, 
-  a.domain,
-  s.account_id,
-  e.event_time, 
-  e.type
 WITH (type = 'append-only', force_append_only='true');
 
 -- :down

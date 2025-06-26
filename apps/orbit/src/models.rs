@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::time::SystemTime;
 
+#[derive(Debug)]
 pub struct Status {
     pub status_id: i64,
     pub account_id: i64,
@@ -8,6 +9,7 @@ pub struct Status {
     pub created_at: SystemTime,
 }
 
+#[derive(Debug)]
 pub struct Engagement {
     pub account_id: i64,
     pub status_id: i64,

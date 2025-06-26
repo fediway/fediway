@@ -16,11 +16,11 @@ BEAT_SCHEDULE = {
         "schedule": 60,  # every 60 seconds
         "options": {"queue": "sources"},
     },
-    "popular-by-influential-accounts": {
-        "task": "sources.popular_by_influential_accounts",
-        "schedule": 60,  # every 60 seconds
-        "options": {"queue": "sources"},
-    },
+    # "popular-by-influential-accounts": {
+    #     "task": "sources.popular_by_influential_accounts",
+    #     "schedule": 60,  # every 60 seconds
+    #     "options": {"queue": "sources"},
+    # },
     # --- queue: schwarm ---
     "clearn-memgraph": {
         "task": "schwarm.clean_memgraph",

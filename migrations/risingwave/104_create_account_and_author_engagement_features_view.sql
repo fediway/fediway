@@ -12,7 +12,7 @@
       {% for id in group_id.split(',') -%}
         e.{{ id }}::BIGINT,
       {% endfor %}
-      COUNT(DISTINCT e.domain) AS disinct_domains_{{ spec }},
+      COUNT(*) AS all_count_{{ spec }},
       COUNT(*) FILTER (WHERE type = 'favourite') AS fav_count_{{ spec }},
       COUNT(*) FILTER (WHERE type = 'reblog') AS reblogs_count_{{ spec }},
       COUNT(*) FILTER (WHERE type = 'reply') AS replies_count_{{ spec }},
@@ -41,76 +41,76 @@
     );
   {% endfor %}
 
-  {% for type in ['favourite', 'reblog', 'reply'] -%}
-    {% for window_size, spec in specs %}
-      CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_is_{{ type }}_{{ spec }} AS
-      SELECT
-        MAX(event_time)::TIMESTAMP as event_time,
-        {% for id in group_id.split(',') -%}
-          e.{{ id }}::BIGINT,
-        {% endfor %}
-        COUNT(DISTINCT e.domain) AS disinct_domains_{{ spec }},
-        SUM(CASE WHEN has_image THEN 1 ELSE 0 END) as num_images_{{ spec }},
-        SUM(CASE WHEN has_gifv THEN 1 ELSE 0 END) as num_gifvs_{{ spec }},
-        SUM(CASE WHEN has_video THEN 1 ELSE 0 END) as num_videos_{{ spec }},
-        SUM(CASE WHEN has_audio THEN 1 ELSE 0 END) as num_audios_{{ spec }},
-        SUM(num_mentions) AS num_mentions_{{ spec }}
-      FROM enriched_status_engagement_events e
-      {% if group == 'account_author' %}
-        JOIN users u ON u.account_id = e.account_id
-      {% endif %}
-      WHERE type = '{{ type }}' 
-        AND event_time >= NOW() - INTERVAL '{{ window_size }}'
-      GROUP BY {% for id in group_id.split(',') -%} e.{{ id }}{% if not loop.last %}, {% endif %} {% endfor %};
+  -- {% for type in ['favourite', 'reblog', 'reply'] -%}
+  --   {% for window_size, spec in specs %}
+  --     CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_is_{{ type }}_{{ spec }} AS
+  --     SELECT
+  --       MAX(event_time)::TIMESTAMP as event_time,
+  --       {% for id in group_id.split(',') -%}
+  --         e.{{ id }}::BIGINT,
+  --       {% endfor %}
+  --       COUNT(*) AS all_count_{{ spec }},
+  --       SUM(CASE WHEN has_image THEN 1 ELSE 0 END) as num_images_{{ spec }},
+  --       SUM(CASE WHEN has_gifv THEN 1 ELSE 0 END) as num_gifvs_{{ spec }},
+  --       SUM(CASE WHEN has_video THEN 1 ELSE 0 END) as num_videos_{{ spec }},
+  --       SUM(CASE WHEN has_audio THEN 1 ELSE 0 END) as num_audios_{{ spec }},
+  --       SUM(num_mentions) AS num_mentions_{{ spec }}
+  --     FROM enriched_status_engagement_events e
+  --     {% if group == 'account_author' %}
+  --       JOIN users u ON u.account_id = e.account_id
+  --     {% endif %}
+  --     WHERE type = '{{ type }}' 
+  --       AND event_time >= NOW() - INTERVAL '{{ window_size }}'
+  --     GROUP BY {% for id in group_id.split(',') -%} e.{{ id }}{% if not loop.last %}, {% endif %} {% endfor %};
 
-      CREATE SINK IF NOT EXISTS {{ group }}_engagement_is_{{ type }}_{{ spec }}_sink
-      FROM {{ group }}_engagement_is_{{ type }}_{{ spec }}
-      WITH (
-        connector='kafka',
-        properties.bootstrap.server='${bootstrap_server}',
-        topic='{{ group }}_engagement_is_{{ type }}_{{ spec }}',
-        primary_key='{{ group_id }}',
-        properties.linger.ms='30000',
-      ) FORMAT PLAIN ENCODE JSON (
-        force_append_only='true'
-      );
-    {% endfor %}
-  {% endfor %}
+  --     CREATE SINK IF NOT EXISTS {{ group }}_engagement_is_{{ type }}_{{ spec }}_sink
+  --     FROM {{ group }}_engagement_is_{{ type }}_{{ spec }}
+  --     WITH (
+  --       connector='kafka',
+  --       properties.bootstrap.server='${bootstrap_server}',
+  --       topic='{{ group }}_engagement_is_{{ type }}_{{ spec }}',
+  --       primary_key='{{ group_id }}',
+  --       properties.linger.ms='30000',
+  --     ) FORMAT PLAIN ENCODE JSON (
+  --       force_append_only='true'
+  --     );
+  --   {% endfor %}
+  -- {% endfor %}
 
-  {% for media in ['image', 'gifv', 'video'] -%}
-    {% for window_size, spec in specs %}
-      CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_has_{{ media }}_{{ spec }} AS
-      SELECT
-        MAX(event_time)::TIMESTAMP as event_time,
-        {% for id in group_id.split(',') -%}
-          e.{{ id }}::BIGINT,
-        {% endfor %}
-        COUNT(DISTINCT e.domain) AS disinct_domains_{{ spec }},
-        COUNT(*) FILTER (WHERE type = 'favourite') AS fav_count_{{ spec }},
-        COUNT(*) FILTER (WHERE type = 'reblog') AS reblogs_count_{{ spec }},
-        COUNT(*) FILTER (WHERE type = 'reply') AS replies_count_{{ spec }},
-        SUM(num_mentions) AS num_mentions_{{ spec }}
-      FROM enriched_status_engagement_events e
-      {% if group == 'account_author' %}
-        JOIN users u ON u.account_id = e.account_id
-      {% endif %}
-      WHERE has_{{ media }}
-        AND event_time >= NOW() - INTERVAL '{{ window_size }}'
-      GROUP BY {% for id in group_id.split(',') -%} e.{{ id }}{% if not loop.last %}, {% endif %} {% endfor %};
+  -- {% for media in ['image', 'gifv', 'video'] -%}
+  --   {% for window_size, spec in specs %}
+  --     CREATE MATERIALIZED VIEW IF NOT EXISTS {{ group }}_engagement_has_{{ media }}_{{ spec }} AS
+  --     SELECT
+  --       MAX(event_time)::TIMESTAMP as event_time,
+  --       {% for id in group_id.split(',') -%}
+  --         e.{{ id }}::BIGINT,
+  --       {% endfor %}
+  --       COUNT(*) AS all_count_{{ spec }},
+  --       COUNT(*) FILTER (WHERE type = 'favourite') AS fav_count_{{ spec }},
+  --       COUNT(*) FILTER (WHERE type = 'reblog') AS reblogs_count_{{ spec }},
+  --       COUNT(*) FILTER (WHERE type = 'reply') AS replies_count_{{ spec }},
+  --       SUM(num_mentions) AS num_mentions_{{ spec }}
+  --     FROM enriched_status_engagement_events e
+  --     {% if group == 'account_author' %}
+  --       JOIN users u ON u.account_id = e.account_id
+  --     {% endif %}
+  --     WHERE has_{{ media }}
+  --       AND event_time >= NOW() - INTERVAL '{{ window_size }}'
+  --     GROUP BY {% for id in group_id.split(',') -%} e.{{ id }}{% if not loop.last %}, {% endif %} {% endfor %};
 
-      CREATE SINK IF NOT EXISTS {{ group }}_engagement_has_{{ media }}_{{ spec }}_sink
-      FROM {{ group }}_engagement_has_{{ media }}_{{ spec }}
-      WITH (
-        connector='kafka',
-        properties.bootstrap.server='${bootstrap_server}',
-        topic='{{ group }}_engagement_has_{{ media }}_{{ spec }}',
-        primary_key='{{ group_id }}',
-        properties.linger.ms='30000',
-      ) FORMAT PLAIN ENCODE JSON (
-        force_append_only='true'
-      );
-    {% endfor %}
-  {% endfor -%}
+  --     CREATE SINK IF NOT EXISTS {{ group }}_engagement_has_{{ media }}_{{ spec }}_sink
+  --     FROM {{ group }}_engagement_has_{{ media }}_{{ spec }}
+  --     WITH (
+  --       connector='kafka',
+  --       properties.bootstrap.server='${bootstrap_server}',
+  --       topic='{{ group }}_engagement_has_{{ media }}_{{ spec }}',
+  --       primary_key='{{ group_id }}',
+  --       properties.linger.ms='30000',
+  --     ) FORMAT PLAIN ENCODE JSON (
+  --       force_append_only='true'
+  --     );
+  --   {% endfor %}
+  -- {% endfor -%}
 {% endfor -%}
 
 -- :down

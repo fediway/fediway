@@ -4,6 +4,7 @@ use petgraph::graph::{NodeIndex, UnGraph};
 use rand::prelude::*;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct Communities(pub HashMap<i64, usize>);
 
 impl Into<(CsrMatrix<f64>, HashMap<i64, usize>)> for Communities {

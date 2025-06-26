@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     memorial BOOLEAN,
     actor_type VARCHAR,
     discoverable BOOLEAN,
-    also_known_as VARCHAR,
+    also_known_as VARCHAR[],
     silenced_at TIMESTAMP,
     suspended_at TIMESTAMP,
     trendable BOOLEAN,

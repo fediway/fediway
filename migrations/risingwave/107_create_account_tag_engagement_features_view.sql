@@ -7,6 +7,7 @@
         e.account_id,
         tag_id,
         MAX(event_time)::TIMESTAMP as event_time,
+        COUNT(*) AS all_count_{{ spec }},
         COUNT(*) FILTER (WHERE type = 'favourite') AS fav_count_{{ spec }},
         COUNT(*) FILTER (WHERE type = 'reblog') AS reblogs_count_{{ spec }},
         COUNT(*) FILTER (WHERE type = 'reply') AS replies_count_{{ spec }},

@@ -25,7 +25,7 @@ fn default_random_state() -> u64 {
     42
 }
 fn default_tag_sim_threshold() -> f64 {
-    0.1
+    0.25
 }
 fn default_max_producer_communities() -> usize {
     20

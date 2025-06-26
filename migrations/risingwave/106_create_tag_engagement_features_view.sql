@@ -6,6 +6,9 @@
     SELECT
         tag_id,
         MAX(event_time)::TIMESTAMP as event_time,
+        COUNT(DISTINCT e.account_id) AS num_engaged_accounts,
+        COUNT(DISTINCT e.author_id) AS num_authors,
+        COUNT(DISTINCT e.status_id) AS num_statuses,
         COUNT(*) FILTER (WHERE type = 'favourite') AS fav_count_{{ spec }},
         COUNT(*) FILTER (WHERE type = 'reblog') AS reblogs_count_{{ spec }},
         COUNT(*) FILTER (WHERE type = 'reply') AS replies_count_{{ spec }},
