@@ -1,10 +1,13 @@
-mod algo;
+mod communities;
 mod config;
-mod embeddings;
-mod models;
+mod embedding;
+mod init;
+mod kafka;
+mod orbit;
+mod qdrant;
 mod rw;
-mod services;
 mod sparse;
+mod types;
 
 #[tokio::main]
 async fn main() {
@@ -15,14 +18,11 @@ async fn main() {
         )
         .init();
 
-    tracing::info!("Starting orbit.");
+    tracing::info!("Starting orbit...");
 
     let config = config::Config::from_env();
 
-    tracing::info!("Loaded config.");
+    let orbit = orbit::Orbit::new(config.clone(), init::get_initial_embeddings(config).await);
 
-    let _embeddings =
-        services::compute_initial_embeddings::compute_initial_embeddings(&config).await;
-
-    tracing::info!("Done.");
+    orbit.start().await;
 }

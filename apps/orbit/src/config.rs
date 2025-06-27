@@ -42,6 +42,9 @@ fn default_max_status_communities() -> usize {
 fn default_lambda() -> f64 {
     0.05
 }
+fn default_workers() -> usize {
+    4
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -107,6 +110,9 @@ pub struct Config {
 
     #[serde(rename = "orbit_lambda", default = "default_lambda")]
     pub lambda: f64,
+
+    #[serde(rename = "orbit_workers", default = "default_workers")]
+    pub workers: usize,
 }
 
 impl Config {

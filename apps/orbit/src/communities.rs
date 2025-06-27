@@ -1,17 +1,17 @@
+use crate::types::{FastHashMap, FastHashSet};
 use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
 use petgraph::graph::{NodeIndex, UnGraph};
 use rand::prelude::*;
-use std::collections::HashMap;
 
 #[derive(Clone)]
-pub struct Communities(pub HashMap<i64, usize>);
+pub struct Communities(pub FastHashMap<i64, usize>);
 
-impl Into<(CsrMatrix<f64>, HashMap<i64, usize>)> for Communities {
-    fn into(self) -> (CsrMatrix<f64>, HashMap<i64, usize>) {
+impl Into<(CsrMatrix<f64>, FastHashMap<i64, usize>)> for Communities {
+    fn into(self) -> (CsrMatrix<f64>, FastHashMap<i64, usize>) {
         let n_rows = self.0.len();
         let n_cols = *self.0.values().max().unwrap() + 1;
         let mut matrix: CooMatrix<f64> = CooMatrix::zeros(n_rows, n_cols);
-        let mut tag_indices: HashMap<i64, usize> = HashMap::new();
+        let mut tag_indices: FastHashMap<i64, usize> = FastHashMap::default();
 
         for (tag, c_idx) in self.0.iter() {
             let next_idx = tag_indices.len();
@@ -34,7 +34,7 @@ pub fn weighted_louvain(
     let mut rng = StdRng::seed_from_u64(random_state);
 
     // Initialize each node in its own community
-    let mut communities: HashMap<_, _> = graph
+    let mut communities: FastHashMap<_, _> = graph
         .node_indices()
         .enumerate()
         .map(|(i, node)| (node, i))
@@ -42,7 +42,7 @@ pub fn weighted_louvain(
 
     // Precompute total edge weights and node degrees
     let total_weight: f64 = graph.edge_weights().sum();
-    let node_weights: HashMap<_, _> = graph
+    let node_weights: FastHashMap<_, _> = graph
         .node_indices()
         .map(|node| {
             let weight: f64 = graph.edges(node).map(|edge| edge.weight()).sum();
@@ -65,7 +65,7 @@ pub fn weighted_louvain(
             let current_community = communities[&node];
 
             // Calculate weight of edges from node to each neighboring community
-            let mut neighbor_communities: HashMap<usize, f64> = HashMap::new();
+            let mut neighbor_communities: FastHashMap<usize, f64> = FastHashMap::default();
 
             for neighbor in graph.neighbors(node) {
                 let neighbor_comm = communities[&neighbor];
@@ -112,7 +112,7 @@ pub fn weighted_louvain(
         }
     }
 
-    let mut community_indices: HashMap<usize, usize> = HashMap::new();
+    let mut community_indices: FastHashMap<usize, usize> = FastHashMap::default();
 
     for (_, c) in communities.iter() {
         if !community_indices.contains_key(c) {
@@ -139,9 +139,9 @@ fn calculate_modularity_gain(
     node: NodeIndex,
     from_comm: usize,
     to_comm: usize,
-    communities: &HashMap<NodeIndex, usize>,
+    communities: &FastHashMap<NodeIndex, usize>,
     weight_to_comm: f64,
-    node_weights: &HashMap<NodeIndex, f64>,
+    node_weights: &FastHashMap<NodeIndex, f64>,
     total_weight: f64,
     resolution: f64,
 ) -> f64 {

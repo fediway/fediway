@@ -1,7 +1,7 @@
-use crate::models::{Engagement, Status};
+use crate::kafka::{EngagementEvent, StatusEvent};
+use crate::types::{FastHashMap, FastHashSet};
 use itertools::Itertools;
 use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
-use std::collections::{HashMap, HashSet};
 use std::time::SystemTime;
 use tokio_postgres::{Client, types::ToSql};
 
@@ -16,8 +16,8 @@ pub async fn get_tag_similarities(db: &Client) -> impl Iterator<Item = (i64, i64
         ) as cosine_sim
     FROM orbit_account_tag_engagements e1
     JOIN orbit_account_tag_engagements e2 ON e2.account_id = e1.account_id
-    JOIN orbit_tag_performance t1 ON t1.tag_id = e1.tag_id AND t1.num_authors > 1 AND t1.num_engaged_accounts >= 15
-    JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id AND t1.num_authors > 1 AND t2.num_engaged_accounts >= 15
+    JOIN orbit_tag_performance t1 ON t1.tag_id = e1.tag_id AND t1.num_authors > 2 AND t1.num_engaged_accounts >= 10
+    JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id AND t1.num_authors > 2 AND t2.num_engaged_accounts >= 10
     WHERE e1.tag_id < e2.tag_id
     GROUP BY e1.tag_id, e2.tag_id;
     "#;
@@ -31,8 +31,8 @@ pub async fn get_tag_similarities(db: &Client) -> impl Iterator<Item = (i64, i64
     })
 }
 
-pub async fn get_tag_names(db: &Client, tags: &[i64]) -> HashMap<i64, String> {
-    let mut tag_names = HashMap::new();
+pub async fn get_tag_names(db: &Client, tags: &[i64]) -> FastHashMap<i64, String> {
+    let mut tag_names = FastHashMap::default();
 
     for t in tags.chunks(1000) {
         let placeholders: Vec<String> = (1..=t.len()).map(|i| format!("${}", i)).collect();
@@ -58,8 +58,8 @@ pub async fn get_tag_names(db: &Client, tags: &[i64]) -> HashMap<i64, String> {
 
 pub async fn get_at_matrix(
     db: &Client,
-    tag_indices: &HashMap<i64, usize>,
-) -> (CsrMatrix<f64>, HashMap<i64, usize>) {
+    tag_indices: &FastHashMap<i64, usize>,
+) -> (CsrMatrix<f64>, FastHashMap<i64, usize>) {
     let mut entries = Vec::new();
     for tags in tag_indices
         .keys()
@@ -96,7 +96,7 @@ pub async fn get_at_matrix(
     let n_rows = entries.iter().map(|(a, _, _)| a).unique().count();
     let n_cols = tag_indices.len();
     let mut matrix = CooMatrix::zeros(n_rows, n_cols);
-    let mut account_indices: HashMap<i64, usize> = HashMap::new();
+    let mut account_indices: FastHashMap<i64, usize> = FastHashMap::default();
 
     for (account_id, tag_id, value) in entries.into_iter() {
         let next_idx = account_indices.len();
@@ -113,8 +113,8 @@ pub async fn get_at_matrix(
 
 pub async fn get_ta_matrix(
     db: &Client,
-    account_indices: &HashMap<i64, usize>,
-) -> (CsrMatrix<f64>, HashMap<i64, usize>) {
+    account_indices: &FastHashMap<i64, usize>,
+) -> (CsrMatrix<f64>, FastHashMap<i64, usize>) {
     let query = r#"
     SELECT
         e.account_id,
@@ -142,7 +142,7 @@ pub async fn get_ta_matrix(
         .count();
     let n_cols = account_indices.len();
     let mut matrix = CooMatrix::zeros(n_rows, n_cols);
-    let mut tag_indices: HashMap<i64, usize> = HashMap::new();
+    let mut tag_indices: FastHashMap<i64, usize> = FastHashMap::default();
 
     for row in rows.into_iter() {
         let account_id: i64 = row.get(0);
@@ -162,8 +162,8 @@ pub async fn get_ta_matrix(
 
 pub async fn get_pa_matrix(
     db: &Client,
-    account_indices: &HashMap<i64, usize>,
-) -> (CsrMatrix<f64>, HashMap<i64, usize>) {
+    account_indices: &FastHashMap<i64, usize>,
+) -> (CsrMatrix<f64>, FastHashMap<i64, usize>) {
     let query = r#"
     SELECT
         e.account_id,
@@ -190,7 +190,7 @@ pub async fn get_pa_matrix(
         .unique()
         .count();
     let mut matrix = CooMatrix::zeros(n_rows, n_cols);
-    let mut producer_indices: HashMap<i64, usize> = HashMap::new();
+    let mut producer_indices: FastHashMap<i64, usize> = FastHashMap::default();
 
     for row in rows.into_iter() {
         let account_id: i64 = row.get(0);
@@ -210,8 +210,8 @@ pub async fn get_pa_matrix(
 
 pub async fn get_pt_matrix(
     db: &Client,
-    producer_indices: &HashMap<i64, usize>,
-    tag_indices: &HashMap<i64, usize>,
+    producer_indices: &FastHashMap<i64, usize>,
+    tag_indices: &FastHashMap<i64, usize>,
 ) -> CsrMatrix<f64> {
     let placeholders: Vec<String> = (1..=tag_indices.len()).map(|i| format!("${}", i)).collect();
     let query = format!(
@@ -253,7 +253,7 @@ pub async fn get_pt_matrix(
     CsrMatrix::from(&matrix)
 }
 
-pub async fn get_initial_engagements(db: &Client) -> impl Iterator<Item = (Status, Engagement)> {
+pub async fn get_initial_engagements(db: &Client) -> impl Iterator<Item = (StatusEvent, EngagementEvent)> {
     let query = r#"
     SELECT
         e.status_id, 
@@ -281,15 +281,15 @@ pub async fn get_initial_engagements(db: &Client) -> impl Iterator<Item = (Statu
         let event_time: SystemTime = row.get(3);
         let created_at: SystemTime = row.get(4);
         let tags: Option<Vec<i64>> = row.get(5);
-        let tags: HashSet<i64> = tags.unwrap_or_default().into_iter().collect();
+        let tags: FastHashSet<i64> = tags.unwrap_or_default().into_iter().collect();
 
-        let status = Status {
+        let status = StatusEvent {
             status_id,
             account_id: author_id,
             tags,
             created_at,
         };
-        let engagement = Engagement {
+        let engagement = EngagementEvent {
             account_id,
             status_id,
             author_id,

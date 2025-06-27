@@ -1,6 +1,7 @@
 use sprs::CsVec;
 use std::ops::{AddAssign, Mul, MulAssign};
 
+#[derive(Clone)]
 pub struct SparseVec(pub CsVec<f64>);
 
 impl SparseVec {
@@ -76,5 +77,17 @@ impl MulAssign<f64> for SparseVec {
 impl AddAssign<&SparseVec> for SparseVec {
     fn add_assign(&mut self, rhs: &SparseVec) {
         self.0 = (&self.0 + &rhs.0).to_owned();
+    }
+}
+
+pub fn cosine_similarity(a: &SparseVec, b: &SparseVec) -> f64 {
+    let dot_product = a.0.dot(&b.0);
+    let a_norm = a.0.l2_norm();
+    let b_norm = b.0.l2_norm();
+
+    if a_norm == 0.0 || b_norm == 0.0 {
+        0.0
+    } else {
+        dot_product / (a_norm * b_norm)
     }
 }
