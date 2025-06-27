@@ -1,6 +1,4 @@
-use nalgebra_sparse::csr::CsrMatrix;
-use std::cmp;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 
 use crate::algo::weighted_louvain::Communities;
 use crate::models::{Engagement, Status};
@@ -25,7 +23,7 @@ impl Embedding {
         }
     }
 
-    pub fn new(dim: usize, vec: SparseVec, confidence: f64) -> Self {
+    pub fn new(vec: SparseVec, confidence: f64) -> Self {
         Self {
             vec,
             confidence,
@@ -95,11 +93,11 @@ impl Embeddings {
         }
     }
 
-    fn get_weighted_tags_embedding(&self, tags: &Vec<i64>) -> Option<Embedding> {
+    fn get_weighted_tags_embedding(&self, tags: &[i64]) -> Option<Embedding> {
         let tag_embeddings: Vec<&Embedding> =
             tags.iter().filter_map(|t| self.tags.get(t)).collect();
 
-        if tag_embeddings.len() == 0 {
+        if tag_embeddings.is_empty() {
             return None;
         }
 
@@ -116,7 +114,7 @@ impl Embeddings {
             vec += &(e.vec.to_owned() * (c / total_confidence));
         }
 
-        Some(Embedding::new(self.dim, vec, avg_confidence))
+        Some(Embedding::new(vec, avg_confidence))
     }
 
     pub fn push_status(&mut self, status: Status) {
@@ -133,7 +131,7 @@ impl Embeddings {
 
         self.statuses.insert(status.status_id, status_embedding);
 
-        if status.tags.len() > 0 {
+        if !status.tags.is_empty() {
             self.statuses_tags.insert(status.status_id, tags);
         }
 
@@ -152,13 +150,13 @@ impl Embeddings {
         if a_embedding.is_zero() {
             return;
         }
-        
+
         if let Some(s_embedding) = self.statuses.get_mut(&engagement.status_id) {
             // 1. udpate status embedding
-            s_embedding.update(&a_embedding);
+            s_embedding.update(a_embedding);
 
             // 2.1 udpate consumer embedding
-            a_embedding.update(&s_embedding);
+            a_embedding.update(s_embedding);
 
             if let Some(t_embedding) = t_embedding {
                 // 2.2 udpate consumer embedding
@@ -168,17 +166,16 @@ impl Embeddings {
 
         if let Some(p_embedding) = self.producers.get_mut(&engagement.status_id) {
             // 3. update producer embedding
-            p_embedding.update(&a_embedding);
+            p_embedding.update(a_embedding);
         }
 
-        
         for tag in tags {
             if let Some(t_embedding) = self.tags.get_mut(&tag) {
                 // 4. update tag embedding
-                t_embedding.update(&a_embedding);
+                t_embedding.update(a_embedding);
             }
         }
-        
+
         // tracing::info!("Added engagement {} -> {}", engagement.account_id, engagement.status_id);
     }
 }

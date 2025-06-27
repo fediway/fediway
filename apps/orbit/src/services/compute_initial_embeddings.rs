@@ -6,7 +6,6 @@ use crate::sparse::SparseVec;
 use itertools::Itertools;
 use nalgebra_sparse::csr::CsrMatrix;
 use std::collections::{HashMap, HashSet};
-use tokio_postgres::Client;
 use std::time::Instant;
 
 fn get_embeddings(
@@ -24,12 +23,12 @@ fn get_embeddings(
                 .map(|(account_id, _)| account_id),
         )
         .map(|(row, account_id)| {
-            let indices: Vec<usize> = row.col_indices().clone().into();
-            let values: Vec<f64> = row.values().clone().into();
+            let indices: Vec<usize> = row.col_indices().into();
+            let values: Vec<f64> = row.values().into();
             let confidence = confidence_scores.get(account_id).unwrap();
             let mut vec = SparseVec::new(dim, indices, values);
             vec.l1_normalize();
-            let embedding = Embedding::new(dim, vec, *confidence);
+            let embedding = Embedding::new(vec, *confidence);
             (*account_id, embedding)
         })
         .collect()
@@ -47,9 +46,9 @@ pub async fn compute_initial_embeddings(config: &Config) {
     });
 
     // 1. compute communities
-    let communities = compute_communities(&config, &db).await;
+    let communities = compute_communities(config, &db).await;
 
-    let tags: Vec<_> = communities.0.iter().map(|(tag, _)| *tag).collect();
+    let tags: Vec<_> = communities.0.keys().copied().collect();
     let tag_names = rw::get_tag_names(&db, &tags).await;
     let mut community_tags: HashMap<usize, HashSet<String>> = HashMap::new();
     for (tag, c) in communities.0.iter() {
@@ -145,7 +144,8 @@ pub async fn compute_initial_embeddings(config: &Config) {
         get_embeddings(dim, ac_matrix, a_indices, a_confidence);
     let producers: HashMap<i64, Embedding> =
         get_embeddings(dim, pc_matrix, p_indices, p_confidence);
-    let mut tags: HashMap<i64, Embedding> = get_embeddings(dim, tc2_matrix, t2_indices, t_confidence);
+    let mut tags: HashMap<i64, Embedding> =
+        get_embeddings(dim, tc2_matrix, t2_indices, t_confidence);
 
     for tag in communities.0.keys() {
         tags.get_mut(tag).unwrap().confidence = 1.0;
@@ -177,7 +177,12 @@ pub async fn compute_initial_embeddings(config: &Config) {
     if let Some(e) = embeddings.consumers.get(&114712296598632158) {
         println!("{:?}", e.vec.0);
 
-        for (i, score) in e.vec.0.iter().sorted_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Less)) {
+        for (i, score) in e
+            .vec
+            .0
+            .iter()
+            .sorted_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+        {
             println!("{}: {} -> {:?}", i, score, community_tags.get(&i));
         }
     } else {

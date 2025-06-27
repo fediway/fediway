@@ -21,7 +21,7 @@ async fn main() {
 
     tracing::info!("Loaded config.");
 
-    let embeddings =
+    let _embeddings =
         services::compute_initial_embeddings::compute_initial_embeddings(&config).await;
 
     tracing::info!("Done.");

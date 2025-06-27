@@ -1,4 +1,3 @@
-use itertools::{CombinationsWithReplacement, Itertools};
 use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
 use petgraph::graph::{NodeIndex, UnGraph};
 use rand::prelude::*;
@@ -10,7 +9,7 @@ pub struct Communities(pub HashMap<i64, usize>);
 impl Into<(CsrMatrix<f64>, HashMap<i64, usize>)> for Communities {
     fn into(self) -> (CsrMatrix<f64>, HashMap<i64, usize>) {
         let n_rows = self.0.len();
-        let n_cols = *self.0.iter().map(|(_, c)| c).max().unwrap() + 1;
+        let n_cols = *self.0.values().max().unwrap() + 1;
         let mut matrix: CooMatrix<f64> = CooMatrix::zeros(n_rows, n_cols);
         let mut tag_indices: HashMap<i64, usize> = HashMap::new();
 
@@ -173,10 +172,8 @@ fn calculate_modularity_gain(
     let node_degree = node_weights[&node];
 
     // Modularity gain calculation
-    let gain = (weight_to_comm - weight_to_current)
+    (weight_to_comm - weight_to_current)
         - resolution
             * node_degree
-            * ((to_comm_weight - from_comm_weight + node_degree) / (2.0 * total_weight));
-
-    gain
+            * ((to_comm_weight - from_comm_weight + node_degree) / (2.0 * total_weight))
 }

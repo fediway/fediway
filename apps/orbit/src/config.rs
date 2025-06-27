@@ -89,7 +89,7 @@ pub struct Config {
 
     #[serde(
         rename = "orbit_max_consumer_communities",
-        default = "default_max_producer_communities"
+        default = "default_max_consumer_communities"
     )]
     pub max_consumer_communities: usize,
 

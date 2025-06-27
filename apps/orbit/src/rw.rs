@@ -1,9 +1,9 @@
+use crate::models::{Engagement, Status};
 use itertools::Itertools;
 use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
 use std::collections::{HashMap, HashSet};
-use tokio_postgres::{Client, types::ToSql};
-use crate::models::{Status, Engagement};
 use std::time::SystemTime;
+use tokio_postgres::{Client, types::ToSql};
 
 pub async fn get_tag_similarities(db: &Client) -> impl Iterator<Item = (i64, i64, f64)> {
     let query = r#"
@@ -16,8 +16,8 @@ pub async fn get_tag_similarities(db: &Client) -> impl Iterator<Item = (i64, i64
         ) as cosine_sim
     FROM orbit_account_tag_engagements e1
     JOIN orbit_account_tag_engagements e2 ON e2.account_id = e1.account_id
-    JOIN orbit_tag_performance t1 ON t1.tag_id = e1.tag_id AND t1.num_engaged_accounts >= 5
-    JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id AND t2.num_engaged_accounts >= 5
+    JOIN orbit_tag_performance t1 ON t1.tag_id = e1.tag_id AND t1.num_authors > 1 AND t1.num_engaged_accounts >= 15
+    JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id AND t1.num_authors > 1 AND t2.num_engaged_accounts >= 15
     WHERE e1.tag_id < e2.tag_id
     GROUP BY e1.tag_id, e2.tag_id;
     "#;
@@ -31,7 +31,7 @@ pub async fn get_tag_similarities(db: &Client) -> impl Iterator<Item = (i64, i64
     })
 }
 
-pub async fn get_tag_names(db: &Client, tags: &Vec<i64>) -> HashMap<i64, String> {
+pub async fn get_tag_names(db: &Client, tags: &[i64]) -> HashMap<i64, String> {
     let mut tag_names = HashMap::new();
 
     for t in tags.chunks(1000) {
@@ -208,54 +208,6 @@ pub async fn get_pa_matrix(
     (CsrMatrix::from(&matrix), producer_indices)
 }
 
-pub async fn get_ap_matrix(
-    db: &Client,
-    producer_indices: &HashMap<i64, usize>,
-) -> (CsrMatrix<f64>, HashMap<i64, usize>) {
-    let query = r#"
-    SELECT
-        e.account_id,
-        e.author_id,
-        COUNT(DISTINCT e.status_id) as count
-    FROM enriched_status_engagement_events e
-    WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
-    GROUP BY e.account_id, e.author_id;
-    "#;
-
-    let rows = db.query(query, &[]).await.unwrap();
-    let n_cols = producer_indices.len();
-    let n_rows = rows
-        .iter()
-        .filter_map(|r| {
-            let account_id: i64 = r.get(0);
-            let producer_id: i64 = r.get(1);
-            if producer_indices.contains_key(&producer_id) {
-                Some(account_id)
-            } else {
-                None
-            }
-        })
-        .unique()
-        .count();
-    let mut matrix = CooMatrix::zeros(n_rows, n_cols);
-    let mut account_indices: HashMap<i64, usize> = HashMap::new();
-
-    for row in rows.into_iter() {
-        let producer_id: i64 = row.get(1);
-
-        if let Some(p_idx) = producer_indices.get(&producer_id) {
-            let account_id: i64 = row.get(0);
-            let value: i64 = row.get(2);
-            let next_idx = account_indices.len();
-            let a_idx = *account_indices.entry(account_id).or_insert(next_idx);
-
-            matrix.push(a_idx, *p_idx, value as f64);
-        }
-    }
-
-    (CsrMatrix::from(&matrix), account_indices)
-}
-
 pub async fn get_pt_matrix(
     db: &Client,
     producer_indices: &HashMap<i64, usize>,
@@ -322,30 +274,28 @@ pub async fn get_initial_engagements(db: &Client) -> impl Iterator<Item = (Statu
 
     let rows = db.query(query, &[]).await.unwrap();
 
-    rows
-        .into_iter()
-        .map(|row| {
-            let status_id: i64 = row.get(0);
-            let account_id: i64 = row.get(1);
-            let author_id: i64 = row.get(2);
-            let event_time: SystemTime = row.get(3);
-            let created_at: SystemTime = row.get(4);
-            let tags: Option<Vec<i64>> = row.get(5);
-            let tags: HashSet<i64> = tags.unwrap_or_else(|| Vec::new()).into_iter().collect();
+    rows.into_iter().map(|row| {
+        let status_id: i64 = row.get(0);
+        let account_id: i64 = row.get(1);
+        let author_id: i64 = row.get(2);
+        let event_time: SystemTime = row.get(3);
+        let created_at: SystemTime = row.get(4);
+        let tags: Option<Vec<i64>> = row.get(5);
+        let tags: HashSet<i64> = tags.unwrap_or_default().into_iter().collect();
 
-            let status = Status {
-                status_id, 
-                account_id: author_id,
-                tags,
-                created_at
-            };
-            let engagement = Engagement {
-                account_id, 
-                status_id,
-                author_id,
-                event_time
-            };
+        let status = Status {
+            status_id,
+            account_id: author_id,
+            tags,
+            created_at,
+        };
+        let engagement = Engagement {
+            account_id,
+            status_id,
+            author_id,
+            event_time,
+        };
 
-            (status, engagement)
-        })
+        (status, engagement)
+    })
 }

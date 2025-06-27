@@ -33,9 +33,9 @@ pub async fn compute_communities(config: &Config, db: &Client) -> Communities {
         config.random_state,
     );
 
-    let num_communities = communities.0.iter().map(|(_, c)| c).max().unwrap() + 1;
+    let num_communities = communities.0.values().max().unwrap() + 1;
     let num_tags = communities.0.len();
-    let tags: Vec<_> = communities.0.iter().map(|(tag, _)| *tag).collect();
+    let tags: Vec<_> = communities.0.keys().copied().collect();
     let tag_names = rw::get_tag_names(db, &tags).await;
 
     let mut community_tags: HashMap<usize, HashSet<String>> = HashMap::new();
