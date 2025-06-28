@@ -76,7 +76,6 @@ async def home_timeline(
         .sources(_map_sources(in_network_sources), group="in-network")
         .sources(_map_sources(near_network_sources), group="near-network")
         .sources(_map_sources(out_network_sources), group="out-network")
-        .rank(kirby, kirby_features)
         .diversify(by="status:account_id", penalty=0.1)
         .sample(
             config.fediway.feed_batch_size,
