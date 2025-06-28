@@ -14,9 +14,9 @@ class StoreViralSourceService:
     def _get_languages(self) -> list[str]:
         query = """
         SELECT DISTINCT s.language 
-        FROM status_scores sc
+        FROM status_viral_scores v
         JOIN statuses s 
-        ON s.id = sc.status_id
+        ON s.id = v.status_id
         AND s.language IS NOT NULL;
         """
 
