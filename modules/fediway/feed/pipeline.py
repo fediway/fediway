@@ -102,9 +102,9 @@ class CandidateList:
 
         for candidate, sources in other._sources.items():
             if candidate not in self._sources:
-                self._souces[candidate] = sources
+                self._sources[candidate] = sources
             else:
-                self._souces[candidate] |= sources
+                self._sources[candidate] |= sources
 
         return self
 
@@ -408,9 +408,11 @@ class SamplingStep(PipelineStep):
                 self.seen.add(candidate.id)
 
                 for heuristic in self.heuristics:
-                    features = (await self.feature_service.get(
-                        [{self.entity: candidate.id}], heuristic.features
-                    )).values[0]
+                    features = (
+                        await self.feature_service.get(
+                            [{self.entity: candidate.id}], heuristic.features
+                        )
+                    ).values[0]
                     heuristic.update_seen(candidate, features)
 
                 break
