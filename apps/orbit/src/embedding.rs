@@ -109,7 +109,7 @@ pub struct StatusEvent {
 
 impl StatusEvent {
     pub fn age_in_seconds(&self) -> u64 {
-        self.created_at.elapsed().unwrap().as_secs()
+        self.created_at.elapsed().unwrap_or_default().as_secs()
     }
 }
 

@@ -50,9 +50,8 @@ impl Orbit {
         // publish embedding version
         if let Err(e) = self.publish() {
             tracing::error!("Failed to publish embedding version to redis: {}", e);
+            return;
         }
-
-        return;
 
         // start embedding workers
         let embedding_workers: Vec<JoinHandle<()>> = (0..self.config.workers)
