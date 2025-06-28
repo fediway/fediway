@@ -3,7 +3,7 @@ FROM rust:1.86-slim-bookworm AS builder
 
 # Install required system dependencies
 RUN apt-get update && \
-    apt-get install -y pkg-config libssl-dev && \
+    apt-get install -y build-essential pkg-config libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # Create app directory and set as workdir
