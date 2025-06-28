@@ -1,12 +1,11 @@
+use serde::Deserialize;
+
 use crate::communities::Communities;
 use crate::config::Config;
 use crate::sparse::SparseVec;
 use crate::types::{FastDashMap, FastHashSet};
+use crate::utils::deserialize_timestamp;
 use std::time::SystemTime;
-
-const ALPHA: f64 = 0.01;
-const BETA: f64 = 0.1;
-const DECAY: f64 = 0.005;
 
 pub enum EmbeddingType {
     Consumer,
@@ -48,26 +47,50 @@ impl Embedding {
     }
 
     pub fn update(&mut self, embedding: &Embedding) {
-        let beta = (ALPHA * embedding.confidence)
-            .max(1.0 / ((self.updates as f64) + 1.0))
-            .max(DECAY);
-        let decay = DECAY.min(beta);
-        // let decay = 0.2;
+        // let beta = (ALPHA * embedding.confidence)
+        //     .max(1.0 / ((self.updates as f64) + 1.0))
+        //     .max(DECAY);
+        // let decay = DECAY.min(beta);
 
-        // self.vec *= 0.9;
+        // let alpha = 1.0;
+
+        // self.vec *= self.confidence.min(1.0);
+        // self.vec += &(embedding.vec.to_owned() * alpha * embedding.confidence);
+        // self.vec *= 1.0 / (self.confidence.min(1.0) + alpha * embedding.confidence + 0.00001);
+
+        // let beta = embedding.confidence / (embedding.confidence * 5.0);
+        // let k = 0.7;
+        // let lambda = 0.5;
+        // self.confidence += beta * (1.0 + embedding.confidence * k * (-lambda * self.confidence).exp());
+
+        // let decay = 0.2;
+        // self.vec *= 0.2;
         // self.vec += &SparseVec::new(
         //     embedding.vec.0.dim(),
         //     embedding.vec.0.indices().iter().cloned().collect(),
-        //     embedding.vec.0.data().iter().map(|_| 1.0).collect()
+        //     embedding.vec.0.data().iter().map(|x| x.min(1.0)).collect()
         // );
 
-        self.vec *= 1.0 - decay;
-        self.vec += &(embedding.vec.to_owned() * beta);
-        self.vec.l1_normalize();
+        // let a_weight = self.confidence.max(0.1);
+        let a_weight = 0.1;
+        let b_weight = self.confidence.max(0.1);
+
+        self.vec *= a_weight;
+        self.vec += &(embedding.vec.to_owned() * b_weight);
+        self.vec *= 1.0 / (a_weight + b_weight);
+        // self.vec += &(embedding.vec.to_owned() * beta);
+        // self.vec.l1_normalize();
+        self.confidence +=
+            (1.0 - self.confidence) * (embedding.confidence / (embedding.confidence + 1.0));
+
+        // self.vec *= 1.0 - embedding.confidence;
+        // self.vec += &embedding.vec;
+        // // self.vec += &(embedding.vec.to_owned() * beta);
+        // self.vec.l1_normalize();
+        // self.confidence += (1.0 - self.confidence) * BETA * embedding.confidence;
+
         self.updates += 1;
-        self.confidence += (1.0 - self.confidence) * BETA * embedding.confidence;
         self.is_dirty = true;
-        self.vec.keep_top_n(15);
     }
 
     pub fn is_zero(&self) -> bool {
@@ -75,11 +98,12 @@ impl Embedding {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct StatusEvent {
     pub status_id: i64,
     pub account_id: i64,
-    pub tags: FastHashSet<i64>,
+    pub tags: Option<FastHashSet<i64>>,
+    #[serde(deserialize_with = "deserialize_timestamp")]
     pub created_at: SystemTime,
 }
 
@@ -89,11 +113,12 @@ impl StatusEvent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct EngagementEvent {
     pub account_id: i64,
     pub status_id: i64,
     pub author_id: i64,
+    #[serde(deserialize_with = "deserialize_timestamp")]
     pub event_time: SystemTime,
 }
 
@@ -118,10 +143,10 @@ impl Embeddings {
     ) -> Self {
         Self {
             config,
-            communities: communities,
-            consumers: consumers,
-            producers: producers,
-            tags: tags,
+            communities,
+            consumers,
+            producers,
+            tags,
             statuses: FastDashMap::default(),
             statuses_tags: FastDashMap::default(),
             statuses_dt: FastDashMap::default(),
@@ -175,7 +200,7 @@ impl Embeddings {
         }
 
         let mut status_embedding = Embedding::empty(self.communities.dim);
-        let tags: Vec<i64> = status.tags.iter().cloned().collect();
+        let tags: Vec<i64> = status.tags.unwrap_or_default().iter().cloned().collect();
 
         if let Some(p_embedding) = self.producers.get(&status.account_id) {
             status_embedding.update(p_embedding.value());
@@ -188,7 +213,7 @@ impl Embeddings {
         self.statuses.insert(status.status_id, status_embedding);
         self.statuses_dt.insert(status.status_id, status.created_at);
 
-        if !status.tags.is_empty() {
+        if !tags.is_empty() {
             self.statuses_tags.insert(status.status_id, tags);
         }
     }

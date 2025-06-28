@@ -8,11 +8,11 @@ use qdrant_client::qdrant::{
     DeletePointsBuilder, NamedVectors, PointId, PointStruct, PointsIdsList, UpsertPointsBuilder,
     Vector,
 };
-use qdrant_client::{Payload, Qdrant};
+use qdrant_client::{Payload, Qdrant, QdrantError};
+use tokio::task::JoinHandle;
 use tokio::time::{Duration, Instant, sleep};
 
 const MAX_WAIT_TIME: Duration = Duration::from_secs(1);
-const MAX_BATCH_SIZE: usize = 100;
 
 pub struct QdrantWorker {
     config: Config,
@@ -26,7 +26,20 @@ impl QdrantWorker {
         Self { config, client }
     }
 
-    pub async fn start_batch_processor(&self, mut rx: UnboundedReceiver<QdrantTask>) {
+    pub fn start(self, rx: UnboundedReceiver<QdrantTask>) -> JoinHandle<()> {
+        tracing::info!("Starting qdrant worker");
+
+        tokio::spawn(async move {
+            if let Err(e) = self.run_batch_processor(rx).await {
+                tracing::error!("Qdrant worker failed: {}", e);
+            }
+        })
+    }
+
+    async fn run_batch_processor(
+        &self,
+        mut rx: UnboundedReceiver<QdrantTask>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut buffer: Vec<QdrantTask> = Vec::with_capacity(self.config.qdrant_max_batch_size);
         let deadline = sleep(MAX_WAIT_TIME);
         let client = &self.client;
@@ -66,24 +79,26 @@ impl QdrantWorker {
                 }
             }
         }
+
+        Ok(())
     }
 
     async fn update_batch(tasks: Vec<QdrantTask>, client: &Qdrant) {
-        let mut upsert_groups: FastHashMap<String, Vec<PointStruct>> = FastHashMap::default();
-        let mut delete_groups: FastHashMap<String, Vec<PointId>> = FastHashMap::default();
+        let mut upsert_batches: FastHashMap<String, Vec<PointStruct>> = FastHashMap::default();
+        let mut delete_batches: FastHashMap<String, Vec<PointId>> = FastHashMap::default();
 
         for task in tasks {
             let point: Option<PointStruct> = task.clone().into();
 
             match task {
                 QdrantTask::Delete { collection, id } => {
-                    delete_groups
+                    delete_batches
                         .entry(collection.clone())
                         .or_default()
                         .push(id.into());
                 }
                 QdrantTask::Upsert { collection, .. } => {
-                    upsert_groups
+                    upsert_batches
                         .entry(collection.clone())
                         .or_default()
                         .push(point.unwrap());
@@ -91,41 +106,63 @@ impl QdrantWorker {
             }
         }
 
-        for (collection, points) in upsert_groups {
-            let num_points = points.len();
-
-            let response = client
-                .upsert_points(UpsertPointsBuilder::new(collection.clone(), points))
-                .await
-                .unwrap();
-
-            tracing::info!(
-                "Upserted {} embeddings in {} in {:.3} milliseconds",
-                num_points,
-                collection,
-                response.time * 1000.0
-            );
+        for (collection, points) in upsert_batches {
+            if let Err(e) = Self::upsert_batch(client, &collection, points).await {
+                tracing::error!("Failed to delete from {}: {}", collection, e);
+            }
         }
 
-        for (collection, ids) in delete_groups {
-            let num_ids = ids.len();
-
-            let response = client
-                .delete_points(
-                    DeletePointsBuilder::new(collection.clone())
-                        .points(PointsIdsList { ids })
-                        .wait(true),
-                )
-                .await
-                .unwrap();
-
-            tracing::info!(
-                "Deleted {} embeddings from {} in {:.3} milliseconds",
-                num_ids,
-                collection,
-                response.time * 1000.0
-            );
+        for (collection, ids) in delete_batches {
+            if let Err(e) = Self::delete_batch(client, &collection, ids).await {
+                tracing::error!("Failed to delete from {}: {}", collection, e);
+            }
         }
+    }
+
+    async fn upsert_batch(
+        client: &Qdrant,
+        collection: &String,
+        points: Vec<PointStruct>,
+    ) -> Result<(), QdrantError> {
+        let num_points = points.len();
+
+        let response = client
+            .upsert_points(UpsertPointsBuilder::new(collection.clone(), points))
+            .await?;
+
+        tracing::info!(
+            "Upserted {} embeddings in {} in {:.3} milliseconds",
+            num_points,
+            collection,
+            response.time * 1000.0
+        );
+
+        Ok(())
+    }
+
+    async fn delete_batch(
+        client: &Qdrant,
+        collection: &String,
+        ids: Vec<PointId>,
+    ) -> Result<(), QdrantError> {
+        let num_ids = ids.len();
+
+        let response = client
+            .delete_points(
+                DeletePointsBuilder::new(collection.clone())
+                    .points(PointsIdsList { ids })
+                    .wait(true),
+            )
+            .await?;
+
+        tracing::info!(
+            "Deleted {} embeddings from {} in {:.3} milliseconds",
+            num_ids,
+            collection,
+            response.time * 1000.0
+        );
+
+        Ok(())
     }
 }
 
@@ -143,6 +180,7 @@ pub enum QdrantTask {
     },
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<Option<PointStruct>> for QdrantTask {
     fn into(self) -> Option<PointStruct> {
         match self {
@@ -153,17 +191,12 @@ impl Into<Option<PointStruct>> for QdrantTask {
                 metadata,
                 ..
             } => {
-                let indices: Vec<u32> = embedding
-                    .0
-                    .indices()
-                    .into_iter()
-                    .map(|i| *i as u32)
-                    .collect();
-                let data: Vec<f32> = embedding.0.data().into_iter().map(|v| *v as f32).collect();
+                let indices: Vec<u32> = embedding.0.indices().iter().map(|i| *i as u32).collect();
+                let data: Vec<f32> = embedding.0.data().iter().map(|v| *v as f32).collect();
 
                 // TODO: add payload
                 Some(PointStruct::new(
-                    id as u64,
+                    id,
                     NamedVectors::default()
                         .add_vector("embedding", Vector::new_sparse(indices, data)),
                     Payload::new(),

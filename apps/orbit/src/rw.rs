@@ -5,7 +5,11 @@ use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
 use std::time::SystemTime;
 use tokio_postgres::{Client, types::ToSql};
 
-pub async fn get_tag_similarities(db: &Client) -> impl Iterator<Item = (i64, i64, f64)> {
+pub async fn get_tag_similarities(
+    db: &Client,
+    min_authors: usize,
+    min_engagers: usize,
+) -> impl Iterator<Item = (i64, i64, f64)> {
     let query = r#"
     SELECT
         e1.tag_id AS tag1,
@@ -16,19 +20,23 @@ pub async fn get_tag_similarities(db: &Client) -> impl Iterator<Item = (i64, i64
         ) as cosine_sim
     FROM orbit_account_tag_engagements e1
     JOIN orbit_account_tag_engagements e2 ON e2.account_id = e1.account_id
-    JOIN orbit_tag_performance t1 ON t1.tag_id = e1.tag_id AND t1.num_authors > 4 AND t1.num_engaged_accounts >= 15
-    JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id AND t1.num_authors > 4 AND t2.num_engaged_accounts >= 15
+    JOIN orbit_tag_performance t1 ON t1.tag_id = e1.tag_id AND t1.num_authors >= $1 AND t1.num_engaged_accounts >= $2
+    JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id AND t1.num_authors >= $1 AND t2.num_engaged_accounts >= $2
     WHERE e1.tag_id < e2.tag_id
     GROUP BY e1.tag_id, e2.tag_id;
     "#;
 
-    db.query(query, &[]).await.unwrap().into_iter().map(|row| {
-        let t1: i64 = row.get(0);
-        let t2: i64 = row.get(1);
-        let sim: f64 = row.get(2);
+    db.query(query, &[&(min_authors as i64), &(min_engagers as i64)])
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|row| {
+            let t1: i64 = row.get(0);
+            let t2: i64 = row.get(1);
+            let sim: f64 = row.get(2);
 
-        (t1, t2, sim)
-    })
+            (t1, t2, sim)
+        })
 }
 
 pub async fn get_tag_names(db: &Client, tags: &[i64]) -> FastHashMap<i64, String> {
@@ -284,7 +292,7 @@ pub async fn get_initial_engagements(
         let status = StatusEvent {
             status_id,
             account_id: author_id,
-            tags,
+            tags: Some(tags),
             created_at,
         };
         let engagement = EngagementEvent {

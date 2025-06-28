@@ -22,6 +22,8 @@ impl StatusPurgeWorker {
         qdrant_tx: UnboundedSender<QdrantTask>,
         embeddings: Arc<Embeddings>,
     ) -> JoinHandle<()> {
+        tracing::info!("Starting StatusPurge worker");
+
         let mut interval = interval(Duration::from_secs(300));
 
         tokio::spawn(async move {

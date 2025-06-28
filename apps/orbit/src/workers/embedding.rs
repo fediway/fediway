@@ -3,7 +3,13 @@ use std::{
     time::{Duration, SystemTime},
 };
 
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::{
+    sync::{
+        Mutex,
+        mpsc::{UnboundedReceiver, UnboundedSender},
+    },
+    task::JoinHandle,
+};
 
 use crate::{
     config::Config,
@@ -14,6 +20,7 @@ use crate::{
 
 pub struct EmbeddingWorker {
     config: Config,
+    worker_id: usize,
     qdrant_tx: UnboundedSender<QdrantTask>,
     consumers_collection: String,
     producers_collection: String,
@@ -23,6 +30,7 @@ pub struct EmbeddingWorker {
 
 impl EmbeddingWorker {
     pub fn new(
+        worker_id: usize,
         config: Config,
         qdrant_tx: UnboundedSender<QdrantTask>,
         collection_prefix: String,
@@ -30,6 +38,7 @@ impl EmbeddingWorker {
         Self {
             config,
             qdrant_tx,
+            worker_id,
             consumers_collection: format!("{}_consumers", collection_prefix),
             producers_collection: format!("{}_producers", collection_prefix),
             statuses_collection: format!("{}_statuses", collection_prefix),
@@ -37,7 +46,43 @@ impl EmbeddingWorker {
         }
     }
 
-    pub async fn process_event(&self, event: Event, embeddings: &Arc<Embeddings>) {
+    pub fn start(
+        self,
+        event_rx: Arc<Mutex<UnboundedReceiver<Event>>>,
+        embeddings: Arc<Embeddings>,
+    ) -> JoinHandle<()> {
+        tracing::info!("Starting embedding worker {}", self.worker_id);
+
+        tokio::spawn(async move {
+            if let Err(e) = self.run_event_consumer(event_rx, embeddings).await {
+                tracing::error!("Embedding worker {} failed: {}", self.worker_id, e);
+            }
+        })
+    }
+
+    async fn run_event_consumer(
+        &self,
+        event_rx: Arc<Mutex<UnboundedReceiver<Event>>>,
+        embeddings: Arc<Embeddings>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        loop {
+            let mut rx = event_rx.lock().await;
+
+            match rx.recv().await {
+                Some(event) => {
+                    self.process_event(event, &embeddings).await;
+                }
+                None => {
+                    tracing::info!("Shutting down embedding worker {}", self.worker_id);
+                    break;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn process_event(&self, event: Event, embeddings: &Arc<Embeddings>) {
         match event {
             Event::Status(status) => self.process_status(status, embeddings).await,
             Event::Engagement(engagement) => self.process_engagement(engagement, embeddings).await,
@@ -45,8 +90,20 @@ impl EmbeddingWorker {
     }
 
     async fn process_status(&self, status: StatusEvent, embeddings: &Arc<Embeddings>) {
+        tracing::info!(
+            "Processing status {} in worker {}",
+            status.status_id,
+            self.worker_id
+        );
+
         // skip when status age exceeds threshold
         if status.age_in_seconds() > self.config.max_status_age {
+            tracing::info!(
+                "Skipping status {}: age {} exceeds limit {}",
+                status.status_id,
+                status.age_in_seconds(),
+                self.config.max_status_age,
+            );
             return;
         }
 
@@ -54,6 +111,13 @@ impl EmbeddingWorker {
     }
 
     async fn process_engagement(&self, engagement: EngagementEvent, embeddings: &Arc<Embeddings>) {
+        tracing::info!(
+            "Processing engagement {} -> {} in worker {}",
+            engagement.account_id,
+            engagement.status_id,
+            self.worker_id
+        );
+
         let account_id = engagement.account_id;
         let status_id = engagement.status_id;
 
@@ -75,7 +139,7 @@ impl EmbeddingWorker {
                 status_id,
                 embedding.value_mut(),
                 EmbeddingType::Status {
-                    created_at: created_at.clone(),
+                    created_at: *created_at,
                 },
             );
         }
@@ -86,10 +150,14 @@ impl EmbeddingWorker {
         embedding: &Embedding,
         embedding_type: &EmbeddingType,
     ) -> bool {
+        // skip updating embeddings that:
+        // - have not been changed since last udpate
+        // - are zero
         if !embedding.is_dirty || embedding.vec.is_zero() {
             return false;
         }
 
+        // skip updating embeddings that have been updated recently
         if let Some(last_stored) = embedding.last_stored {
             let now = SystemTime::now();
             let update_delay = Duration::from_secs(self.config.qdrant_update_delay);
@@ -99,30 +167,29 @@ impl EmbeddingWorker {
             }
         }
 
+        // skip updating embeddings of entities that have to few engagments
         if embedding.engagements < self.config.engagement_threshold(embedding_type) {
             return false;
         }
 
-        match embedding_type {
-            EmbeddingType::Status { created_at } => {
-                let status_age = created_at.elapsed().unwrap().as_secs();
-                if status_age > self.config.max_status_age {
-                    return false;
-                }
+        // skip updating embeddings of statuses that are to old
+        if let EmbeddingType::Status { created_at } = embedding_type {
+            let status_age = created_at.elapsed().unwrap().as_secs();
+            if status_age > self.config.max_status_age {
+                return false;
             }
-            _ => {}
         }
 
         true
     }
 
-    pub fn upsert_embedding_if_needed<'a>(
+    pub fn upsert_embedding_if_needed(
         &self,
         id: i64,
         embedding: &mut Embedding,
         embedding_type: EmbeddingType,
     ) {
-        if self.should_upsert_embedding(&embedding, &embedding_type) {
+        if self.should_upsert_embedding(embedding, &embedding_type) {
             self.upsert_embedding(id, embedding, embedding_type);
         }
     }
@@ -137,7 +204,7 @@ impl EmbeddingWorker {
         .clone()
     }
 
-    pub fn upsert_embedding<'a>(
+    pub fn upsert_embedding(
         &self,
         id: i64,
         embedding: &mut Embedding,

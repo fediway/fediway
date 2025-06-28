@@ -18,6 +18,7 @@ impl Communities {
     }
 }
 
+#[allow(clippy::from_over_into)]
 impl Into<(CsrMatrix<f64>, FastHashMap<i64, usize>)> for Communities {
     fn into(self) -> (CsrMatrix<f64>, FastHashMap<i64, usize>) {
         let n_rows = self.tags.len();
@@ -146,6 +147,7 @@ pub fn weighted_louvain(
 }
 
 /// Calculate the modularity gain from moving a node between communities.
+#[allow(clippy::too_many_arguments)]
 fn calculate_modularity_gain(
     graph: &UnGraph<i64, f64>,
     node: NodeIndex,

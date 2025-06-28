@@ -6,6 +6,7 @@ mod orbit;
 mod rw;
 mod sparse;
 mod types;
+mod utils;
 mod workers;
 
 #[tokio::main]

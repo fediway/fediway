@@ -1,6 +1,6 @@
 use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
-use crate::embedding::{Embedding, EmbeddingType, Embeddings};
+use crate::embedding::{Embedding, Embeddings};
 use crate::rw;
 use crate::sparse::SparseVec;
 use crate::types::{FastDashMap, FastHashMap, FastHashSet};
@@ -61,7 +61,9 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
 
     // set confidence for tags that are assigned to communities to 1
     for tag in communities.tags.keys() {
-        *t_confidence.get_mut(tag).unwrap() = 1.0;
+        if let Some(c) = t_confidence.get_mut(tag) {
+            *c = 1.0;
+        }
     }
 
     let consumers = get_embeddings(communities.dim, ac_matrix, a_indices, a_confidence);
@@ -108,7 +110,7 @@ async fn get_communities(config: &Config, db: &Client) -> Communities {
 
     tracing::info!("Loading tag similarities.");
 
-    for sim in rw::get_tag_similarities(db).await {
+    for sim in rw::get_tag_similarities(db, config.min_tag_authors, config.min_tag_engagers).await {
         if sim.2 < config.tag_sim_threshold {
             continue;
         }

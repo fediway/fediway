@@ -50,8 +50,38 @@ LEFT JOIN (
 ) t ON t.status_id = s.id
 WHERE s.created_at > NOW() - INTERVAL '90 DAYS';
 
+CREATE SINK IF NOT EXISTS orbit_engagements_sink AS 
+SELECT
+    e.account_id,
+    e.status_id,
+    e.author_id,
+    e.event_time
+FROM enriched_status_engagement_events e
+WITH (
+    connector='kafka',
+    properties.bootstrap.server='${bootstrap_server}',
+    topic='orbit_engagements',
+    primary_key='account_id,status_id',
+) FORMAT PLAIN ENCODE JSON (
+    force_append_only='true'
+);
+
+CREATE SINK IF NOT EXISTS orbit_statuses_sink
+FROM orbit_statuses
+WITH (
+    connector='kafka',
+    properties.bootstrap.server='${bootstrap_server}',
+    topic='orbit_statuses',
+    primary_key='status_id',
+) FORMAT PLAIN ENCODE JSON (
+    force_append_only='true'
+);
+
+
 -- :down
 
+DROP SINK IF EXISTS orbit_statuses_sink;
+DROP SINK IF EXISTS orbit_engagements_sink;
 DROP VIEW IF EXISTS orbit_account_tag_engagements;
 DROP VIEW IF EXISTS orbit_tag_similarities;
 DROP VIEW IF EXISTS orbit_tag_performance;

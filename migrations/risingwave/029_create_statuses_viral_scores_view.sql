@@ -16,17 +16,17 @@ WHERE e_curr.window_start < NOW() - INTERVAL '60 MINUTES'
   AND e_curr.window_start > NOW() - INTERVAL '120 MINUTES'
 GROUP BY e_curr.status_id;
 
-CREATE SINK IF NOT EXISTS status_viral_scores_sink 
-FROM status_viral_scores
-WITH (
-    primary_key = 'status_id',
-    connector = 'redis',
-    redis.url= '{{ redis_url }}',
-) FORMAT PLAIN ENCODE TEMPLATE (
-    force_append_only='true',
-    key_format = 'score:viral:{status_id}',
-    value_format = '{score}'
-);
+-- CREATE SINK IF NOT EXISTS status_viral_scores_sink 
+-- FROM status_viral_scores
+-- WITH (
+--     primary_key = 'status_id',
+--     connector = 'redis',
+--     redis.url= '{{ redis_url }}',
+-- ) FORMAT PLAIN ENCODE TEMPLATE (
+--     force_append_only='true',
+--     key_format = 'score:viral:{status_id}',
+--     value_format = '{score}'
+-- );
 
 -- :down
 

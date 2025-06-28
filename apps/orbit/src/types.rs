@@ -1,4 +1,4 @@
-use ahash::{AHasher, RandomState};
+use ahash::RandomState;
 use dashmap::DashMap;
 use std::collections::{HashMap, HashSet};
 

@@ -50,6 +50,12 @@ fn default_lambda() -> f64 {
 fn default_workers() -> usize {
     4
 }
+fn default_kafka_bootstrap_servers() -> String {
+    "localhost:29092".into()
+}
+fn default_kafka_group_id() -> String {
+    "orbit".into()
+}
 fn default_qdrant_host() -> String {
     "localhost".into()
 }
@@ -77,6 +83,12 @@ fn default_qdrant_update_delay() -> u64 {
 fn default_max_status_age() -> u64 {
     60 * 60 * 24 * 7 // 7 days
 }
+fn default_min_tag_authors() -> usize {
+    5
+}
+fn default_min_tag_engagers() -> usize {
+    15
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -100,6 +112,12 @@ pub struct Config {
 
     #[serde(default = "default_qdrant_port")]
     pub qdrant_port: u16,
+
+    #[serde(default = "default_kafka_bootstrap_servers")]
+    pub kafka_bootstrap_servers: String,
+
+    #[serde(default = "default_kafka_group_id")]
+    pub kafka_group_id: String,
 
     #[serde(
         rename = "orbit_qdrant_collection_prefix",
@@ -190,6 +208,15 @@ pub struct Config {
 
     #[serde(rename = "orbit_workers", default = "default_workers")]
     pub workers: usize,
+
+    #[serde(rename = "orbit_min_tag_authors", default = "default_min_tag_authors")]
+    pub min_tag_authors: usize,
+
+    #[serde(
+        rename = "orbit_min_tag_engagers",
+        default = "default_min_tag_engagers"
+    )]
+    pub min_tag_engagers: usize,
 }
 
 impl Config {
