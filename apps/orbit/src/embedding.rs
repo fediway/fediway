@@ -48,6 +48,10 @@ impl Embedding {
     }
 
     pub fn update(&mut self, embedding: &Embedding) {
+        if embedding.is_zero() {
+            return;
+        }
+
         // let beta = (ALPHA * embedding.confidence)
         //     .max(1.0 / ((self.updates as f64) + 1.0))
         //     .max(DECAY);
@@ -231,6 +235,7 @@ impl Embeddings {
                 .or_insert_with(|| Embedding::empty(self.communities.dim));
 
             if a_embedding.is_zero() {
+                tracing::info!("Skip embeddings update: consumer embedding is zero");
                 return;
             }
         }
@@ -240,6 +245,7 @@ impl Embeddings {
             self.consumers.get(&account_id),
             self.statuses.get_mut(&status_id),
         ) {
+            tracing::info!("Updating status embedding {}", status_id);
             s_embedding.update(a_embedding.value());
             s_embedding.engagements += 1;
         }
@@ -249,6 +255,7 @@ impl Embeddings {
             self.consumers.get_mut(&account_id),
             self.statuses.get(&status_id),
         ) {
+            tracing::info!("Updating consumer embedding {}", account_id);
             a_embedding.update(s_embedding.value());
             a_embedding.engagements += 1;
 
@@ -265,6 +272,7 @@ impl Embeddings {
             self.consumers.get(&account_id),
             self.producers.get_mut(&author_id),
         ) {
+            tracing::info!("Updating producer embedding {}", author_id);
             p_embedding.update(a_embedding.value());
             p_embedding.engagements += 1;
         }
@@ -276,6 +284,7 @@ impl Embeddings {
         ) {
             for tag in tags.value() {
                 if let Some(mut t_embedding) = self.tags.get_mut(tag) {
+                    tracing::info!("Updating tag embedding {}", tag);
                     // 4. update tag embedding
                     t_embedding.update(a_embedding.value());
                     t_embedding.engagements += 1;
