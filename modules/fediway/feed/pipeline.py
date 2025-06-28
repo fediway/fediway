@@ -213,7 +213,7 @@ class RememberStep(PipelineStep):
 
     def get_state(self):
         return {
-            "candidates": self.candidates,
+            "candidates": self.candidates.get_state(),
         }
 
     def set_state(self, state):

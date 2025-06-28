@@ -51,7 +51,7 @@ LEFT JOIN (
 WHERE s.created_at > NOW() - INTERVAL '90 DAYS';
 
 CREATE SINK IF NOT EXISTS orbit_statuses_sink
-FROM orbit_statuses s
+FROM orbit_statuses
 WITH (
     connector='kafka',
     properties.bootstrap.server='${bootstrap_server}',
