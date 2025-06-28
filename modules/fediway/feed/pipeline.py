@@ -68,7 +68,7 @@ class CandidateList:
 
     def unique_groups(self) -> set[str]:
         groups = set()
-        for _, group in self._sources.items():
+        for _, group in self._sources.values():
             groups.add(group)
         return groups
 
