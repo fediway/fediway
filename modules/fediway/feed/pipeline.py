@@ -382,7 +382,7 @@ class SamplingStep(PipelineStep):
 
         if self.unique:
             for seen in self.seen:
-                del candidates[candidate]
+                del candidates[seen]
 
         for _ in range(self.n):
             if len(candidates) == 0:
