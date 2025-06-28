@@ -1,9 +1,8 @@
 use crate::communities::Communities;
 use crate::embedding::EmbeddingType;
 use qdrant_client::config::QdrantConfig;
+use redis::{ConnectionAddr, ConnectionInfo, ProtocolVersion, RedisConnectionInfo};
 use serde::Deserialize;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 
 fn default_rw_host() -> String {
     "localhost".into()
@@ -19,6 +18,18 @@ fn default_rw_pass() -> String {
 }
 fn default_rw_name() -> String {
     "dev".into()
+}
+fn default_redis_host() -> String {
+    "localhost".into()
+}
+fn default_redis_port() -> u16 {
+    6379
+}
+fn default_redis_pass() -> Option<String> {
+    None
+}
+fn default_redis_name() -> i64 {
+    0
 }
 fn default_louvain_resolution() -> f64 {
     1.0
@@ -106,6 +117,18 @@ pub struct Config {
 
     #[serde(default = "default_rw_name")]
     pub rw_name: String,
+
+    #[serde(default = "default_redis_host")]
+    pub redis_host: String,
+
+    #[serde(default = "default_redis_port")]
+    pub redis_port: u16,
+
+    #[serde(default = "default_redis_pass")]
+    pub redis_pass: Option<String>,
+
+    #[serde(default = "default_redis_name")]
+    pub redis_name: i64,
 
     #[serde(default = "default_qdrant_host")]
     pub qdrant_host: String,
@@ -234,6 +257,18 @@ impl Config {
         )
     }
 
+    pub fn redis_conn(&self) -> ConnectionInfo {
+        ConnectionInfo {
+            addr: ConnectionAddr::Tcp(self.redis_host.clone(), self.redis_port),
+            redis: RedisConnectionInfo {
+                db: self.redis_name,
+                username: None,
+                password: self.redis_pass.clone(),
+                protocol: ProtocolVersion::default(),
+            },
+        }
+    }
+
     pub fn qdrant_url(&self) -> String {
         format!("http://{}:{}", self.qdrant_host, self.qdrant_port)
     }
@@ -243,16 +278,11 @@ impl Config {
     }
 
     pub fn qdrant_collection_name(&self, communities: &Communities) -> String {
-        let mut hasher = DefaultHasher::new();
-
-        for (t, c) in &communities.tags {
-            t.hash(&mut hasher);
-            c.hash(&mut hasher);
-        }
-
-        let hex_string = format!("{:x}", hasher.finish());
-
-        format!("{}_{}", self.qdrant_collection_prefix, &hex_string[..5])
+        format!(
+            "{}_{}",
+            self.qdrant_collection_prefix,
+            communities.version()
+        )
     }
 
     pub fn engagement_threshold(&self, embedding_type: &EmbeddingType) -> usize {

@@ -1,3 +1,6 @@
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
 use crate::types::FastHashMap;
 use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
 use petgraph::graph::{NodeIndex, UnGraph};
@@ -15,6 +18,19 @@ impl Communities {
             dim: tags.values().max().unwrap() + 1,
             tags,
         }
+    }
+
+    pub fn version(&self) -> String {
+        let mut hasher = DefaultHasher::new();
+
+        for (t, c) in &self.tags {
+            t.hash(&mut hasher);
+            c.hash(&mut hasher);
+        }
+
+        let hex_string = format!("{:x}", hasher.finish());
+
+        hex_string[..6].to_string()
     }
 }
 

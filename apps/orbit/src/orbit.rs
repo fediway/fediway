@@ -9,6 +9,7 @@ use qdrant_client::qdrant::{
     CreateCollectionBuilder, SparseVectorParamsBuilder, SparseVectorsConfigBuilder,
 };
 use qdrant_client::{Qdrant, QdrantError};
+use redis::{Commands, RedisError};
 
 use std::sync::Arc;
 use tokio::sync::{mpsc, mpsc::UnboundedSender};
@@ -46,8 +47,10 @@ impl Orbit {
         // store initial embeddings
         self.store_initial_embeddings(qdrant_tx.clone()).await;
 
-        // delete old collections
-        self.purge_outdated_qdrant_collections().await;
+        // publish embedding version
+        if let Err(e) = self.publish() {
+            tracing::error!("Failed to publish embedding version to redis: {}", e);
+        }
 
         // start embedding workers
         let embedding_workers: Vec<JoinHandle<()>> = (0..self.config.workers)
@@ -73,12 +76,28 @@ impl Orbit {
         // start kafka event consumer
         let kafka_worker = KafkaWorker::new(self.config.clone()).start(event_tx);
 
+        // delete old collections
+        self.purge_outdated_qdrant_collections().await;
+
         qdrant_worker.await.unwrap();
         for worker in embedding_workers {
             worker.await.unwrap();
         }
         status_purge_worker.await.unwrap();
         kafka_worker.await.unwrap();
+    }
+
+    fn publish(&self) -> Result<(), RedisError> {
+        let mut redis = redis::Client::open(self.config.redis_conn())?;
+        let version = self.embeddings.communities.version();
+        let _: () = redis.set("orbit:version", version.clone())?;
+
+        tracing::info!(
+            "Published embedding version {} to redis key 'orbit:version'",
+            version
+        );
+
+        Ok(())
     }
 
     async fn store_initial_embeddings(&self, qdrant_tx: UnboundedSender<QdrantTask>) {

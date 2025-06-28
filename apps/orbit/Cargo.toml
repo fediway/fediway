@@ -22,3 +22,4 @@ rustc-hash = { version = "2.1", default-features = false }
 dashmap = "6.1.0"
 ahash = "0.8.12"
 rdkafka = "0.37.0"
+redis = "0.32.2"
