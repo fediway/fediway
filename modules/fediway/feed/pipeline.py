@@ -408,9 +408,9 @@ class SamplingStep(PipelineStep):
                 self.seen.add(candidate.id)
 
                 for heuristic in self.heuristics:
-                    features = await self.feature_service.get(
+                    features = (await self.feature_service.get(
                         [{self.entity: candidate}], heuristic.features
-                    ).values[0]
+                    )).values[0]
                     heuristic.update_seen(candidate, features)
 
                 break
