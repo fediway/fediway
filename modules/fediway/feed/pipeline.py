@@ -409,7 +409,7 @@ class SamplingStep(PipelineStep):
 
                 for heuristic in self.heuristics:
                     features = (await self.feature_service.get(
-                        [{self.entity: candidate}], heuristic.features
+                        [{self.entity: candidate.id}], heuristic.features
                     )).values[0]
                     heuristic.update_seen(candidate, features)
 
