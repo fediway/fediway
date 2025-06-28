@@ -13,6 +13,7 @@ from apps.api.dependencies.sources.statuses import (
     get_popular_in_social_circle_sources,
     get_similar_to_engaged_sources,
     get_status_based_collaborative_filtering_source,
+    get_orbit_source,
     get_viral_source,
 )
 from apps.api.services.feed_service import FeedService
@@ -43,19 +44,10 @@ def get_near_network_sources(
 
 
 def get_out_network_sources(
-    account_based_collaborative_filtering: list[Source] = Depends(
-        get_account_based_collaborative_filtering_source
-    ),
-    status_based_collaborative_filtering: list[Source] = Depends(
-        get_status_based_collaborative_filtering_source
-    ),
+    orbit: list[Source] = Depends(get_orbit_source),
     viral: list[Source] = Depends(get_viral_source),
 ):
-    return (
-        account_based_collaborative_filtering
-        + status_based_collaborative_filtering
-        + viral
-    )
+    return orbit + viral
 
 
 @router.get("/home")

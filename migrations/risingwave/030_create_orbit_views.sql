@@ -50,6 +50,17 @@ LEFT JOIN (
 ) t ON t.status_id = s.id
 WHERE s.created_at > NOW() - INTERVAL '90 DAYS';
 
+CREATE SINK IF NOT EXISTS orbit_statuses_sink
+FROM orbit_statuses s
+WITH (
+    connector='kafka',
+    properties.bootstrap.server='${bootstrap_server}',
+    topic='orbit_statuses',
+    primary_key='status_id',
+) FORMAT PLAIN ENCODE JSON (
+    force_append_only='true'
+);
+
 CREATE SINK IF NOT EXISTS orbit_engagements_sink AS 
 SELECT
     e.account_id,
@@ -65,18 +76,6 @@ WITH (
 ) FORMAT PLAIN ENCODE JSON (
     force_append_only='true'
 );
-
-CREATE SINK IF NOT EXISTS orbit_statuses_sink
-FROM orbit_statuses
-WITH (
-    connector='kafka',
-    properties.bootstrap.server='${bootstrap_server}',
-    topic='orbit_statuses',
-    primary_key='status_id',
-) FORMAT PLAIN ENCODE JSON (
-    force_append_only='true'
-);
-
 
 -- :down
 

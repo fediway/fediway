@@ -88,6 +88,8 @@ def migrate():
             if version in applied:
                 continue
 
+            print(version)
+
             with open(file, "r") as f:
                 sql = env_substitute(f.read(), context)
 

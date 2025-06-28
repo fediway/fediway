@@ -27,6 +27,21 @@ def triangular_loop(account_id: int, limit: int = 10):
         print(candidate)
 
 
+@app.command("orbit")
+def viral(
+    account_id: int,
+    limit: int = 10,
+):
+    from modules.fediway.sources.statuses import OrbitSource
+    from shared.core.redis import get_redis
+    from shared.core.qdrant import client
+
+    source = OrbitSource(r=get_redis(), client=client, account_id=account_id)
+
+    for candidate in source.collect(limit):
+        print(candidate)
+
+
 @app.command("viral")
 def viral(
     limit: int = 10,

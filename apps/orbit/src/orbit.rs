@@ -93,7 +93,7 @@ impl Orbit {
         let _: () = redis.set("orbit:version", version.clone())?;
 
         tracing::info!(
-            "Published embedding version {} to redis key 'orbit:version'",
+            "Published communities version {} to redis key 'orbit:version'",
             version
         );
 
