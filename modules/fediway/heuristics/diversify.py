@@ -20,7 +20,9 @@ class DiversifyHeuristic(Heuristic):
     def update_seen(self, candidate, features):
         self.seen_ids.add(features[0])
 
-    def __call__(self, candidates: list[float], scores: np.ndarray, features):
+    def __call__(self, candidates, features):
+        scores = candidates.get_scores()
+
         if len(scores) == 0:
             return scores
 

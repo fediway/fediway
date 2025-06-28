@@ -75,7 +75,7 @@ class CandidateList:
     def get_entity_rows(self):
         return [{self.entity: c} for c in self._ids]
 
-    def get_scores(self):
+    def get_scores(self) -> np.ndarray:
         return np.array(self._scores)
 
     def set_scores(self, scores):
