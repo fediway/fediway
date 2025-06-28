@@ -30,7 +30,7 @@ class CandidateList:
     def append(
         self,
         candidate,
-        score: float | None = None,
+        score: float = 1.0,
         source: str | list[str] | None = None,
         source_group: str | list[str] | None = None,
     ):
