@@ -42,14 +42,13 @@ class CandidateList:
         if candidate in self._sources:
             if source is not None:
                 self._sources[candidate].add((source, source_group))
-            return
         else:
             if source is None:
                 self._sources[candidate] = set()
             elif type(source) == str:
-                self._sources[candidate] = [(source, source_group)]
+                self._sources[candidate] = set([(source, source_group)])
             else:
-                self._sources[candidate] = list(zip(source, source_group))
+                self._sources[candidate] = set(zip(source, source_group))
 
         self._ids.append(candidate)
         self._scores.append(score)
@@ -68,8 +67,9 @@ class CandidateList:
 
     def unique_groups(self) -> set[str]:
         groups = set()
-        for _, group in self._sources.values():
-            groups.add(group)
+        for sources in self._sources.values():
+            for _, group in sources:
+                groups.add(group)
         return groups
 
     def get_entity_rows(self):

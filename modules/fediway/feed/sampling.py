@@ -39,22 +39,22 @@ class WeightedGroupSampler(Sampler):
         groups = [g for g in candidates.unique_groups() if g in self.weights]
         weights = [self.weights[g] for g in groups]
 
-        assert len(groups > 0)
+        assert len(groups) > 0
 
         probs = np.array(weights) / sum(weights)
-        group = np.random.choice(groups, p=probs)
+        target_group = np.random.choice(groups, p=probs)
 
         indices = []
         scores = []
-        for i, c in enumerate(zip(candidates.get_candidates())):
+        for i, c in enumerate(candidates.get_candidates()):
             for source, g in candidates.get_source(c):
-                if group == g:
+                if target_group == g:
                     indices.append(i)
-                    scores.append(candidate._scores[i])
-                    break
+                    scores.append(candidates._scores[i])
 
-        p = None
         if sum(scores):
             p = np.array(scores) / sum(scores)
+        else:
+            p = np.ones(len(scores)) / len(scores)
 
         return np.random.choice(indices, p=p)
