@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   WATERMARK FOR event_time AS event_time - INTERVAL '1 DAY'
 ) APPEND ONLY ON CONFLICT IGNORE;
 
+CREATE INDEX IF NOT EXISTS idx_enriched_status_engagement_events_event_time ON enriched_status_engagement_events(event_time); 
+
 CREATE SINK IF NOT EXISTS enriched_status_engagement_events_sink
 INTO enriched_status_engagement_events AS
 SELECT
@@ -52,4 +54,5 @@ WITH (type = 'append-only', force_append_only='true');
 
 -- :down
 DROP SINK IF EXISTS enriched_status_engagement_events_sink;
+DROP INDEX IF EXISTS idx_enriched_status_engagement_events_event_time;
 DROP TABLE IF EXISTS enriched_status_engagement_events CASCADE;

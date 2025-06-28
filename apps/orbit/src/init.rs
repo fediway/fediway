@@ -1,6 +1,6 @@
 use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
-use crate::embedding::{Embedding, Embeddings};
+use crate::embedding::{Embedding, EmbeddingType, Embeddings};
 use crate::rw;
 use crate::sparse::SparseVec;
 use crate::types::{FastDashMap, FastHashMap, FastHashSet};
@@ -54,31 +54,28 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
         pc_matrix.nrows(),
     );
 
-    // compute consumer confidence
+    // compute initial confidence scores
     let a_confidence = get_confidence_scores(&at_matrix, &a_indices, config.lambda);
-
-    // compute tag confidence
+    let p_confidence = get_confidence_scores(&pt_matrix, &p_indices, config.lambda);
     let mut t_confidence = get_confidence_scores(&ta_matrix, &t2_indices, config.lambda);
 
     // set confidence for tags that are assigned to communities to 1
-    for tag in communities.0.keys() {
+    for tag in communities.tags.keys() {
         *t_confidence.get_mut(tag).unwrap() = 1.0;
     }
 
-    // compute producer confidence
-    let p_confidence = get_confidence_scores(&pt_matrix, &p_indices, config.lambda);
+    let consumers = get_embeddings(communities.dim, ac_matrix, a_indices, a_confidence);
+    let producers = get_embeddings(communities.dim, pc_matrix, p_indices, p_confidence);
+    let tags = get_embeddings(communities.dim, tc2_matrix, t2_indices, t_confidence);
 
-    let dim = communities.0.values().max().unwrap() + 1;
-    let consumers = get_embeddings(dim, ac_matrix, a_indices, a_confidence);
-    let producers = get_embeddings(dim, pc_matrix, p_indices, p_confidence);
-    let mut tags = get_embeddings(dim, tc2_matrix, t2_indices, t_confidence);
+    let embeddings = Embeddings::initial(config, communities, consumers, producers, tags);
 
-    let mut embeddings = Embeddings::initial(config, communities, consumers, producers, tags);
-    let mut status_ids: FastHashSet<i64> = FastHashSet::default();
+    // return embeddings;
 
     tracing::info!("Loading initial engagements...");
 
     let mut i = 0;
+    let mut status_ids: FastHashSet<i64> = FastHashSet::default();
     let results = rw::get_initial_engagements(&db).await;
 
     let start = Instant::now();
@@ -96,6 +93,7 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
     }
 
     let duration = start.elapsed();
+
     tracing::info!(
         "Seeded initial engagements with {} udpates/second.",
         (i as f64) / duration.as_secs_f64()
@@ -132,14 +130,14 @@ async fn get_communities(config: &Config, db: &Client) -> Communities {
         config.random_state,
     );
 
-    let num_communities = communities.0.values().max().unwrap() + 1;
-    let num_tags = communities.0.len();
-    let tags: Vec<_> = communities.0.keys().copied().collect();
+    let num_communities = communities.tags.values().max().unwrap() + 1;
+    let num_tags = communities.tags.len();
+    let tags: Vec<_> = communities.tags.keys().copied().collect();
     let tag_names = rw::get_tag_names(db, &tags).await;
 
     let mut community_tags: FastHashMap<usize, FastHashSet<String>> = FastHashMap::default();
 
-    for (tag, c) in communities.0.iter() {
+    for (tag, c) in communities.tags.iter() {
         let tag_name = tag_names[tag].clone();
         community_tags
             .entry(*c)

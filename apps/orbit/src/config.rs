@@ -1,9 +1,14 @@
+use crate::communities::Communities;
+use crate::embedding::EmbeddingType;
+use qdrant_client::config::QdrantConfig;
 use serde::Deserialize;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 fn default_rw_host() -> String {
     "localhost".into()
 }
-fn default_rw_port() -> usize {
+fn default_rw_port() -> u16 {
     4566
 }
 fn default_rw_user() -> String {
@@ -45,6 +50,33 @@ fn default_lambda() -> f64 {
 fn default_workers() -> usize {
     4
 }
+fn default_qdrant_host() -> String {
+    "localhost".into()
+}
+fn default_qdrant_port() -> u16 {
+    6334
+}
+fn default_qdrant_collection_prefix() -> String {
+    "orbit".into()
+}
+fn default_qdrant_max_batch_size() -> usize {
+    100
+}
+fn default_producer_engagement_threshold() -> usize {
+    50
+}
+fn default_status_engagement_threshold() -> usize {
+    5
+}
+fn default_tag_engagement_threshold() -> usize {
+    10
+}
+fn default_qdrant_update_delay() -> u64 {
+    60 // 60 seconds
+}
+fn default_max_status_age() -> u64 {
+    60 * 60 * 24 * 7 // 7 days
+}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
@@ -52,7 +84,7 @@ pub struct Config {
     pub rw_host: String,
 
     #[serde(default = "default_rw_port")]
-    pub rw_port: usize,
+    pub rw_port: u16,
 
     #[serde(default = "default_rw_user")]
     pub rw_user: String,
@@ -62,6 +94,30 @@ pub struct Config {
 
     #[serde(default = "default_rw_name")]
     pub rw_name: String,
+
+    #[serde(default = "default_qdrant_host")]
+    pub qdrant_host: String,
+
+    #[serde(default = "default_qdrant_port")]
+    pub qdrant_port: u16,
+
+    #[serde(
+        rename = "orbit_qdrant_collection_prefix",
+        default = "default_qdrant_collection_prefix"
+    )]
+    pub qdrant_collection_prefix: String,
+
+    #[serde(
+        rename = "orbit_qdrant_max_batch_size",
+        default = "default_qdrant_max_batch_size"
+    )]
+    pub qdrant_max_batch_size: usize,
+
+    #[serde(
+        rename = "orbit_qdrant_update_delay",
+        default = "default_qdrant_update_delay"
+    )]
+    pub qdrant_update_delay: u64,
 
     #[serde(
         rename = "orbit_louvain_resolution",
@@ -108,6 +164,27 @@ pub struct Config {
     )]
     pub max_status_communities: usize,
 
+    #[serde(
+        rename = "orbit_status_engagement_threshold",
+        default = "default_status_engagement_threshold"
+    )]
+    pub status_engagement_threshold: usize,
+
+    #[serde(
+        rename = "orbit_producer_engagement_threshold",
+        default = "default_producer_engagement_threshold"
+    )]
+    pub producer_engagement_threshold: usize,
+
+    #[serde(
+        rename = "orbit_tag_engagement_threshold",
+        default = "default_tag_engagement_threshold"
+    )]
+    pub tag_engagement_threshold: usize,
+
+    #[serde(rename = "orbit_max_status_age", default = "default_max_status_age")]
+    pub max_status_age: u64,
+
     #[serde(rename = "orbit_lambda", default = "default_lambda")]
     pub lambda: f64,
 
@@ -128,5 +205,44 @@ impl Config {
             "host={} user={} password={} dbname={} port={}",
             self.rw_host, self.rw_user, self.rw_pass, self.rw_name, self.rw_port
         )
+    }
+
+    pub fn qdrant_url(&self) -> String {
+        format!("http://{}:{}", self.qdrant_host, self.qdrant_port)
+    }
+
+    pub fn qdrant_config(&self) -> QdrantConfig {
+        QdrantConfig::from_url(&self.qdrant_url())
+    }
+
+    pub fn qdrant_collection_name(&self, communities: &Communities) -> String {
+        let mut hasher = DefaultHasher::new();
+
+        for (t, c) in &communities.tags {
+            t.hash(&mut hasher);
+            c.hash(&mut hasher);
+        }
+
+        let hex_string = format!("{:x}", hasher.finish());
+
+        format!("{}_{}", self.qdrant_collection_prefix, &hex_string[..5])
+    }
+
+    pub fn engagement_threshold(&self, embedding_type: &EmbeddingType) -> usize {
+        match embedding_type {
+            EmbeddingType::Consumer => 0,
+            EmbeddingType::Producer => self.producer_engagement_threshold,
+            EmbeddingType::Status { .. } => self.status_engagement_threshold,
+            EmbeddingType::Tag => self.tag_engagement_threshold,
+        }
+    }
+
+    pub fn max_communities(&self, embedding_type: &EmbeddingType) -> usize {
+        match embedding_type {
+            EmbeddingType::Consumer => self.max_consumer_communities,
+            EmbeddingType::Producer => self.max_producer_communities,
+            EmbeddingType::Status { .. } => self.max_status_communities,
+            EmbeddingType::Tag => self.max_tag_communities,
+        }
     }
 }

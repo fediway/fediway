@@ -2,12 +2,11 @@ mod communities;
 mod config;
 mod embedding;
 mod init;
-mod kafka;
 mod orbit;
-mod qdrant;
 mod rw;
 mod sparse;
 mod types;
+mod workers;
 
 #[tokio::main]
 async fn main() {

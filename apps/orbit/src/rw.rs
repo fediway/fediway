@@ -1,4 +1,4 @@
-use crate::kafka::{EngagementEvent, StatusEvent};
+use crate::embedding::{EngagementEvent, StatusEvent};
 use crate::types::{FastHashMap, FastHashSet};
 use itertools::Itertools;
 use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
@@ -16,8 +16,8 @@ pub async fn get_tag_similarities(db: &Client) -> impl Iterator<Item = (i64, i64
         ) as cosine_sim
     FROM orbit_account_tag_engagements e1
     JOIN orbit_account_tag_engagements e2 ON e2.account_id = e1.account_id
-    JOIN orbit_tag_performance t1 ON t1.tag_id = e1.tag_id AND t1.num_authors > 2 AND t1.num_engaged_accounts >= 10
-    JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id AND t1.num_authors > 2 AND t2.num_engaged_accounts >= 10
+    JOIN orbit_tag_performance t1 ON t1.tag_id = e1.tag_id AND t1.num_authors > 4 AND t1.num_engaged_accounts >= 15
+    JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id AND t1.num_authors > 4 AND t2.num_engaged_accounts >= 15
     WHERE e1.tag_id < e2.tag_id
     GROUP BY e1.tag_id, e2.tag_id;
     "#;
@@ -253,7 +253,9 @@ pub async fn get_pt_matrix(
     CsrMatrix::from(&matrix)
 }
 
-pub async fn get_initial_engagements(db: &Client) -> impl Iterator<Item = (StatusEvent, EngagementEvent)> {
+pub async fn get_initial_engagements(
+    db: &Client,
+) -> impl Iterator<Item = (StatusEvent, EngagementEvent)> {
     let query = r#"
     SELECT
         e.status_id, 
@@ -261,13 +263,9 @@ pub async fn get_initial_engagements(db: &Client) -> impl Iterator<Item = (Statu
         e.author_id,
         e.event_time,
         s.created_at,
-        ARRAY_REMOVE(t.tags, NULL) as tags
+        s.tags
     FROM enriched_status_engagement_events e
-    join statuses s on s.id = e.status_id
-    left join (
-        select status_id, array_agg(tag_id) as tags from statuses_tags t
-        group by status_id
-    ) t on t.status_id = e.status_id
+    JOIN orbit_statuses s ON s.status_id = e.status_id
     WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
     ORDER BY e.event_time;
     "#;

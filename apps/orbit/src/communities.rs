@@ -1,19 +1,31 @@
-use crate::types::{FastHashMap, FastHashSet};
+use crate::types::FastHashMap;
 use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
 use petgraph::graph::{NodeIndex, UnGraph};
 use rand::prelude::*;
 
 #[derive(Clone)]
-pub struct Communities(pub FastHashMap<i64, usize>);
+pub struct Communities {
+    pub tags: FastHashMap<i64, usize>,
+    pub dim: usize,
+}
+
+impl Communities {
+    pub fn new(tags: FastHashMap<i64, usize>) -> Self {
+        Self {
+            dim: tags.values().max().unwrap() + 1,
+            tags,
+        }
+    }
+}
 
 impl Into<(CsrMatrix<f64>, FastHashMap<i64, usize>)> for Communities {
     fn into(self) -> (CsrMatrix<f64>, FastHashMap<i64, usize>) {
-        let n_rows = self.0.len();
-        let n_cols = *self.0.values().max().unwrap() + 1;
+        let n_rows = self.tags.len();
+        let n_cols = self.dim;
         let mut matrix: CooMatrix<f64> = CooMatrix::zeros(n_rows, n_cols);
         let mut tag_indices: FastHashMap<i64, usize> = FastHashMap::default();
 
-        for (tag, c_idx) in self.0.iter() {
+        for (tag, c_idx) in self.tags.iter() {
             let next_idx = tag_indices.len();
             let t_idx = tag_indices.entry(*tag).or_insert(next_idx);
 
@@ -120,7 +132,7 @@ pub fn weighted_louvain(
         }
     }
 
-    Communities(
+    Communities::new(
         communities
             .iter()
             .map(|(node, community)| {
