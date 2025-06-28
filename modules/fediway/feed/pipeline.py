@@ -39,16 +39,20 @@ class CandidateList:
             score = candidate.score
             candidate = candidate.id
 
+        if source is None:
+            sources = set()
+        elif type(source) == str:
+            sources = set([(source, source_group)])
+        else:
+            if source_group is None or type(source_group) == str:
+                source_group = [source_group for _ in range(len(source))]
+            sources = set(zip(source, source_group))
+
         if candidate in self._sources:
             if source is not None:
-                self._sources[candidate].add((source, source_group))
+                self._sources[candidate] |= sources
         else:
-            if source is None:
-                self._sources[candidate] = set()
-            elif type(source) == str:
-                self._sources[candidate] = set([(source, source_group)])
-            else:
-                self._sources[candidate] = set(zip(source, source_group))
+            self._sources[candidate] = sources
 
         self._ids.append(candidate)
         self._scores.append(score)
