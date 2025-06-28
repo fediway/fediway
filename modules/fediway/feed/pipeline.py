@@ -101,7 +101,7 @@ class CandidateList:
         self._scores += other._scores
 
         for candidate, sources in other._sources.items():
-            if canidate not in self._sources:
+            if candidate not in self._sources:
                 self._souces[candidate] = sources
             else:
                 self._souces[candidate] |= sources
