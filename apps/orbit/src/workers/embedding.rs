@@ -154,7 +154,7 @@ impl EmbeddingWorker {
         // - have not been changed since last udpate
         // - are zero
         if !embedding.is_dirty || embedding.vec.is_zero() {
-            tracing::info!("Skip upserting {:?}: engaments empty", embedding_type,);
+            tracing::info!("Skip upserting: engaments empty");
             return false;
         }
 
@@ -163,10 +163,9 @@ impl EmbeddingWorker {
             let now = SystemTime::now();
             let update_delay = Duration::from_secs(self.config.qdrant_update_delay);
 
-            if last_stored < now - update_delay {
+            if last_stored > now - update_delay {
                 tracing::info!(
-                    "Skip upserting {:?}: last stored {:?}",
-                    embedding_type,
+                    "Skip upserting: last stored {:?}",
                     last_stored.elapsed()
                 );
 
@@ -177,8 +176,7 @@ impl EmbeddingWorker {
         // skip updating embeddings of entities that have to few engagments
         if embedding.engagements < self.config.engagement_threshold(embedding_type) {
             tracing::info!(
-                "Skip upserting {:?}: engaments {} below threshold {}",
-                embedding_type,
+                "Skip upserting: engaments {} below threshold {}",
                 embedding.engagements,
                 self.config.engagement_threshold(embedding_type)
             );
@@ -189,7 +187,7 @@ impl EmbeddingWorker {
         if let EmbeddingType::Status { created_at } = embedding_type {
             let status_age = created_at.elapsed().unwrap().as_secs();
             if status_age > self.config.max_status_age {
-                tracing::info!("Skip upserting {:?}: status to old", embedding_type,);
+                tracing::info!("Skip upserting: status to old");
 
                 return false;
             }
