@@ -520,7 +520,7 @@ class Feed:
         return self
 
     def paginate(self, limit: int, offset: int = 0, max_id: int | None = None):
-        self.step(PaginationStep(int(limit), offset, max_id))
+        self.step(PaginationStep(self.entity, int(limit), offset, max_id))
 
         return self
 
