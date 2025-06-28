@@ -359,7 +359,7 @@ class SamplingStep(PipelineStep):
             heuristic.set_state(h_state)
 
     async def _get_adjusted_scores(self, candidates: CandidateList):
-        adjusted_candidates = deepcopy(candidates.scores)
+        adjusted_candidates = deepcopy(candidates)
 
         for heuristic in self.heuristics:
             features = None
@@ -369,9 +369,9 @@ class SamplingStep(PipelineStep):
                     entity_rows, heuristic.features
                 )
 
-            adjusted_candidates.scores = heuristic(adjusted_candidates, features)
+            adjusted_candidates._scores = heuristic(adjusted_candidates, features)
 
-        return adjusted_candidates.scores
+        return adjusted_candidates
 
     async def __call__(self, candidates: CandidateList) -> CandidateList:
         sampled_candidates = CandidateList(candidates.entity)
@@ -393,7 +393,7 @@ class SamplingStep(PipelineStep):
                 idx = self.sampler.sample(adjusted_scores)
 
                 candidate = candidates[idx]
-                candidate.score = adjusted_scores[idx]
+                candidate.score = adjusted_scores._scores[idx]
 
                 del candidates[idx]
 
