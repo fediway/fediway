@@ -7,6 +7,7 @@ use crate::types::{FastDashMap, FastHashSet};
 use crate::utils::deserialize_timestamp;
 use std::time::SystemTime;
 
+#[derive(Debug)]
 pub enum EmbeddingType {
     Consumer,
     Producer,
