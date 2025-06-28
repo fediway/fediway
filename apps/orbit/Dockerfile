@@ -1,6 +1,11 @@
 # Stage 1: Build the application
 FROM rust:1.86-slim-bookworm AS builder
 
+# Install required system dependencies
+RUN apt-get update && \
+    apt-get install -y pkg-config libssl-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 # Create app directory and set as workdir
 WORKDIR /app
 
@@ -12,6 +17,11 @@ RUN cargo build --release
 
 # Stage 2: Create minimal runtime image
 FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy built binary from builder stage
 COPY --from=builder /app/target/release/orbit /usr/local/bin/
