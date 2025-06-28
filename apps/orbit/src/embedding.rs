@@ -208,11 +208,17 @@ impl Embeddings {
         let tags: Vec<i64> = status.tags.unwrap_or_default().iter().cloned().collect();
 
         if let Some(p_embedding) = self.producers.get(&status.account_id) {
-            status_embedding.update(p_embedding.value());
+            if !p_embedding.is_zero() {
+                tracing::info!("Updating initial status embedding {} from producer embeddings", status.status_id);
+                status_embedding.update(p_embedding.value());
+            }
         }
 
         if let Some(t_embedding) = self.get_weighted_tags_embedding(&tags) {
-            status_embedding.update(&t_embedding);
+            if !t_embedding.is_zero() {
+                tracing::info!("Updating initial status embedding {} from tags", status.status_id);
+                status_embedding.update(&t_embedding);
+            }
         }
 
         self.statuses.insert(status.status_id, status_embedding);
