@@ -38,7 +38,7 @@ class CandidateList:
             score = candidate.score
             candidate = candidate.id
 
-        if candiate in self._sources:
+        if candidate in self._sources:
             if source is not None:
                 self._sources[candidate].add((source, source_group))
             return
