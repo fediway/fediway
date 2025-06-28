@@ -43,15 +43,12 @@ class CandidateList:
                 self._sources[candidate].add((source, source_group))
             return
         else:
-            self._sources[candidate] = (
-                set()
-                if source is None
-                else set(
-                    [(source, source_group)]
-                    if type(source) == str
-                    else list(zip(source, source_group))
-                )
-            )
+            if source is None:
+                self._sources[candidate] = set()
+            elif type(source) == str:
+                self._sources[candidate] = [(source, source_group)]
+            else:
+                self._sources[candidate] = list(zip(source, source_group))
 
         self._ids.append(candidate)
         self._scores.append(score)
@@ -320,7 +317,7 @@ class SourcingStep(PipelineStep):
         for batch, (source, _) in zip(results, self.sources):
             for candidate in batch:
                 candidates.append(
-                    candidate, source=source.name, source_group=self.group
+                    candidate, source=source.name(), source_group=self.group
                 )
                 n_sourced += 1
 

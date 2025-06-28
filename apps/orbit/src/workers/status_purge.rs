@@ -43,7 +43,7 @@ impl StatusPurgeWorker {
         let statuses_to_delete: Vec<i64> = embeddings
             .statuses_dt
             .iter()
-            .filter(|row| row.elapsed().unwrap().as_secs() > self.config.max_status_age)
+            .filter(|row| row.elapsed().unwrap_or_default().as_secs() > self.config.max_status_age)
             .map(|row| *row.key())
             .collect();
 
