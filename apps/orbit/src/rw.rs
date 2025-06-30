@@ -64,6 +64,32 @@ pub async fn get_tag_names(db: &Client, tags: &[i64]) -> FastHashMap<i64, String
     tag_names
 }
 
+pub async fn get_tag_ids(db: &Client, tags: &Vec<String>) -> FastHashMap<String, i64> {
+    let mut tag_ids = FastHashMap::default();
+
+    for chunk in tags.chunks(1000) {
+        let placeholders: Vec<String> = (1..=chunk.len()).map(|i| format!("${}", i)).collect();
+        let query = format!(
+            "SELECT t.id, t.name FROM tags t WHERE t.name IN ({});",
+            placeholders.join(", ")
+        );
+
+        let params: Vec<&(dyn ToSql + Sync)> =
+        chunk.iter().map(|id| id as &(dyn ToSql + Sync)).collect();
+
+        let rows = db.query(&query, &params).await.unwrap();
+
+        for row in rows {
+            let id: i64 = row.get(0);
+            let name: String = row.get(1);
+            tag_ids.insert(name, id);
+        }
+    }
+
+    tag_ids
+}
+
+
 pub async fn get_at_matrix(
     db: &Client,
     tag_indices: &FastHashMap<i64, usize>,

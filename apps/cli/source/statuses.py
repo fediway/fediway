@@ -5,6 +5,36 @@ from config import config
 app = typer.Typer(help="Follow sources.")
 
 
+def _get_account_id_from_username(username: str):
+    from sqlmodel import select
+    from modules.mastodon.models import Account
+    from shared.core.db import db_session
+
+    with db_session() as db:
+        account_id = db.scalar(select(Account.id).where(Account.username == username))
+
+    if account_id is None:
+        typer.echo(f"No account found with username '{username}'")
+
+        raise typer.Exit(1)
+
+    return account_id
+
+
+def _log_candidates(candidates: list[str]):
+    from sqlmodel import select
+    from modules.mastodon.models import Status
+    from shared.core.db import db_session
+
+    print(candidates)
+
+    with db_session() as db:
+        statuses = db.exec(select(Status.url).where(Status.id.in_(candidates))).all()
+
+        for status in statuses:
+            typer.echo(status)
+
+
 @app.command("popular-in-social-circle")
 def triangular_loop(account_id: int, limit: int = 10):
     from modules.fediway.sources.statuses import PopularInSocialCircleSource
@@ -27,19 +57,35 @@ def triangular_loop(account_id: int, limit: int = 10):
         print(candidate)
 
 
-@app.command("orbit")
-def viral(
-    account_id: int,
+@app.command("community-recommendations")
+def community_recommendations(
+    username: str,
     limit: int = 10,
 ):
-    from modules.fediway.sources.statuses import OrbitSource
+    from modules.fediway.sources.statuses import CommunityRecommendationsSource
     from shared.core.redis import get_redis
     from shared.core.qdrant import client
 
-    source = OrbitSource(r=get_redis(), client=client, account_id=account_id)
+    account_id = _get_account_id_from_username(username)
 
-    for candidate in source.collect(limit):
-        print(candidate)
+    source = CommunityRecommendationsSource(
+        r=get_redis(), client=client, account_id=account_id
+    )
+
+    _log_candidates([c for c in source.collect(limit)])
+
+
+@app.command("random-communities")
+def random_communities(limit: int = 10, batch_size: int = 1):
+    from modules.fediway.sources.statuses import RandomCommunitiesSource
+    from shared.core.redis import get_redis
+    from shared.core.qdrant import client
+
+    source = RandomCommunitiesSource(
+        r=get_redis(), client=client, batch_size=batch_size
+    )
+
+    _log_candidates([c for c in source.collect(limit)])
 
 
 @app.command("viral")

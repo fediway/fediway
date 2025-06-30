@@ -13,7 +13,8 @@ from apps.api.dependencies.sources.statuses import (
     get_popular_in_social_circle_sources,
     get_similar_to_engaged_sources,
     get_status_based_collaborative_filtering_source,
-    get_orbit_source,
+    get_community_recommendations_source,
+    get_random_communities_source,
     get_viral_source,
 )
 from apps.api.services.feed_service import FeedService
@@ -44,10 +45,17 @@ def get_near_network_sources(
 
 
 def get_out_network_sources(
-    orbit: list[Source] = Depends(get_orbit_source),
-    viral: list[Source] = Depends(get_viral_source),
+    community_recommendations: list[Source] = Depends(
+        get_community_recommendations_source
+    ),
 ):
-    return orbit + viral
+    return community_recommendations
+
+
+def get_cold_start_sources(
+    random_communities: list[Source] = Depends(get_random_communities_source),
+):
+    return random_communities
 
 
 @router.get("/home")
@@ -58,6 +66,7 @@ async def home_timeline(
     in_network_sources: list[Source] = Depends(get_in_network_sources),
     near_network_sources: list[Source] = Depends(get_near_network_sources),
     out_network_sources: list[Source] = Depends(get_out_network_sources),
+    cold_start_sources: list[Source] = Depends(get_cold_start_sources),
     db: DBSession = Depends(get_db_session),
     kirby_features: KirbyFeatureService = Depends(get_kirby_feature_service),
 ) -> list[StatusItem]:
@@ -67,15 +76,13 @@ async def home_timeline(
 
     _map_sources = lambda S: [(s, max_candidates_per_source) for s in S]
 
-    print("config.fediway.feed_batch_size", config.fediway.feed_batch_size)
-    print("max_id", max_id)
-
     pipeline = (
         feed.name("timelines/home")
         .select("status_id")
         .sources(_map_sources(in_network_sources), group="in-network")
         .sources(_map_sources(near_network_sources), group="near-network")
         .sources(_map_sources(out_network_sources), group="out-network")
+        .sources(_map_sources(cold_start_sources), group="cold-start")
         .diversify(by="status:account_id", penalty=0.1)
         .sample(
             config.fediway.feed_batch_size,
@@ -84,6 +91,7 @@ async def home_timeline(
                     "in-network": 0.5,
                     "near-network": 0.25,
                     "out-network": 0.25,
+                    "cold-start": 0.1,
                 }
             ),
         )
@@ -94,8 +102,6 @@ async def home_timeline(
         feed.flush()
 
     recommendations = await pipeline.execute()
-
-    print("home", recommendations)
 
     statuses = db.exec(Status.select_by_ids(recommendations)).all()
 

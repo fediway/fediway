@@ -203,6 +203,12 @@ pub struct Config {
         default = "default_min_tag_engagers"
     )]
     pub min_tag_engagers: usize,
+
+    #[serde(
+        rename = "orbit_tags_blacklist",
+        default = "Vec::default"
+    )]
+    pub tags_blacklist: Vec<String>,
 }
 
 impl Config {

@@ -92,7 +92,18 @@ impl Orbit {
     fn publish(&self) -> Result<(), RedisError> {
         let mut redis = redis::Client::open(self.config.redis_conn())?;
         let version = self.embeddings.communities.version();
-        let _: () = redis.set("orbit:version", version.clone())?;
+        let _: () = redis.set("orbit:dim", version.clone())?;
+
+        let _: () = redis::pipe()
+            .atomic()
+            .set("orbit:dim", self.embeddings.communities.dim)
+            .set("orbit:version", version.clone())
+            .query(&mut redis)?;
+
+        tracing::info!(
+            "Published communities dimension {} to redis key 'orbit:dim'",
+            self.embeddings.communities.dim
+        );
 
         tracing::info!(
             "Published communities version {} to redis key 'orbit:version'",

@@ -10,7 +10,8 @@ from modules.fediway.sources.statuses import (
     AccountBasedCollaborativeFilteringSource,
     CollaborativeFilteringSource,
     NewestInNetworkSource,
-    OrbitSource,
+    CommunityRecommendationsSource,
+    RandomCommunitiesSource,
     PopularInCommunitySource,
     PouplarByInfluentialAccountsSource,
     PopularInSocialCircleSource,
@@ -78,11 +79,24 @@ def get_viral_source(
     ]
 
 
-def get_orbit_source(
+def get_community_recommendations_source(
     r: Redis = Depends(get_redis),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[Source]:
-    return [OrbitSource(r=r, client=qdrant_client, account_id=account.id)]
+    return [
+        CommunityRecommendationsSource(r=r, client=qdrant_client, account_id=account.id)
+    ]
+
+
+def get_random_communities_source(
+    r: Redis = Depends(get_redis),
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[Source]:
+    return [
+        RandomCommunitiesSource(
+            r=r, client=qdrant_client, account_id=account.id, max_batch_size=5
+        )
+    ]
 
 
 def get_newest_in_network_sources(
