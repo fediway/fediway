@@ -10,7 +10,7 @@ class Sampler:
 
 class TopKSampler(Sampler):
     def sample(self, candidates) -> int:
-        return np.argsort(scores)[-1]
+        return np.argsort(candidates.get_scores())[-1]
 
 
 class InverseTransformSampler(Sampler):
