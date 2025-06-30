@@ -8,7 +8,7 @@ use crate::{
 
 const MIN_SPARSITY: usize = 10;
 const MAX_SPARSITY: usize = 50;
-const BETA: f64 = 0.9;
+const LAMBDA: f64 = 0.3;
 
 #[derive(Clone)]
 pub struct Consumer {
@@ -39,8 +39,7 @@ impl<E: Embedded> UpdateEmbedding<E> for Consumer {
             return;
         }
 
-        self.embedding *= BETA;
-        self.embedding += &(entity.embedding().to_owned() * (1.0 - BETA));
+        self.embedding += &(entity.embedding().to_owned() * LAMBDA);
         self.embedding.keep_top_n(
             (self.embedding.0.dim() / 10)
                 .max(MAX_SPARSITY)
