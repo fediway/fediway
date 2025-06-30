@@ -92,7 +92,9 @@ class CandidateList:
         return self._ids
 
     def get_source(self, candidate) -> set[tuple[str, str | None]]:
-        return self._sources[candidate]
+        if candidate in self._sources:
+            return self._sources[candidate]
+        return set()
 
     def __iadd__(self, other):
         assert type(other) == type(self)

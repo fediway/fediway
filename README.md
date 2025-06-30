@@ -52,7 +52,10 @@ pipeline = (
     .paginate(20, offset=0)
 )
 
-status_ids = pipeline.execute()
+recommendations = pipeline.execute()
+
+for r in recommendations:
+    print(r.id, r.score)
 ```
 
 <a name="sources"></a>
