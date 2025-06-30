@@ -91,7 +91,7 @@ def get_community_recommendations_source(
 def get_random_communities_source(
     r: Redis = Depends(get_redis),
 ) -> list[Source]:
-    return [RandomCommunitiesSource(r=r, client=qdrant_client, max_batch_size=5)]
+    return [RandomCommunitiesSource(r=r, client=qdrant_client, batch_size=5)]
 
 
 def get_newest_in_network_sources(
