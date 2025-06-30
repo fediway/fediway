@@ -22,11 +22,11 @@ class PouplarByInfluentialAccountsSource(RedisSource):
         self.top_n = top_n
         self.decay_rate = decay_rate
 
-    def group(self):
-        return "popular_by_influential_accounts"
+    def get_params(self):
+        return {"language": language, "decay_rate": self.decay_rate}
 
     def name(self):
-        return f"popular_by_influential_accounts[l={self.language},d={self.decay_rate}]"
+        return "popular_by_influential_accounts"
 
     def compute(self):
         query = """

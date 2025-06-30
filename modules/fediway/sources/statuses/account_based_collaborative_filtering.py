@@ -12,9 +12,6 @@ class AccountBasedCollaborativeFilteringSource(Source):
         self.r = r
         self.account_id = account_id
 
-    def group(self):
-        return "account_based_collaborative_filtering"
-
     def name(self):
         return f"account_based_collaborative_filtering"
 

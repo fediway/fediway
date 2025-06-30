@@ -9,11 +9,11 @@ class CollaborativeFilteringSource(Source):
         self.language = language
         self.account_id = account_id
 
-    def group(self):
+    def name(self):
         return "collaborative_filtering"
 
-    def name(self):
-        return f"collaborative_filtering[l={self.language}]"
+    def get_params(self):
+        return {"language": language}
 
     def compute_scores(self):
         pass

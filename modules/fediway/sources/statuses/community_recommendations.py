@@ -21,9 +21,6 @@ class CommunityRecommendationsSource(Source):
         self.client = client
         self.account_id = account_id
 
-    def group(self):
-        return "community_recommendations"
-
     def name(self):
         return f"community_recommendations"
 

@@ -4,6 +4,12 @@ import numpy as np
 class Heuristic:
     features: list[str] = []
 
+    def get_params(self):
+        return {}
+
+    def name(self):
+        return self.__class__.__name__
+
     def update_seen(self, candidate) -> None:
         pass
 

@@ -24,8 +24,10 @@ class RandomCommunitiesSource(Source):
         self.client = client
         self.batch_size = batch_size
 
-    def group(self):
-        return "random_communities"
+    def get_params(self):
+        return {
+            "batch_size": self.batch_size,
+        }
 
     def name(self):
         return f"random_communities"

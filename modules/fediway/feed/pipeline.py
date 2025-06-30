@@ -1,5 +1,6 @@
 from loguru import logger
 from copy import deepcopy
+from datetime import datetime
 import pandas as pd
 import numpy as np
 import asyncio
@@ -13,7 +14,7 @@ from .features import Features
 
 
 class Candidate:
-    def __init__(self, entity, candidate, score, sources):
+    def __init__(self, entity, candidate, score, sources: set[tuple[str, str]]):
         self.entity = entity
         self.id = candidate
         self.score = score
@@ -35,7 +36,8 @@ class CandidateList:
         source_group: str | list[str] | None = None,
     ):
         if type(candidate) == Candidate:
-            source = candidate.sources
+            source = [s for s, _ in candidate.sources]
+            source_group = [g for _, g in candidate.sources]
             score = candidate.score
             candidate = candidate.id
 
@@ -139,10 +141,30 @@ class CandidateList:
         except ValueError:
             return
 
+    def __iter__(self):
+        return CandidateListIterator(self)
+
+
+class CandidateListIterator:
+    def __init__(self, candidates: CandidateList):
+        self.candidates = candidates
+        self.index = 0
+
+    def __next__(self) -> Candidate:
+        if self.index < len(self.candidates):
+            c = self.candidates[self.index]
+            self.index += 1
+            return c
+        else:
+            raise StopIteration
+
 
 class PipelineStep:
     def results(self) -> tuple[list[int], np.ndarray]:
         raise NotImplementedError
+
+    def get_params(self):
+        return {}
 
     def get_state(self):
         return None
@@ -150,9 +172,7 @@ class PipelineStep:
     def set_state(self, state):
         pass
 
-    async def __call__(
-        self, candidates: list[int], scores: np.ndarray
-    ) -> tuple[list[int], np.ndarray]:
+    async def __call__(self, candidates: CandidateList) -> CandidateList:
         raise NotImplementedError
 
 
@@ -238,6 +258,13 @@ class PaginationStep(PipelineStep):
         self.offset = offset
         self.max_id = max_id
 
+    def get_params(self):
+        return {
+            "limit": self.limit,
+            "offset": self.offset,
+            "max_id": self.max_id,
+        }
+
     def get_state(self):
         return {"candidates": self.candidates.get_state()}
 
@@ -279,6 +306,12 @@ class SourcingStep(PipelineStep):
         self._duration = None
         self._durations = []
         self._counts = []
+
+    def get_params(self):
+        return {
+            "sources": [[s.name(), n] for s, n in self.sources],
+            "group": self.group,
+        }
 
     def add(self, source: Source, n: int):
         self.sources.append((source, n))
@@ -352,6 +385,23 @@ class SamplingStep(PipelineStep):
         self.heuristics = heuristics
         self.feature_service = feature_service
         self.unique = unique
+
+    def get_params(self):
+        return {
+            "n": self.n,
+            "unique": self.unique,
+            "heuristics": [
+                {
+                    "name": h.name(),
+                    "params": h.get_params(),
+                }
+                for h in self.heuristics
+            ],
+            "sampler": {
+                "name": self.sampler.name(),
+                "params": self.sampler.get_params(),
+            },
+        }
 
     def get_state(self):
         return {
@@ -431,6 +481,7 @@ class Feed:
         self.counter = 0
         self._durations = []
         self._running = False
+        self.event_time = datetime.now()
 
     def get_durations(self) -> list[int]:
         return self._durations
@@ -472,6 +523,9 @@ class Feed:
         self.steps.append(step_fn)
 
         return self
+
+    def with_event_time(self, event_time: datetime):
+        self.event_time = event_time
 
     def remember(self):
         self.steps.append(RememberStep(self.entity))
@@ -575,7 +629,7 @@ class Feed:
 
         return self
 
-    def results(self, step_idx=None):
+    def results(self, step_idx=None) -> CandidateList:
         step_idx = step_idx or len(self.steps) - 1
 
         return self.steps[step_idx].results()

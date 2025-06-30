@@ -1,4 +1,4 @@
-from fastapi import Request, Depends
+from fastapi import Request, Depends, BackgroundTasks
 
 from shared.core.feast import feature_store
 from shared.services.feature_service import FeatureService
@@ -8,9 +8,9 @@ from modules.mastodon.models import Account
 from .auth import get_authenticated_account_or_fail
 
 
-def get_feature_service(request: Request):
+def get_feature_service(request: Request, background_tasks: BackgroundTasks):
     if not hasattr(request.state, "features"):
-        request.state.features = FeatureService()
+        request.state.features = FeatureService(background_tasks=background_tasks)
     return request.state.features
 
 

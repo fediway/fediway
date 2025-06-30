@@ -1,6 +1,7 @@
 import logging
 import time
 from contextlib import contextmanager
+import json
 
 from loguru import logger
 
@@ -25,3 +26,22 @@ def duration(message, level=logging.INFO):
 
 def flatten(arr):
     return reduce(operator.add, arr)
+
+
+def get_class_path(obj):
+    cls = obj.__class__
+    return f"{cls.__module__}.{cls.__qualname__}"
+
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif type(obj) == tuple:
+            return list(obj)
+        else:
+            return super(JSONEncoder, self).default(obj)

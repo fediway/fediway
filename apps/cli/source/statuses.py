@@ -109,28 +109,3 @@ def viral(
 
         for candidate in source.collect(limit):
             print(candidate)
-
-
-@app.command("unusual-popularity")
-def unusual_popularity(
-    limit: int = 10,
-    language: str = "en",
-    decay_rate: float = 1.0,
-    max_age_in_days: int = 3,
-):
-    from modules.fediway.sources.statuses import UnusualPopularitySource
-    from shared.core.rw import rw_session
-    from shared.core.redis import get_redis
-    import time
-
-    with rw_session() as rw:
-        source = UnusualPopularitySource(
-            r=get_redis(),
-            rw=rw,
-            language=language,
-            decay_rate=decay_rate,
-            max_age_in_days=max_age_in_days,
-        )
-
-        for candidate in source.collect(limit):
-            print(candidate)

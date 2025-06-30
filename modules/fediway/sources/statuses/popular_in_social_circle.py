@@ -26,11 +26,15 @@ class PopularInSocialCircleSource(Source):
         self.language = language
         self.max_age = max_age
 
-    def group(self):
-        return "influence_propagation"
+    def get_params(self):
+        return {
+            "language": self.language,
+            "max_age": self.max_age.total_seconds(),
+            "decay_rate": self.decay_rate,
+        }
 
     def name(self):
-        return f"influence_propagation[l={self.language},h={self.max_hops},a={self.max_age.total_seconds()}]"
+        return "influence_propagation"
 
     def collect(self, limit: int):
         query = """

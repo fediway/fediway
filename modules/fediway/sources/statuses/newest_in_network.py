@@ -19,9 +19,6 @@ class NewestInNetworkSource(Source):
         self.db = db
         self.account_id = account_id
 
-    def group(self):
-        return "newest_in_network"
-
     def name(self):
         return f"newest_in_network"
 

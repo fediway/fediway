@@ -17,7 +17,6 @@ from modules.fediway.sources.statuses import (
     PopularInSocialCircleSource,
     SimilarToEngagedSource,
     StatusBasedCollaborativeFilteringSource,
-    UnusualPopularitySource,
     ViralSource,
 )
 from modules.mastodon.models import Account
@@ -42,21 +41,6 @@ def get_popular_by_influential_accounts_sources(
         PouplarByInfluentialAccountsSource(
             r=r,
             driver=schwarm_driver,
-            language=lang,
-            decay_rate=config.fediway.feed_decay_rate,
-            ttl=timedelta(minutes=10),
-        )
-        for lang in languages
-    ]
-
-
-def get_unusual_popularity_source(
-    r: Redis = Depends(get_redis),
-    languages: list[str] = Depends(get_languages),
-) -> list[Source]:
-    return [
-        UnusualPopularitySource(
-            r=r,
             language=lang,
             decay_rate=config.fediway.feed_decay_rate,
             ttl=timedelta(minutes=10),

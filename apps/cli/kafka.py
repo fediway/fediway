@@ -17,6 +17,13 @@ def _topic(topic):
 
 TOPICS = [
     "status_text_embeddings",
+    "feeds",
+    "feed_pipeline_runs",
+    "feed_pipeline_steps",
+    "feed_sourcing_runs",
+    "feed_recommendations",
+    "feed_recommendation_sources",
+    "feed_ranking_runs",
 ]
 
 

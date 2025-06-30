@@ -1,10 +1,10 @@
-import time
-
 import numpy as np
 import pandas as pd
 from feast import FeatureStore
 from loguru import logger
 from fastapi import BackgroundTasks
+from datetime import datetime
+import time
 
 from modules.fediway.feed.features import Features
 from shared.core.feast import feature_store
@@ -15,10 +15,14 @@ class FeatureService(Features):
         self,
         fs: FeatureStore = feature_store,
         background_tasks: BackgroundTasks | None = None,
+        event_time: datetime = datetime.now(),
+        ingest_to_offline_store: bool = False,
     ):
         self.cache = {}
         self.fs = fs
         self.background_tasks = background_tasks
+        self.event_time = event_time
+        self.ingest_to_offline_store = ingest_to_offline_store
 
     def _cache_key(self, entities: list[dict[str, int]]) -> str:
         return ",".join(list(entities[0].keys()))
@@ -72,7 +76,7 @@ class FeatureService(Features):
                     ~feat.index.duplicated(keep="last")
                 ]
 
-    def _ingest_to_offline_store(self, features: pd.DataFrame, event_time: int):
+    def _ingest_to_offline_store(self, features: pd.DataFrame):
         feature_views = set([c.split("__")[0] for c in features.columns if "__" in c])
         for fv_name in feature_views:
             feature_view = self.fs.get_feature_view(fv_name)
@@ -85,7 +89,8 @@ class FeatureService(Features):
             ]
             feature_names = [c.split("__")[-1] for c in columns]
             df = features[columns].rename(columns=dict(zip(columns, feature_names)))
-            df["event_time"] = event_time
+            df["event_time"] = int(self.event_time.timestamp())
+
             try:
                 result = self.fs.write_to_offline_store(
                     fv_name,
@@ -98,8 +103,6 @@ class FeatureService(Features):
         self,
         entities: list[dict[str, int]],
         features: list[str],
-        ingest_to_offline_store: bool = False,
-        event_time: int = int(time.time()),
     ) -> pd.DataFrame | None:
         if len(features) == 0:
             return None
@@ -109,6 +112,7 @@ class FeatureService(Features):
 
         start = time.time()
 
+        # load features from cache
         cached_df, missing_entities = self._get_cached(entities, features)
 
         if len(missing_entities) == 0 and cached_df is not None:
@@ -121,7 +125,7 @@ class FeatureService(Features):
         ).to_df()
 
         # ingest into offline store
-        if ingest_to_offline_store and len(df) > 0:
+        if self.ingest_to_offline_store and len(df) > 0:
             if self.background_tasks is None:
                 logger.warning(
                     "Missing background task manager: ingesting features to offline store sequentially."

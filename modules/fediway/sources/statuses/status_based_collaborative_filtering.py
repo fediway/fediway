@@ -12,9 +12,6 @@ class StatusBasedCollaborativeFilteringSource(Source):
         self.r = r
         self.account_id = account_id
 
-    def group(self):
-        return "status_based_collaborative_filtering"
-
     def name(self):
         return f"status_based_collaborative_filtering"
 

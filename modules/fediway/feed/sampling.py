@@ -4,6 +4,12 @@ import numpy as np
 
 
 class Sampler:
+    def get_params(self):
+        return {}
+
+    def name(self):
+        return self.__class__.__name__
+
     def sample(self, candidates) -> int:
         raise NotImplementedError
 

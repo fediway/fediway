@@ -5,7 +5,8 @@ from .entities import account, author, status, tag
 # from .views.combined_status_tags import combined_status_tags_features
 # from .views.embedding import account_embedding_features
 # from .views.engagement import account_author_features, account_features, author_features
-# from .views.status import status_features
+from .views.status import status_features
+
 # from .views.latest_engaged_statuses import latest_engaged_statuses
 from .views.tag_engagement_features import tag_engagement_features
 
@@ -26,8 +27,8 @@ FEATURE_VIEWS = (
     # # account author features
     # account_author_features
     # +
-    # # status features
-    # [status_features]
+    # status features
+    + [status_features]
     # + combined_status_tags_features
 )
 

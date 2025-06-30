@@ -12,5 +12,4 @@ from .similar_to_engaged import SimilarToEngagedSource
 from .status_based_collaborative_filtering import (
     StatusBasedCollaborativeFilteringSource,
 )
-from .unusual_popularity import UnusualPopularitySource
 from .viral import ViralSource

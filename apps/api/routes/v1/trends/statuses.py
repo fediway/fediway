@@ -49,6 +49,7 @@ async def status_trends(
         feed.flush()
 
     recommendations = await pipeline.execute()
+    status_ids = [r.id for r in recommendations]
 
     set_next_link(request, response, {"offset": offset + len(recommendations)})
 

@@ -13,7 +13,7 @@ from ..main import app
 
 
 @app.task(name="sources.viral", queue="sources")
-def store_unusual_popularity_source():
+def store_viral_source_service():
     with rw_session() as rw:
         StoreViralSourceService(get_redis(), rw)()
 

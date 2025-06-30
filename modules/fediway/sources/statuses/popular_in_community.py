@@ -14,11 +14,11 @@ class PopularInCommunitySource(Source):
         self.decay_rate = decay_rate
         self.top_n = top_n
 
-    def group(self):
-        return "popular_in_community"
+    def get_params(self):
+        return {"decay_rate": self.decay_rate}
 
     def name(self):
-        return f"popular_in_community[d={self.decay_rate}]"
+        return "popular_in_community"
 
     def collect(self, limit: int):
         query = """

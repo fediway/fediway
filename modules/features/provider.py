@@ -10,17 +10,7 @@ from loguru import logger
 import pyarrow
 import json
 
-
-class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        else:
-            return super(NumpyEncoder, self).default(obj)
+from modules.utils import JSONEncoder
 
 
 class FediwayProvider(PassthroughProvider):
@@ -52,9 +42,12 @@ class FediwayProvider(PassthroughProvider):
         data: pyarrow.Table,
         progress: Optional[Callable[[int], Any]],
     ) -> None:
+        if isinstance(feature_view, OnDemandFeatureView):
+            return
+
         producer = KafkaProducer(
             bootstrap_servers=config.offline_store.kafka_bootstrap_servers,
-            value_serializer=lambda v: json.dumps(v, cls=NumpyEncoder).encode("utf-8"),
+            value_serializer=lambda v: json.dumps(v, cls=JSONEncoder).encode("utf-8"),
             key_serializer=lambda k: str(k).encode("utf-8") if k else None,
             max_in_flight_requests_per_connection=5,  # Parallel sends
             acks=1,  # Leader acknowledgment
@@ -78,7 +71,7 @@ class FediwayProvider(PassthroughProvider):
                 future.get(timeout=10)
                 successful_deliveries += 1
             except Exception as e:
-                logger.error(f"Message delivery failed: {str(e)}")
+                logger.error(f"Kafka message delivery failed: {str(e)}")
 
         # Ensure all messages are sent
         producer.flush()

@@ -4,7 +4,7 @@ import hashlib
 
 import numpy as np
 from fastapi import BackgroundTasks, Request, Response
-from faststream.confluent import KafkaBroker
+from kafka import KafkaProducer
 from redis import Redis
 from sqlmodel import Session as DBSession
 from datetime import datetime
@@ -51,22 +51,10 @@ def _get_feed_key(request: Request, length: int = 32):
     return hashlib.sha256(request_key(request).encode("utf-8")).hexdigest()[:length]
 
 
-class NumpyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        else:
-            return super(NumpyEncoder, self).default(obj)
-
-
 class FeedService:
     def __init__(
         self,
-        db: DBSession,
+        kafka: KafkaProducer,
         request: Request,
         tasks: BackgroundTasks,
         redis: Redis,
@@ -74,8 +62,8 @@ class FeedService:
         account: Account | None,
     ):
         self.r = redis
-        self.db = db
         self.tasks = tasks
+        self.kafka = kafka
         self.request = request
         self.feature_service = feature_service
         self.pipeline = Feed(feature_service)
@@ -138,85 +126,110 @@ class FeedService:
         return self
 
     async def _save_pipeline_run(self):
-        now = datetime.now()
+        event_time = int(self.feature_service.event_time.timestamp())
 
-        self.db.merge(
-            FeedModel(
-                id=self.id,
-                user_agent=self.request.headers.get("User-Agent"),
-                ip=self.request.client.host,
-                account_id=self.account.id if self.account else None,
-                name=self._name,
-                entity=self.pipeline.entity,
-                created_at=now,
+        futures = []
+
+        # ingest feed
+        futures.append(
+            self.kafka.send(
+                topic="feeds",
+                key=self.id,
+                value={
+                    "id": self.id,
+                    "user_agent": self.request.headers.get("User-Agent"),
+                    "ip": self.request.client.host,
+                    "account_id": self.account.id if self.account else None,
+                    "name": self._name,
+                    "entity": self.pipeline.entity,
+                    "event_time": event_time,
+                },
             )
         )
 
+        # ingest pipeline run
         run_id = str(uuid.uuid4())
-        self.db.add(
-            RecPipelineRun(
-                id=run_id,
-                feed_id=self.id,
-                iteration=self.pipeline.counter - 1,
-                duration_ns=sum(self.pipeline.get_durations()),
-                executed_at=now,
+        futures.append(
+            self.kafka.send(
+                topic="feed_pipeline_runs",
+                key=run_id,
+                value={
+                    "id": run_id,
+                    "feed_id": self.id,
+                    "iteration": self.pipeline.counter - 1,
+                    "duration_ns": sum(self.pipeline.get_durations()),
+                    "event_time": event_time,
+                },
             )
         )
 
-        rec_step_ids = [str(uuid.uuid4()) for _ in range(len(self.pipeline.steps))]
-        self.db.bulk_save_objects(
-            [
-                RecPipelineStep(
-                    id=step_id,
-                    feed_id=self.id,
-                    run_id=run_id,
-                    group_name=str(step.__class__.__name__),
-                    name=str(step),
-                    duration_ns=duration_ns,
-                    executed_at=now,
+        # ingest recommendations
+        for recommendation in self.pipeline.results():
+            rec_id = str(uuid.uuid4())
+            futures.append(
+                self.kafka.send(
+                    topic="feed_recommendations",
+                    key=rec_id,
+                    value={
+                        "id": rec_id,
+                        "feed_id": self.id,
+                        "pipeline_run_id": run_id,
+                        "entity": self.pipeline.entity,
+                        "entity_id": recommendation.id,
+                        "sources": [s for s, _ in recommendation.sources],
+                        "groups": [g for _, g in recommendation.sources],
+                        "score": np.clip(recommendation.score, 1e-10, None),
+                        "event_time": event_time,
+                    },
                 )
-                for step_id, step, duration_ns in zip(
-                    rec_step_ids, self.pipeline.steps, self.pipeline.get_durations()
-                )
-            ]
-        )
+            )
 
+        # ingest pipeline steps
+        rec_step_ids = [str(uuid.uuid4()) for _ in range(len(self.pipeline.steps))]
+        for step_id, step, duration_ns in zip(
+            rec_step_ids, self.pipeline.steps, self.pipeline.get_durations()
+        ):
+            futures.append(
+                self.kafka.send(
+                    topic="feed_pipeline_steps",
+                    key=step_id,
+                    value={
+                        "id": step_id,
+                        "feed_id": self.id,
+                        "pipeline_run_id": run_id,
+                        "name": str(step),
+                        "params": step.get_params(),
+                        "duration_ns": duration_ns,
+                        "event_time": event_time,
+                    },
+                )
+            )
+
+        # ingest sourcing runs
         for step_id, step in zip(rec_step_ids, self.pipeline.steps):
             if not isinstance(step, SourcingStep):
                 continue
-            self.db.bulk_save_objects(
-                [
-                    SourcingRun(
-                        id=str(uuid.uuid4()),
-                        feed_id=self.id,
-                        step_id=step_id,
-                        group_name=source.group(),
-                        source=source.name(),
-                        candidates_limit=limit,
-                        candidates_count=count,
-                        duration_ns=duration_ns,
-                        executed_at=now,
+            for (source, limit), duration_ns, count in zip(
+                step.sources, step.get_durations(), step.get_counts()
+            ):
+                sourcing_run_id = str(uuid.uuid4())
+                futures.append(
+                    self.kafka.send(
+                        topic="feed_sourcing_runs",
+                        key=sourcing_run_id,
+                        value={
+                            "id": sourcing_run_id,
+                            "feed_id": self.id,
+                            "pipeline_step_id": step_id,
+                            "params": source.get_params(),
+                            "source": source.name(),
+                            "candidates_limit": limit,
+                            "candidates_count": count,
+                            "duration_ns": duration_ns,
+                            "event_time": event_time,
+                        },
                     )
-                    for (source, limit), duration_ns, count in zip(
-                        step.sources, step.get_durations(), step.get_counts()
-                    )
-                ]
-            )
-
-        self.db.bulk_save_objects(
-            [
-                Recommendation(
-                    id=str(uuid.uuid4()),
-                    feed_id=self.id,
-                    run_id=run_id,
-                    entity=self.pipeline.entity,
-                    entity_id=recommendation,
-                    score=np.clip(score, 1e-10, None),
-                    created_at=now,
                 )
-                for recommendation, score in zip(*self.pipeline.results())
-            ]
-        )
 
         for step_id, step in zip(rec_step_ids, self.pipeline.steps):
             if not isinstance(step, RankingStep):
@@ -225,39 +238,31 @@ class FeedService:
                 continue
 
             ranking_run_id = str(uuid.uuid4())
-            self.db.add(
-                RankingRun(
-                    id=ranking_run_id,
-                    feed_id=self.id,
-                    rec_run_id=run_id,
-                    rec_step_id=step_id,
-                    ranker=step.ranker.name,
-                    feature_retrival_duration_ns=step.get_feature_retrieval_duration(),
-                    ranking_duration_ns=step.get_ranking_duration(),
-                    candidates_count=len(step.get_candidates()),
-                    executed_at=now,
+            futures.append(
+                self.kafka.send(
+                    topic="feed_rankin_runs",
+                    key=sourcing_run_id,
+                    value={
+                        "id": ranking_run_id,
+                        "feed_id": self.id,
+                        "pipeline_run_id": run_id,
+                        "pipeline_step_id": step_id,
+                        "ranker": step.ranker.name,
+                        "feature_retrival_duration_ns": step.get_feature_retrieval_duration(),
+                        "ranking_duration_ns": step.get_ranking_duration(),
+                        "candidates_count": len(step.get_candidates()),
+                        "event_time": event_time,
+                    },
                 )
             )
-            self.db.bulk_save_objects(
-                [
-                    RankedEntity(
-                        id=str(uuid.uuid4()),
-                        ranking_run_id=ranking_run_id,
-                        entity=self.pipeline.entity,
-                        entity_id=candidate,
-                        features=features.to_dict(),
-                        score=np.clip(score, 1e-10, None),
-                        created_at=now,
-                    )
-                    for candidate, score, features in zip(
-                        step.get_candidates(),
-                        step.get_scores(),
-                        step.get_features().iloc,
-                    )
-                ]
-            )
 
-        self.db.commit()
+        for future in futures:
+            try:
+                future.get(timeout=10)
+            except Exception as e:
+                logger.error(f"Kafka message delivery failed: {str(e)}")
+
+        self.kafka.flush()
 
     def flush(self):
         self.r.delete(self._redis_key())
@@ -268,7 +273,7 @@ class FeedService:
         self.r.setex(
             self._redis_key(),
             config.fediway.feed_session_ttl,
-            json.dumps(state, cls=NumpyEncoder),
+            json.dumps(state, cls=utils.JSONEncoder),
         )
 
     def _load_state(self):
@@ -288,7 +293,7 @@ class FeedService:
         self._save_state()
 
         # store pipeline execution data
-        # self.tasks.add_task(self._save_pipeline_run)
+        self.tasks.add_task(self._save_pipeline_run)
 
     async def execute(self) -> CandidateList:
         with utils.duration("Loaded recommendations in {:.3f} seconds."):
@@ -311,4 +316,4 @@ class FeedService:
             # load new candidates
             self.tasks.add_task(self._execute)
 
-            return [c for c in recommendations.get_candidates()]
+            return recommendations

@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session as DBSession
 
-from apps.api.core.ranker import kirby
 from apps.api.dependencies.feeds import get_feed
-from apps.api.dependencies.features import get_kirby_feature_service
 from apps.api.dependencies.sources.statuses import (
     get_account_based_collaborative_filtering_source,
     get_popular_by_influential_accounts_sources,
@@ -20,7 +18,6 @@ from apps.api.dependencies.sources.statuses import (
 from apps.api.services.feed_service import FeedService
 from config import config
 from modules.fediway.feed.sampling import WeightedGroupSampler
-from modules.fediway.rankers.kirby import KirbyFeatureService
 from modules.fediway.sources import Source
 from modules.mastodon.items import StatusItem
 from modules.mastodon.models import Status
@@ -68,7 +65,6 @@ async def home_timeline(
     out_network_sources: list[Source] = Depends(get_out_network_sources),
     cold_start_sources: list[Source] = Depends(get_cold_start_sources),
     db: DBSession = Depends(get_db_session),
-    kirby_features: KirbyFeatureService = Depends(get_kirby_feature_service),
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(
         len(in_network_sources) + len(near_network_sources) + len(out_network_sources)
@@ -102,7 +98,8 @@ async def home_timeline(
         feed.flush()
 
     recommendations = await pipeline.execute()
+    status_ids = [r.id for r in recommendations]
 
-    statuses = db.exec(Status.select_by_ids(recommendations)).all()
+    statuses = db.exec(Status.select_by_ids(status_ids)).all()
 
     return [StatusItem.from_model(status) for status in statuses]

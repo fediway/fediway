@@ -24,11 +24,14 @@ class SimilarToEngagedSource(Source):
         self.max_age = max_age
         self.feature_service = feature_service
 
-    def group(self):
-        return "similar_to_engaged"
+    def get_params(self):
+        return {
+            "language": self.language,
+            "max_age": self.max_age.total_seconds(),
+        }
 
     def name(self):
-        return f"similar_to_engaged[l={self.language},a={self.max_age.total_seconds()}]"
+        return "similar_to_engaged"
 
     def collect(self, limit: int):
         status_ids = asyncio.run(
