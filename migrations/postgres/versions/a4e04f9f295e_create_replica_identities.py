@@ -18,6 +18,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 TABLES = [
     "accounts",
+    "accounts_tags",
+    "bookmarks",
+    "blocks",
     "statuses",
     "status_stats",
     "follows",
@@ -31,8 +34,13 @@ TABLES = [
     "polls",
     "poll_votes",
     "mutes",
+    "reports",
     "lists",
     "list_accounts",
+    "preview_card_trends",
+    "preview_card_providers",
+    "preview_card_statuses",
+    "preview_cards",
 ]
 
 

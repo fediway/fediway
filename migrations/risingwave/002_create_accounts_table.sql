@@ -1,5 +1,6 @@
 
 -- :up
+
 CREATE TABLE IF NOT EXISTS accounts (
     id BIGINT PRIMARY KEY,
     username VARCHAR,
@@ -19,7 +20,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     suspended_at TIMESTAMP,
     trendable BOOLEAN,
     indexable BOOLEAN,
-    attribution_domains VARCHAR
+    attribution_domains VARCHAR[]
 ) FROM pg_source TABLE 'public.accounts';
 
 -- :down

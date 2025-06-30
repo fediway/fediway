@@ -1,3 +1,4 @@
+use petgraph::algo::FloatMeasure;
 use sprs::CsVec;
 use std::ops::{AddAssign, Mul, MulAssign};
 
@@ -17,11 +18,11 @@ impl SparseVec {
         SparseVec(self.0.to_owned())
     }
 
-    pub fn l1_normalize(&mut self) {
-        let l1_norm = self.0.l1_norm();
+    pub fn normalize(&mut self) {
+        let norm = self.0.norm(f64::infinite());
 
-        if l1_norm > 0.0 {
-            *self *= 1.0 / l1_norm;
+        if norm > 0.0 {
+            *self *= 1.0 / norm;
         }
     }
 

@@ -1,5 +1,4 @@
 use crate::communities::Communities;
-use crate::embedding::EmbeddingType;
 use qdrant_client::config::QdrantConfig;
 use redis::{ConnectionAddr, ConnectionInfo, ProtocolVersion, RedisConnectionInfo};
 use serde::Deserialize;
@@ -43,18 +42,6 @@ fn default_random_state() -> u64 {
 fn default_tag_sim_threshold() -> f64 {
     0.25
 }
-fn default_max_producer_communities() -> usize {
-    20
-}
-fn default_max_consumer_communities() -> usize {
-    50
-}
-fn default_max_tag_communities() -> usize {
-    16
-}
-fn default_max_status_communities() -> usize {
-    100
-}
 fn default_lambda() -> f64 {
     0.05
 }
@@ -88,7 +75,7 @@ fn default_status_engagement_threshold() -> usize {
 fn default_tag_engagement_threshold() -> usize {
     10
 }
-fn default_qdrant_update_delay() -> u64 {
+fn default_qdrant_upsert_delay() -> u64 {
     60 // 60 seconds
 }
 fn default_max_status_age() -> u64 {
@@ -155,10 +142,10 @@ pub struct Config {
     pub qdrant_max_batch_size: usize,
 
     #[serde(
-        rename = "orbit_qdrant_update_delay",
-        default = "default_qdrant_update_delay"
+        rename = "orbit_qdrant_upsert_delay",
+        default = "default_qdrant_upsert_delay"
     )]
-    pub qdrant_update_delay: u64,
+    pub qdrant_upsert_delay: u64,
 
     #[serde(
         rename = "orbit_louvain_resolution",
@@ -180,30 +167,6 @@ pub struct Config {
 
     #[serde(default = "default_random_state")]
     pub random_state: u64,
-
-    #[serde(
-        rename = "orbit_max_producer_communities",
-        default = "default_max_producer_communities"
-    )]
-    pub max_producer_communities: usize,
-
-    #[serde(
-        rename = "orbit_max_consumer_communities",
-        default = "default_max_consumer_communities"
-    )]
-    pub max_consumer_communities: usize,
-
-    #[serde(
-        rename = "orbit_max_tag_communities",
-        default = "default_max_tag_communities"
-    )]
-    pub max_tag_communities: usize,
-
-    #[serde(
-        rename = "orbit_max_status_communities",
-        default = "default_max_status_communities"
-    )]
-    pub max_status_communities: usize,
 
     #[serde(
         rename = "orbit_status_engagement_threshold",
@@ -283,23 +246,5 @@ impl Config {
             self.qdrant_collection_prefix,
             communities.version()
         )
-    }
-
-    pub fn engagement_threshold(&self, embedding_type: &EmbeddingType) -> usize {
-        match embedding_type {
-            EmbeddingType::Consumer => 0,
-            EmbeddingType::Producer => self.producer_engagement_threshold,
-            EmbeddingType::Status { .. } => self.status_engagement_threshold,
-            EmbeddingType::Tag => self.tag_engagement_threshold,
-        }
-    }
-
-    pub fn max_communities(&self, embedding_type: &EmbeddingType) -> usize {
-        match embedding_type {
-            EmbeddingType::Consumer => self.max_consumer_communities,
-            EmbeddingType::Producer => self.max_producer_communities,
-            EmbeddingType::Status { .. } => self.max_status_communities,
-            EmbeddingType::Tag => self.max_tag_communities,
-        }
     }
 }

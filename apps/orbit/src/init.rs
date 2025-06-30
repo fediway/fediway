@@ -1,6 +1,6 @@
 use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
-use crate::embedding::{Embedding, Embeddings};
+use crate::embedding::{Embeddings, FromEmbedding};
 use crate::rw;
 use crate::sparse::SparseVec;
 use crate::types::{FastDashMap, FastHashMap, FastHashSet};
@@ -54,23 +54,11 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
         pc_matrix.nrows(),
     );
 
-    // compute initial confidence scores
-    let a_confidence = get_confidence_scores(&at_matrix, &a_indices, config.lambda);
-    let p_confidence = get_confidence_scores(&pt_matrix, &p_indices, config.lambda);
-    let mut t_confidence = get_confidence_scores(&ta_matrix, &t2_indices, config.lambda);
+    let consumers = get_embeddings(communities.dim, ac_matrix, a_indices);
+    let producers = get_embeddings(communities.dim, pc_matrix, p_indices);
+    let tags = get_embeddings(communities.dim, tc2_matrix, t2_indices);
 
-    // set confidence for tags that are assigned to communities to 1
-    for tag in communities.tags.keys() {
-        if let Some(c) = t_confidence.get_mut(tag) {
-            *c = 1.0;
-        }
-    }
-
-    let consumers = get_embeddings(communities.dim, ac_matrix, a_indices, a_confidence);
-    let producers = get_embeddings(communities.dim, pc_matrix, p_indices, p_confidence);
-    let tags = get_embeddings(communities.dim, tc2_matrix, t2_indices, t_confidence);
-
-    let embeddings = Embeddings::initial(config, communities, consumers, producers, tags);
+    let embeddings = Embeddings::initial(communities, consumers, producers, tags);
 
     // return embeddings;
 
@@ -147,7 +135,7 @@ async fn get_communities(config: &Config, db: &Client) -> Communities {
             .insert(tag_name);
     }
 
-    for (c, tags) in community_tags {
+    for (c, tags) in community_tags.iter().sorted_by(|(a, _), (b, _)| a.cmp(b)) {
         println!("{}: {:?}", c, tags);
     }
 
@@ -160,12 +148,11 @@ async fn get_communities(config: &Config, db: &Client) -> Communities {
     communities
 }
 
-fn get_embeddings(
+fn get_embeddings<E: FromEmbedding>(
     dim: usize,
     matrix: CsrMatrix<f64>,
     id_mappings: FastHashMap<i64, usize>,
-    confidence_scores: FastHashMap<i64, f64>,
-) -> FastDashMap<i64, Embedding> {
+) -> FastDashMap<i64, E> {
     matrix
         .row_iter()
         .zip(
@@ -177,32 +164,9 @@ fn get_embeddings(
         .map(|(row, id)| {
             let indices: Vec<usize> = row.col_indices().into();
             let values: Vec<f64> = row.values().into();
-            let confidence = confidence_scores.get(id).unwrap();
             let mut vec = SparseVec::new(dim, indices, values);
-            vec.l1_normalize();
-            let embedding = Embedding::new(vec, *confidence);
-            (*id, embedding)
-        })
-        .collect()
-}
-
-fn get_confidence_scores(
-    matrix: &CsrMatrix<f64>,
-    id_mappings: &FastHashMap<i64, usize>,
-    lambda: f64,
-) -> FastHashMap<i64, f64> {
-    matrix
-        .row_iter()
-        .zip(
-            id_mappings
-                .iter()
-                .sorted_by(|a, b| a.1.cmp(b.1))
-                .map(|(id, _)| id),
-        )
-        .map(|(row, id)| {
-            let x: f64 = row.values().iter().sum();
-            let confidence = 1.0 - (-lambda * x).exp();
-            (*id, confidence)
+            vec.normalize();
+            (*id, E::from_embedding(vec))
         })
         .collect()
 }

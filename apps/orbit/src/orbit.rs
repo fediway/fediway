@@ -1,5 +1,6 @@
 use crate::config::Config;
-use crate::embedding::{EmbeddingType, Embeddings};
+use crate::embedding::Embeddings;
+use crate::entities::EntityType;
 use crate::workers::embedding::EmbeddingWorker;
 use crate::workers::kafka::{Event, KafkaWorker};
 use crate::workers::qdrant::{QdrantTask, QdrantWorker};
@@ -114,25 +115,19 @@ impl Orbit {
         );
 
         for mut row in self.embeddings.consumers.iter_mut() {
-            worker.upsert_embedding(*row.key(), row.value_mut(), EmbeddingType::Consumer);
+            worker.upsert_embedding(*row.key(), row.value_mut(), &EntityType::Consumer);
         }
 
         for mut row in self.embeddings.producers.iter_mut() {
-            worker.upsert_embedding(*row.key(), row.value_mut(), EmbeddingType::Producer);
+            worker.upsert_embedding(*row.key(), row.value_mut(), &EntityType::Producer);
         }
 
         for mut row in self.embeddings.statuses.iter_mut() {
-            let status_id = *row.key();
-            if let Some(created_at) = self.embeddings.statuses_dt.get(&status_id) {
-                let embedding_type = EmbeddingType::Status {
-                    created_at: *created_at,
-                };
-                worker.upsert_embedding_if_needed(status_id, row.value_mut(), embedding_type);
-            }
+            worker.upsert_embedding_if_needed(*row.key(), row.value_mut(), &EntityType::Status);
         }
 
         for mut row in self.embeddings.tags.iter_mut() {
-            worker.upsert_embedding_if_needed(*row.key(), row.value_mut(), EmbeddingType::Tag);
+            worker.upsert_embedding_if_needed(*row.key(), row.value_mut(), &EntityType::Tag);
         }
     }
 

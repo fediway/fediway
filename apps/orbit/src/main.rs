@@ -1,6 +1,7 @@
 mod communities;
 mod config;
 mod embedding;
+mod entities;
 mod init;
 mod orbit;
 mod rw;

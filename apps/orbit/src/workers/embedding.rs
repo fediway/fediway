@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::{Duration, SystemTime},
-};
+use std::{sync::Arc, time::SystemTime};
 
 use tokio::{
     sync::{
@@ -13,9 +10,9 @@ use tokio::{
 
 use crate::{
     config::Config,
-    embedding::{Embedding, EmbeddingType, Embeddings, EngagementEvent, StatusEvent},
-    workers::kafka::Event,
-    workers::qdrant::QdrantTask,
+    embedding::{Embedded, Embeddings, EngagementEvent, StatusEvent},
+    entities::{Entity, EntityType, Upsertable},
+    workers::{kafka::Event, qdrant::QdrantTask},
 };
 
 pub struct EmbeddingWorker {
@@ -123,117 +120,53 @@ impl EmbeddingWorker {
 
         embeddings.push_engagement(engagement);
 
-        if let Some(mut embedding) = embeddings.consumers.get_mut(&account_id) {
+        if let Some(mut consumer) = embeddings.consumers.get_mut(&account_id) {
             self.upsert_embedding_if_needed(
                 account_id,
-                embedding.value_mut(),
-                EmbeddingType::Consumer,
+                consumer.value_mut(),
+                &EntityType::Consumer,
             );
         }
 
-        if let (Some(mut embedding), Some(created_at)) = (
-            embeddings.statuses.get_mut(&status_id),
-            embeddings.statuses_dt.get(&status_id),
-        ) {
-            self.upsert_embedding_if_needed(
-                status_id,
-                embedding.value_mut(),
-                EmbeddingType::Status {
-                    created_at: *created_at,
-                },
-            );
+        if let Some(mut status) = embeddings.statuses.get_mut(&status_id) {
+            self.upsert_embedding_if_needed(status_id, status.value_mut(), &EntityType::Status);
         }
     }
 
-    pub fn should_upsert_embedding(
-        &self,
-        embedding: &Embedding,
-        embedding_type: &EmbeddingType,
-    ) -> bool {
-        // skip updating embeddings that:
-        // - have not been changed since last udpate
-        // - are zero
-        if !embedding.is_dirty || embedding.vec.is_zero() {
-            tracing::info!("Skip upserting: engaments empty");
-            return false;
-        }
-
-        // skip updating embeddings that have been updated recently
-        if let Some(last_stored) = embedding.last_stored {
-            let now = SystemTime::now();
-            let update_delay = Duration::from_secs(self.config.qdrant_update_delay);
-
-            if last_stored > now - update_delay {
-                tracing::info!(
-                    "Skip upserting: last stored {:?}",
-                    last_stored.elapsed()
-                );
-
-                return false;
-            }
-        }
-
-        // skip updating embeddings of entities that have to few engagments
-        if embedding.engagements < self.config.engagement_threshold(embedding_type) {
-            tracing::info!(
-                "Skip upserting: engaments {} below threshold {}",
-                embedding.engagements,
-                self.config.engagement_threshold(embedding_type)
-            );
-            return false;
-        }
-
-        // skip updating embeddings of statuses that are to old
-        if let EmbeddingType::Status { created_at } = embedding_type {
-            let status_age = created_at.elapsed().unwrap().as_secs();
-            if status_age > self.config.max_status_age {
-                tracing::info!("Skip upserting: status to old");
-
-                return false;
-            }
-        }
-
-        true
-    }
-
-    pub fn upsert_embedding_if_needed(
+    pub fn upsert_embedding_if_needed<E: Upsertable>(
         &self,
         id: i64,
-        embedding: &mut Embedding,
-        embedding_type: EmbeddingType,
+        entity: &mut E,
+        entity_type: &EntityType,
     ) {
-        if self.should_upsert_embedding(embedding, &embedding_type) {
-            self.upsert_embedding(id, embedding, embedding_type);
+        if entity.should_upsert(&self.config) {
+            self.upsert_embedding(id, entity, entity_type);
         }
     }
 
-    fn get_collection_for_type(&self, embedding_type: &EmbeddingType) -> String {
-        match embedding_type {
-            EmbeddingType::Consumer => self.consumers_collection.clone(),
-            EmbeddingType::Producer => self.producers_collection.clone(),
-            EmbeddingType::Status { .. } => self.statuses_collection.clone(),
-            EmbeddingType::Tag => self.tags_collection.clone(),
+    fn get_collection_for_type(&self, entity_type: &EntityType) -> String {
+        match entity_type {
+            EntityType::Consumer => self.consumers_collection.clone(),
+            EntityType::Producer => self.producers_collection.clone(),
+            EntityType::Status => self.statuses_collection.clone(),
+            EntityType::Tag => self.tags_collection.clone(),
         }
-        .clone()
     }
 
-    pub fn upsert_embedding(
+    pub fn upsert_embedding<E: Entity + Embedded>(
         &self,
         id: i64,
-        embedding: &mut Embedding,
-        embedding_type: EmbeddingType,
+        entity: &mut E,
+        entity_type: &EntityType,
     ) {
-        embedding.is_dirty = false;
-        embedding
-            .vec
-            .keep_top_n(self.config.max_communities(&embedding_type));
-        embedding.last_stored = Some(SystemTime::now());
+        *entity.is_dirty_mut() = false;
+        *entity.last_upserted_mut() = Some(SystemTime::now());
 
         self.qdrant_tx
             .send(QdrantTask::Upsert {
                 id: id as u64,
-                collection: self.get_collection_for_type(&embedding_type),
-                embedding: embedding.vec.to_owned(),
+                collection: self.get_collection_for_type(entity_type),
+                embedding: entity.embedding().to_owned(),
                 metadata: serde_json::Value::default(),
             })
             .unwrap();

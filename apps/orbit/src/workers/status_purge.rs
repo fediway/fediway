@@ -41,15 +41,16 @@ impl StatusPurgeWorker {
         embeddings: &Arc<Embeddings>,
     ) {
         let statuses_to_delete: Vec<i64> = embeddings
-            .statuses_dt
+            .statuses
             .iter()
-            .filter(|row| row.elapsed().unwrap_or_default().as_secs() > self.config.max_status_age)
+            .filter(|row| {
+                row.created_at.elapsed().unwrap_or_default().as_secs() > self.config.max_status_age
+            })
             .map(|row| *row.key())
             .collect();
 
         for status_id in statuses_to_delete {
             embeddings.statuses.remove(&status_id);
-            embeddings.statuses_dt.remove(&status_id);
             embeddings.statuses_tags.remove(&status_id);
 
             qdrant_tx

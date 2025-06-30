@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   has_audio BOOLEAN DEFAULT false,
   num_mentions BIGINT,
   PRIMARY KEY (account_id, status_id, type),
-  WATERMARK FOR event_time AS event_time - INTERVAL '1 DAY'
+
+  -- wait at most 1 day for late arriving engagements
+  WATERMARK FOR event_time AS event_time - INTERVAL '1 DAY' 
 ) APPEND ONLY ON CONFLICT IGNORE;
 
 CREATE INDEX IF NOT EXISTS idx_enriched_status_engagement_events_event_time ON enriched_status_engagement_events(event_time); 
