@@ -1,11 +1,11 @@
 from feast.feature_store import RepoConfig
-from feast.infra.offline_stores.contrib.postgres_offline_store.postgres import (
-    PostgreSQLOfflineStoreConfig,
-)
 from feast.infra.online_stores.redis import RedisOnlineStoreConfig
+from feast.repo_config import FeastConfigBaseModel
 from pydantic import SecretStr
 
 from .base import BaseConfig
+from modules.features.offline_store import RisingwaveOfflineStoreConfig
+from modules.features.provider import FediwayProvider
 
 
 class FeastConfig(BaseConfig):
@@ -21,7 +21,7 @@ class FeastConfig(BaseConfig):
     def repo_config(self) -> RepoConfig:
         return RepoConfig(
             project="fediway",
-            provider="local",
+            provider="modules.features.provider.FediwayProvider",
             registry=self.feast_registry,
             online_store=self.online_config,
             offline_store=self.offline_config,
@@ -43,13 +43,16 @@ class FeastConfig(BaseConfig):
     @property
     def offline_config(self):
         from .db import DBConfig
+        from .kafka import KafkaConfig
 
         db = DBConfig()
+        kafka = KafkaConfig()
 
-        return PostgreSQLOfflineStoreConfig(
+        return RisingwaveOfflineStoreConfig(
             host=db.rw_host,
             port=db.rw_port,
             database=db.rw_name,
             user=db.rw_user,
             password=db.rw_pass.get_secret_value(),
+            kafka_bootstrap_servers=kafka.kafka_bootstrap_servers,
         )

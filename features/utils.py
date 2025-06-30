@@ -5,11 +5,14 @@ from functools import reduce
 import pyarrow as pa
 
 # from feast.infra.offline_stores.contrib.spark_offline_store.spark_source import SparkSource
-from feast import Entity, FeatureView, Field, PushSource
+from feast import Entity, FeatureView, Field, PushSource, KafkaSource
 from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import (
     PostgreSQLSource,
 )
+
+from feast.data_format import JsonFormat, StreamFormat
 from feast.types import (
+    FeastType,
     Array,
     Bool,
     Bytes,
@@ -21,6 +24,9 @@ from feast.types import (
     UnixTimestamp,
 )
 
+from modules.features.sources import RisingWaveSource
+from config import config
+
 
 def make_feature_view(
     name: str,
@@ -30,15 +36,13 @@ def make_feature_view(
     ttl=timedelta(days=365),
     tags=None,
 ) -> FeatureView:
-    source = get_push_source(view_name=name)
-
     fv = FeatureView(
         name=name,
         entities=entities,
         ttl=ttl,
         schema=schema,
         online=online,
-        source=source,
+        source=get_source(view_name=name, schema=schema),
         tags=tags,
     )
 
@@ -49,7 +53,7 @@ def flatten(arr):
     return reduce(operator.add, arr)
 
 
-def _feast_type_to_pa_type(_type):
+def _feast_type_to_pa_type(dtype: FeastType):
     type_mapping = {
         Int64: pa.int64(),
         Int32: pa.int32(),
@@ -61,22 +65,59 @@ def _feast_type_to_pa_type(_type):
         UnixTimestamp: pa.timestamp("s"),
     }
 
-    if isinstance(_type, Array):
-        return pa.list_(_feast_type_to_pa_type(_type.base_type))
+    if isinstance(dtype, Array):
+        return pa.list_(_feast_type_to_pa_type(dtype.base_type))
 
-    return type_mapping[_type]
+    return type_mapping[dtype]
 
 
-def get_push_source(view_name: str) -> PushSource:
-    batch_source = PostgreSQLSource(
-        name=f"{view_name}_source",
-        table=f"offline_fs_{view_name}_features",
+def _feast_type_to_json_type(dtype: FeastType):
+    type_mapping = {
+        Int64: "int",
+        Int32: "int",
+        Float32: "float",
+        Float64: "float",
+        String: "string",
+        Bytes: "string",
+        Bool: "bool",
+        UnixTimestamp: "timestamp",
+    }
+
+    return type_mapping[dtype]
+
+
+def _schema_to_json_format(schema: list[Field]) -> JsonFormat:
+    return JsonFormat(
+        schema_json=", ".join(
+            [
+                f"{field.name} {_feast_type_to_json_type(field.dtype)}"
+                for field in schema
+            ]
+        )
+    )
+
+
+def get_source(view_name: str, schema: list[Field]) -> KafkaSource:
+    batch_source = RisingWaveSource(
+        name=f"{view_name}_offline_store",
+        table=f"offline_features_{view_name}",
         timestamp_field="event_time",
     )
 
-    push_source = PushSource(
+    print(f"{view_name}_stream")
+
+    # return KafkaSource(
+    #     name=f"{view_name}_stream",
+    #     topic=f"offline_features_{view_name}",
+    #     timestamp_field="event_time",
+    #     message_format=_schema_to_json_format(schema),
+    #     kafka_bootstrap_servers=config.kafka.kafka_bootstrap_servers,
+    #     batch_source=batch_source,
+    # )
+
+    return PushSource(
         name=f"{view_name}_stream",
         batch_source=batch_source,
     )
 
-    return push_source
+    # return push_source

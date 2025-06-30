@@ -4,15 +4,21 @@ import numpy as np
 import pandas as pd
 from feast import FeatureStore
 from loguru import logger
+from fastapi import BackgroundTasks
 
 from modules.fediway.feed.features import Features
 from shared.core.feast import feature_store
 
 
 class FeatureService(Features):
-    def __init__(self, fs: FeatureStore = feature_store):
+    def __init__(
+        self,
+        fs: FeatureStore = feature_store,
+        background_tasks: BackgroundTasks | None = None,
+    ):
         self.cache = {}
         self.fs = fs
+        self.background_tasks = background_tasks
 
     def _cache_key(self, entities: list[dict[str, int]]) -> str:
         return ",".join(list(entities[0].keys()))
@@ -66,8 +72,34 @@ class FeatureService(Features):
                     ~feat.index.duplicated(keep="last")
                 ]
 
+    def _ingest_to_offline_store(self, features: pd.DataFrame, event_time: int):
+        feature_views = set([c.split("__")[0] for c in features.columns if "__" in c])
+        for fv_name in feature_views:
+            feature_view = self.fs.get_feature_view(fv_name)
+            if feature_view is None:
+                continue
+            columns = [
+                c
+                for c in features.columns
+                if c.startswith(fv_name) or c in feature_view.entities
+            ]
+            feature_names = [c.split("__")[-1] for c in columns]
+            df = features[columns].rename(columns=dict(zip(columns, feature_names)))
+            df["event_time"] = event_time
+            try:
+                result = self.fs.write_to_offline_store(
+                    fv_name,
+                    df=df,
+                )
+            except Exception as e:
+                logger.error(e)
+
     async def get(
-        self, entities: list[dict[str, int]], features: list[str]
+        self,
+        entities: list[dict[str, int]],
+        features: list[str],
+        ingest_to_offline_store: bool = False,
+        event_time: int = int(time.time()),
     ) -> pd.DataFrame | None:
         if len(features) == 0:
             return None
@@ -87,6 +119,18 @@ class FeatureService(Features):
                 features=features, entity_rows=missing_entities, full_feature_names=True
             )
         ).to_df()
+
+        # ingest into offline store
+        if ingest_to_offline_store and len(df) > 0:
+            if self.background_tasks is None:
+                logger.warning(
+                    "Missing background task manager: ingesting features to offline store sequentially."
+                )
+                self._ingest_to_offline_store(df, event_time)
+            else:
+                self.background_tasks.add_task(
+                    self._ingest_to_offline_store, df, event_time
+                )
 
         # drop entity columns
         columns = set(df.columns)

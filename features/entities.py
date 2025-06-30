@@ -11,3 +11,5 @@ author = Entity(
 status = Entity(
     name="status_id", value_type=ValueType.INT64, description="Status identifier"
 )
+
+tag = Entity(name="tag_id", value_type=ValueType.INT64, description="Tag identifier")
