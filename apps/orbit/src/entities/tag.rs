@@ -18,17 +18,6 @@ pub struct Tag {
     is_dirty: bool,
 }
 
-impl Tag {
-    pub fn empty(dim: usize) -> Self {
-        Self {
-            embedding: SparseVec::empty(dim),
-            engagements: 0,
-            last_upserted: None,
-            is_dirty: false,
-        }
-    }
-}
-
 impl Embedded for Tag {
     fn embedding(&self) -> &SparseVec {
         &self.embedding

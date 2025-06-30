@@ -98,7 +98,7 @@ async fn get_communities(config: &Config, db: &Client) -> Communities {
 
     tracing::info!("Loading tag similarities.");
 
-    let blacklist: FastHashSet<i64> = rw::get_tag_ids(db, &config.tags_blacklist).await.into_iter().map(|(_, id)| id).collect();
+    let blacklist: FastHashSet<i64> = rw::get_tag_ids(db, &config.tags_blacklist).await.into_values().collect();
 
     for sim in rw::get_tag_similarities(db, config.min_tag_authors, config.min_tag_engagers).await {
         if sim.2 < config.tag_sim_threshold {

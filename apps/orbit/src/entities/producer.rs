@@ -19,18 +19,6 @@ pub struct Producer {
     is_dirty: bool,
 }
 
-impl Producer {
-    pub fn empty(dim: usize) -> Self {
-        Self {
-            embedding: SparseVec::empty(dim),
-            last_upserted: None,
-            engagements: 0,
-            authority: 0.0,
-            is_dirty: false,
-        }
-    }
-}
-
 impl Embedded for Producer {
     fn embedding(&self) -> &SparseVec {
         &self.embedding

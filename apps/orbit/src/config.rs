@@ -42,9 +42,6 @@ fn default_random_state() -> u64 {
 fn default_tag_sim_threshold() -> f64 {
     0.25
 }
-fn default_lambda() -> f64 {
-    0.05
-}
 fn default_workers() -> usize {
     4
 }
@@ -188,9 +185,6 @@ pub struct Config {
 
     #[serde(rename = "orbit_max_status_age", default = "default_max_status_age")]
     pub max_status_age: u64,
-
-    #[serde(rename = "orbit_lambda", default = "default_lambda")]
-    pub lambda: f64,
 
     #[serde(rename = "orbit_workers", default = "default_workers")]
     pub workers: usize,

@@ -64,7 +64,7 @@ pub async fn get_tag_names(db: &Client, tags: &[i64]) -> FastHashMap<i64, String
     tag_names
 }
 
-pub async fn get_tag_ids(db: &Client, tags: &Vec<String>) -> FastHashMap<String, i64> {
+pub async fn get_tag_ids(db: &Client, tags: &[String]) -> FastHashMap<String, i64> {
     let mut tag_ids = FastHashMap::default();
 
     for chunk in tags.chunks(1000) {
