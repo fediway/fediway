@@ -20,28 +20,12 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.execute("""
-    CREATE PUBLICATION risingwave_pub
-        FOR TABLE public.accounts,
-                  public.account_stats,
-                  public.statuses,
-                  public.status_stats,
-                  public.follows,
-                  public.follow_requests,
-                  public.mentions,
-                  public.favourites,
-                  public.tags,
-                  public.tag_follows,
-                  public.statuses_tags,
-                  public.media_attachments,
-                  public.users,
-                  public.polls,
-                  public.poll_votes,
-                  public.mutes;
+    CREATE PUBLICATION risingwave FOR ALL TABLES;
     """)
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     op.execute("""
-    DROP PUBLICATION risingwave_pub;
+    DROP PUBLICATION risingwave;
     """)

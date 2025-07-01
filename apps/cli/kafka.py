@@ -12,6 +12,10 @@ def _topic(topic):
         topic,
         num_partitions=config.kafka.kafka_num_partitions,
         replication_factor=config.kafka.kafka_replication_factor,
+        topic_configs={
+            'retention.ms': '60000', # 1 minute
+            'segment.ms': '60000', # force frequent cleanup
+        }
     )
 
 

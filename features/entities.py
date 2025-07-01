@@ -13,3 +13,7 @@ status = Entity(
 )
 
 tag = Entity(name="tag_id", value_type=ValueType.INT64, description="Tag identifier")
+
+domain = Entity(
+    name="domain", value_type=ValueType.STRING, description="Domain identifier"
+)

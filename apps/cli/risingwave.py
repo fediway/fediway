@@ -101,6 +101,7 @@ def migrate():
                     except Exception as e:
                         if str(e) == "can't execute an empty query":
                             continue
+                        print(query)
                         raise e
                 cur.execute(
                     "INSERT INTO _migrations (version) VALUES (%s);", (version,)

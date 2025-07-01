@@ -1,5 +1,6 @@
 
 -- :up
+
 CREATE SOURCE IF NOT EXISTS pg_source WITH (
     connector = 'postgres-cdc',
     hostname = '{{ db_host }}',
@@ -8,9 +9,10 @@ CREATE SOURCE IF NOT EXISTS pg_source WITH (
     password = '{{ db_pass }}',
     database.name = '{{ db_name }}',
     schema.name = 'public',
-    publication.name = 'risingwave_pub',
+    publication.name = 'risingwave',
     slot.name = 'risingwave_slot',
 );
 
 -- :down
--- DROP SOURCE IF EXISTS pg_source;
+
+DROP SOURCE IF EXISTS pg_source;

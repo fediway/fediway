@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from config import config
 
-from ..entities import tag
+from ..entities import account, tag
 from ..utils import make_feature_view
 
 feature_views = []
@@ -44,8 +44,8 @@ FEATURES = [
 for spec in SPECS:
     feature_views.append(
         make_feature_view(
-            f"tag_engagement_{spec}",
-            entities=[tag],
+            f"account_tag_engagement_{spec}",
+            entities=[account, tag],
             schema=FEATURES,
             online=True,
             tags={"push": "kafka"},

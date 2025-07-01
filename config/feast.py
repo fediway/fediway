@@ -11,6 +11,7 @@ from modules.features.provider import FediwayProvider
 class FeastConfig(BaseConfig):
     feast_registry: str = "data/features.db"
 
+    offline_store_enabled: bool = True
     feast_online_store_ttl: int = 3600 * 60 * 30
 
     feast_redis_host: str = "localhost"

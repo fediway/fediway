@@ -34,7 +34,7 @@ def make_feature_view(
     schema: list[Field],
     online: bool = True,
     ttl=timedelta(days=365),
-    tags=None,
+    tags={},
 ) -> FeatureView:
     fv = FeatureView(
         name=name,

@@ -16,13 +16,13 @@ class FeatureService(Features):
         fs: FeatureStore = feature_store,
         background_tasks: BackgroundTasks | None = None,
         event_time: datetime = datetime.now(),
-        ingest_to_offline_store: bool = False,
+        offline_store: bool = False,
     ):
         self.cache = {}
         self.fs = fs
         self.background_tasks = background_tasks
         self.event_time = event_time
-        self.ingest_to_offline_store = ingest_to_offline_store
+        self.offline_store = offline_store
 
     def _cache_key(self, entities: list[dict[str, int]]) -> str:
         return ",".join(list(entities[0].keys()))
@@ -76,7 +76,7 @@ class FeatureService(Features):
                     ~feat.index.duplicated(keep="last")
                 ]
 
-    def _ingest_to_offline_store(self, features: pd.DataFrame):
+    def ingest_to_offline_store(self, features: pd.DataFrame, event_time: datetime | None = None):
         feature_views = set([c.split("__")[0] for c in features.columns if "__" in c])
         for fv_name in feature_views:
             feature_view = self.fs.get_feature_view(fv_name)
@@ -89,7 +89,7 @@ class FeatureService(Features):
             ]
             feature_names = [c.split("__")[-1] for c in columns]
             df = features[columns].rename(columns=dict(zip(columns, feature_names)))
-            df["event_time"] = int(self.event_time.timestamp())
+            df["event_time"] = int((event_time or self.event_time).timestamp())
 
             try:
                 result = self.fs.write_to_offline_store(
@@ -125,15 +125,15 @@ class FeatureService(Features):
         ).to_df()
 
         # ingest into offline store
-        if self.ingest_to_offline_store and len(df) > 0:
+        if self.offline_store and len(df) > 0:
             if self.background_tasks is None:
                 logger.warning(
                     "Missing background task manager: ingesting features to offline store sequentially."
                 )
-                self._ingest_to_offline_store(df, event_time)
+                self.ingest_to_offline_store(df, event_time)
             else:
                 self.background_tasks.add_task(
-                    self._ingest_to_offline_store, df, event_time
+                    self.ingest_to_offline_store, df, event_time
                 )
 
         # drop entity columns

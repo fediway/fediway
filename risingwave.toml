@@ -1,0 +1,3 @@
+[meta.developer]
+meta_actor_cnt_per_worker_parallelism_soft_limit = 200
+meta_actor_cnt_per_worker_parallelism_hard_limit = 800
