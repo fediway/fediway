@@ -14,23 +14,24 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   reply_id BIGINT,
   poll_vote_id BIGINT,
   bookmark_id BIGINT,
-  fav_count BIGINT,
-  reblogs_count BIGINT,
-  replies_count BIGINT,
-  has_link BOOLEAN,
-  has_photo_link BOOLEAN,
-  has_video_link BOOLEAN,
-  has_rich_link BOOLEAN,
-  has_poll BOOLEAN,
-  num_poll_options INT,
-  allows_multiple_poll_options BOOLEAN,
-  hides_total_poll_options BOOLEAN,
+  fav_count BIGINT 0,
+  reblogs_count BIGINT 0,
+  replies_count BIGINT 0,
+  has_link BOOLEAN false,
+  has_photo_link BOOLEAN false,
+  has_video_link BOOLEAN false,
+  has_rich_link BOOLEAN false,
+  has_poll BOOLEAN false,
+  num_poll_options INT 0,
+  allows_multiple_poll_options BOOLEAN false,
+  hides_total_poll_options BOOLEAN false,
   has_image BOOLEAN DEFAULT false,
   has_gifv BOOLEAN DEFAULT false,
   has_video BOOLEAN DEFAULT false,
   has_audio BOOLEAN DEFAULT false,
-  num_mentions BIGINT,
-  num_tags BIGINT,
+  num_media_attachments INT 0,
+  num_mentions INT 0,
+  num_tags INT 0,
   PRIMARY KEY (account_id, status_id, type),
 
   -- wait at most 1 day for late arriving engagements
@@ -54,9 +55,9 @@ SELECT
   e.reply_id,
   e.poll_vote_id,
   e.bookmark_id,
-  m.fav_count,
-  m.reblogs_count,
-  m.replies_count,
+  st.favourites_count,
+  st.reblogs_count,
+  st.replies_count,
   m.has_link,
   m.has_photo_link,
   m.has_video_link,
@@ -69,12 +70,14 @@ SELECT
   m.has_gifv,
   m.has_video,
   m.has_audio,
+  m.num_media_attachments,
   m.num_mentions,
   m.num_tags
 FROM status_engagements e
 JOIN accounts a ON e.account_id = a.id
 JOIN statuses s ON s.id = e.status_id
-JOIN statuses_meta m ON m.status_id = e.status_id
+JOIN status_stats st ON st.status_id = e.status_id
+JOIN status_meta m ON m.status_id = e.status_id
 WITH (type = 'append-only', force_append_only='true');
 
 -- :down

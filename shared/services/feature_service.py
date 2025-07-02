@@ -105,6 +105,7 @@ class FeatureService(Features):
         self,
         entities: list[dict[str, int]],
         features: list[str],
+        offline_store: bool | None = None,
     ) -> pd.DataFrame | None:
         if len(features) == 0:
             return None
@@ -127,7 +128,7 @@ class FeatureService(Features):
         ).to_df()
 
         # ingest into offline store
-        if self.offline_store and len(df) > 0:
+        if (offline_store or self.offline_store) and len(df) > 0:
             if self.background_tasks is None:
                 logger.warning(
                     "Missing background task manager: ingesting features to offline store sequentially."

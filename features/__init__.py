@@ -1,40 +1,56 @@
-from .entities import account, author, status, tag, domain
+from .entities import (
+    account,
+    author,
+    status,
+    tag,
+    domain,
+    preview_card,
+    preview_card_domain,
+)
 
-# from .services.kirby import kirby_features
-from .views.status import status_features
+from .views.engagement import (
+    account_author_engagement_features,
+    account_domain_engagement_features,
+    account_engagement_features,
+    account_preview_card_domain_engagement_features,
+    account_preview_card_engagement_features,
+    account_tag_engagement_features,
+    author_engagement_features,
+    preview_card_domain_engagement_features,
+    preview_card_engagement_features,
+    tag_engagement_features,
+)
+from .views.meta import status_meta_features, status_features
 
-# from .views.latest_engaged_statuses import latest_engaged_statuses
-from .views.account_author_engagement_features import (
-    feature_views as account_author_engagement_features,
+from .services import (
+    account_author_engagement_feature_service,
+    account_tag_engagement_feature_service,
+    account_status_engagement_feature_service,
+    status_feature_service,
 )
-from .views.account_domain_engagement_features import (
-    feature_views as account_domain_engagement_features,
-)
-from .views.account_engagement_features import (
-    feature_views as account_engagement_features,
-)
-from .views.account_tag_engagement_features import (
-    feature_views as account_tag_engagement_features,
-)
-from .views.author_engagement_features import (
-    feature_views as author_engagement_features,
-)
-from .views.tag_engagement_features import feature_views as tag_engagement_features
 
-ENTITIES = [account, author, status, tag, domain]
+ENTITIES = [account, author, status, tag, domain, preview_card, preview_card_domain]
 
 FEATURE_VIEWS = (
     # engagement features
     account_author_engagement_features
     + account_domain_engagement_features
     + account_engagement_features
+    + account_preview_card_domain_engagement_features
+    + account_preview_card_engagement_features
     + account_tag_engagement_features
     + author_engagement_features
+    + preview_card_domain_engagement_features
+    + preview_card_engagement_features
     + tag_engagement_features
-    # status features
+    # meta features
     + [status_features]
+    + status_meta_features
 )
 
 FEATURES_SERVICES = [
-    # kirby_features
+    account_author_engagement_feature_service,
+    account_tag_engagement_feature_service,
+    account_status_engagement_feature_service,
+    status_feature_service,
 ]

@@ -15,5 +15,15 @@ status = Entity(
 tag = Entity(name="tag_id", value_type=ValueType.INT64, description="Tag identifier")
 
 domain = Entity(
-    name="domain", value_type=ValueType.STRING, description="Domain identifier"
+    name="domain", value_type=ValueType.STRING, description="Instance domain identifier"
+)
+
+preview_card = Entity(
+    name="preview_card_id", value_type=ValueType.INT64, description="Tag identifier"
+)
+
+preview_card_domain = Entity(
+    name="preview_card_domain",
+    value_type=ValueType.STRING,
+    description="Preview card domain identifier",
 )

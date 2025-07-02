@@ -4,8 +4,8 @@ from datetime import timedelta
 
 from config import config
 
-from ..entities import account, author
-from ..utils import make_feature_view
+from ...entities import account, author
+from ...utils import make_feature_view
 
 feature_views = []
 

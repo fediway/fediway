@@ -2,10 +2,9 @@
 -- :up
 
 {% for window_size, spec in [('24 HOURS', '1d'), ('7 DAYS', '7d'), ('60 DAYS', '60d')] %}
-  CREATE MATERIALIZED VIEW IF NOT EXISTS online_features_account_tag_engagement_{{ spec }} AS
+  CREATE MATERIALIZED VIEW IF NOT EXISTS online_features_preview_card_engagement_{{ spec }} AS
   SELECT
-      e.account_id,
-      tag_id,
+      p.preview_card_id,
       MAX(event_time)::TIMESTAMP as event_time,
       COUNT(*) AS num_all,
       APPROX_COUNT_DISTINCT(domain) as num_domains,
@@ -35,27 +34,24 @@
       AVG(num_mentions) AS avg_mentions,
       AVG(num_tags) AS avg_tags
   FROM enriched_status_engagement_events e
-  JOIN statuses_tags st ON e.status_id = st.status_id
+  JOIN preview_cards_statuses p ON e.status_id = p.status_id
   WHERE event_time >= NOW() - INTERVAL '{{ window_size }}'
-  -- compute account-tag features only for users on our instance
-  AND EXISTS (SELECT 1 FROM users u WHERE u.account_id = e.account_id) 
-  GROUP BY e.account_id, tag_id;
+  GROUP BY p.preview_card_id;
   
-  CREATE SINK IF NOT EXISTS online_features_account_tag_engagement_{{ spec }}_sink
-  FROM online_features_account_tag_engagement_{{ spec }}
+  CREATE SINK IF NOT EXISTS online_features_preview_card_engagement_{{ spec }}_sink
+  FROM online_features_preview_card_engagement_{{ spec }}
   WITH (
     connector='kafka',
     properties.bootstrap.server='{{ bootstrap_server }}',
-    topic='online_features_account_tag_engagement_{{ spec }}',
-    primary_key='account_id,tag_id',
+    topic='online_features_preview_card_engagement_{{ spec }}',
+    primary_key='preview_card_id',
     properties.linger.ms='10000',
   ) FORMAT PLAIN ENCODE JSON (
     force_append_only='true'
   );
 
-  CREATE TABLE IF NOT EXISTS offline_features_account_tag_engagement_{{ spec }} (
-    account_id BIGINT,
-    tag_id BIGINT,
+  CREATE TABLE IF NOT EXISTS offline_features_preview_card_engagement_{{ spec }} (
+    preview_card_id BIGINT,
     event_time TIMESTAMP,
     num_all INT,
     num_domains INT,
@@ -84,10 +80,10 @@
     min_status_replies_count INT,
     avg_mentions FLOAT,
     avg_tags FLOAT,
-    PRIMARY KEY (account_id, tag_id, event_time)
+    PRIMARY KEY (preview_card_id, event_time)
   ) APPEND ONLY ON CONFLICT IGNORE WITH (
     connector='kafka',
-    topic='offline_features_account_tag_engagement_{{ spec }}',
+    topic='offline_features_preview_card_engagement_{{ spec }}',
     properties.bootstrap.server='{{ bootstrap_server }}',
   ) FORMAT PLAIN ENCODE JSON;
 {% endfor %}
@@ -95,7 +91,7 @@
 -- :down
 
 {% for spec in ['1d', '7d', '56d'] %}
-    DROP SINK IF EXISTS online_features_account_tag_engagement_{{ spec }}_sink;
-    DROP VIEW IF EXISTS online_features_account_tag_engagement_{{ spec }};
-    DROP TABLE IF EXISTS offline_features_account_tag_engagement_{{ spec }};
+    DROP SINK IF EXISTS online_features_preview_card_engagement_{{ spec }}_sink;
+    DROP VIEW IF EXISTS online_features_preview_card_engagement_{{ spec }};
+    DROP TABLE IF EXISTS offline_features_preview_card_engagement_{{ spec }};
 {% endfor %}

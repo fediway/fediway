@@ -45,7 +45,7 @@
       topic='online_features_tag_engagement_{{ spec }}',
       primary_key='tag_id',
       properties.bootstrap.server='{{ bootstrap_server }}',
-      properties.linger.ms='60000',
+      properties.linger.ms='10000',
     ) FORMAT PLAIN ENCODE JSON (
       force_append_only='true'
     );

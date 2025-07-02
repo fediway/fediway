@@ -11,6 +11,7 @@ CREATE SOURCE IF NOT EXISTS pg_source WITH (
     schema.name = 'public',
     publication.name = 'risingwave',
     slot.name = 'risingwave_slot',
+    debezium.snapshot.delay.ms = '1000' -- create snapshots every second
 );
 
 -- :down

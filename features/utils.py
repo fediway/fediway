@@ -104,20 +104,7 @@ def get_source(view_name: str, schema: list[Field]) -> KafkaSource:
         timestamp_field="event_time",
     )
 
-    print(f"{view_name}_stream")
-
-    # return KafkaSource(
-    #     name=f"{view_name}_stream",
-    #     topic=f"offline_features_{view_name}",
-    #     timestamp_field="event_time",
-    #     message_format=_schema_to_json_format(schema),
-    #     kafka_bootstrap_servers=config.kafka.kafka_bootstrap_servers,
-    #     batch_source=batch_source,
-    # )
-
     return PushSource(
         name=f"{view_name}_stream",
         batch_source=batch_source,
     )
-
-    # return push_source

@@ -46,7 +46,7 @@
     properties.bootstrap.server='{{ bootstrap_server }}',
     topic='online_features_account_author_engagement_{{ spec }}',
     primary_key='account_id,author_id',
-    properties.linger.ms='30000',
+    properties.linger.ms='10000',
   ) FORMAT PLAIN ENCODE JSON (
     force_append_only='true'
   );

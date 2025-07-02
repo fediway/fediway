@@ -43,10 +43,22 @@ CREATE TABLE IF NOT EXISTS preview_cards_statuses (
     PRIMARY KEY (preview_card_id, status_id)
 ) FROM pg_source TABLE 'public.preview_cards_statuses';
 
+CREATE MATERIALIZED VIEW preview_card_domains AS
+SELECT
+    id AS preview_card_id,
+    SPLIT_PART(regexp_match(url, 'https?://([^/]+)')[1], '.', -2) || '.' ||
+    SPLIT_PART(regexp_match(url, 'https?://([^/]+)')[1], '.', -1) AS domain
+FROM preview_cards;
+
+CREATE INDEX IF NOT EXISTS idx_preview_card_domains_preview_card_id ON preview_card_domains(preview_card_id);
+
 -- :down
 
 DROP INDEX IF EXISTS idx_preview_cards_author_account_id;
+DROP INDEX IF EXISTS idx_preview_card_domains_preview_card_id;
 
 DROP TABLE IF EXISTS preview_cards_statuses CASCADE;
 DROP TABLE IF EXISTS preview_card_providers CASCADE;
 DROP TABLE IF EXISTS preview_cards CASCADE;
+
+DROP VIEW IF EXISTS preview_card_domains;

@@ -4,8 +4,8 @@ from datetime import timedelta
 
 from config import config
 
-from ..entities import account, domain
-from ..utils import make_feature_view
+from ...entities import preview_card_domain
+from ...utils import make_feature_view
 
 feature_views = []
 
@@ -13,6 +13,7 @@ SPECS = ["1d", "7d", "60d"]
 
 FEATURES = [
     Field(name="num_all", dtype=Int64),
+    Field(name="num_domains", dtype=Int64),
     Field(name="num_favs", dtype=Int64),
     Field(name="num_reblogs", dtype=Int64),
     Field(name="num_replies", dtype=Int64),
@@ -43,8 +44,8 @@ FEATURES = [
 for spec in SPECS:
     feature_views.append(
         make_feature_view(
-            f"account_domain_engagement_{spec}",
-            entities=[account, domain],
+            f"preview_card_domain_engagement_{spec}",
+            entities=[preview_card_domain],
             schema=FEATURES,
             online=True,
             tags={"push": "kafka"},
