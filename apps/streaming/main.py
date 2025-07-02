@@ -35,16 +35,16 @@ broker = KafkaBroker(
 app = FastStream(broker)
 
 feature_topics = {
-    f"online_features_{fv.name}"
+    fv.name
     for fv in feature_store.list_feature_views()
     if "push" in fv.tags and fv.tags["push"] == "kafka"
 }
 
-for topic in feature_topics:
+for feature_view in feature_topics:
     make_handler(
         broker,
-        topic,
-        FeaturesEventHandler(feature_store, topic),
+        f"online_features_{feature_view}",
+        FeaturesEventHandler(feature_store, feature_view),
         group_id="features",
     )
 
