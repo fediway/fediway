@@ -76,7 +76,9 @@ class FeatureService(Features):
                     ~feat.index.duplicated(keep="last")
                 ]
 
-    def ingest_to_offline_store(self, features: pd.DataFrame, event_time: datetime | None = None):
+    def ingest_to_offline_store(
+        self, features: pd.DataFrame, event_time: datetime | None = None
+    ):
         feature_views = set([c.split("__")[0] for c in features.columns if "__" in c])
         for fv_name in feature_views:
             feature_view = self.fs.get_feature_view(fv_name)

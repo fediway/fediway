@@ -6,7 +6,7 @@ import modules.utils as utils
 from modules.fediway.sources.statuses import ViralSource
 
 
-class StoreViralSourceService:
+class StoreViralStatusesSourceService:
     def __init__(self, r: Redis, db: Session):
         self.r = r
         self.db = db
@@ -14,7 +14,7 @@ class StoreViralSourceService:
     def _get_languages(self) -> list[str]:
         query = """
         SELECT DISTINCT s.language 
-        FROM status_viral_scores v
+        FROM status_virality_scores v
         JOIN statuses s 
         ON s.id = v.status_id
         AND s.language IS NOT NULL;

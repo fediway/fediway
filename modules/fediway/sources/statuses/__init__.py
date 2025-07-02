@@ -3,13 +3,13 @@ from .account_based_collaborative_filtering import (
 )
 from .collaborative_filtering import CollaborativeFilteringSource
 from .newest_in_network import NewestInNetworkSource
-from .community_recommendations import CommunityRecommendationsSource
+from .community_based_recommendations import CommunityBasedRecommendationsSource
 from .popular_in_social_circle import PopularInSocialCircleSource
-from .random_communities import RandomCommunitiesSource
 from .popular_by_influential_accounts import PouplarByInfluentialAccountsSource
 from .popular_in_community import PopularInCommunitySource
 from .similar_to_engaged import SimilarToEngagedSource
 from .status_based_collaborative_filtering import (
     StatusBasedCollaborativeFilteringSource,
 )
-from .viral import ViralSource
+from .top_statuses_from_random_communities import TopStatusesFromRandomCommunitiesSource
+from .viral_statuses import ViralStatusesSource

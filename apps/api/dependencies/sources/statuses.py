@@ -10,14 +10,14 @@ from modules.fediway.sources.statuses import (
     AccountBasedCollaborativeFilteringSource,
     CollaborativeFilteringSource,
     NewestInNetworkSource,
-    CommunityRecommendationsSource,
-    RandomCommunitiesSource,
+    CommunityBasedRecommendationsSource,
+    TopStatusesFromRandomCommunitiesSource,
     PopularInCommunitySource,
     PouplarByInfluentialAccountsSource,
     PopularInSocialCircleSource,
     SimilarToEngagedSource,
     StatusBasedCollaborativeFilteringSource,
-    ViralSource,
+    ViralStatusesSource,
 )
 from modules.mastodon.models import Account
 from shared.core.qdrant import client as qdrant_client
@@ -49,12 +49,12 @@ def get_popular_by_influential_accounts_sources(
     ]
 
 
-def get_viral_source(
+def get_viral_statuses_source(
     r: Redis = Depends(get_redis),
     languages: list[str] = Depends(get_languages),
 ) -> list[Source]:
     return [
-        ViralSource(
+        ViralStatusesSource(
             r=r,
             language=lang,
             ttl=timedelta(minutes=10),
@@ -63,19 +63,23 @@ def get_viral_source(
     ]
 
 
-def get_community_recommendations_source(
+def get_community_based_recommendations_source(
     r: Redis = Depends(get_redis),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[Source]:
     return [
-        CommunityRecommendationsSource(r=r, client=qdrant_client, account_id=account.id)
+        CommunityBasedRecommendationsSource(
+            r=r, client=qdrant_client, account_id=account.id
+        )
     ]
 
 
-def get_random_communities_source(
+def get_top_statuses_from_random_communities_source(
     r: Redis = Depends(get_redis),
 ) -> list[Source]:
-    return [RandomCommunitiesSource(r=r, client=qdrant_client, batch_size=5)]
+    return [
+        TopStatusesFromRandomCommunitiesSource(r=r, client=qdrant_client, batch_size=5)
+    ]
 
 
 def get_newest_in_network_sources(

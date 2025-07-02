@@ -11,8 +11,8 @@ config.logging.configure_logging()
 
 BEAT_SCHEDULE = {
     # --- queue: sources ---
-    "viral-source": {
-        "task": "sources.viral",
+    "viral-statuses-source": {
+        "task": "sources.viral_statuses",
         "schedule": 60,  # every 60 seconds
         "options": {"queue": "sources"},
     },

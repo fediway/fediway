@@ -6,7 +6,7 @@ import numpy as np
 from ..base import RedisSource
 
 
-class ViralSource(RedisSource):
+class ViralStatusesSource(RedisSource):
     def __init__(
         self,
         r: Redis,
@@ -21,16 +21,19 @@ class ViralSource(RedisSource):
         self.language = language
         self.top_n = top_n
 
-    def group(self):
-        return "viral"
+    def get_params(self):
+        return {
+            "language": self.language,
+            "top_n": self.top_n,
+        }
 
     def name(self):
-        return f"viral[l={self.language}]"
+        return f"viral"
 
     def compute(self):
         query = f"""
         SELECT v.status_id, v.score
-        FROM status_viral_scores v
+        FROM status_virality_scores v
         JOIN statuses s ON s.id = v.status_id AND s.language = :language
         ORDER BY v.score DESC
         LIMIT :limit;
@@ -59,4 +62,5 @@ class ViralSource(RedisSource):
             len(scores), size=limit, p=probabilities, replace=False
         )
 
-        return np.array(status_ids)[sampled_indices].tolist()
+        for i in sampled_indices:
+            yield status_ids[i]

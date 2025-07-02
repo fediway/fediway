@@ -10,7 +10,7 @@ from modules.fediway.feed.features import Features
 from ..base import Source
 
 
-class CommunityRecommendationsSource(Source):
+class CommunityBasedRecommendationsSource(Source):
     def __init__(
         self,
         r: Redis,
@@ -22,7 +22,7 @@ class CommunityRecommendationsSource(Source):
         self.account_id = account_id
 
     def name(self):
-        return f"community_recommendations"
+        return f"community_based_recommendations"
 
     def _fetch_embeddings_version(self):
         return self.r.get("orbit:version")

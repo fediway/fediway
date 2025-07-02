@@ -11,7 +11,7 @@ from modules.fediway.feed.features import Features
 from ..base import Source
 
 
-class RandomCommunitiesSource(Source):
+class TopStatusesFromRandomCommunitiesSource(Source):
     """
     Queryies top statuses for random communities.
 
@@ -30,7 +30,7 @@ class RandomCommunitiesSource(Source):
         }
 
     def name(self):
-        return f"random_communities"
+        return f"top_statuses_from_random_communities"
 
     def _fetch_embeddings_version(self) -> str:
         return self.r.get("orbit:version").decode("utf8")
