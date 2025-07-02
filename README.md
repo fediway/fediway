@@ -1,6 +1,6 @@
 # Fediway Feeds
 
-Fediway brings algorithmic feeds to Mastodon in an attempt to make the Fediverse more attractive to new users. Fediway feeds can be integrated into an existing mastodon server by simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway server.
+Fediway brings algorithmic feeds to Mastodon in an attempt to make decentralised social media more attractive to new users. Fediway feeds can be integrated into an existing mastodon server by simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway server.
 
 ## Table Of Contents
 

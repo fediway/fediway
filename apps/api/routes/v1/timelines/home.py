@@ -61,7 +61,9 @@ async def home_timeline(
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
     max_candidates_per_source = config.fediway.max_candidates_per_source(
-        len(in_network_sources) + len(near_network_sources) + len(out_network_sources)
+        # len(in_network_sources) +
+        # len(near_network_sources) +
+        len(out_network_sources) + len(cold_start_sources)
     )
 
     _map_sources = lambda S: [(s, max_candidates_per_source) for s in S]
