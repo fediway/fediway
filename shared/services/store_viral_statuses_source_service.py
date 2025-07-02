@@ -3,7 +3,7 @@ from redis import Redis
 
 from config import config
 import modules.utils as utils
-from modules.fediway.sources.statuses import ViralSource
+from modules.fediway.sources.statuses import ViralStatusesSource
 
 
 class StoreViralStatusesSourceService:
@@ -24,7 +24,7 @@ class StoreViralStatusesSourceService:
 
     def __call__(self):
         for lang in self._get_languages():
-            source = ViralSource(
+            source = ViralStatusesSource(
                 r=self.r,
                 rw=self.db,
                 language=lang,
