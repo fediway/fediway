@@ -6,6 +6,7 @@ from modules.fediway.rankers.kirby import KirbyFeatureService
 from modules.mastodon.models import Account
 
 from .auth import get_authenticated_account_or_fail
+from config import config
 
 
 def get_feature_service(request: Request, background_tasks: BackgroundTasks):
