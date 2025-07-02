@@ -13,6 +13,9 @@ SPECS = ["1d", "7d", "60d"]
 
 FEATURES = [
     Field(name="num_all", dtype=Int64),
+    Field(name="num_accounts", dtype=Int64),
+    Field(name="num_statuses", dtype=Int64),
+    Field(name="num_source_domains", dtype=Int64),
     Field(name="num_favs", dtype=Int64),
     Field(name="num_reblogs", dtype=Int64),
     Field(name="num_replies", dtype=Int64),

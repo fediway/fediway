@@ -6,7 +6,9 @@
     e.account_id,
     MAX(event_time)::TIMESTAMP as event_time,    
     COUNT(*) AS num_all,
-    APPROX_COUNT_DISTINCT(domain) as num_domains,
+    APPROX_COUNT_DISTINCT(author_id) as num_authors,
+    APPROX_COUNT_DISTINCT(status_id) as num_statuses,
+    APPROX_COUNT_DISTINCT(target_domain) as num_target_domains,
     COUNT(*) FILTER (WHERE type = 0) AS num_favs,
     COUNT(*) FILTER (WHERE type = 1) AS num_reblogs,
     COUNT(*) FILTER (WHERE type = 2) AS num_replies,
@@ -52,7 +54,9 @@
     account_id BIGINT,
     event_time TIMESTAMP,
     num_all INT,
-    num_domains INT,
+    num_authors INT,
+    num_statuses INT,
+    num_target_domains INT,
     num_favs INT,
     num_reblogs INT,
     num_replies INT,
@@ -91,5 +95,5 @@
 {% for spec in ['1d', '7d', '60d'] -%}
   DROP VIEW IF EXISTS online_features_account_engagement_{{ spec }};
   DROP SINK IF EXISTS online_features_account_engagement_{{ spec }}_sink;
-  DROP TABLE IF EXISTS offline_features_account_engagement_{{ spec }}_sink;
+  DROP TABLE IF EXISTS offline_features_account_engagement_{{ spec }};
 {% endfor -%}

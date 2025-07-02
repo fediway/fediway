@@ -6,8 +6,10 @@
   SELECT
     MAX(event_time)::TIMESTAMP as event_time,
     e.account_id,
-    e.domain,
+    e.target_domain as domain,
     COUNT(*) AS num_all,
+    APPROX_COUNT_DISTINCT(author_id) as num_authors,
+    APPROX_COUNT_DISTINCT(status_id) as num_statuses,
     COUNT(*) FILTER (WHERE type = 0) AS num_favs,
     COUNT(*) FILTER (WHERE type = 1) AS num_reblogs,
     COUNT(*) FILTER (WHERE type = 2) AS num_replies,
@@ -37,7 +39,7 @@
   WHERE event_time >= NOW() - INTERVAL '{{ window_size }}'
   -- compute account-domain features only for users on our instance
   AND EXISTS (SELECT 1 FROM users u WHERE u.account_id = e.account_id) 
-  GROUP BY e.account_id, e.domain;
+  GROUP BY e.account_id, e.target_domain;
   
   CREATE SINK IF NOT EXISTS online_features_account_domain_engagement_{{ spec }}_sink
   FROM online_features_account_domain_engagement_{{ spec }}
@@ -56,6 +58,8 @@
     domain VARCHAR,
     event_time TIMESTAMP,
     num_all INT,
+    num_authors INT,
+    num_statuses INT,
     num_favs INT,
     num_reblogs INT,
     num_replies INT,

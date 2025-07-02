@@ -8,7 +8,9 @@
       d.domain as preview_card_domain,
       MAX(event_time)::TIMESTAMP as event_time,
       COUNT(*) AS num_all,
-      APPROX_COUNT_DISTINCT(e.domain) as num_domains,
+      APPROX_COUNT_DISTINCT(author_id) as num_authors,
+      APPROX_COUNT_DISTINCT(e.status_id) as num_statuses,
+      APPROX_COUNT_DISTINCT(target_domain) as num_target_domains,
       COUNT(*) FILTER (WHERE type = 0) AS num_favs,
       COUNT(*) FILTER (WHERE type = 1) AS num_reblogs,
       COUNT(*) FILTER (WHERE type = 2) AS num_replies,
@@ -48,18 +50,20 @@
     connector='kafka',
     properties.bootstrap.server='{{ bootstrap_server }}',
     topic='online_features_account_preview_card_domain_engagement_{{ spec }}',
-    primary_key='account_id,domain',
+    primary_key='account_id,preview_card_domain',
     properties.linger.ms='10000',
   ) FORMAT PLAIN ENCODE JSON (
     force_append_only='true'
   );
 
   CREATE TABLE IF NOT EXISTS offline_features_account_preview_card_domain_engagement_{{ spec }} (
-    account_id,
+    account_id BIGINT,
     preview_card_domain BIGINT,
     event_time TIMESTAMP,
     num_all INT,
-    num_domains INT,
+    num_authors INT,
+    num_statuses INT,
+    num_target_domains INT,
     num_favs INT,
     num_reblogs INT,
     num_replies INT,

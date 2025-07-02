@@ -22,63 +22,6 @@ pub trait FromEmbedding {
     fn from_embedding(embedding: SparseVec) -> Self;
 }
 
-// impl Embedding {
-//     pub fn update(&mut self, embedding: &Embedding) {
-//         if embedding.is_zero() {
-//             return;
-//         }
-
-//         // let beta = (ALPHA * embedding.confidence)
-//         //     .max(1.0 / ((self.updates as f64) + 1.0))
-//         //     .max(DECAY);
-//         // let decay = DECAY.min(beta);
-
-//         // let alpha = 1.0;
-
-//         // self.vec *= self.confidence.min(1.0);
-//         // self.vec += &(embedding.vec.to_owned() * alpha * embedding.confidence);
-//         // self.vec *= 1.0 / (self.confidence.min(1.0) + alpha * embedding.confidence + 0.00001);
-
-//         // let beta = embedding.confidence / (embedding.confidence * 5.0);
-//         // let k = 0.7;
-//         // let lambda = 0.5;
-//         // self.confidence += beta * (1.0 + embedding.confidence * k * (-lambda * self.confidence).exp());
-
-//         // let decay = 0.2;
-//         // self.vec *= 0.2;
-//         // self.vec += &SparseVec::new(
-//         //     embedding.vec.0.dim(),
-//         //     embedding.vec.0.indices().iter().cloned().collect(),
-//         //     embedding.vec.0.data().iter().map(|x| x.min(1.0)).collect()
-//         // );
-
-//         // let a_weight = self.confidence.max(0.1);
-//         let a_weight = 0.1;
-//         let b_weight = self.confidence.max(0.1);
-
-//         self.vec *= a_weight;
-//         self.vec += &(embedding.vec.to_owned() * b_weight);
-//         self.vec *= 1.0 / (a_weight + b_weight);
-//         // self.vec += &(embedding.vec.to_owned() * beta);
-//         // self.vec.l1_normalize();
-//         self.confidence +=
-//             (1.0 - self.confidence) * (embedding.confidence / (embedding.confidence + 1.0));
-
-//         // self.vec *= 1.0 - embedding.confidence;
-//         // self.vec += &embedding.vec;
-//         // // self.vec += &(embedding.vec.to_owned() * beta);
-//         // self.vec.l1_normalize();
-//         // self.confidence += (1.0 - self.confidence) * BETA * embedding.confidence;
-
-//         self.updates += 1;
-//         self.is_dirty = true;
-//     }
-
-//     pub fn is_zero(&self) -> bool {
-//         self.vec.is_zero()
-//     }
-// }
-
 #[derive(Debug, Deserialize)]
 pub struct StatusEvent {
     pub status_id: i64,
@@ -112,6 +55,22 @@ pub struct Embeddings {
     pub statuses_tags: FastDashMap<i64, Vec<i64>>,
 }
 
+pub struct Embedding {
+    embedding: SparseVec
+}
+
+impl Embedding {
+    pub fn new(embedding: SparseVec) -> Self {
+        Self { embedding }
+    }
+}
+
+impl Embedded for Embedding {
+    fn embedding(&self) -> &SparseVec {
+        &self.embedding
+    }
+}
+
 impl Embeddings {
     pub fn initial(
         communities: Communities,
@@ -129,45 +88,41 @@ impl Embeddings {
         }
     }
 
-    // fn get_weighted_statuses_tags_embedding(&self, status_id: &i64) -> Option<Embedding> {
-    //     if let Some(tags) = self.statuses_tags.get(status_id) {
-    //         self.get_weighted_tags_embedding(tags.value())
-    //     } else {
-    //         None
-    //     }
-    // }
+    fn get_weighted_statuses_tags_embedding(&self, status_id: &i64) -> Option<Embedding> {
+        if let Some(tags) = self.statuses_tags.get(status_id) {
+            self.get_weighted_tags_embedding(tags.value())
+        } else {
+            None
+        }
+    }
 
-    // fn get_weighted_tags_embedding(&self, tags: &[i64]) -> Option<Embedding> {
-    //     let tag_embeddings: Vec<(SparseVec, f64)> = tags
-    //         .iter()
-    //         .filter_map(|t| match self.tags.get(t) {
-    //             Some(e) => Some((e.vec.clone(), e.confidence)),
-    //             _ => None,
-    //         })
-    //         .collect();
+    fn get_weighted_tags_embedding(&self, tags: &[i64]) -> Option<Embedding> {
+        let tag_embeddings: Vec<(SparseVec, usize)> = tags
+            .iter()
+            .filter_map(|t| match self.tags.get(t) {
+                Some(e) => Some((e.embedding().to_owned(), e.engagements)),
+                _ => None,
+            })
+            .collect();
 
-    //     if tag_embeddings.is_empty() {
-    //         return None;
-    //     }
+        if tag_embeddings.is_empty() {
+            return None;
+        }
 
-    //     let mut vec: SparseVec = SparseVec::empty(self.communities.dim);
+        let mut weighted: SparseVec = SparseVec::empty(self.communities.dim);
 
-    //     let confidence_scores: Vec<f64> = tag_embeddings
-    //         .iter()
-    //         .map(|(_, confidence)| *confidence)
-    //         .collect();
-    //     let total_confidence: f64 = confidence_scores.iter().sum();
-    //     let avg_confidence: f64 = total_confidence / (confidence_scores.len() as f64);
+        let total_engagements: f64 = tag_embeddings
+            .iter()
+            .map(|(_, e)| *e as f64)
+            .sum();
 
-    //     for (c, (e, _)) in confidence_scores
-    //         .into_iter()
-    //         .zip(tag_embeddings.into_iter())
-    //     {
-    //         vec += &(e * (c / total_confidence));
-    //     }
+        for (embedding, engagements) in tag_embeddings.into_iter()
+        {
+            weighted += &(embedding * (engagements as f64 / total_engagements));
+        }
 
-    //     Some(Embedding::new(vec, avg_confidence))
-    // }
+        Some(Embedding::new(weighted))
+    }
 
     pub fn push_status(&self, event: StatusEvent) {
         // do nothing when status embedding already exists
@@ -182,9 +137,9 @@ impl Embeddings {
             status.update_embedding(producer.value(), event.created_at);
         }
 
-        // if let Some(tag) = self.get_weighted_tags_embedding(&tags) {
-        //     status.update_embedding(tag.value(), event.created_at);
-        // }
+        if let Some(weighted_tags_embedding) = self.get_weighted_tags_embedding(&tags) {
+            status.update_embedding(&weighted_tags_embedding, event.created_at);
+        }
 
         self.statuses.insert(event.status_id, status);
 
@@ -213,9 +168,9 @@ impl Embeddings {
             consumer.update_embedding(status.value(), event_time);
 
             // Add tag embedding if available
-            // if let Some(t_embedding) = self.get_weighted_statuses_tags_embedding(&status_id) {
-            //     consumer.update_embedding(&t_embedding, event_time);
-            // }
+            if let Some(weighted_tags_embedding) = self.get_weighted_statuses_tags_embedding(&status_id) {
+                consumer.update_embedding(&weighted_tags_embedding, event_time);
+            }
         }
 
         // update status embedding

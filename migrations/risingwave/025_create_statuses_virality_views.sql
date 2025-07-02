@@ -5,7 +5,7 @@ SELECT
     e.status_id, 
     e.window_start, 
     e.window_end,
-    APPROX_COUNT_DISTINCT(e.domain) AS engaged_domains,
+    APPROX_COUNT_DISTINCT(e.target_domain) AS engaged_domains,
     COUNT(*) AS engagement_speed,
     COALESCE((
     	COUNT(*) - 

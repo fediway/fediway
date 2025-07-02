@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from feast import FeatureStore
+from feast import FeatureStore, FeatureService as FeastFeatureService
 from loguru import logger
 from fastapi import BackgroundTasks
 from datetime import datetime
@@ -27,7 +27,12 @@ class FeatureService(Features):
     def _cache_key(self, entities: list[dict[str, int]]) -> str:
         return ",".join(list(entities[0].keys()))
 
-    def _get_cached(self, entities: list[dict[str, int]], features: list[str]):
+    def _get_cached(
+        self, entities: list[dict[str, int]], features: list[str] | FeastFeatureService
+    ):
+        if isinstance(features, FeastFeatureService):
+            return None, entities
+
         cache_key = self._cache_key(entities)
 
         if not cache_key in self.cache:
@@ -53,6 +58,9 @@ class FeatureService(Features):
         ]
 
     def _remember(self, entities, df, features):
+        if isinstance(features, FeastFeatureService):
+            return
+
         cache_key = self._cache_key(entities)
 
         if "," in cache_key:
@@ -104,10 +112,10 @@ class FeatureService(Features):
     async def get(
         self,
         entities: list[dict[str, int]],
-        features: list[str],
+        features: list[str] | FeastFeatureService,
         offline_store: bool | None = None,
     ) -> pd.DataFrame | None:
-        if len(features) == 0:
+        if type(features) == list and len(features) == 0:
             return None
 
         if len(entities) == 0:
@@ -150,8 +158,11 @@ class FeatureService(Features):
             df = pd.concat([df, cached_df])
             df = df[~df.index.duplicated()].reindex(pd.DataFrame(entities).values[:, 0])
 
+        features_name = (
+            f" {features.name}" if isinstance(features, FeastFeatureService) else ""
+        )
         logger.info(
-            f"Fetched features for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds."
+            f"Fetched{features_name} features for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds."
         )
 
         return df

@@ -16,7 +16,7 @@ def apply():
 
     feature_store.apply(ENTITIES)
     feature_store.apply(FEATURE_VIEWS)
-    # feature_store.apply(FEATURES_SERVICES)
+    feature_store.apply(FEATURES_SERVICES)
 
     admin = AdminClient({"bootstrap.servers": config.kafka.kafka_bootstrap_servers})
     existing_topics = admin.list_topics().topics.keys()

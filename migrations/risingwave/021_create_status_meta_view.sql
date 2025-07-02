@@ -30,15 +30,15 @@ SELECT
   COALESCE(media.has_gifv, FALSE) AS has_gifv,
   COALESCE(media.has_video, FALSE) AS has_video,
   COALESCE(media.has_audio, FALSE) AS has_audio,
-  COALESCE(media.num_media_attachments, 0) AS num_media_attachments,
+  COALESCE(media.num_media_attachments, 0)::INT AS num_media_attachments,
   media.media_attachments AS media_attachments,
 
   -- mentions
-  COALESCE(mentions.num_mentions, 0) AS num_mentions,
+  COALESCE(mentions.num_mentions, 0)::INT AS num_mentions,
   mentions.mentions,
 
   -- tags
-  COALESCE(tags.num_tags, 0) AS num_tags,
+  COALESCE(tags.num_tags, 0)::INT AS num_tags,
   tags.tags
 
 FROM statuses s
@@ -96,6 +96,7 @@ SELECT
   *,
   created_at as event_time
 FROM status_meta
+WHERE created_at > NOW() - INTERVAL '30 DAYS'
 WITH (
   connector='kafka',
   properties.bootstrap.server='{{ bootstrap_server }}',
