@@ -114,6 +114,7 @@ class FeatureService(Features):
         entities: list[dict[str, int]],
         features: list[str] | FeastFeatureService,
         offline_store: bool | None = None,
+        event_time: datetime | None = None,
     ) -> pd.DataFrame | None:
         if type(features) == list and len(features) == 0:
             return None
