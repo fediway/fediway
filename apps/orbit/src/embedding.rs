@@ -56,7 +56,7 @@ pub struct Embeddings {
 }
 
 pub struct Embedding {
-    embedding: SparseVec
+    embedding: SparseVec,
 }
 
 impl Embedding {
@@ -111,13 +111,13 @@ impl Embeddings {
 
         let mut weighted: SparseVec = SparseVec::empty(self.communities.dim);
 
-        let total_engagements: f64 = tag_embeddings
-            .iter()
-            .map(|(_, e)| *e as f64)
-            .sum();
+        let total_engagements: f64 = tag_embeddings.iter().map(|(_, e)| *e as f64).sum();
 
-        for (embedding, engagements) in tag_embeddings.into_iter()
-        {
+        if total_engagements == 0.0 {
+            return None;
+        }
+
+        for (embedding, engagements) in tag_embeddings.into_iter() {
             weighted += &(embedding * (engagements as f64 / total_engagements));
         }
 
@@ -168,7 +168,9 @@ impl Embeddings {
             consumer.update_embedding(status.value(), event_time);
 
             // Add tag embedding if available
-            if let Some(weighted_tags_embedding) = self.get_weighted_statuses_tags_embedding(&status_id) {
+            if let Some(weighted_tags_embedding) =
+                self.get_weighted_statuses_tags_embedding(&status_id)
+            {
                 consumer.update_embedding(&weighted_tags_embedding, event_time);
             }
         }

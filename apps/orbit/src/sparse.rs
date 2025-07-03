@@ -19,9 +19,9 @@ impl SparseVec {
     }
 
     pub fn normalize(&mut self) {
-        let norm = self.0.norm(f64::infinite());
+        let norm: f64 = self.0.norm(f64::infinite());
 
-        if norm > 0.0 {
+        if norm > 0.0 && !norm.is_nan() {
             *self *= 1.0 / norm;
         }
     }

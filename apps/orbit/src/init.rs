@@ -54,9 +54,9 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
         pc_matrix.nrows(),
     );
 
-    let consumers = get_embeddings(communities.dim, ac_matrix, a_indices);
-    let producers = get_embeddings(communities.dim, pc_matrix, p_indices);
-    let tags = get_embeddings(communities.dim, tc2_matrix, t2_indices);
+    let consumers = get_embeddings(ac_matrix, a_indices);
+    let producers = get_embeddings(pc_matrix, p_indices);
+    let tags = get_embeddings(tc2_matrix, t2_indices);
 
     let embeddings = Embeddings::initial(communities, consumers, producers, tags);
 
@@ -98,7 +98,10 @@ async fn get_communities(config: &Config, db: &Client) -> Communities {
 
     tracing::info!("Loading tag similarities.");
 
-    let blacklist: FastHashSet<i64> = rw::get_tag_ids(db, &config.tags_blacklist).await.into_values().collect();
+    let blacklist: FastHashSet<i64> = rw::get_tag_ids(db, &config.tags_blacklist)
+        .await
+        .into_values()
+        .collect();
 
     for sim in rw::get_tag_similarities(db, config.min_tag_authors, config.min_tag_engagers).await {
         if sim.2 < config.tag_sim_threshold {
@@ -155,7 +158,6 @@ async fn get_communities(config: &Config, db: &Client) -> Communities {
 }
 
 fn get_embeddings<E: FromEmbedding>(
-    dim: usize,
     matrix: CsrMatrix<f64>,
     id_mappings: FastHashMap<i64, usize>,
 ) -> FastDashMap<i64, E> {
@@ -170,7 +172,7 @@ fn get_embeddings<E: FromEmbedding>(
         .map(|(row, id)| {
             let indices: Vec<usize> = row.col_indices().into();
             let values: Vec<f64> = row.values().into();
-            let mut vec = SparseVec::new(dim, indices, values);
+            let mut vec = SparseVec::new(row.ncols(), indices, values);
             vec.normalize();
             (*id, E::from_embedding(vec))
         })

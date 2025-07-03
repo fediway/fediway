@@ -75,7 +75,7 @@ pub async fn get_tag_ids(db: &Client, tags: &[String]) -> FastHashMap<String, i6
         );
 
         let params: Vec<&(dyn ToSql + Sync)> =
-        chunk.iter().map(|id| id as &(dyn ToSql + Sync)).collect();
+            chunk.iter().map(|id| id as &(dyn ToSql + Sync)).collect();
 
         let rows = db.query(&query, &params).await.unwrap();
 
@@ -88,7 +88,6 @@ pub async fn get_tag_ids(db: &Client, tags: &[String]) -> FastHashMap<String, i6
 
     tag_ids
 }
-
 
 pub async fn get_at_matrix(
     db: &Client,

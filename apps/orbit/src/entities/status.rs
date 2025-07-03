@@ -10,7 +10,7 @@ use crate::{
 const MIN_SPARSITY: usize = 10;
 const MAX_SPARSITY: usize = 100;
 
-const ALPHA: f64 = 0.0001;
+const ALPHA: f64 = 0.001;
 const BETA: f64 = 0.1;
 const GAMMA: f64 = 0.05;
 
