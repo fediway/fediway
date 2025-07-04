@@ -14,6 +14,8 @@ class MediaAttachmentItem(Item):
     id: int
     type: str
     url: str
+    preview_url: str
+    remote_url: str
     meta: dict | None
 
     @classmethod
@@ -22,5 +24,7 @@ class MediaAttachmentItem(Item):
             id=media_attachment.id,
             type=MEDIA_TYPES[media_attachment.type],
             url=media_attachment.file_url,
+            preview_url=media_attachment.preview_url,
+            remote_url=media_attachment.remote_url,
             meta=media_attachment.file_meta,
         )

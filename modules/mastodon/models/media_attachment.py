@@ -20,6 +20,8 @@ class MediaAttachment(SQLModel, table=True):
     file_file_name: str | None = Field()
     file_meta: dict = Field(sa_column=Column(JSON()))
 
+    thumbnail_file_name: str | None = Field()
+
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
@@ -33,3 +35,20 @@ class MediaAttachment(SQLModel, table=True):
             instance_id=self.id,
             file_name=self.file_file_name,
         )
+
+    @property
+    def thumbnail_url(self):
+        if self.thumbnail_file_name is None:
+            return
+
+        return config.files.build_file_url(
+            self.__tablename__,
+            attachment="files",
+            instance_id=self.id,
+            file_name=self.thumbnail_file_name,
+            style="small",
+        )
+
+    @property
+    def preview_url(self):
+        return self.thumbnail_url or self.file_url
