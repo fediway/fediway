@@ -10,6 +10,9 @@ SELECT
 FROM enriched_status_engagement_events e
 JOIN statuses_tags st ON st.status_id = e.status_id
 WHERE e.event_time > NOW() - INTERVAL '90 DAYS'
+  AND e.author_silenced_at IS NULL 
+  AND e.account_silenced_at IS NULL
+  AND e.sensitive != true
 GROUP BY st.tag_id;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS orbit_account_tag_engagements AS
@@ -19,6 +22,9 @@ SELECT
 FROM enriched_status_engagement_events e
 JOIN statuses_tags st ON st.status_id = e.status_id
 WHERE e.event_time > NOW() - INTERVAL '90 DAYS'
+  AND e.author_silenced_at IS NULL 
+  AND e.account_silenced_at IS NULL
+  AND e.sensitive != true
 GROUP BY e.account_id, st.tag_id;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS orbit_tag_similarities AS
@@ -36,51 +42,8 @@ JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id AND t2.num_engaged_accoun
 WHERE e1.tag_id < e2.tag_id
 GROUP BY e1.tag_id, e2.tag_id;
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS orbit_statuses AS
-SELECT
-    s.id as status_id,
-    s.account_id,
-    s.created_at,
-    ARRAY_REMOVE(t.tags, NULL) as tags
-FROM statuses s
-LEFT JOIN (
-    SELECT status_id, array_agg(tag_id) AS tags 
-    FROM statuses_tags t
-    GROUP BY status_id
-) t ON t.status_id = s.id
-WHERE s.created_at > NOW() - INTERVAL '90 DAYS';
-
-CREATE SINK IF NOT EXISTS orbit_statuses_sink
-FROM orbit_statuses
-WITH (
-    connector='kafka',
-    properties.bootstrap.server='${bootstrap_server}',
-    topic='orbit_statuses',
-    primary_key='status_id',
-) FORMAT PLAIN ENCODE JSON (
-    force_append_only='true'
-);
-
-CREATE SINK IF NOT EXISTS orbit_engagements_sink AS 
-SELECT
-    e.account_id,
-    e.status_id,
-    e.author_id,
-    e.event_time
-FROM enriched_status_engagement_events e
-WITH (
-    connector='kafka',
-    properties.bootstrap.server='${bootstrap_server}',
-    topic='orbit_engagements',
-    primary_key='account_id,status_id',
-) FORMAT PLAIN ENCODE JSON (
-    force_append_only='true'
-);
-
 -- :down
 
-DROP SINK IF EXISTS orbit_statuses_sink;
-DROP SINK IF EXISTS orbit_engagements_sink;
 DROP VIEW IF EXISTS orbit_account_tag_engagements;
 DROP VIEW IF EXISTS orbit_tag_similarities;
 DROP VIEW IF EXISTS orbit_tag_performance;

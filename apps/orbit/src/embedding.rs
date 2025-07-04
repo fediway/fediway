@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 use crate::communities::Communities;
+use crate::debezium::{DebeziumEvent, Operation, Payload};
 use crate::entities::consumer::Consumer;
 use crate::entities::producer::Producer;
 use crate::entities::status::Status;
@@ -25,7 +26,9 @@ pub trait FromEmbedding {
 #[derive(Debug, Deserialize)]
 pub struct StatusEvent {
     pub status_id: i64,
-    pub account_id: i64,
+    pub author_id: i64,
+    pub visibility: i32,
+    pub sensitive: Option<bool>,
     pub tags: Option<FastHashSet<i64>>,
     #[serde(deserialize_with = "deserialize_timestamp")]
     pub created_at: SystemTime,
@@ -131,27 +134,51 @@ impl Embeddings {
         Some(Embedding::new(weighted))
     }
 
-    pub fn push_status(&self, event: StatusEvent) {
-        // do nothing when status embedding already exists
-        if self.statuses.contains_key(&event.status_id) {
-            return;
+    pub fn push_status(&self, event: DebeziumEvent<StatusEvent>) {
+        if let Some(payload) = event.payload {
+            match payload.op {
+                Operation::Create => self.create_status(payload),
+                Operation::Update => self.update_status(payload),
+                Operation::Delete => self.delete_status(payload),
+                _ => {}
+            }
         }
+    }
 
-        let mut status = Status::empty(self.communities.dim, event.created_at);
-        let tags: Vec<i64> = event.tags.unwrap_or_default().iter().cloned().collect();
+    fn create_status(&self, payload: Payload<StatusEvent>) {
+        if let Some(event) = payload.after {
+            // do nothing when status embedding already exists
+            if self.statuses.contains_key(&event.status_id) {
+                return;
+            }
 
-        if let Some(producer) = self.producers.get(&event.account_id) {
-            status.update_embedding(producer.value(), event.created_at);
+            let mut status = Status::empty(self.communities.dim, event.created_at);
+            let tags: Vec<i64> = event.tags.unwrap_or_default().iter().cloned().collect();
+
+            if let Some(producer) = self.producers.get(&event.author_id) {
+                status.update_embedding(producer.value(), event.created_at);
+            }
+
+            if let Some(weighted_tags_embedding) = self.get_weighted_tags_embedding(&tags) {
+                status.update_embedding(&weighted_tags_embedding, event.created_at);
+            }
+
+            self.statuses.insert(event.status_id, status);
+
+            if !tags.is_empty() {
+                self.statuses_tags.insert(event.status_id, tags);
+            }
         }
+    }
 
-        if let Some(weighted_tags_embedding) = self.get_weighted_tags_embedding(&tags) {
-            status.update_embedding(&weighted_tags_embedding, event.created_at);
-        }
+    fn update_status(&self, payload: Payload<StatusEvent>) {
+        // TODO: delete when changed to sensitive
+    }
 
-        self.statuses.insert(event.status_id, status);
-
-        if !tags.is_empty() {
-            self.statuses_tags.insert(event.status_id, tags);
+    fn delete_status(&self, payload: Payload<StatusEvent>) {
+        if let Some(event) = payload.before {
+            self.statuses.remove(&event.status_id);
+            self.statuses_tags.remove(&event.status_id);
         }
     }
 

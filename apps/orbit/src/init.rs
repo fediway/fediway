@@ -1,5 +1,6 @@
 use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
+use crate::debezium::DebeziumEvent;
 use crate::embedding::{Embeddings, FromEmbedding};
 use crate::entities::tag::Tag;
 use crate::rw;
@@ -79,7 +80,7 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
         if !status_ids.contains(&status.status_id) {
             status_ids.insert(status.status_id);
 
-            embeddings.push_status(status);
+            embeddings.push_status(DebeziumEvent::new_create(status));
             i += 1;
         }
 

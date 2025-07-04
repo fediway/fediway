@@ -10,6 +10,7 @@ use tokio::{
 
 use crate::{
     config::Config,
+    debezium::DebeziumEvent,
     embedding::{Embedded, Embeddings, EngagementEvent, StatusEvent},
     entities::{Entity, EntityType, Upsertable},
     workers::{kafka::Event, qdrant::QdrantTask},
@@ -86,25 +87,45 @@ impl EmbeddingWorker {
         };
     }
 
-    async fn process_status(&self, status: StatusEvent, embeddings: &Arc<Embeddings>) {
-        tracing::info!(
-            "Processing status {} in worker {}",
-            status.status_id,
-            self.worker_id
-        );
+    async fn process_status(
+        &self,
+        event: DebeziumEvent<StatusEvent>,
+        embeddings: &Arc<Embeddings>,
+    ) {
+        if let Some(payload) = &event.payload {
+            if let Some(status) = &payload.after {
+                tracing::info!(
+                    "Processing status {} in worker {}",
+                    status.status_id,
+                    self.worker_id
+                );
 
-        // skip when status age exceeds threshold
-        if status.age_in_seconds() > self.config.max_status_age {
-            tracing::info!(
-                "Skipping status {}: age {} exceeds limit {}",
-                status.status_id,
-                status.age_in_seconds(),
-                self.config.max_status_age,
-            );
-            return;
+                // skip when status is not trendable
+                if status.visibility != 0 {
+                    tracing::info!("Skipping status {}: visibility not public", status.status_id,);
+                    return;
+                }
+
+                // skip when status is sensible
+                if status.sensitive.unwrap_or(false) {
+                    tracing::info!("Skipping status {}: sensitive", status.status_id,);
+                    return;
+                }
+
+                // skip when status age exceeds threshold
+                if status.age_in_seconds() > self.config.max_status_age {
+                    tracing::info!(
+                        "Skipping status {}: age {} exceeds limit {}",
+                        status.status_id,
+                        status.age_in_seconds(),
+                        self.config.max_status_age,
+                    );
+                    return;
+                }
+            }
         }
 
-        embeddings.push_status(status);
+        embeddings.push_status(event);
     }
 
     async fn process_engagement(&self, engagement: EngagementEvent, embeddings: &Arc<Embeddings>) {

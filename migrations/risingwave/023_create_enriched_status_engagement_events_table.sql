@@ -5,8 +5,6 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   account_id BIGINT,
   status_id BIGINT,
   author_id BIGINT,
-  source_domain VARCHAR,
-  target_domain VARCHAR,
   type INT,
   event_time TIMESTAMP,
   status_age_in_seconds BIGINT,
@@ -15,9 +13,28 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   reply_id BIGINT,
   poll_vote_id BIGINT,
   bookmark_id BIGINT,
-  fav_count BIGINT DEFAULT 0,
-  reblogs_count BIGINT DEFAULT 0,
-  replies_count BIGINT DEFAULT 0,
+
+  -- account
+  account_domain VARCHAR,
+  account_locked BOOLEAN DEFAULT false,
+  account_discoverable BOOLEAN DEFAULT true,
+  account_trendable BOOLEAN DEFAULT true,
+  account_indexable BOOLEAN DEFAULT true,
+  account_silenced_at TIMESTAMP,
+  account_suspended_at TIMESTAMP,
+
+  -- author
+  author_domain VARCHAR,
+  author_locked BOOLEAN DEFAULT false,
+  author_discoverable BOOLEAN DEFAULT true,
+  author_trendable BOOLEAN DEFAULT true,
+  author_indexable BOOLEAN DEFAULT true,
+  author_silenced_at TIMESTAMP,
+  author_suspended_at TIMESTAMP,
+
+  -- status
+  sensitive BOOLEAN DEFAULT false,
+  visibility INT,
   has_link BOOLEAN DEFAULT false,
   has_photo_link BOOLEAN DEFAULT false,
   has_video_link BOOLEAN DEFAULT false,
@@ -33,6 +50,12 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   num_media_attachments INT DEFAULT 0,
   num_mentions INT DEFAULT 0,
   num_tags INT DEFAULT 0,
+
+  -- stats
+  fav_count BIGINT DEFAULT 0,
+  reblogs_count BIGINT DEFAULT 0,
+  replies_count BIGINT DEFAULT 0,
+
   PRIMARY KEY (account_id, status_id, type),
 
   -- wait at most 1 day for late arriving engagements
@@ -44,9 +67,7 @@ INTO enriched_status_engagement_events AS
 SELECT
   e.account_id,
   e.status_id,
-  s.account_id as author_id,
-  account.domain as source_domain,
-  author.domain as target_domain,
+  s.author_id,
   e.type,
   e.event_time,
   EXTRACT(EPOCH FROM (e.event_time - s.created_at))::BIGINT AS status_age_in_seconds,
@@ -55,34 +76,68 @@ SELECT
   e.reply_id,
   e.poll_vote_id,
   e.bookmark_id,
+  
+  -- account
+  a.domain as source_domain,
+  a.locked AS account_locked,
+  a.discoverable AS account_discoverable,
+  a.trendable AS account_trendable,
+  a.indexable AS account_indexable,
+  a.silenced_at AS account_silenced_at,
+  a.suspended_at AS account_suspended_at,
+
+  -- author
+  s.author_domain as target_domain,
+  s.author_locked,
+  s.author_discoverable,
+  s.author_trendable,
+  s.author_indexable,
+  s.author_silenced_at,
+  s.author_suspended_at,
+
+  -- status
+  s.sensitive,
+  s.visibility,
+  s.has_link,
+  s.has_photo_link,
+  s.has_video_link,
+  s.has_rich_link,
+  s.has_poll,
+  s.num_poll_options,
+  s.allows_multiple_poll_options,
+  s.hides_total_poll_options,
+  s.has_image,
+  s.has_gifv,
+  s.has_video,
+  s.has_audio,
+  s.num_media_attachments::INT,
+  s.num_mentions::INT,
+  s.num_tags::INT,
+
+  -- stats
   st.favourites_count,
   st.reblogs_count,
-  st.replies_count,
-  m.has_link,
-  m.has_photo_link,
-  m.has_video_link,
-  m.has_rich_link,
-  m.has_poll,
-  m.num_poll_options,
-  m.allows_multiple_poll_options,
-  m.hides_total_poll_options,
-  m.has_image,
-  m.has_gifv,
-  m.has_video,
-  m.has_audio,
-  m.num_media_attachments::INT,
-  m.num_mentions::INT,
-  m.num_tags::INT
+  st.replies_count
 FROM status_engagements e
-JOIN statuses s ON s.id = e.status_id
-JOIN accounts account ON e.account_id = account.id
-JOIN accounts author ON s.account_id = author.id
+JOIN accounts a ON e.account_id = a.id
 JOIN status_stats st ON st.status_id = e.status_id
-JOIN status_meta m ON m.status_id = e.status_id
+JOIN enriched_statuses s ON s.status_id = e.status_id
 WITH (type = 'append-only', force_append_only='true');
 
 CREATE INDEX IF NOT EXISTS idx_enriched_status_engagement_events_event_time ON enriched_status_engagement_events(event_time); 
 
+CREATE SINK IF NOT EXISTS enriched_status_engagement_events_sink AS
+SELECT *
+FROM enriched_status_engagement_events
+WHERE event_time > NOW() - INTERVAL '3 DAYS'
+WITH (
+  connector='kafka',
+  properties.bootstrap.server='{{ bootstrap_server }}',
+  topic='status_engagements',
+  primary_key='account_id,status_id',
+) FORMAT PLAIN ENCODE JSON (
+  force_append_only='true'
+);
 
 -- :down
 

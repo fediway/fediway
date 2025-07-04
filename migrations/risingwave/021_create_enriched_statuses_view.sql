@@ -1,6 +1,6 @@
 -- :up
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS status_meta AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS enriched_statuses AS
 SELECT
   s.id AS status_id,
   s.account_id AS author_id,
@@ -9,6 +9,17 @@ SELECT
   -- type
   (s.reblog_of_id IS NOT NULL) AS is_reblog,
   (s.in_reply_to_id IS NOT NULL) AS is_reply,
+  s.sensitive,
+  s.visibility,
+
+  -- author
+  a.domain AS author_domain,
+  a.locked AS author_locked,
+  a.discoverable AS author_discoverable,
+  a.trendable AS author_trendable,
+  a.indexable AS author_indexable,
+  a.silenced_at AS author_silenced_at,
+  a.suspended_at AS author_suspended_at,
 
   -- preview card
   COALESCE(pc.type = 0, FALSE) AS has_link,
@@ -42,6 +53,9 @@ SELECT
   tags.tags
 
 FROM statuses s
+
+-- account
+JOIN accounts a ON a.id = s.account_id
 
 -- preview cards
 LEFT JOIN (
@@ -91,22 +105,20 @@ LEFT JOIN (
   GROUP BY status_id
 ) tags ON s.id = tags.status_id;
 
-CREATE SINK IF NOT EXISTS online_features_status_meta_sink AS
+CREATE SINK IF NOT EXISTS enriched_statuses_sink AS
 SELECT 
   *,
   created_at as event_time
-FROM status_meta
+FROM enriched_statuses
 WHERE created_at > NOW() - INTERVAL '30 DAYS'
 WITH (
   connector='kafka',
   properties.bootstrap.server='{{ bootstrap_server }}',
-  topic='online_features_status_meta',
+  topic='statuses',
   primary_key='status_id',
   properties.linger.ms='1000',
-) FORMAT PLAIN ENCODE JSON (
-  force_append_only='true'
-);
+) FORMAT DEBEZIUM ENCODE JSON;
 
 -- :down
 
-DROP VIEW IF EXISTS status_meta CASCADE;
+DROP VIEW IF EXISTS enriched_statuses CASCADE;

@@ -295,10 +295,12 @@ pub async fn get_initial_engagements(
         e.account_id,
         e.author_id,
         e.event_time,
+        s.visibility,
+        s.sensitive,
         s.created_at,
         s.tags
     FROM enriched_status_engagement_events e
-    JOIN orbit_statuses s ON s.status_id = e.status_id
+    JOIN enriched_statuses s ON s.status_id = e.status_id
     WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
     ORDER BY e.event_time;
     "#;
@@ -310,13 +312,17 @@ pub async fn get_initial_engagements(
         let account_id: i64 = row.get(1);
         let author_id: i64 = row.get(2);
         let event_time: SystemTime = row.get(3);
-        let created_at: SystemTime = row.get(4);
-        let tags: Option<Vec<i64>> = row.get(5);
+        let visibility: i32 = row.get(4);
+        let sensitive: Option<bool> = row.get(5);
+        let created_at: SystemTime = row.get(6);
+        let tags: Option<Vec<i64>> = row.get(7);
         let tags: FastHashSet<i64> = tags.unwrap_or_default().into_iter().collect();
 
         let status = StatusEvent {
             status_id,
-            account_id: author_id,
+            author_id,
+            visibility,
+            sensitive,
             tags: Some(tags),
             created_at,
         };

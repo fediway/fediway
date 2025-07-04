@@ -11,11 +11,12 @@ use tokio::{sync::mpsc::UnboundedSender, task::JoinHandle, time::sleep};
 
 use crate::{
     config::Config,
+    debezium::DebeziumEvent,
     embedding::{EngagementEvent, StatusEvent},
 };
 
-const STATUSES_TOPIC: &str = "orbit_statuses";
-const ENGAGEMENTS_TOPIC: &str = "orbit_engagements";
+const STATUSES_TOPIC: &str = "statuses";
+const ENGAGEMENTS_TOPIC: &str = "status_engagements";
 const TOPICS: [&str; 2] = [STATUSES_TOPIC, ENGAGEMENTS_TOPIC];
 
 struct Context;
@@ -105,7 +106,8 @@ impl KafkaWorker {
         // tracing::info!("Received message in {}: {}", topic, payload_str);
 
         match topic {
-            STATUSES_TOPIC => match serde_json::from_str::<StatusEvent>(payload_str) {
+            STATUSES_TOPIC => match serde_json::from_str::<DebeziumEvent<StatusEvent>>(payload_str)
+            {
                 Ok(status_event) => {
                     if let Err(e) = event_tx.send(Event::Status(status_event)) {
                         tracing::error!("Failed to send status event: {}", e);
@@ -206,6 +208,6 @@ impl KafkaWorker {
 
 #[derive(Debug)]
 pub enum Event {
-    Status(StatusEvent),
+    Status(DebeziumEvent<StatusEvent>),
     Engagement(EngagementEvent),
 }

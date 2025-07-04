@@ -14,6 +14,8 @@ FEATURES = [
     # Field(name="created_at", dtype=UnixTimestamp),
     Field(name="is_reblog", dtype=Bool),
     Field(name="is_reply", dtype=Bool),
+    Field(name="sensitive", dtype=Bool),
+    Field(name="visibility", dtype=Bool),
     Field(name="has_link", dtype=Bool),
     Field(name="has_photo_link", dtype=Bool),
     Field(name="has_video_link", dtype=Bool),
@@ -39,7 +41,7 @@ FEATURES = [
 
 feature_views.append(
     make_feature_view(
-        f"status_meta",
+        f"status",
         entities=[status],
         schema=FEATURES,
         online=True,

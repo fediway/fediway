@@ -27,7 +27,7 @@ def create_topics(community_id: int, limit: int = 10, entity: str = "statuses"):
     recommendations = client.search(
         collection_name=f"orbit_{version}_{entity}",
         query_vector=models.NamedSparseVector(name="embedding", vector=vector),
-        limit=limit
+        limit=limit,
     )
 
     entity_ids = {rec.id for rec in recommendations}

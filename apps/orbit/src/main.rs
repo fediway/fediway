@@ -1,5 +1,6 @@
 mod communities;
 mod config;
+mod debezium;
 mod embedding;
 mod entities;
 mod init;
