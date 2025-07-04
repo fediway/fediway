@@ -38,14 +38,14 @@ from modules.fediway.feed.sampling import TopKSampler
 from modules.fediway.rankers import SimpleStatsRanker
 from modules.fediway.sources.statuses import (
     MostInteractedByMutualFollowsSource,
-    CommunityBasedRecommendations,
+    CommunityBasedRecommendationsSource,
 )
 
 pipeline = (
     Feed()
     .select('status_id')
     .source(MostInteractedByMutualFollowsSource(account_id), 100)
-    .source(CommunityBasedRecommendations(account_id, language='en'), 100)
+    .source(CommunityBasedRecommendationsSource(account_id, language='en'), 100)
     .rank(SimpleStatsRanker())
     .diversify(by='status:account_id', penalty=0.1)
     .sample(20, sampler=TopKSampler())
