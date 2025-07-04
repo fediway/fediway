@@ -58,8 +58,9 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
 
   PRIMARY KEY (account_id, status_id, type),
 
-  -- wait at most 1 day for late arriving engagements
-  WATERMARK FOR event_time AS event_time - INTERVAL '1 DAY' 
+  -- due to federation events may be days late
+  -- we wait at most 7 days for late arriving engagements
+  WATERMARK FOR event_time AS event_time - INTERVAL '7 DAYS'
 ) APPEND ONLY ON CONFLICT IGNORE;
 
 CREATE SINK IF NOT EXISTS enriched_status_engagement_events_sink
