@@ -1,6 +1,7 @@
 use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
 use crate::embedding::{Embeddings, FromEmbedding};
+use crate::entities::tag::Tag;
 use crate::rw;
 use crate::sparse::SparseVec;
 use crate::types::{FastDashMap, FastHashMap, FastHashSet};
@@ -56,7 +57,11 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
 
     let consumers = get_embeddings(ac_matrix, a_indices);
     let producers = get_embeddings(pc_matrix, p_indices);
-    let tags = get_embeddings(tc2_matrix, t2_indices);
+    let tags: FastDashMap<i64, Tag> = get_embeddings(tc2_matrix, t2_indices);
+
+    for (tag_id, community) in communities.tags.iter() {
+        tags.get_mut(tag_id).unwrap().set_community(*community);
+    }
 
     let embeddings = Embeddings::initial(communities, consumers, producers, tags);
 

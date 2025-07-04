@@ -6,9 +6,9 @@ use crate::{
     sparse::SparseVec,
 };
 
-const MIN_SPARSITY: usize = 10;
+const MIN_SPARSITY: usize = 5;
 const MAX_SPARSITY: usize = 50;
-const LAMBDA: f64 = 0.3;
+const LAMBDA: f64 = 0.2;
 
 #[derive(Clone)]
 pub struct Consumer {
@@ -39,6 +39,7 @@ impl<E: Embedded> UpdateEmbedding<E> for Consumer {
             return;
         }
 
+        self.embedding *= 0.95;
         self.embedding += &(entity.embedding().to_owned() * LAMBDA);
         self.embedding.keep_top_n(
             (self.embedding.0.dim() / 10)

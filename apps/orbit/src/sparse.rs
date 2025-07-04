@@ -58,6 +58,19 @@ impl SparseVec {
         // Create new sparse vector
         self.0 = CsVec::new(self.0.dim(), new_indices, new_data);
     }
+
+    pub fn set_entries(&mut self, mut indices: Vec<usize>, value: f64) {
+        let mut data: Vec<f64> = indices.iter().map(|_| value).collect();
+
+        for (i, &val) in self.0.iter() {
+            if !indices.contains(&i) {
+                indices.push(i);
+                data.push(val);
+            }
+        }
+
+        self.0 = CsVec::new(self.0.dim(), indices, data);
+    }
 }
 
 impl Mul<f64> for SparseVec {

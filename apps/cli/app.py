@@ -4,6 +4,7 @@ from .feast import app as feast_app
 from .herde import app as herde_app
 from .kafka import app as kafka_app
 from .kirby import app as kirby_app
+from .orbit import app as orbit_app
 from .qdrant import app as qdrant_app
 from .risingwave import app as risingwave_app
 from .schwarm import app as schwarm_app
@@ -20,6 +21,8 @@ app.add_typer(
 )
 
 app.add_typer(kirby_app, name="kirby", help="Kirby commands (ranker)")
+
+app.add_typer(orbit_app, name="orbit", help="Orbit commands (community embeddings)")
 
 app.add_typer(
     schwarm_app,

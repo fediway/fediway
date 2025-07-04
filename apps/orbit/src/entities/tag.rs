@@ -14,8 +14,26 @@ const BETA: f64 = 0.95;
 pub struct Tag {
     embedding: SparseVec,
     pub engagements: usize,
+    community: Option<usize>,
     last_upserted: Option<SystemTime>,
     is_dirty: bool,
+}
+
+impl Tag {
+    pub fn community(&self) -> &Option<usize> {
+        &self.community
+    }
+
+    pub fn set_community(&mut self, community: usize) {
+        self.community = Some(community);
+
+        for (i, val) in self.embedding.0.iter_mut() {
+            if i == community {
+                *val = 1.0;
+                break;
+            }
+        }
+    }
 }
 
 impl Embedded for Tag {
@@ -38,6 +56,17 @@ impl<E: Embedded> UpdateEmbedding<E> for Tag {
                 .min(MIN_SPARSITY),
         );
         self.embedding.normalize();
+
+        // fix community of tag to 1.0
+        if let Some(community) = self.community {
+            for (i, val) in self.embedding.0.iter_mut() {
+                if i == community {
+                    *val = 1.0;
+                    break;
+                }
+            }
+        }
+
         self.is_dirty = true;
     }
 }
@@ -46,6 +75,7 @@ impl FromEmbedding for Tag {
     fn from_embedding(embedding: SparseVec) -> Self {
         Self {
             embedding,
+            community: None,
             engagements: 0,
             last_upserted: None,
             is_dirty: false,

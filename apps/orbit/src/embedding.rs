@@ -97,10 +97,10 @@ impl Embeddings {
     }
 
     fn get_weighted_tags_embedding(&self, tags: &[i64]) -> Option<Embedding> {
-        let tag_embeddings: Vec<(SparseVec, usize)> = tags
+        let tag_embeddings: Vec<(SparseVec, Option<usize>, usize)> = tags
             .iter()
             .filter_map(|t| match self.tags.get(t) {
-                Some(e) => Some((e.embedding().to_owned(), e.engagements)),
+                Some(e) => Some((e.embedding().to_owned(), *e.community(), e.engagements)),
                 _ => None,
             })
             .collect();
@@ -111,14 +111,21 @@ impl Embeddings {
 
         let mut weighted: SparseVec = SparseVec::empty(self.communities.dim);
 
-        let total_engagements: f64 = tag_embeddings.iter().map(|(_, e)| *e as f64).sum();
+        let total_engagements: f64 = tag_embeddings.iter().map(|(_, _, e)| *e as f64).sum();
 
         if total_engagements == 0.0 {
             return None;
         }
 
-        for (embedding, engagements) in tag_embeddings.into_iter() {
+        let communities: FastHashSet<usize> =
+            tag_embeddings.iter().filter_map(|(_, c, _)| *c).collect();
+
+        for (embedding, _, engagements) in tag_embeddings.into_iter() {
             weighted += &(embedding * (engagements as f64 / total_engagements));
+        }
+
+        if communities.is_empty() {
+            weighted.set_entries(communities.into_iter().collect(), 1.0);
         }
 
         Some(Embedding::new(weighted))
@@ -153,6 +160,10 @@ impl Embeddings {
         let status_id = event.status_id;
         let author_id = event.author_id;
         let event_time = event.event_time;
+
+        if account_id == author_id {
+            return;
+        }
 
         let old_consumer = self
             .consumers

@@ -7,11 +7,11 @@ use crate::{
     utils::duration_since_or_zero,
 };
 
-const MIN_SPARSITY: usize = 10;
+const MIN_SPARSITY: usize = 5;
 const MAX_SPARSITY: usize = 100;
 
 const ALPHA: f64 = 0.001;
-const BETA: f64 = 1.0;
+const BETA: f64 = 0.5;
 const GAMMA: f64 = 0.05;
 
 pub struct Status {

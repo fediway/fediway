@@ -6,7 +6,7 @@ use crate::{
     sparse::SparseVec,
 };
 
-const MIN_SPARSITY: usize = 10;
+const MIN_SPARSITY: usize = 5;
 const MAX_SPARSITY: usize = 20;
 
 const BETA: f64 = 0.95;
@@ -34,7 +34,7 @@ impl<E: Embedded> UpdateEmbedding<E> for Producer {
         self.embedding *= BETA;
         self.embedding += &(entity.embedding().to_owned() * (1.0 - BETA));
         self.embedding.keep_top_n(
-            (self.embedding.0.dim() / 10)
+            (self.embedding.0.dim() / 15)
                 .max(MAX_SPARSITY)
                 .min(MIN_SPARSITY),
         );
