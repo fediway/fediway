@@ -3,6 +3,7 @@
 
 {% for window_size, spec in [('24 HOURS', '1d'), ('7 DAYS', '7d'), ('60 DAYS', '60d')] %}
   CREATE MATERIALIZED VIEW IF NOT EXISTS online_features_account_author_engagement_{{ spec }} AS
+  WITH ( source_rate_limit = 200 ) AS
   SELECT
     MAX(event_time)::TIMESTAMP as event_time,
     e.account_id,

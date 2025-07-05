@@ -1,6 +1,7 @@
 -- :up
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS status_virality_stats AS
+WITH ( source_rate_limit = 200 ) AS
 SELECT 
     e.status_id, 
     e.window_start, 
@@ -16,6 +17,7 @@ WHERE e.account_id != e.author_id -- ignore engagements by author on their own s
 GROUP BY e.status_id, e.window_start, e.window_end;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS status_virality_scores AS
+WITH ( source_rate_limit = 200 ) AS
 SELECT 
     stats_current.status_id,
     (

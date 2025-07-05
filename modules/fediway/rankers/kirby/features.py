@@ -40,8 +40,8 @@ class KirbyFeatureService(Features):
         )
         self.status_features = feature_store.get_feature_service("status_features")
 
-    async def _get_account_tag_features(self, status_entities, status_meta):
-        status_tags = status_meta["status_meta__tags"].values
+    async def _get_account_tag_features(self, status_entities, statuses):
+        status_tags = statuses["status__tags"].values
 
         # TODO: only load each unique tag once
 
@@ -56,6 +56,9 @@ class KirbyFeatureService(Features):
                         "account_id": self.account_id,
                     }
                 )
+
+        if len(entities) == 0:
+            return
 
         df = await self.feature_service.get(
             entities=entities,
@@ -73,8 +76,8 @@ class KirbyFeatureService(Features):
 
         return df
 
-    async def _get_account_mentions_features(self, status_entities, status_meta):
-        status_mentions = status_meta["status_meta__mentions"].values
+    async def _get_account_mentions_features(self, status_entities, statuses):
+        status_mentions = statuses["status__mentions"].values
 
         # TODO: only load each unique tag once
 
@@ -89,6 +92,9 @@ class KirbyFeatureService(Features):
                         "account_id": self.account_id,
                     }
                 )
+
+        if len(entities) == 0:
+            return
 
         df = await self.feature_service.get(
             entities=entities,
@@ -106,12 +112,12 @@ class KirbyFeatureService(Features):
 
         return df
 
-    async def _get_account_status_features(self, status_entities, status_meta):
-        entities = status_meta[
+    async def _get_account_status_features(self, status_entities, statuses):
+        entities = statuses[
             [
-                "status_meta__author_id",
-                "status_meta__preview_card_id",
-                "status_meta__preview_card_domain",
+                "status__author_id",
+                "status__preview_card_id",
+                "status__preview_card_domain",
             ]
         ].values
 
@@ -136,22 +142,20 @@ class KirbyFeatureService(Features):
         )
 
     async def get(self, entities: list[dict[str, int]], *pargs, **kwargs):
-        status_meta = await self.feature_service.get(
+        statuses = await self.feature_service.get(
             entities, features=self.status_features
         )
 
-        account_status_features = self._get_account_status_features(
-            entities, status_meta
-        )
+        account_status_features = self._get_account_status_features(entities, statuses)
         account_mentions_features = self._get_account_mentions_features(
-            entities, status_meta
+            entities, statuses
         )
-        account_tag_features = self._get_account_tag_features(entities, status_meta)
+        account_tag_features = self._get_account_tag_features(entities, statuses)
 
         features = await asyncio.gather(
             account_status_features, account_mentions_features, account_tag_features
         )
 
-        df = pd.concat([status_meta] + features, axis=1)
+        df = pd.concat([statuses] + [f for f in features if f is not None], axis=1)
 
         return df.fillna(0.0)
