@@ -85,10 +85,21 @@ class FeatureService(Features):
                 ]
 
     def ingest_to_offline_store(
-        self, features: pd.DataFrame, event_time: datetime | None = None
+        self,
+        features: pd.DataFrame,
+        entities: list[dict[str, int]],
+        event_time: datetime | None = None,
     ):
         if len(features) == 0:
             return
+
+        if len(features) != len(entities):
+            logger.warning(
+                f"Features and entities do not match: {len(features)} != {len(entities)}"
+            )
+            return
+
+        entities_df = pd.DataFrame(entities)
 
         feature_views = set([c.split("__")[0] for c in features.columns if "__" in c])
         for fv_name in feature_views:
@@ -102,9 +113,7 @@ class FeatureService(Features):
             if "offline_store" not in feature_view.tags:
                 continue
 
-            missing_entites = [
-                e for e in feature_view.entities if e not in features.columns
-            ]
+            missing_entites = [e for e in feature_view.entities if e not in entities[0]]
             if len(missing_entites) > 0:
                 logger.warning(
                     f"Skip ingesting {fv_name} features: missing entities {', '.join(missing_entites)}"
@@ -116,10 +125,15 @@ class FeatureService(Features):
             feature_names = [c.split("__")[-1] for c in columns]
 
             # filter feature and entity values for feature view
-            df = features[columns].rename(columns=dict(zip(columns, feature_names)))
+            df = pd.concat(
+                [entities_df[feature_view.entities], features[columns]], axis=1
+            )
 
             # filter rows with only nan values
-            df = df[df[feature_columns].isna().all(axis=1)]
+            df = df[~df[feature_columns].isna().all(axis=1)]
+
+            # remove feature view from column names
+            df.rename(columns=dict(zip(columns, feature_names)), inplace=True)
 
             if len(df) == 0:
                 logger.info(f"Skip ingesting {fv_name} features: all entries missing")
@@ -168,7 +182,7 @@ class FeatureService(Features):
                 logger.warning(
                     "Missing background task manager: ingesting features to offline store sequentially."
                 )
-                self.ingest_to_offline_store(df, event_time)
+                self.ingest_to_offline_store(df, entities, event_time)
             else:
                 self.background_tasks.add_task(
                     self.ingest_to_offline_store, df, event_time

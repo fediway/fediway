@@ -79,7 +79,7 @@ class KirbyFeatureService(Features):
     async def _get_account_mentions_features(self, status_entities, statuses):
         status_mentions = statuses["status__mentions"].values
 
-        # TODO: only load each unique tag once
+        # TODO: only load each unique mentioned account once
 
         status_ids = []
         entities = []
@@ -146,16 +146,12 @@ class KirbyFeatureService(Features):
             entities, features=self.status_features
         )
 
-        account_status_features = self._get_account_status_features(entities, statuses)
-        account_mentions_features = self._get_account_mentions_features(
-            entities, statuses
-        )
-        account_tag_features = self._get_account_tag_features(entities, statuses)
-
         features = await asyncio.gather(
-            account_status_features, account_mentions_features, account_tag_features
+            self._get_account_status_features(entities, statuses),
+            self._get_account_mentions_features(entities, statuses),
+            self._get_account_tag_features(entities, statuses),
         )
 
         df = pd.concat([statuses] + [f for f in features if f is not None], axis=1)
 
-        return df.fillna(0.0)
+        return df

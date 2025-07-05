@@ -3,13 +3,14 @@ from datetime import datetime
 
 from sqlmodel import Field, SQLModel, Session
 
-SHORTCODE_RE_FRAGMENT = r'[a-zA-Z0-9_]{2,}'
+SHORTCODE_RE_FRAGMENT = r"[a-zA-Z0-9_]{2,}"
 SCAN_RE = re.compile(
-    r'(?:^|[^a-zA-Z0-9:])'
-    r':(' + SHORTCODE_RE_FRAGMENT + r'):'
-    r'(?=[^a-zA-Z0-9:]|$)'
+    r"(?:^|[^a-zA-Z0-9:])"
+    r":(" + SHORTCODE_RE_FRAGMENT + r"):"
+    r"(?=[^a-zA-Z0-9:]|$)"
 )
-SHORTCODE_ONLY_RE = re.compile(r'^' + SHORTCODE_RE_FRAGMENT + r'$')
+SHORTCODE_ONLY_RE = re.compile(r"^" + SHORTCODE_RE_FRAGMENT + r"$")
+
 
 class CustomEmoji(SQLModel, table=True):
     __tablename__ = "custom_emojies"
