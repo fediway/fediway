@@ -524,20 +524,20 @@ class Feed:
         return self
 
     def unique(self):
-        def _step_fn(candidates: CandidateList):
+        async def _step_fn(candidates: CandidateList):
             _, indices = np.unique(candidates.get_candidates(), return_index=True)
             return candidates[indices]
 
-        self.steps.append(step_fn)
+        self.steps.append(_step_fn)
 
         return self
 
     def passthrough(self, callback):
-        def _step_fn(candidates: CandidateList):
+        async def _step_fn(candidates: CandidateList):
             callback(candidates)
             return candidates
 
-        self.steps.append(step_fn)
+        self.steps.append(_step_fn)
 
         return self
 
