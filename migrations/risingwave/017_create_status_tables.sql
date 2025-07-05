@@ -67,8 +67,8 @@ SELECT
   status_id,
   favourites_count,
   reblogs_count,
-  replies_count
-  updated_at as event_time
+  replies_count,
+  updated_at AS event_time
 FROM status_stats st
 WHERE created_at > NOW() - INTERVAL '30 DAYS'
 WITH (
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS offline_features_status_stats (
     event_time TIMESTAMP,
     favourites_count BIGINT,
     reblogs_count BIGINT,
-    replies_count BIGINT
+    replies_count BIGINT,
     PRIMARY KEY (status_id, event_time)
 ) APPEND ONLY ON CONFLICT IGNORE WITH (
     connector='kafka',

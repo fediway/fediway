@@ -209,8 +209,11 @@ class FeedService:
         for step_id, step in zip(rec_step_ids, self.pipeline.steps):
             if not isinstance(step, SourcingStep):
                 continue
-            for (source, limit), duration_ns, count in zip(
-                step.sources, step.get_durations(), step.get_counts()
+            for (source, limit), duration_ns, count, candidates in zip(
+                step.sources,
+                step.get_durations(),
+                step.get_counts(),
+                step.get_sourced_candidates(),
             ):
                 sourcing_run_id = str(uuid.uuid4())
                 futures.append(
@@ -230,6 +233,19 @@ class FeedService:
                         },
                     )
                 )
+
+                for c in candidates:
+                    futures.append(
+                        self.kafka.send(
+                            topic="feed_candidate_sources",
+                            key=f"{sourcing_run_id},{c},{self.pipeline.entity}",
+                            value={
+                                "entity_id": c,
+                                "entity": self.pipeline.entity,
+                                "sourcing_run_id": sourcing_run_id,
+                            },
+                        )
+                    )
 
         for step_id, step in zip(rec_step_ids, self.pipeline.steps):
             if not isinstance(step, RankingStep):

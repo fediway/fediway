@@ -27,7 +27,7 @@ TOPICS = [
     "feed_pipeline_steps",
     "feed_sourcing_runs",
     "feed_recommendations",
-    "feed_recommendation_sources",
+    "feed_candidate_sources",
     "feed_ranking_runs",
 ]
 

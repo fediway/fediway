@@ -306,12 +306,16 @@ class SourcingStep(PipelineStep):
         self._duration = None
         self._durations = []
         self._counts = []
+        self._sourced_candidates = []
 
     def get_params(self):
         return {
             "sources": [[s.name(), n] for s, n in self.sources],
             "group": self.group,
         }
+
+    def get_sourced_candidates(self) -> dict[str]:
+        return self._sourced_candidates
 
     def add(self, source: Source, n: int):
         self.sources.append((source, n))
@@ -335,6 +339,9 @@ class SourcingStep(PipelineStep):
         self._durations[idx] = time.perf_counter_ns() - start_time
         self._counts[idx] = len(candidates)
 
+        for c in candidates:
+            self._sourced_candidates.add(c)
+
         # logger.info(f"Collected {len(candidates)} candidates from {source.name()} in {self._durations[idx] / 1_000_000} ms")
 
         return candidates
@@ -342,6 +349,7 @@ class SourcingStep(PipelineStep):
     async def __call__(self, candidates: CandidateList) -> CandidateList:
         self._durations = [None for _ in range(len(self.sources))]
         self._counts = [0 for _ in range(len(self.sources))]
+        self._sourced_candidates = [{} for _ in range(len(self.sources))]
         jobs = []
 
         start_time = time.perf_counter_ns()

@@ -72,13 +72,14 @@ CREATE TABLE IF NOT EXISTS feed_recommendations (
     properties.bootstrap.server='{{ bootstrap_server }}',
 ) FORMAT PLAIN ENCODE JSON;
 
-CREATE TABLE IF NOT EXISTS feed_recommendation_sources (
-    recommendation_id VARCHAR,
+CREATE TABLE IF NOT EXISTS feed_candidate_sources (
+    entity_id VARCHAR,
+    entity BIGINT,
     sourcing_run_id VARCHAR,
-    PRIMARY KEY (recommendation_id, sourcing_run_id)
+    PRIMARY KEY (entity_id, entity, sourcing_run_id)
 ) APPEND ONLY ON CONFLICT IGNORE WITH (
     connector='kafka',
-    topic='feed_recommendation_sources',
+    topic='feed_candidate_sources',
     properties.bootstrap.server='{{ bootstrap_server }}',
 ) FORMAT PLAIN ENCODE JSON;
 
