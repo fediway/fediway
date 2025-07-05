@@ -2,7 +2,7 @@
 -- :up
 
 {% for window_size, spec in [('24 HOURS', '1d'), ('7 DAYS', '7d'), ('60 DAYS', '60d')] %}
-  CREATE MATERIALIZED VIEW IF NOT EXISTS online_features_account_preview_card_engagement_{{ spec }} AS
+  CREATE MATERIALIZED VIEW IF NOT EXISTS online_features_account_preview_card_engagement_{{ spec }}
   WITH ( source_rate_limit = 200 ) AS
   SELECT
       e.account_id,

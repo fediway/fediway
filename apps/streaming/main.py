@@ -35,7 +35,7 @@ broker = KafkaBroker(
 app = FastStream(broker)
 
 feature_topics = {
-    fv.name: fv.tags.get("topic") or f"online_features_{feature_view}"
+    fv.name: fv.tags.get("topic") or f"online_features_{fv.name}"
     for fv in feature_store.list_feature_views()
     if "push" in fv.tags and fv.tags["push"] == "kafka"
 }
