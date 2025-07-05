@@ -340,7 +340,7 @@ class SourcingStep(PipelineStep):
         self._counts[idx] = len(candidates)
 
         for c in candidates:
-            self._sourced_candidates.add(c)
+            self._sourced_candidates[idx].add(c)
 
         # logger.info(f"Collected {len(candidates)} candidates from {source.name()} in {self._durations[idx] / 1_000_000} ms")
 
@@ -349,7 +349,7 @@ class SourcingStep(PipelineStep):
     async def __call__(self, candidates: CandidateList) -> CandidateList:
         self._durations = [None for _ in range(len(self.sources))]
         self._counts = [0 for _ in range(len(self.sources))]
-        self._sourced_candidates = [{} for _ in range(len(self.sources))]
+        self._sourced_candidates = [set() for _ in range(len(self.sources))]
         jobs = []
 
         start_time = time.perf_counter_ns()

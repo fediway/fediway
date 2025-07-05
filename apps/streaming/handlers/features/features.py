@@ -37,13 +37,10 @@ class FeaturesJsonEventHandler:
 
 class FeaturesDebeziumEventHandler(DebeziumEventHandler, FeaturesJsonEventHandler):
     async def created(self, data: dict):
-        logger.debug(f"Debezium features: create")
-        self(data)
+        await self(data)
 
     async def updated(self, old: dict, new: dict):
-        logger.debug(f"Debezium features: update")
-        self(new)
+        await self(new)
 
     async def deleted(self, data: dict):
-        logger.debug(f"Debezium features: delete")
         pass  # TODO: delete from feature store
