@@ -19,7 +19,7 @@ from modules.fediway.feed.pipeline import (
     SourcingStep,
     RankingStep,
 )
-from modules.fediway.feed.pipeline import CandidateList
+from modules.fediway.feed.pipeline import CandidateList, PipelineStep
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
 from modules.fediway.models.risingwave import (
@@ -203,7 +203,9 @@ class FeedService:
                         "feed_id": self.id,
                         "pipeline_run_id": run_id,
                         "name": str(step),
-                        "params": step.get_params(),
+                        "params": step.get_params()
+                        if isinstance(step, PipelineStep)
+                        else [],
                         "duration_ns": duration_ns,
                         "event_time": event_time,
                     },
