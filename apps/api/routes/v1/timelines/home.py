@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, BackgroundTasks
 from sqlmodel import Session as DBSession
 
+from apps.api.dependencies.features import get_kirby_feature_service
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
     get_popular_in_social_circle_sources,
@@ -9,6 +10,8 @@ from apps.api.dependencies.sources.statuses import (
 )
 from apps.api.services.feed_service import FeedService
 from config import config
+from modules.fediway.rankers.kirby import KirbyFeatureService
+from modules.fediway.feed import CandidateList
 from modules.fediway.feed.sampling import WeightedGroupSampler
 from modules.fediway.sources import Source
 from modules.mastodon.items import StatusItem
@@ -52,14 +55,20 @@ def get_cold_start_sources(
 @router.get("/home")
 async def home_timeline(
     request: Request,
+    background_tasks: BackgroundTasks,
     max_id: int | None = None,
     feed: FeedService = Depends(get_feed),
     # in_network_sources: list[Source] = Depends(get_in_network_sources),
     # near_network_sources: list[Source] = Depends(get_near_network_sources),
     out_network_sources: list[Source] = Depends(get_out_network_sources),
     cold_start_sources: list[Source] = Depends(get_cold_start_sources),
+    kirby_features: KirbyFeatureService = Depends(get_kirby_feature_service),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
+    async def _push_kirby_features_to_offline_store(candidates: CandidateList):
+        background_tasks.add_task(kirby_features.get, candidates.get_entity_rows())
+        return candidates
+
     max_candidates_per_source = config.fediway.max_candidates_per_source(
         # len(in_network_sources) +
         # len(near_network_sources) +
@@ -75,6 +84,7 @@ async def home_timeline(
         # .sources(_map_sources(near_network_sources), group="near-network")
         .sources(_map_sources(out_network_sources), group="out-network")
         .sources(_map_sources(cold_start_sources), group="cold-start")
+        .passthrough(_push_kirby_features_to_offline_store)
         .diversify(by="status:account_id", penalty=0.1)
         .sample(
             config.fediway.feed_batch_size,

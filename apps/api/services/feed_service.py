@@ -125,6 +125,11 @@ class FeedService:
 
         return self
 
+    def passthrough(self, callback):
+        self.pipeline.passthrough(callback)
+
+        return self
+
     async def _save_pipeline_run(self):
         event_time = int(self.feature_service.event_time.timestamp())
 
