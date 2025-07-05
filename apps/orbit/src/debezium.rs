@@ -66,23 +66,10 @@ pub struct Payload<T> {
 
 #[derive(Debug, Deserialize, Default)]
 pub struct Source {
-    pub version: String,
-    pub connector: String,
-    pub name: String,
     #[serde(rename = "ts_ms")]
     pub timestamp_ms: i64,
-    pub snapshot: Option<String>,
-    pub db: String,
-    pub sequence: Option<String>,
+    pub db: Option<String>,
     pub table: Option<String>,
-    #[serde(rename = "server_id")]
-    pub server_id: Option<i64>,
-    pub gtid: Option<String>,
-    pub file: Option<String>,
-    pub pos: Option<i64>,
-    pub row: Option<i32>,
-    pub thread: Option<i64>,
-    pub query: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

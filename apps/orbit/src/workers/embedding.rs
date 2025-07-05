@@ -102,7 +102,10 @@ impl EmbeddingWorker {
 
                 // skip when status is not trendable
                 if status.visibility != 0 {
-                    tracing::info!("Skipping status {}: visibility not public", status.status_id,);
+                    tracing::info!(
+                        "Skipping status {}: visibility not public",
+                        status.status_id,
+                    );
                     return;
                 }
 
