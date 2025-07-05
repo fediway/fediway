@@ -1,4 +1,5 @@
 from .account import Account, AccountStats
+from .custom_emoji import CustomEmoji
 from .favourite import Favourite
 from .follow import Follow
 from .media_attachment import MediaAttachment

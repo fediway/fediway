@@ -106,7 +106,7 @@ class FeatureService(Features):
                 e for e in feature_view.entities if e not in features.columns
             ]
             if len(missing_entites) > 0:
-                logger.warn(
+                logger.warning(
                     f"Skip ingesting {fv_name} features: missing entities {', '.join(missing_entites)}"
                 )
                 continue
@@ -128,7 +128,7 @@ class FeatureService(Features):
             df["event_time"] = int((event_time or self.event_time).timestamp())
 
             try:
-                result = self.fs.write_to_offline_store(
+                self.fs.write_to_offline_store(
                     fv_name,
                     df=df,
                 )

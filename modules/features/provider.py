@@ -80,5 +80,5 @@ class FediwayProvider(PassthroughProvider):
         producer.flush()
 
         logger.info(
-            f"Successfully sent {successful_deliveries}/{len(data)} '{feature_view.name}' features to offline store"
+            f"Ingested {successful_deliveries}/{len(data)} {feature_view.name} features to offline store"
         )
