@@ -93,13 +93,13 @@ def viral(
     limit: int = 10,
     language: str = "en",
 ):
-    from modules.fediway.sources.statuses import ViralSource
+    from modules.fediway.sources.statuses import ViralStatusesSource
     from shared.core.rw import rw_session
     from shared.core.redis import get_redis
     import time
 
     with rw_session() as rw:
-        source = ViralSource(
+        source = ViralStatusesSource(
             r=get_redis(),
             rw=rw,
             language=language,
@@ -107,5 +107,4 @@ def viral(
 
         source.reset()
 
-        for candidate in source.collect(limit):
-            print(candidate)
+        _log_candidates([c for c in source.collect(limit)])

@@ -59,7 +59,10 @@ class ViralStatusesSource(RedisSource):
         probabilities = scores / scores.sum()
 
         sampled_indices = np.random.choice(
-            len(scores), size=limit, p=probabilities, replace=False
+            len(scores),
+            size=min(limit, len(status_ids)),
+            p=probabilities,
+            replace=False,
         )
 
         for i in sampled_indices:

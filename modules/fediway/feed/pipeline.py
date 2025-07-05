@@ -452,7 +452,6 @@ class SamplingStep(PipelineStep):
                 if len(candidates) == 0:
                     break
 
-                logger.debug(f"{len(candidates)} candidates")
                 adjusted_scores = await self._get_adjusted_scores(candidates)
 
                 idx = self.sampler.sample(adjusted_scores)

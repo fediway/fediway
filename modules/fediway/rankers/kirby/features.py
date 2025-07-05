@@ -43,8 +43,6 @@ class KirbyFeatureService(Features):
     async def _get_account_tag_features(self, status_entities, statuses):
         status_tags = statuses["status__tags"].values
 
-        # TODO: only load each unique tag once
-
         status_ids = []
         entities = []
         for status_entitiy, tags in zip(status_entities, status_tags):
@@ -78,8 +76,6 @@ class KirbyFeatureService(Features):
 
     async def _get_account_mentions_features(self, status_entities, statuses):
         status_mentions = statuses["status__mentions"].values
-
-        # TODO: only load each unique mentioned account once
 
         status_ids = []
         entities = []
