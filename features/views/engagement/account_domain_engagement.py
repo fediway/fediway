@@ -49,7 +49,10 @@ for spec in SPECS:
             entities=[account, domain],
             schema=FEATURES,
             online=True,
-            tags={"push": "kafka"},
+            tags={
+                "online_store": f"online_features_account_domain_engagement_{spec}",
+                "offline_store": f"offline_features_account_domain_engagement_{spec}",
+            },
             ttl=timedelta(days=int(spec.replace("d", ""))),
         )
     )

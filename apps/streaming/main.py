@@ -36,11 +36,11 @@ app = FastStream(broker)
 
 feature_topics = {
     fv.name: (
-        fv.tags.get("topic") or f"online_features_{fv.name}",
-        fv.tags.get("format") or "json",
+        fv.tags["online_store"],
+        fv.tags.get("online_store_format") or "json",
     )
     for fv in feature_store.list_feature_views()
-    if "push" in fv.tags and fv.tags["push"] == "kafka"
+    if "online_store" in fv.tags
 }
 
 for feature_view, (topic, format) in feature_topics.items():

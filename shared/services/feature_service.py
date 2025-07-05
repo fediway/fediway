@@ -87,18 +87,33 @@ class FeatureService(Features):
     def ingest_to_offline_store(
         self, features: pd.DataFrame, event_time: datetime | None = None
     ):
+        if len(features) == 0:
+            return
+
         feature_views = set([c.split("__")[0] for c in features.columns if "__" in c])
         for fv_name in feature_views:
             feature_view = self.fs.get_feature_view(fv_name)
+
+            # skip if feature view does not exist
             if feature_view is None:
                 continue
-            columns = [
-                c
-                for c in features.columns
-                if c.startswith(fv_name) or c in feature_view.entities
-            ]
+
+            feature_columns = [c for c in features.columns if c.startswith(fv_name)]
+            columns = feature_columns + feature_view.entitires
             feature_names = [c.split("__")[-1] for c in columns]
+
+            # filter feature and entity values for feature view
             df = features[columns].rename(columns=dict(zip(columns, feature_names)))
+
+            # filter rows with only nan values
+            df = df[df[feature_columns].isna().all(axis=1)]
+
+            if len(df) == 0:
+                logger.info(
+                    f"Skip ingesting features for {fv_name}: all entries missing"
+                )
+                continue
+
             df["event_time"] = int((event_time or self.event_time).timestamp())
 
             try:
@@ -107,7 +122,7 @@ class FeatureService(Features):
                     df=df,
                 )
             except Exception as e:
-                logger.error(e)
+                logger.error(f"Failed to ingest feature view {fv_name}: {e}")
 
     async def get(
         self,
@@ -158,6 +173,10 @@ class FeatureService(Features):
             df.index = pd.DataFrame(missing_entities).values[:, 0]
             df = pd.concat([df, cached_df])
             df = df[~df.index.duplicated()].reindex(pd.DataFrame(entities).values[:, 0])
+
+        import traceback
+
+        traceback.print_stack()
 
         features_name = (
             f" {features.name} features"

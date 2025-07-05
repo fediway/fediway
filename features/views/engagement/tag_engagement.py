@@ -53,8 +53,8 @@ for spec in SPECS:
             schema=FEATURES,
             online=True,
             tags={
-                "push": "kafka",
-                "offline_store": f"offline_store_tag_engagement_{spec}",
+                "online_store": f"online_features_tag_engagement_{spec}",
+                "offline_store": f"offline_features_tag_engagement_{spec}",
             },
             ttl=timedelta(days=int(spec.replace("d", ""))),
         )

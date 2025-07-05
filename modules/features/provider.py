@@ -45,6 +45,9 @@ class FediwayProvider(PassthroughProvider):
         if isinstance(feature_view, OnDemandFeatureView):
             return
 
+        if "offline_store" not in feature_view.tags:
+            return
+
         producer = KafkaProducer(
             bootstrap_servers=config.offline_store.kafka_bootstrap_servers,
             value_serializer=lambda v: json.dumps(v, cls=JSONEncoder).encode("utf-8"),
@@ -60,7 +63,7 @@ class FediwayProvider(PassthroughProvider):
             key = ",".join([str(key) for key in row[feature_view.entities].values])
 
             future = producer.send(
-                feature_view.source.table, key=key, value=row.to_dict()
+                feature_view.tags["offline_store"], key=key, value=row.to_dict()
             )
 
             futures.append(future)
