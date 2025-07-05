@@ -98,8 +98,21 @@ class FeatureService(Features):
             if feature_view is None:
                 continue
 
+            # skip if offline store topic is not set for feature view
+            if "offline_store" not in feature_view.tags:
+                continue
+
+            missing_entites = [
+                e for e in feature_view.entities if e not in features.columns
+            ]
+            if len(missing_entites) > 0:
+                logger.warn(
+                    f"Skip ingesting {fv_name} features: missing entities {', '.join(missing_entites)}"
+                )
+                continue
+
             feature_columns = [c for c in features.columns if c.startswith(fv_name)]
-            columns = feature_columns + feature_view.entitires
+            columns = feature_columns + feature_view.entities
             feature_names = [c.split("__")[-1] for c in columns]
 
             # filter feature and entity values for feature view
@@ -109,9 +122,7 @@ class FeatureService(Features):
             df = df[df[feature_columns].isna().all(axis=1)]
 
             if len(df) == 0:
-                logger.info(
-                    f"Skip ingesting features for {fv_name}: all entries missing"
-                )
+                logger.info(f"Skip ingesting {fv_name} features: all entries missing")
                 continue
 
             df["event_time"] = int((event_time or self.event_time).timestamp())
