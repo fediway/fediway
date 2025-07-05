@@ -11,6 +11,7 @@ feature_views = []
 
 FEATURES = [
     Field(name="author_id", dtype=Int64),
+    Field(name="author_domain", dtype=String),
     # Field(name="created_at", dtype=UnixTimestamp),
     Field(name="is_reblog", dtype=Bool),
     Field(name="is_reply", dtype=Bool),

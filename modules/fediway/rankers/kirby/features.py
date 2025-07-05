@@ -116,6 +116,7 @@ class KirbyFeatureService(Features):
         entities = statuses[
             [
                 "status__author_id",
+                # "status__author_domain",
                 "status__preview_card_id",
                 "status__preview_card_domain",
             ]
@@ -125,12 +126,14 @@ class KirbyFeatureService(Features):
             status_entitiy
             | {
                 "author_id": author_id or -1,
+                "domain": "",
                 "preview_card_id": preview_card_id or -1,
-                "preview_card_domain": preview_card_domain or -1,
+                "preview_card_domain": preview_card_domain or "",
                 "account_id": self.account_id,
             }
             for status_entitiy, (
                 author_id,
+                # author_domain,
                 preview_card_id,
                 preview_card_domain,
             ) in zip(status_entities, entities)
