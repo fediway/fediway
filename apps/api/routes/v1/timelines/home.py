@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Request, BackgroundTasks
 from sqlmodel import Session as DBSession
 
+from apps.api.modules.utils import set_next_link
 from apps.api.dependencies.features import get_kirby_feature_service
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
@@ -105,6 +106,9 @@ async def home_timeline(
 
     recommendations = await pipeline.execute()
     status_ids = [r.id for r in recommendations]
+
+    if len(status_ids) > 0:
+        set_next_link(request, response, {"max_id": status_ids[-1]})
 
     statuses = db.exec(Status.select_by_ids(status_ids)).all()
 
