@@ -12,7 +12,7 @@ from .views.engagement import (
     preview_card_engagement_features,
     tag_engagement_features,
 )
-from .views.entities import status_features
+from .views.base import status_stats_features, status_features
 
 
 account_author_engagement_feature_service = FeatureService(
@@ -41,5 +41,5 @@ account_status_engagement_feature_service = FeatureService(
 
 status_feature_service = FeatureService(
     name="status_features",
-    features=(status_features),
+    features=(status_stats_features + status_features),
 )

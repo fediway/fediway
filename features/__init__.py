@@ -20,7 +20,7 @@ from .views.engagement import (
     preview_card_engagement_features,
     tag_engagement_features,
 )
-from .views.entities import status_features, status_db_features
+from .views.base import status_db_features, status_stats_features, status_features
 
 from .services import (
     account_author_engagement_feature_service,
@@ -44,8 +44,9 @@ FEATURE_VIEWS = (
     + preview_card_engagement_features
     + tag_engagement_features
     # entities features
-    + status_features
     + [status_db_features]
+    + status_stats_features
+    + status_features
 )
 
 FEATURES_SERVICES = [

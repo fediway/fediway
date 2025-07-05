@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   bookmark_id BIGINT,
 
   -- account
-  account_domain VARCHAR,
+  source_domain VARCHAR,
   account_locked BOOLEAN DEFAULT false,
   account_discoverable BOOLEAN DEFAULT true,
   account_trendable BOOLEAN DEFAULT true,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   account_suspended_at TIMESTAMP,
 
   -- author
-  author_domain VARCHAR,
+  target_domain VARCHAR,
   author_locked BOOLEAN DEFAULT false,
   author_discoverable BOOLEAN DEFAULT true,
   author_trendable BOOLEAN DEFAULT true,
