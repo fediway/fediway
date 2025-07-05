@@ -20,21 +20,28 @@ class FeaturesJsonEventHandler:
         features = {k: v for k, v in data.items() if k not in self._non_feature_keys}
         features["event_time"] = min(now, data["event_time"] * 1000)
 
-        self.feature_store.push(
-            self.feature_view + "_stream",
-            pd.DataFrame([features]),
-            to=PushMode.ONLINE,
-        )
+        try:
+            self.feature_store.push(
+                self.feature_view + "_stream",
+                pd.DataFrame([features]),
+                to=PushMode.ONLINE,
+            )
+        except Exception as e:
+            print(features)
+            raise e
 
         logger.debug(f"Pushed {self.feature_view} features to online store.")
 
 
 class FeaturesDebeziumEventHandler(DebeziumEventHandler, FeaturesJsonEventHandler):
     async def created(self, data: dict):
+        logger.debug(f"Debezium features: create")
         self(data)
 
     async def updated(self, old: dict, new: dict):
+        logger.debug(f"Debezium features: update")
         self(new)
 
     async def deleted(self, data: dict):
+        logger.debug(f"Debezium features: delete")
         pass  # TODO: delete from feature store
