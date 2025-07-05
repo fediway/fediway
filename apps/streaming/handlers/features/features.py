@@ -20,6 +20,8 @@ class FeaturesJsonEventHandler:
         features = {k: v for k, v in data.items() if k not in self._non_feature_keys}
         features["event_time"] = min(now, data["event_time"] * 1000)
 
+        entity_ids = [features.get(e) for e in self.feature_view.entities]
+
         try:
             self.feature_store.push(
                 self.feature_view + "_stream",
@@ -30,7 +32,13 @@ class FeaturesJsonEventHandler:
             print(features)
             raise e
 
-        logger.debug(f"Pushed {self.feature_view} features to online store.")
+        entities_desc = ",".join(
+            [f"{e}:{eid}" for eid, e in zip(entity_ids, self.feature_view.entities)]
+        )
+
+        logger.debug(
+            f"Pushed {self.feature_view}[{entities_desc}] features to online store."
+        )
 
 
 class FeaturesDebeziumEventHandler(DebeziumEventHandler, FeaturesJsonEventHandler):
