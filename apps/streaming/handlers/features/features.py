@@ -5,8 +5,10 @@ from feast import FeatureStore
 from feast.data_source import PushMode
 from loguru import logger
 
+from modules.debezium import DebeziumEventHandler
 
-class FeaturesEventHandler:
+
+class FeaturesJsonEventHandler:
     def __init__(self, feature_store: FeatureStore, feature_view: str):
         self.feature_store = feature_store
         self.feature_view = feature_view
@@ -25,3 +27,14 @@ class FeaturesEventHandler:
         )
 
         logger.debug(f"Pushed {self.feature_view} features to online store.")
+
+
+class FeaturesDebeziumEventHandler(DebeziumEventHandler, FeaturesJsonEventHandler):
+    async def created(self, data: dict):
+        self(data)
+
+    async def updated(self, old: dict, new: dict):
+        self(new)
+
+    async def deleted(self, account: Account):
+        pass  # TODO: delete from feature store

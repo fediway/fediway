@@ -11,7 +11,7 @@ from modules.schwarm import Schwarm
 from shared.core.feast import feature_store
 from shared.core.schwarm import driver
 
-from .handlers.features import FeaturesEventHandler
+from .handlers.features import FeaturesJsonEventHandler, FeaturesDebeziumEventHandler
 from .handlers.schwarm import (
     FavouriteEventHandler as SchwarmFavouriteEventHandler,
 )
@@ -35,18 +35,30 @@ broker = KafkaBroker(
 app = FastStream(broker)
 
 feature_topics = {
-    fv.name: fv.tags.get("topic") or f"online_features_{fv.name}"
+    fv.name: (
+        fv.tags.get("topic") or f"online_features_{fv.name}",
+        fv.tags.get("format") or "json",
+    )
     for fv in feature_store.list_feature_views()
     if "push" in fv.tags and fv.tags["push"] == "kafka"
 }
 
-for feature_view, topic in feature_topics.items():
-    make_handler(
-        broker,
-        topic,
-        FeaturesEventHandler(feature_store, feature_view),
-        group_id="features",
-    )
+for feature_view, (topic, format) in feature_topics.items():
+    if format == "json":
+        make_handler(
+            broker,
+            topic,
+            FeaturesJsonEventHandler(feature_store, feature_view),
+            group_id="feature_store",
+        )
+    else:
+        make_debezium_handler(
+            broker,
+            topic,
+            FeaturesDebeziumEventHandler,
+            args=(feature_store, feature_view),
+            group_id="feature_store",
+        )
 
 
 # Schwarm consumers (responsible for pushing data to memgraph)

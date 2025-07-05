@@ -2,16 +2,15 @@
 -- :up
 
 {% for window_size, spec in [('24 HOURS', '1d'), ('7 DAYS', '7d'), ('60 DAYS', '60d')] %}
-  CREATE MATERIALIZED VIEW IF NOT EXISTS online_features_account_preview_card_engagement_{{ spec }}
-  WITH ( source_rate_limit = 200 ) AS
+  CREATE MATERIALIZED VIEW IF NOT EXISTS online_features_account_preview_card_engagement_{{ spec }} AS
   SELECT
       e.account_id,
       p.preview_card_id,
       MAX(event_time)::TIMESTAMP as event_time,
       COUNT(*) AS num_all,
-      APPROX_COUNT_DISTINCT(author_id) as num_authors,
-      APPROX_COUNT_DISTINCT(e.status_id) as num_statuses,
-      APPROX_COUNT_DISTINCT(target_domain) as num_target_domains,
+      COUNT(DISTINCT author_id) as num_authors,
+      COUNT(DISTINCT e.status_id) as num_statuses,
+      COUNT(DISTINCT target_domain) as num_target_domains,
       COUNT(*) FILTER (WHERE type = 0) AS num_favs,
       COUNT(*) FILTER (WHERE type = 1) AS num_reblogs,
       COUNT(*) FILTER (WHERE type = 2) AS num_replies,

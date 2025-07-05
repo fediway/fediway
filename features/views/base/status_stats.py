@@ -21,7 +21,11 @@ feature_views.append(
         entities=[status],
         schema=FEATURES,
         online=True,
-        tags={"push": "kafka", "topic": "status_stats"},
+        tags={
+            "push": "kafka",
+            "topic": "status_stats",
+            "format": "json",
+        },
         ttl=timedelta(days=30),
     )
 )
