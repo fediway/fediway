@@ -14,13 +14,13 @@ from modules.mastodon.models import Status, StatusStats
 register_adapter(np.int64, AsIs)
 
 status_request = RequestSource(
-    name="status_source",
+    name="status_db_source",
     schema=[Field(name="status_id", dtype=Int64)],
 )
 
 
 @on_demand_feature_view(
-    name="status",
+    name="status_db",
     sources=[status_request],
     schema=[
         Field(name="account_id", dtype=Int64),
@@ -30,7 +30,7 @@ status_request = RequestSource(
         Field(name="age_in_seconds", dtype=Int64),
     ],
 )
-def status_features(status_ids: pd.DataFrame) -> pd.DataFrame:
+def status_db_features(status_ids: pd.DataFrame) -> pd.DataFrame:
     from shared.core.db import db_session
 
     with db_session() as db:
