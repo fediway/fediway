@@ -11,20 +11,14 @@ from modules.debezium import DebeziumEventHandler
 class FeaturesJsonEventHandler:
     def __init__(self, feature_store: FeatureStore, feature_view: str):
         self.feature_store = feature_store
-        self.feature_view = feature_view
-        self._non_feature_keys = set(["window_end", "window_start", "event_time"])
+        self.feature_view = feature_store.get_feature_view(feature_view)
 
-    async def __call__(self, data: dict):
-        now = int(time.time())
-
-        features = {k: v for k, v in data.items() if k not in self._non_feature_keys}
-        features["event_time"] = min(now, data["event_time"] * 1000)
-
-        entity_ids = [features.get(e) for e in self.feature_view.entities]
+    async def __call__(self, features: dict):
+        features["event_time"] = min(int(time.time()), features["event_time"] * 1000)
 
         try:
             self.feature_store.push(
-                self.feature_view + "_stream",
+                self.feature_view.name + "_stream",
                 pd.DataFrame([features]),
                 to=PushMode.ONLINE,
             )
@@ -33,11 +27,11 @@ class FeaturesJsonEventHandler:
             raise e
 
         entities_desc = ",".join(
-            [f"{e}:{eid}" for eid, e in zip(entity_ids, self.feature_view.entities)]
+            [f"{e}:{features.get(e)}" for e in self.feature_view.entities]
         )
 
         logger.debug(
-            f"Pushed {self.feature_view}[{entities_desc}] features to online store."
+            f"Pushed {self.feature_view.name}[{entities_desc}] features to online store."
         )
 
 
