@@ -36,5 +36,5 @@ class FeaturesDebeziumEventHandler(DebeziumEventHandler, FeaturesJsonEventHandle
     async def updated(self, old: dict, new: dict):
         self(new)
 
-    async def deleted(self, account: Account):
+    async def deleted(self, data: dict):
         pass  # TODO: delete from feature store
