@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, Request, Response, BackgroundTasks
 from sqlmodel import Session as DBSession
 
 from apps.api.modules.utils import set_next_link
@@ -56,6 +56,7 @@ def get_cold_start_sources(
 @router.get("/home")
 async def home_timeline(
     request: Request,
+    response: Response,
     background_tasks: BackgroundTasks,
     max_id: int | None = None,
     feed: FeedService = Depends(get_feed),
