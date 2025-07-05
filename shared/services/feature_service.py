@@ -185,10 +185,6 @@ class FeatureService(Features):
             df = pd.concat([df, cached_df])
             df = df[~df.index.duplicated()].reindex(pd.DataFrame(entities).values[:, 0])
 
-        import traceback
-
-        traceback.print_stack()
-
         features_name = (
             f" {features.name} features"
             if isinstance(features, FeastFeatureService)
