@@ -1,20 +1,18 @@
+import re
 from datetime import datetime
 
 from sqlmodel import Field, SQLModel, Session
 
+SHORTCODE_RE_FRAGMENT = r'[a-zA-Z0-9_]{2,}'
+SCAN_RE = re.compile(
+    r'(?:^|[^a-zA-Z0-9:])'
+    r':(' + SHORTCODE_RE_FRAGMENT + r'):'
+    r'(?=[^a-zA-Z0-9:]|$)'
+)
+SHORTCODE_ONLY_RE = re.compile(r'^' + SHORTCODE_RE_FRAGMENT + r'$')
 
 class CustomEmoji(SQLModel, table=True):
     __tablename__ = "custom_emojies"
-
-    SHORTCODE_RE_FRAGMENT = r"[a-zA-Z0-9_]{2,}"
-    SCAN_RE = re.compile(
-        r"(?<=[^a-zA-Z0-9:]|\n|^)"
-        r":(" + SHORTCODE_RE_FRAGMENT + r"):"
-        r"(?=[^a-zA-Z0-9:]|$)",
-        re.VERBOSE,
-    )
-    SHORTCODE_ONLY_RE = re.compile(r"^" + SHORTCODE_RE_FRAGMENT + r"$")
-    IMAGE_MIME_TYPES = ["image/png", "image/gif", "image/webp"]
 
     id: int = Field(primary_key=True)
     shortcode: str = Field()
@@ -31,7 +29,7 @@ class CustomEmoji(SQLModel, table=True):
             return []
 
         # extract shortcodes from text
-        matches = cls.SCAN_RE.findall(text)
+        matches = SCAN_RE.findall(text)
 
         # drop duplicates
         shortcodes = list(set(matches))
