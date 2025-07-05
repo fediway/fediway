@@ -25,6 +25,7 @@ feature_views.append(
             "push": "kafka",
             "topic": "status_stats",
             "format": "json",
+            "offline_topic": "status_stats",
         },
         ttl=timedelta(days=30),
     )

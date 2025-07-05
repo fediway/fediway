@@ -534,7 +534,7 @@ class Feed:
 
     def passthrough(self, callback):
         async def _step_fn(candidates: CandidateList):
-            callback(candidates)
+            await callback(candidates)
             return candidates
 
         self.steps.append(_step_fn)

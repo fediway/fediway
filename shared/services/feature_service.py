@@ -160,10 +160,12 @@ class FeatureService(Features):
             df = df[~df.index.duplicated()].reindex(pd.DataFrame(entities).values[:, 0])
 
         features_name = (
-            f" {features.name}" if isinstance(features, FeastFeatureService) else ""
+            f" {features.name} features"
+            if isinstance(features, FeastFeatureService)
+            else f" {', '.join(features)}"
         )
         logger.info(
-            f"Fetched{features_name} features for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds."
+            f"Fetched{features_name} for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds."
         )
 
         return df

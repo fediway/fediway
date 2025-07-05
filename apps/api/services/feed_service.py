@@ -203,9 +203,9 @@ class FeedService:
                         "feed_id": self.id,
                         "pipeline_run_id": run_id,
                         "name": str(step),
-                        "params": step.get_params()
-                        if isinstance(step, PipelineStep)
-                        else [],
+                        "params": (
+                            step.get_params() if isinstance(step, PipelineStep) else {}
+                        ),
                         "duration_ns": duration_ns,
                         "event_time": event_time,
                     },
