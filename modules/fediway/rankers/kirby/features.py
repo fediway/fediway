@@ -124,7 +124,7 @@ class KirbyFeatureService(Features):
         entities = [
             status_entitiy
             | {
-                "author_id": author_id,
+                "author_id": author_id or -1,
                 "preview_card_id": preview_card_id or -1,
                 "preview_card_domain": preview_card_domain or -1,
                 "account_id": self.account_id,
