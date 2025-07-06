@@ -61,10 +61,14 @@ class CandidateList:
         }
 
     def set_state(self, state):
+        dtype = int
+        if len(state["ids"]) > 0 and type(state["ids"][0]) == str:
+            dtype = str
+
         self._ids = state["ids"]
         self._scores = state["scores"]
         self._sources = {
-            c: set([(s, g) for s, g in sources])
+            dtype(c): set([(s, g) for s, g in sources])
             for c, sources in state["sources"].items()
         }
 

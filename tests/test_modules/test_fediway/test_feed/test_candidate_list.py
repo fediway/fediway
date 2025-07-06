@@ -1,4 +1,5 @@
 from modules.fediway.feed import Candidate, CandidateList
+import json
 
 
 def test_candidates_init():
@@ -84,6 +85,46 @@ def test_set_state():
     assert candidates._scores == [0.7, 0.8]
     assert candidates._sources[1] == {("source1", "group1")}
     assert candidates._sources[2] == {("source2", "group2")}
+
+
+def test_set_json_serialized_state_with_integer_entities():
+    candidates = CandidateList("status_id")
+
+    state = {
+        "ids": [1, 2],
+        "scores": [0.7, 0.8],
+        "sources": {
+            1: [("source1", "group1")],
+            2: [("source2", "group2")],
+        },
+    }
+
+    candidates.set_state(json.loads(json.dumps(state)))
+
+    assert candidates._ids == [1, 2]
+    assert candidates._scores == [0.7, 0.8]
+    assert candidates._sources[1] == {("source1", "group1")}
+    assert candidates._sources[2] == {("source2", "group2")}
+
+
+def test_set_json_serialized_state_with_string_entities():
+    candidates = CandidateList("status_id")
+
+    state = {
+        "ids": ["a", "b"],
+        "scores": [0.7, 0.8],
+        "sources": {
+            "a": [("source1", "group1")],
+            "b": [("source2", "group2")],
+        },
+    }
+
+    candidates.set_state(json.loads(json.dumps(state)))
+
+    assert candidates._ids == ["a", "b"]
+    assert candidates._scores == [0.7, 0.8]
+    assert candidates._sources["a"] == {("source1", "group1")}
+    assert candidates._sources["b"] == {("source2", "group2")}
 
 
 def test_unique_groups():
