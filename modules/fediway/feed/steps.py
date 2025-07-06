@@ -3,6 +3,7 @@ from loguru import logger
 from copy import deepcopy
 import numpy as np
 import asyncio
+import time
 
 from ..rankers import Ranker
 from ..sources import Source
