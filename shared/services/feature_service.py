@@ -185,7 +185,7 @@ class FeatureService(Features):
                 self.ingest_to_offline_store(df, entities, event_time)
             else:
                 self.background_tasks.add_task(
-                    self.ingest_to_offline_store, df, event_time
+                    self.ingest_to_offline_store, df, entities, event_time
                 )
 
         # drop entity columns

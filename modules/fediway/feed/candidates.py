@@ -63,7 +63,10 @@ class CandidateList:
     def set_state(self, state):
         self._ids = state["ids"]
         self._scores = state["scores"]
-        self._sources = {c: set(s) for c, s in state["sources"].items()}
+        self._sources = {
+            c: set([(s, g) for s, g in sources])
+            for c, sources in state["sources"].items()
+        }
 
     def unique_groups(self) -> set[str]:
         groups = set()
