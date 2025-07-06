@@ -117,7 +117,7 @@ class CandidateList:
             result = CandidateList(self.entity)
             result._ids = self._ids[index]
             result._scores = self._scores[index]
-            result._sources = {c: self._sources[c] for c in result._ids}
+            result._sources = {c: self._sources.get(c) or set() for c in result._ids}
 
             return result
         else:
