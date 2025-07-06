@@ -100,6 +100,11 @@ class FeedService:
 
         return self
 
+    def unique(self):
+        self.pipeline.unique()
+
+        return self
+
     def rank(self, ranker: Ranker, feature_service: Features | None = None):
         self.pipeline.rank(ranker, feature_service)
 

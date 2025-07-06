@@ -459,7 +459,7 @@ class SamplingStep(PipelineStep):
                 candidate = candidates[idx]
                 candidate.score = adjusted_scores._scores[idx]
 
-                del candidates[idx]
+                del candidates[candidate.id]
 
                 if self.unique and candidate.id in self.seen:
                     logger.debug(
