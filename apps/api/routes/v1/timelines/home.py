@@ -5,7 +5,7 @@ from apps.api.modules.utils import set_next_link
 from apps.api.dependencies.features import get_kirby_feature_service
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
-    get_popular_in_social_circle_sources,
+    # get_popular_in_social_circle_sources,
     get_community_based_recommendations_source,
     get_top_statuses_from_random_communities_source,
 )

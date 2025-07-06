@@ -1,7 +1,7 @@
-_test.py
 /old
 /postgres*
 /qdrant_storage
+foo.py
 
 celerybeat-schedule.*
 docker-compose.yaml

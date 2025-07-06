@@ -22,7 +22,8 @@ from modules.fediway.sources.statuses import (
 from modules.mastodon.models import Account
 from shared.core.qdrant import client as qdrant_client
 from shared.core.schwarm import driver as schwarm_driver
-from shared.core.herde import db as herde_db
+
+# from shared.core.herde import db as herde_db
 from shared.services.feature_service import FeatureService
 from shared.core.rw import get_rw_session
 
@@ -82,18 +83,18 @@ def get_top_statuses_from_random_communities_source(
     ]
 
 
-def get_newest_in_network_sources(
-    account: Account = Depends(get_authenticated_account_or_fail),
-) -> list[Source]:
-    if herde_db is None:
-        return []
+# def get_newest_in_network_sources(
+#     account: Account = Depends(get_authenticated_account_or_fail),
+# ) -> list[Source]:
+#     if herde_db is None:
+#         return []
 
-    return [
-        NewestInNetworkSource(
-            db=herde_db,
-            account_id=account.id,
-        )
-    ]
+#     return [
+#         NewestInNetworkSource(
+#             db=herde_db,
+#             account_id=account.id,
+#         )
+#     ]
 
 
 def get_collaborative_filtering_sources(
@@ -122,52 +123,52 @@ def get_popular_in_community_sources(
     ]
 
 
-def get_account_based_collaborative_filtering_source(
-    r: Redis = Depends(get_redis),
-    account: Account = Depends(get_authenticated_account_or_fail),
-) -> list[Source]:
-    if herde_db is None:
-        return []
+# def get_account_based_collaborative_filtering_source(
+#     r: Redis = Depends(get_redis),
+#     account: Account = Depends(get_authenticated_account_or_fail),
+# ) -> list[Source]:
+#     if herde_db is None:
+#         return []
 
-    return [
-        AccountBasedCollaborativeFilteringSource(
-            r=r,
-            account_id=account.id,
-        )
-    ]
-
-
-def get_status_based_collaborative_filtering_source(
-    r: Redis = Depends(get_redis),
-    account: Account = Depends(get_authenticated_account_or_fail),
-) -> list[Source]:
-    if herde_db is None:
-        return []
-
-    return [
-        StatusBasedCollaborativeFilteringSource(
-            r=r,
-            account_id=account.id,
-        )
-    ]
+#     return [
+#         AccountBasedCollaborativeFilteringSource(
+#             r=r,
+#             account_id=account.id,
+#         )
+#     ]
 
 
-def get_popular_in_social_circle_sources(
-    account: Account = Depends(get_authenticated_account_or_fail),
-    languages: list[str] = Depends(get_languages),
-) -> list[Source]:
-    if herde_db is None:
-        return []
+# def get_status_based_collaborative_filtering_source(
+#     r: Redis = Depends(get_redis),
+#     account: Account = Depends(get_authenticated_account_or_fail),
+# ) -> list[Source]:
+#     if herde_db is None:
+#         return []
 
-    return [
-        PopularInSocialCircleSource(
-            db=herde_db,
-            account_id=account.id,
-            language=lang,
-            max_age=MAX_AGE,
-        )
-        for lang in languages
-    ]
+#     return [
+#         StatusBasedCollaborativeFilteringSource(
+#             r=r,
+#             account_id=account.id,
+#         )
+#     ]
+
+
+# def get_popular_in_social_circle_sources(
+#     account: Account = Depends(get_authenticated_account_or_fail),
+#     languages: list[str] = Depends(get_languages),
+# ) -> list[Source]:
+#     if herde_db is None:
+#         return []
+
+#     return [
+#         PopularInSocialCircleSource(
+#             db=herde_db,
+#             account_id=account.id,
+#             language=lang,
+#             max_age=MAX_AGE,
+#         )
+#         for lang in languages
+#     ]
 
 
 def get_similar_to_engaged_sources(
