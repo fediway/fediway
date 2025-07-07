@@ -198,7 +198,9 @@ class SourcingStep(PipelineStep):
         for c in candidates:
             self._sourced_candidates[idx].add(c)
 
-        # logger.info(f"Collected {len(candidates)} candidates from {source.name()} in {self._durations[idx] / 1_000_000} ms")
+        logger.info(
+            f"Collected {len(candidates)} candidates from {source.name()}{source.get_params()} in {self._durations[idx] / 1_000_000} ms"
+        )
 
         return candidates
 
