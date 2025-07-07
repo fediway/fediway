@@ -1,5 +1,8 @@
-from modules.fediway.feed import Candidate, CandidateList
 import json
+import pytest
+import numpy as np
+
+from modules.fediway.feed import Candidate, CandidateList
 
 
 def test_candidates_init():
@@ -149,3 +152,101 @@ def test_get_entity_rows():
 
     expected_rows = [{"account_id": 1}, {"account_id": 5}]
     assert rows == expected_rows
+
+
+def test_getitem_index_returns_candidate():
+    candidates = CandidateList("status_id")
+    candidates.append(101, score=0.9, source="source1", source_group="groupA")
+
+    candidate = candidates[0]
+
+    assert isinstance(candidate, Candidate)
+    assert candidate.entity == "status_id"
+    assert candidate.id == 101
+    assert candidate.score == 0.9
+    assert candidate.sources == {("source1", "groupA")}
+
+
+def test_getitem_index_with_multiple_candidates():
+    candidates = CandidateList("status_id")
+    candidates.append(1, score=0.5, source="sourceA", source_group="groupA")
+    candidates.append(2, score=0.7, source="sourceB", source_group="groupB")
+
+    candidate = candidates[1]
+
+    assert candidate.id == 2
+    assert candidate.score == 0.7
+    assert candidate.sources == {("sourceB", "groupB")}
+
+
+def test_getitem_slice_returns_candidate_list():
+    candidates = CandidateList("status_id")
+    candidates.append(1, score=0.1, source="source1", source_group="g1")
+    candidates.append(2, score=0.2, source="source2", source_group="g2")
+    candidates.append(3, score=0.3, source="source3", source_group="g3")
+
+    sliced = candidates[0:2]
+
+    assert isinstance(sliced, CandidateList)
+    assert len(sliced) == 2
+    assert sliced.get_candidates() == [1, 2]
+    assert sliced._scores == [0.1, 0.2]
+    assert sliced.get_source(1) == {("source1", "g1")}
+    assert sliced.get_source(2) == {("source2", "g2")}
+
+
+def test_getitem_slice_preserves_entity():
+    candidates = CandidateList("user_id")
+    candidates.append(42)
+    sliced = candidates[:1]
+
+    assert isinstance(sliced, CandidateList)
+    assert sliced.entity == "user_id"
+
+
+def test_getitem_out_of_bounds_raises_index_error():
+    candidates = CandidateList("status_id")
+    candidates.append(1)
+
+    with pytest.raises(IndexError):
+        _ = candidates[5]
+
+
+def test_getitem_slice_empty():
+    candidates = CandidateList("status_id")
+    candidates.append(1)
+    result = candidates[10:20]  # Out of bounds but valid slice
+
+    assert isinstance(result, CandidateList)
+    assert len(result) == 0
+    assert result.get_candidates() == []
+
+
+def test_getitem_with_numpy_index_array():
+    candidates = CandidateList("status_id")
+    candidates.append(1, score=0.1, source="s1", source_group="g1")
+    candidates.append(2, score=0.2, source="s2", source_group="g2")
+    candidates.append(3, score=0.3, source="s3", source_group="g3")
+
+    idx = np.array([0, 2])
+    result = candidates[idx]
+
+    assert isinstance(result, CandidateList)
+    assert result.get_candidates() == [1, 3]
+    assert result._scores == [0.1, 0.3]
+    assert result.get_source(1) == {("s1", "g1")}
+    assert result.get_source(3) == {("s3", "g3")}
+
+
+def test_getitem_with_numpy_boolean_mask():
+    candidates = CandidateList("status_id")
+    candidates.append(1, score=0.1, source="s1", source_group="g1")
+    candidates.append(2, score=0.2, source="s2", source_group="g2")
+    candidates.append(3, score=0.3, source="s3", source_group="g3")
+
+    mask = np.array([True, False, True])
+    result = candidates[mask]
+
+    assert isinstance(result, CandidateList)
+    assert result.get_candidates() == [1, 3]
+    assert result._scores == [0.1, 0.3]

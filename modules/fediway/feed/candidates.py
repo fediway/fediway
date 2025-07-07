@@ -124,6 +124,27 @@ class CandidateList:
             result._sources = {c: self._sources.get(c) or set() for c in result._ids}
 
             return result
+
+        elif isinstance(index, np.ndarray):
+            if index.dtype == bool:
+                # Boolean mask indexing
+                result = CandidateList(self.entity)
+                result._ids = [i for i, flag in zip(self._ids, index) if flag]
+                result._scores = [s for s, flag in zip(self._scores, index) if flag]
+                result._sources = {
+                    c: self._sources.get(c) or set() for c in result._ids
+                }
+                return result
+            else:
+                # Index array
+                result = CandidateList(self.entity)
+                result._ids = [self._ids[i] for i in index]
+                result._scores = [self._scores[i] for i in index]
+                result._sources = {
+                    c: self._sources.get(c) or set() for c in result._ids
+                }
+                return result
+
         else:
             candidate = self._ids[index]
             score = self._scores[index]
