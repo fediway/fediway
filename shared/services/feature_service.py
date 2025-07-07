@@ -13,13 +13,13 @@ from shared.core.feast import feature_store
 class FeatureService(Features):
     def __init__(
         self,
-        fs: FeatureStore = feature_store,
+        feature_store: FeatureStore = feature_store,
         background_tasks: BackgroundTasks | None = None,
         event_time: datetime = datetime.now(),
         offline_store: bool = False,
     ):
         self.cache = {}
-        self.fs = fs
+        self.feature_store = feature_store
         self.background_tasks = background_tasks
         self.event_time = event_time
         self.offline_store = offline_store
@@ -27,7 +27,7 @@ class FeatureService(Features):
     def _cache_key(self, entities: list[dict[str, int]]) -> str:
         return ",".join(list(entities[0].keys()))
 
-    def _get_cached(
+    def get_cached(
         self, entities: list[dict[str, int]], features: list[str] | FeastFeatureService
     ):
         if isinstance(features, FeastFeatureService):
@@ -43,6 +43,7 @@ class FeatureService(Features):
         cached = []
 
         for feature in features:
+            feature = feature.replace(":", "__")
             if not feature in self.cache[cache_key]:
                 return None, entities
             feat = self.cache[cache_key][feature].reindex(entity_ids).dropna()
@@ -88,7 +89,7 @@ class FeatureService(Features):
         self,
         features: pd.DataFrame,
         entities: list[dict[str, int]],
-        event_time: datetime | None = None,
+        event_time: datetime | int | None = None,
     ):
         if len(features) == 0:
             return
@@ -101,9 +102,14 @@ class FeatureService(Features):
 
         entities_df = pd.DataFrame(entities)
 
-        feature_views = set([c.split("__")[0] for c in features.columns if "__" in c])
+        if type(event_time) != int:
+            event_time = int((event_time or self.event_time).timestamp())
+
+        # get unique feature view names from features dataframe
+        feature_views = set(c.split("__")[0] for c in features.columns if "__" in c)
+
         for fv_name in feature_views:
-            feature_view = self.fs.get_feature_view(fv_name)
+            feature_view = self.feature_store.get_feature_view(fv_name)
 
             # skip if feature view does not exist
             if feature_view is None:
@@ -121,29 +127,28 @@ class FeatureService(Features):
                 continue
 
             feature_columns = [c for c in features.columns if c.startswith(fv_name)]
-            columns = feature_columns + feature_view.entities
-            feature_names = [c.split("__")[-1] for c in columns]
+            feature_names = [c.split("__")[-1] for c in feature_columns]
 
             # filter feature and entity values for feature view
             df = pd.concat(
-                [entities_df[feature_view.entities], features[columns]], axis=1
+                [entities_df[feature_view.entities], features[feature_columns]], axis=1
             )
 
             # filter rows with only nan values
             df = df[~df[feature_columns].isna().all(axis=1)]
 
             # remove feature view from column names
-            df.rename(columns=dict(zip(columns, feature_names)), inplace=True)
+            df.rename(columns=dict(zip(feature_columns, feature_names)), inplace=True)
 
             if len(df) == 0:
                 logger.info(f"Skip ingesting {fv_name} features: all entries missing")
                 continue
 
-            df["event_time"] = int((event_time or self.event_time).timestamp())
+            df["event_time"] = event_time
 
             try:
-                self.fs.write_to_offline_store(
-                    fv_name,
+                self.feature_store.write_to_offline_store(
+                    feature_view_name=fv_name,
                     df=df,
                 )
             except Exception as e:
@@ -165,13 +170,13 @@ class FeatureService(Features):
         start = time.time()
 
         # load features from cache
-        cached_df, missing_entities = self._get_cached(entities, features)
+        cached_df, missing_entities = self.get_cached(entities, features)
 
         if len(missing_entities) == 0 and cached_df is not None:
             return cached_df.reindex(pd.DataFrame(entities).values[:, 0])
 
         df = (
-            await self.fs.get_online_features_async(
+            await self.feature_store.get_online_features_async(
                 features=features, entity_rows=missing_entities, full_feature_names=True
             )
         ).to_df()

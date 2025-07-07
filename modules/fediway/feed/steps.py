@@ -107,6 +107,7 @@ class PaginationStep(PipelineStep):
     def __init__(
         self, entity: str, limit: int, offset: int = 0, max_id: int | None = None
     ):
+        self.entity = entity
         self.candidates = CandidateList(entity)
         self.limit = max(limit, 0)
         self.offset = max(offset, 0)
@@ -135,7 +136,8 @@ class PaginationStep(PipelineStep):
             try:
                 start = self.candidates.index(self.max_id) + 1
             except ValueError:
-                return [], np.array([])
+                logger.warning(f"Missing candidate {self.max_id}")
+                return CandidateList(self.entity)
         elif self.offset is not None:
             start = self.offset
 

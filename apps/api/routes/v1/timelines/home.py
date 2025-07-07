@@ -86,7 +86,9 @@ async def home_timeline(
         # .sources(_map_sources(near_network_sources), group="near-network")
         .sources(_map_sources(out_network_sources), group="out-network")
         .sources(_map_sources(cold_start_sources), group="cold-start")
+        .unique()
         .passthrough(_push_kirby_features_to_offline_store)
+        .remember()
         .diversify(by="status:author_id", penalty=0.1)
         .sample(
             config.fediway.feed_batch_size,

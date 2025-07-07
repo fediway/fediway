@@ -1,7 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Item(BaseModel):
-    class Config:
-        extra = "ignore"
-        use_enum_values = True
+    model_config = ConfigDict(extra="ignore", use_enum_values=True)

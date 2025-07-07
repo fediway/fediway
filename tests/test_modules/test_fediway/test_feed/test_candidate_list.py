@@ -7,7 +7,7 @@ def test_candidates_init():
     candidates = CandidateList(entity)
 
     assert candidates.entity == entity
-    assert candidates._ids == []
+    assert candidates.get_candidates() == []
     assert candidates._scores == []
     assert candidates._sources == {}
 
@@ -18,7 +18,7 @@ def test_append_with_candidate():
     candidates.append(123, score=0.8, source="source1", source_group="group1")
 
     assert len(candidates) == 1
-    assert candidates._ids == [123]
+    assert candidates.get_candidates() == [123]
     assert candidates._scores == [0.8]
     assert candidates._sources[123] == {("source1", "group1")}
 
@@ -51,7 +51,7 @@ def test_append_duplicate_candidate():
 
     assert len(candidates) == 2  # Both entries are kept
     expected_sources = {("source1", "group1"), ("source2", "group2")}
-    assert candidates._sources[1] == expected_sources
+    assert candidates.get_source(1) == expected_sources
 
 
 def test_get_state():
@@ -101,10 +101,10 @@ def test_set_json_serialized_state_with_integer_entities():
 
     candidates.set_state(json.loads(json.dumps(state)))
 
-    assert candidates._ids == [1, 2]
+    assert candidates.get_candidates() == [1, 2]
     assert candidates._scores == [0.7, 0.8]
-    assert candidates._sources[1] == {("source1", "group1")}
-    assert candidates._sources[2] == {("source2", "group2")}
+    assert candidates.get_source(1) == {("source1", "group1")}
+    assert candidates.get_source(2) == {("source2", "group2")}
 
 
 def test_set_json_serialized_state_with_string_entities():
@@ -121,10 +121,10 @@ def test_set_json_serialized_state_with_string_entities():
 
     candidates.set_state(json.loads(json.dumps(state)))
 
-    assert candidates._ids == ["a", "b"]
+    assert candidates.get_candidates() == ["a", "b"]
     assert candidates._scores == [0.7, 0.8]
-    assert candidates._sources["a"] == {("source1", "group1")}
-    assert candidates._sources["b"] == {("source2", "group2")}
+    assert candidates.get_source("a") == {("source1", "group1")}
+    assert candidates.get_source("b") == {("source2", "group2")}
 
 
 def test_unique_groups():
