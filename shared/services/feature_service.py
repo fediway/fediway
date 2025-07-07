@@ -72,16 +72,17 @@ class FeatureService(Features):
         if not cache_key in self.cache:
             self.cache[cache_key] = {}
 
-        for column, feature_name in zip(df.columns, features):
+        for column, feature in zip(df.columns, features):
+            feature = feature.replace(":", "__")
             feat = df[column]
             feat.index = entity_ids
-            if not feature_name in self.cache[cache_key]:
-                self.cache[cache_key][feature_name] = feat[
+            if not feature in self.cache[cache_key]:
+                self.cache[cache_key][feature] = feat[
                     ~feat.index.duplicated(keep="last")
                 ]
             else:
-                feat = pd.concat([self.cache[cache_key][feature_name], feat])
-                self.cache[cache_key][feature_name] = feat[
+                feat = pd.concat([self.cache[cache_key][feature], feat])
+                self.cache[cache_key][feature] = feat[
                     ~feat.index.duplicated(keep="last")
                 ]
 

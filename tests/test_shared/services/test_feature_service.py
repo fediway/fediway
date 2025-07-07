@@ -203,3 +203,74 @@ async def test_get_with_partial_cache_hit(feature_service, mock_feature_store):
 
     assert isinstance(result, pd.DataFrame)
     assert len(result) == 3
+
+
+# _remember tests
+
+
+def test_remember_adds_features_to_empty_cache(feature_service):
+    df = pd.DataFrame(
+        {
+            "status__author_id": [5, 6, 7],
+            "status__engagements": [10, 20, 30],
+        }
+    )
+    entities = [{"status_id": 1}, {"status_id": 2}, {"status_id": 3}]
+    features = ["status:author_id", "status:engagements"]
+
+    feature_service._remember(entities, df, features)
+
+    assert "status_id" in feature_service.cache
+    cached = feature_service.cache["status_id"]
+
+    assert "status__author_id" in cached
+    assert "status__engagements" in cached
+    assert list(cached["status__author_id"].values) == [5, 6, 7]
+    assert list(cached["status__author_id"].index) == [1, 2, 3]
+
+
+def test_remember_merges_features(feature_service):
+    # First remember call
+    df1 = pd.DataFrame({"status__author_id": [5, 6]}, index=[0, 1])
+    entities1 = [{"status_id": 1}, {"status_id": 2}]
+    features = ["status:author_id"]
+
+    feature_service._remember(entities1, df1, features)
+
+    # Second remember call with one overlapping ID (1) and one new (3)
+    df2 = pd.DataFrame({"status__author_id": [8, 9]}, index=[0, 1])
+    entities2 = [{"status_id": 1}, {"status_id": 3}]
+
+    feature_service._remember(entities2, df2, features)
+
+    # Check merged cache
+    cached = feature_service.cache["status_id"]["status__author_id"]
+    assert list(cached.index) == [2, 1, 3] or list(cached.index) == [
+        1,
+        2,
+        3,
+    ]  # Duplicates dropped
+    assert 1 in cached.index and 3 in cached.index
+
+
+def test_remember_skips_when_cache_key_has_multiple_keys():
+    feature_service = FeatureService(feature_store=MagicMock())
+
+    df = pd.DataFrame({"status__author_id": [5]}, index=[0])
+    entities = [{"status_id": 1, "user_id": 10}]  # multiple keys → skips
+    features = ["status:author_id"]
+
+    feature_service._remember(entities, df, features)
+
+    assert feature_service.cache == {}  # Should remain empty
+
+
+def test_remember_does_not_store_for_feature_service():
+    feature_service = FeatureService(feature_store=MagicMock())
+    df = pd.DataFrame({"some_feature": [1, 2, 3]})
+    entities = [{"status_id": 1}, {"status_id": 2}, {"status_id": 3}]
+    fs_obj = MagicMock(spec=FeastFeatureService)
+
+    feature_service._remember(entities, df, fs_obj)
+
+    assert feature_service.cache == {}  # Should remain empty

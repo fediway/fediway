@@ -250,3 +250,83 @@ def test_getitem_with_numpy_boolean_mask():
     assert isinstance(result, CandidateList)
     assert result.get_candidates() == [1, 3]
     assert result._scores == [0.1, 0.3]
+
+
+def test_iadd_combines_candidate_lists():
+    cl1 = CandidateList("status_id")
+    cl1.append(1, score=0.5, source="s1", source_group="g1")
+    cl1.append(2, score=0.6, source="s2", source_group="g2")
+
+    cl2 = CandidateList("status_id")
+    cl2.append(3, score=0.7, source="s3", source_group="g3")
+    cl2.append(4, score=0.8, source="s4", source_group="g4")
+
+    cl1 += cl2
+
+    assert cl1.get_candidates() == [1, 2, 3, 4]
+    assert cl1._scores == [0.5, 0.6, 0.7, 0.8]
+    assert cl1.get_source(3) == {("s3", "g3")}
+    assert cl1.get_source(4) == {("s4", "g4")}
+
+
+def test_iadd_merges_sources_for_existing_candidate():
+    cl1 = CandidateList("status_id")
+    cl1.append(1, score=0.5, source="s1", source_group="g1")
+
+    cl2 = CandidateList("status_id")
+    cl2.append(1, score=0.6, source="s2", source_group="g2")
+
+    cl1 += cl2
+
+    assert cl1.get_candidates() == [1, 1]  # both are kept in the list
+    assert cl1._scores == [0.5, 0.6]
+    assert cl1.get_source(1) == {("s1", "g1"), ("s2", "g2")}
+
+
+def test_iadd_preserves_entity():
+    cl1 = CandidateList("user_id")
+    cl2 = CandidateList("user_id")
+    cl2.append(5)
+
+    cl1 += cl2
+
+    assert cl1.entity == "user_id"
+    assert cl1.get_candidates() == [5]
+
+
+def test_iadd_raises_on_mismatched_types():
+    cl1 = CandidateList("status_id")
+    cl1.append(1)
+
+    with pytest.raises(AssertionError):
+        cl1 += "not_a_candidate_list"
+
+
+def test_index_returns_correct_position():
+    cl = CandidateList("status_id")
+    cl.append(100)
+    cl.append(200)
+    cl.append(300)
+
+    assert cl.index(100) == 0
+    assert cl.index(200) == 1
+    assert cl.index(300) == 2
+
+
+def test_index_with_duplicates_returns_first_occurrence():
+    cl = CandidateList("status_id")
+    cl.append(100)
+    cl.append(200)
+    cl.append(100)  # duplicate
+
+    assert cl.index(100) == 0  # First match
+    assert cl.index(200) == 1
+
+
+def test_index_raises_for_missing_candidate():
+    cl = CandidateList("status_id")
+    cl.append(1)
+    cl.append(2)
+
+    with pytest.raises(ValueError):
+        cl.index(999)  # not in the list
