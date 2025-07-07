@@ -22,10 +22,8 @@ feature_views.append(
         schema=FEATURES,
         online=True,
         tags={
-            "push": "kafka",
-            "topic": "status_stats",
-            "format": "json",
-            "offline_topic": "status_stats",
+            "online_store": f"status_stats",
+            "offline_store": f"offline_features_status_stats",
         },
         ttl=timedelta(days=30),
     )

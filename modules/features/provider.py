@@ -59,11 +59,11 @@ class FediwayProvider(PassthroughProvider):
 
         futures = []
 
-        for _, row in data.to_pandas().iterrows():
-            key = ",".join([str(key) for key in row[feature_view.entities].values])
+        for row in data.to_pylist():
+            key = ",".join([str(row[e]) for e in feature_view.entities])
 
             future = producer.send(
-                feature_view.tags["offline_store"], key=key, value=row.to_dict()
+                feature_view.tags["offline_store"], key=key, value=row
             )
 
             futures.append(future)

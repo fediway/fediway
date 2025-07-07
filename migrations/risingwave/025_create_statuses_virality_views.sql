@@ -1,6 +1,6 @@
 -- :up
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS status_virality_stats
+CREATE MATERIALIZED VIEW IF NOT EXISTS status_virality_stats AS
 SELECT 
     e.status_id, 
     e.window_start, 

@@ -1,6 +1,7 @@
 import asyncio
 from feast import FeatureStore, FeatureView
 import pandas as pd
+import numpy as np
 
 from modules.fediway.feed import Features
 
@@ -17,6 +18,15 @@ def get_feature_views(feature_store: FeatureStore) -> list[FeatureView]:
     return [
         feature_store.get_feature_view(projection.name) for projection in projections
     ]
+
+
+def _is_none_or_nan(value):
+    if value is None:
+        return True
+    try:
+        return np.isnan(value)
+    except TypeError:
+        return False
 
 
 class KirbyFeatureService(Features):
@@ -47,6 +57,8 @@ class KirbyFeatureService(Features):
         entities = []
         for status_entitiy, tags in zip(status_entities, status_tags):
             for tag_id in (tags or [])[:15]:  # at max 15 tags
+                if tag_id is None:
+                    continue
                 status_ids.append(status_entitiy["status_id"])
                 entities.append(
                     {
@@ -81,6 +93,8 @@ class KirbyFeatureService(Features):
         entities = []
         for status_entitiy, mentions in zip(status_entities, status_mentions):
             for mention in (mentions or [])[:10]:  # at max 10 mentions
+                if mention is None:
+                    continue
                 status_ids.append(status_entitiy["status_id"])
                 entities.append(
                     {
@@ -118,27 +132,54 @@ class KirbyFeatureService(Features):
             ]
         ].values
 
-        entities = [
-            status_entitiy
-            | {
-                "author_id": author_id or -1,
-                "domain": "",
-                "preview_card_id": preview_card_id or -1,
-                "preview_card_domain": preview_card_domain or "",
-                "account_id": self.account_id,
-            }
-            for status_entitiy, (
-                author_id,
-                # author_domain,
-                preview_card_id,
-                preview_card_domain,
-            ) in zip(status_entities, entities)
-        ]
+        entities = []
+        status_ids = []
 
-        return await self.feature_service.get(
+        for status_entitiy, (
+            author_id,
+            # author_domain,
+            preview_card_id,
+            preview_card_domain,
+        ) in zip(status_entities, entities):
+            if _is_none_or_nan(author_id):
+                continue
+            if _is_none_or_nan(preview_card_id):
+                continue
+            if _is_none_or_nan(preview_card_domain):
+                continue
+
+            status_ids.append(status_entity["status_id"])
+            entities.append(
+                [
+                    status_entitiy
+                    | {
+                        "author_id": author_id,
+                        "domain": "",
+                        "preview_card_id": preview_card_id,
+                        "preview_card_domain": preview_card_domain,
+                        "account_id": self.account_id,
+                    }
+                ]
+            )
+
+        if len(entities) == 0:
+            return
+
+        df = await self.feature_service.get(
             entities=entities,
             features=self.account_status_engagement_features,
         )
+
+        df["status_id"] = status_ids
+
+        df = pd.merge(
+            pd.DataFrame(status_entities),
+            df,
+            on="status_id",
+            how="left",
+        ).drop(columns=["status_id"])
+
+        return df
 
     async def get(self, entities: list[dict[str, int]], *pargs, **kwargs):
         statuses = await self.feature_service.get(

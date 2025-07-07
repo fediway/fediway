@@ -38,6 +38,8 @@ class JSONEncoder(json.JSONEncoder):
         if isinstance(obj, np.integer):
             return int(obj)
         elif isinstance(obj, np.floating):
+            if np.isnan(obj):
+                return None
             return float(obj)
         elif isinstance(obj, np.ndarray):
             return obj.tolist()

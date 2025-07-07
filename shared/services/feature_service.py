@@ -17,12 +17,14 @@ class FeatureService(Features):
         background_tasks: BackgroundTasks | None = None,
         event_time: datetime = datetime.now(),
         offline_store: bool = False,
+        offline_event_time_precision: int = 60,
     ):
         self.cache = {}
         self.feature_store = feature_store
         self.background_tasks = background_tasks
         self.event_time = event_time
         self.offline_store = offline_store
+        self.offline_event_time_precision = offline_event_time_precision
 
     def _cache_key(self, entities: list[dict[str, int]]) -> str:
         return ",".join(list(entities[0].keys()))
@@ -35,14 +37,6 @@ class FeatureService(Features):
 
         cache_key = self._cache_key(entities)
 
-        i = 0
-        for key, cache in self.cache.items():
-            for f, df in cache.items():
-                logger.info(
-                    f"[{i}] Features cache for {key} has {len(df)} for {f} feature"
-                )
-                i += 1
-
         if not cache_key in self.cache:
             return None, entities
 
@@ -54,7 +48,7 @@ class FeatureService(Features):
             feature = feature.replace(":", "__")
             if not feature in self.cache[cache_key]:
                 return None, entities
-            feat = self.cache[cache_key][feature].reindex(entity_ids).dropna()
+            feat = self.cache[cache_key][feature].reindex(entity_ids)
             cached.append(feat[~feat.index.duplicated(keep="last")])
 
         cached = pd.concat(cached, axis=1, join="inner")
@@ -84,7 +78,6 @@ class FeatureService(Features):
             feature = feature.replace(":", "__")
             feat = df[feature]
             feat.index = entity_ids
-            feat.dropna(inplace=True)
 
             if not feature in self.cache[cache_key]:
                 self.cache[cache_key][feature] = feat[
@@ -115,6 +108,8 @@ class FeatureService(Features):
 
         if type(event_time) != int:
             event_time = int((event_time or self.event_time).timestamp())
+
+        event_time = event_time - (event_time % self.offline_event_time_precision)
 
         # get unique feature view names from features dataframe
         feature_views = set(c.split("__")[0] for c in features.columns if "__" in c)
@@ -196,7 +191,7 @@ class FeatureService(Features):
         if (offline_store or self.offline_store) and len(df) > 0:
             if self.background_tasks is None:
                 logger.warning(
-                    "Missing background task manager: ingesting features to offline store sequentially."
+                    "Ingesting features to offline store sequentially: missing background task manager"
                 )
                 self.ingest_to_offline_store(df, entities, event_time)
             else:
