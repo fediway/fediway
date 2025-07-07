@@ -35,6 +35,10 @@ class FeatureService(Features):
 
         cache_key = self._cache_key(entities)
 
+        for key, cache in self.cache.items():
+            for f, df in cache.items():
+                logger.info(f"Features cache for {key} has {len(df)} for {f} feature")
+
         if not cache_key in self.cache:
             return None, entities
 
@@ -72,9 +76,9 @@ class FeatureService(Features):
         if not cache_key in self.cache:
             self.cache[cache_key] = {}
 
-        for column, feature in zip(df.columns, features):
+        for feature in features:
             feature = feature.replace(":", "__")
-            feat = df[column]
+            feat = df[feature]
             feat.index = entity_ids
             if not feature in self.cache[cache_key]:
                 self.cache[cache_key][feature] = feat[
