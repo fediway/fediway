@@ -76,32 +76,32 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
 
     // return embeddings;
 
-    // tracing::info!("Loading initial engagements...");
+    tracing::info!("Loading initial engagements...");
 
-    // let mut i = 0;
-    // let mut status_ids: FastHashSet<i64> = FastHashSet::default();
-    // let results = rw::get_initial_engagements(&db).await;
+    let mut i = 0;
+    let mut status_ids: FastHashSet<i64> = FastHashSet::default();
+    let results = rw::get_initial_engagements(&db).await;
 
-    // let start = Instant::now();
+    let start = Instant::now();
 
-    // for (status, engagement) in results {
-    //     if !status_ids.contains(&status.status_id) {
-    //         status_ids.insert(status.status_id);
+    for (status, engagement) in results {
+        if !status_ids.contains(&status.status_id) {
+            status_ids.insert(status.status_id);
 
-    //         embeddings.push_status(DebeziumEvent::new_create(status));
-    //         i += 1;
-    //     }
+            embeddings.push_status(DebeziumEvent::new_create(status));
+            i += 1;
+        }
 
-    //     embeddings.push_engagement(engagement);
-    //     i += 1;
-    // }
+        embeddings.push_engagement(engagement);
+        i += 1;
+    }
 
-    // let duration = start.elapsed();
+    let duration = start.elapsed();
 
-    // tracing::info!(
-    //     "Seeded initial engagements with {} udpates/second.",
-    //     (i as f64) / duration.as_secs_f64()
-    // );
+    tracing::info!(
+        "Seeded initial engagements with {} udpates/second.",
+        (i as f64) / duration.as_secs_f64()
+    );
 
     embeddings
 }
