@@ -26,16 +26,17 @@ impl ConsumerContext for Context {}
 
 pub struct KafkaWorker {
     config: Config,
+    group_id: String,
 }
 
 impl KafkaWorker {
-    pub fn new(config: Config) -> Self {
-        Self { config }
+    pub fn new(config: Config, group_id: String) -> Self {
+        Self { config, group_id }
     }
 
     fn create_consumer(&self) -> StreamConsumer<Context> {
         ClientConfig::new()
-            .set("group.id", &self.config.kafka_group_id)
+            .set("group.id", &self.group_id)
             .set("bootstrap.servers", &self.config.kafka_bootstrap_servers)
             .set("enable.partition.eof", "false")
             .set("session.timeout.ms", "6000")

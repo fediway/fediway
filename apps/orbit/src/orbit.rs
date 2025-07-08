@@ -76,7 +76,8 @@ impl Orbit {
         .await;
 
         // start kafka event consumer
-        let kafka_worker = KafkaWorker::new(self.config.clone()).start(event_tx);
+        let group_id = format!("orbit_{}", self.embeddings.communities.version());
+        let kafka_worker = KafkaWorker::new(self.config.clone(), group_id).start(event_tx);
 
         // delete old collections
         self.purge_outdated_qdrant_collections().await;

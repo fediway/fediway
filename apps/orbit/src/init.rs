@@ -2,7 +2,7 @@ use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
 use crate::debezium::DebeziumEvent;
 use crate::embedding::{Embeddings, FromEmbedding};
-use crate::entities::tag::Tag;
+use crate::entities::{consumer::Consumer, producer::Producer, tag::Tag};
 use crate::rw;
 use crate::sparse::SparseVec;
 use crate::types::{FastDashMap, FastHashMap, FastHashSet};
@@ -27,73 +27,81 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
     let communities = get_communities(&config, &db).await;
 
     // 2. compute initial consumer embeddings
-    let (tc_matrix, t_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
-        communities.clone().into();
-    let (at_matrix, a_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
-        rw::get_at_matrix(&db, &t_indices).await;
-    let ac_matrix: CsrMatrix<f64> = &at_matrix * &tc_matrix;
-    tracing::info!(
-        "Computed initial embeddings for {} consumers",
-        ac_matrix.nrows(),
-    );
+    // let (tc_matrix, t_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
+    //     communities.clone().into();
+    // let (at_matrix, a_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
+    //     rw::get_at_matrix(&db, &t_indices).await;
+    // let ac_matrix: CsrMatrix<f64> = &at_matrix * &tc_matrix;
+    // tracing::info!(
+    //     "Computed initial embeddings for {} consumers",
+    //     ac_matrix.nrows(),
+    // );
 
     // 3. compute initial tag embeddings
-    let (ta_matrix, t2_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
-        rw::get_ta_matrix(&db, &a_indices).await;
-    let tc2_matrix = &ta_matrix * &ac_matrix;
-    tracing::info!(
-        "Computed initial embeddings for {} tags",
-        tc2_matrix.nrows(),
-    );
+    // let (ta_matrix, t2_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
+    //     rw::get_ta_matrix(&db, &a_indices).await;
+    // let tc2_matrix = &ta_matrix * &ac_matrix;
+    // tracing::info!(
+    //     "Computed initial embeddings for {} tags",
+    //     tc2_matrix.nrows(),
+    // );
 
     // 4. compute initial producer embeddings
-    let (pa_matrix, p_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
-        rw::get_pa_matrix(&db, &a_indices).await;
-    let pt_matrix: CsrMatrix<f64> = rw::get_pt_matrix(&db, &p_indices, &t_indices).await;
-    let pc_matrix = (&pa_matrix * &ac_matrix) + (&pt_matrix * &tc_matrix);
-    tracing::info!(
-        "Computed initial embeddings for {} producers",
-        pc_matrix.nrows(),
-    );
+    // let (pa_matrix, p_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
+    //     rw::get_pa_matrix(&db, &a_indices).await;
+    // let pt_matrix: CsrMatrix<f64> = rw::get_pt_matrix(&db, &p_indices, &t_indices).await;
+    // let pc_matrix = (&pa_matrix * &ac_matrix) + (&pt_matrix * &tc_matrix);
+    // tracing::info!(
+    //     "Computed initial embeddings for {} producers",
+    //     pc_matrix.nrows(),
+    // );
 
-    let consumers = get_embeddings(ac_matrix, a_indices);
-    let producers = get_embeddings(pc_matrix, p_indices);
-    let tags: FastDashMap<i64, Tag> = get_embeddings(tc2_matrix, t2_indices);
+    // let consumers = get_embeddings(ac_matrix, a_indices);
+    // let producers = get_embeddings(pc_matrix, p_indices);
+    // let tags: FastDashMap<i64, Tag> = get_embeddings(tc2_matrix, t2_indices);
+
+    let consumers: FastDashMap<i64, Consumer> = FastDashMap::default();
+    let producers: FastDashMap<i64, Producer> = FastDashMap::default();
+    let tags: FastDashMap<i64, Tag> = FastDashMap::default();
 
     for (tag_id, community) in communities.tags.iter() {
-        tags.get_mut(tag_id).unwrap().set_community(*community);
+        tags.insert(
+            *tag_id,
+            Tag::from_embedding(SparseVec::new(communities.dim, vec![*community], vec![1.0])),
+        );
+        // tags.get_mut(tag_id).unwrap().set_community(*community);
     }
 
     let embeddings = Embeddings::initial(communities, consumers, producers, tags);
 
     // return embeddings;
 
-    tracing::info!("Loading initial engagements...");
+    // tracing::info!("Loading initial engagements...");
 
-    let mut i = 0;
-    let mut status_ids: FastHashSet<i64> = FastHashSet::default();
-    let results = rw::get_initial_engagements(&db).await;
+    // let mut i = 0;
+    // let mut status_ids: FastHashSet<i64> = FastHashSet::default();
+    // let results = rw::get_initial_engagements(&db).await;
 
-    let start = Instant::now();
+    // let start = Instant::now();
 
-    for (status, engagement) in results {
-        if !status_ids.contains(&status.status_id) {
-            status_ids.insert(status.status_id);
+    // for (status, engagement) in results {
+    //     if !status_ids.contains(&status.status_id) {
+    //         status_ids.insert(status.status_id);
 
-            embeddings.push_status(DebeziumEvent::new_create(status));
-            i += 1;
-        }
+    //         embeddings.push_status(DebeziumEvent::new_create(status));
+    //         i += 1;
+    //     }
 
-        embeddings.push_engagement(engagement);
-        i += 1;
-    }
+    //     embeddings.push_engagement(engagement);
+    //     i += 1;
+    // }
 
-    let duration = start.elapsed();
+    // let duration = start.elapsed();
 
-    tracing::info!(
-        "Seeded initial engagements with {} udpates/second.",
-        (i as f64) / duration.as_secs_f64()
-    );
+    // tracing::info!(
+    //     "Seeded initial engagements with {} udpates/second.",
+    //     (i as f64) / duration.as_secs_f64()
+    // );
 
     embeddings
 }

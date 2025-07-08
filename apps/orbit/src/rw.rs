@@ -295,44 +295,46 @@ pub async fn get_initial_engagements(
         e.account_id,
         e.author_id,
         e.event_time,
-        s.visibility,
-        s.sensitive,
+        e.visibility,
+        e.sensitive,
         s.created_at,
         s.tags
     FROM enriched_status_engagement_events e
     JOIN enriched_statuses s ON s.status_id = e.status_id
-    WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
-    ORDER BY e.event_time;
+    WHERE e.event_time > NOW() - INTERVAL '60 DAYS';
     "#;
 
     let rows = db.query(query, &[]).await.unwrap();
 
-    rows.into_iter().map(|row| {
-        let status_id: i64 = row.get(0);
-        let account_id: i64 = row.get(1);
-        let author_id: i64 = row.get(2);
-        let event_time: SystemTime = row.get(3);
-        let visibility: i32 = row.get(4);
-        let sensitive: Option<bool> = row.get(5);
-        let created_at: SystemTime = row.get(6);
-        let tags: Option<Vec<i64>> = row.get(7);
-        let tags: FastHashSet<i64> = tags.unwrap_or_default().into_iter().collect();
+    rows.into_iter()
+        .map(|row| {
+            let status_id: i64 = row.get(0);
+            let account_id: i64 = row.get(1);
+            let author_id: i64 = row.get(2);
+            let event_time: SystemTime = row.get(3);
+            let visibility: i32 = row.get(4);
+            let sensitive: Option<bool> = row.get(5);
+            let created_at: SystemTime = row.get(6);
+            let tags: Option<Vec<i64>> = row.get(7);
+            let tags: FastHashSet<i64> = tags.unwrap_or_default().into_iter().collect();
 
-        let status = StatusEvent {
-            status_id,
-            author_id,
-            visibility,
-            sensitive,
-            tags: Some(tags),
-            created_at,
-        };
-        let engagement = EngagementEvent {
-            account_id,
-            status_id,
-            author_id,
-            event_time,
-        };
+            let status = StatusEvent {
+                status_id,
+                author_id,
+                visibility,
+                sensitive,
+                tags: Some(tags),
+                created_at,
+            };
 
-        (status, engagement)
-    })
+            let engagement = EngagementEvent {
+                account_id,
+                status_id,
+                author_id,
+                event_time,
+            };
+
+            (status, engagement)
+        })
+        .sorted_by(|(_, e1), (_, e2)| e1.event_time.cmp(&e2.event_time))
 }
