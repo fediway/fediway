@@ -37,7 +37,7 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
     //     ac_matrix.nrows(),
     // );
 
-    // 3. compute initial tag embeddings
+    // // 3. compute initial tag embeddings
     // let (ta_matrix, t2_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
     //     rw::get_ta_matrix(&db, &a_indices).await;
     // let tc2_matrix = &ta_matrix * &ac_matrix;
@@ -46,7 +46,7 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
     //     tc2_matrix.nrows(),
     // );
 
-    // 4. compute initial producer embeddings
+    // // 4. compute initial producer embeddings
     // let (pa_matrix, p_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
     //     rw::get_pa_matrix(&db, &a_indices).await;
     // let pt_matrix: CsrMatrix<f64> = rw::get_pt_matrix(&db, &p_indices, &t_indices).await;
