@@ -15,6 +15,7 @@ from modules.fediway.sources.statuses import (
     PopularInCommunitySource,
     PouplarByInfluentialAccountsSource,
     PopularInSocialCircleSource,
+    RecentStatusesByFollowedAccounts,
     SimilarToEngagedSource,
     StatusBasedCollaborativeFilteringSource,
     ViralStatusesSource,
@@ -25,6 +26,7 @@ from shared.core.schwarm import driver as schwarm_driver
 
 # from shared.core.herde import db as herde_db
 from shared.services.feature_service import FeatureService
+from shared.core.db import get_db_session
 from shared.core.rw import get_rw_session
 
 from ..auth import get_authenticated_account_or_fail
@@ -32,6 +34,13 @@ from ..features import get_feature_service
 from ..lang import get_languages
 
 MAX_AGE = timedelta(days=config.fediway.feed_max_age_in_days)
+
+
+def get_recent_statuses_by_followed_accounts_source(
+    db: DBSession = Depends(get_db_session),
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[Source]:
+    return [RecentStatusesByFollowedAccounts(db=db, account_id=account.id)]
 
 
 def get_popular_by_influential_accounts_sources(

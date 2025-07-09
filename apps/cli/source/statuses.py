@@ -26,11 +26,9 @@ def _log_candidates(candidates: list[str]):
     from modules.mastodon.models import Status
     from shared.core.db import db_session
 
-    print(candidates)
-
     with db_session() as db:
         statuses = db.exec(
-            select(Status.language, Status.url).where(Status.id.in_(candidates))
+            select(Status.language, Status.uri).where(Status.id.in_(candidates))
         ).all()
 
         for status in statuses:
@@ -108,5 +106,21 @@ def viral(
         )
 
         source.reset()
+
+        _log_candidates([c for c in source.collect(limit)])
+
+
+@app.command("recent-statuses-by-followed-accounts")
+def recent_statuses_by_followed_accounts(username: str, limit=10):
+    from modules.fediway.sources.statuses import RecentStatusesByFollowedAccounts
+    from shared.core.db import db_session
+
+    account_id = _get_account_id_from_username(username)
+
+    with db_session() as db:
+        source = RecentStatusesByFollowedAccounts(
+            db=db,
+            account_id=account_id,
+        )
 
         _log_candidates([c for c in source.collect(limit)])

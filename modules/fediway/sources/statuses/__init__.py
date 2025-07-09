@@ -5,6 +5,7 @@ from .collaborative_filtering import CollaborativeFilteringSource
 from .newest_in_network import NewestInNetworkSource
 from .community_based_recommendations import CommunityBasedRecommendationsSource
 from .popular_in_social_circle import PopularInSocialCircleSource
+from .recent_statuses_by_followed_accounts import RecentStatusesByFollowedAccounts
 from .popular_by_influential_accounts import PouplarByInfluentialAccountsSource
 from .popular_in_community import PopularInCommunitySource
 from .similar_to_engaged import SimilarToEngagedSource

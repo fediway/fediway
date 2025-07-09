@@ -58,5 +58,6 @@ def test_id_partition_nine_digit_number():
     assert id_partition(123456789) == "123/456/789"
     assert id_partition(999999999) == "999/999/999"
 
+
 def test_with_long_number():
-    assert id_partition(114782619229607682) == "114/801/475/223/196/059"
+    assert id_partition(114782619229607682) == "114/782/619/229/607/682"
