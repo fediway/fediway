@@ -29,6 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_statuses_reblog_of_id ON statuses(reblog_of_id);
 CREATE INDEX IF NOT EXISTS idx_statuses_in_reply_to_id ON statuses(in_reply_to_id); 
 CREATE INDEX IF NOT EXISTS idx_statuses_in_reply_to_account_id ON statuses(in_reply_to_account_id); 
 CREATE INDEX IF NOT EXISTS idx_statuses_created_at ON statuses(created_at); 
+CREATE INDEX IF NOT EXISTS idx_statuses_language ON statuses(language); 
 
 CREATE TABLE IF NOT EXISTS statuses_tags (
     status_id BIGINT,
@@ -104,6 +105,7 @@ DROP INDEX IF EXISTS idx_statuses_reblog_of_id;
 DROP INDEX IF EXISTS idx_statuses_in_reply_to_id;
 DROP INDEX IF EXISTS idx_statuses_in_reply_to_account_id;
 DROP INDEX IF EXISTS idx_statuses_created_at;
+DROP INDEX IF EXISTS idx_statuses_language;
 DROP INDEX IF EXISTS idx_status_id_status_id;
 DROP INDEX IF EXISTS idx_statuses_tags_status_id;
 DROP INDEX IF EXISTS idx_statuses_tags_tag_id;

@@ -5,6 +5,22 @@ from config import config
 app = typer.Typer(help="Orbit commands.")
 
 
+def _log_candidates(candidates: list[str]):
+    from sqlmodel import select
+    from modules.mastodon.models import Status
+    from shared.core.db import db_session
+
+    print(candidates)
+
+    with db_session() as db:
+        statuses = db.exec(
+            select(Status.language, Status.url).where(Status.id.in_(candidates))
+        ).all()
+
+        for status in statuses:
+            typer.echo(status)
+
+
 @app.command("recommend")
 def create_topics(community_id: int, limit: int = 10, entity: str = "statuses"):
     from modules.mastodon.models import Status, Tag, Account

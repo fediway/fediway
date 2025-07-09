@@ -98,7 +98,12 @@ def test_ingest_successful(feature_service, mock_feature_store):
 
     assert fv_name == "status"
     assert list(df.columns) == ["status_id", "author_id", "engagements", "event_time"]
-    assert list(df.values[0]) == [status_id, author_id, engagements, event_time]
+    assert list(df.values[0]) == [
+        status_id,
+        author_id,
+        engagements,
+        event_time - (event_time % 60),
+    ]
 
 
 # get tests

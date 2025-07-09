@@ -191,6 +191,7 @@ class SourcingStep(PipelineStep):
             candidates = [c for c in source.collect(*args)]
         except Exception as e:
             logger.error(e)
+            raise e
 
         self._durations[idx] = time.perf_counter_ns() - start_time
         self._counts[idx] = len(candidates)

@@ -33,8 +33,8 @@ class ViralStatusesSource(RedisSource):
     def compute(self):
         query = f"""
         SELECT v.status_id, v.score
-        FROM status_virality_scores v
-        JOIN statuses s ON s.id = v.status_id AND s.language = :language
+        FROM status_virality_score_languages v
+        WHERE v.language = :language
         ORDER BY v.score DESC
         LIMIT :limit;
         """

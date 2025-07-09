@@ -61,6 +61,8 @@ for feature_view, (topic, format) in feature_topics.items():
         )
 
 
+#
+
 # Schwarm consumers (responsible for pushing data to memgraph)
 
 

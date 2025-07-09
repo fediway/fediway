@@ -29,7 +29,9 @@ def _log_candidates(candidates: list[str]):
     print(candidates)
 
     with db_session() as db:
-        statuses = db.exec(select(Status.url).where(Status.id.in_(candidates))).all()
+        statuses = db.exec(
+            select(Status.language, Status.url).where(Status.id.in_(candidates))
+        ).all()
 
         for status in statuses:
             typer.echo(status)

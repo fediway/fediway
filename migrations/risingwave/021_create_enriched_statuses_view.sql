@@ -105,6 +105,8 @@ LEFT JOIN (
   GROUP BY status_id
 ) tags ON s.id = tags.status_id;
 
+CREATE INDEX IF NOT EXISTS idx_enriched_statuses_status_id ON enriched_statuses(status_id);
+
 CREATE SINK IF NOT EXISTS enriched_statuses_sink AS
 SELECT 
   *,
@@ -120,5 +122,9 @@ WITH (
 ) FORMAT DEBEZIUM ENCODE JSON;
 
 -- :down
+
+DROP SINK IF EXISTS enriched_statuses_sink;
+
+DROP INDEX IF EXISTS idx_enriched_statuses_status_id;
 
 DROP VIEW IF EXISTS enriched_statuses CASCADE;

@@ -125,7 +125,7 @@ JOIN status_stats st ON st.status_id = e.status_id
 JOIN enriched_statuses s ON s.status_id = e.status_id
 WITH (type = 'append-only', force_append_only='true');
 
-CREATE INDEX IF NOT EXISTS idx_enriched_status_engagement_events_event_time ON enriched_status_engagement_events(event_time); 
+CREATE INDEX IF NOT EXISTS idx_enriched_status_engagement_events_event_time ON enriched_status_engagement_events(event_time DESC); 
 
 CREATE SINK IF NOT EXISTS enriched_status_engagement_events_sink AS
 SELECT *

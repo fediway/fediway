@@ -13,11 +13,10 @@ class StoreViralStatusesSourceService:
 
     def _get_languages(self) -> list[str]:
         query = """
-        SELECT DISTINCT s.language 
-        FROM status_virality_scores v
-        JOIN statuses s 
-        ON s.id = v.status_id
-        AND s.language IS NOT NULL;
+        SELECT s.language 
+        FROM status_virality_score_languages s
+        AND s.language IS NOT NULL
+        GROUP BY s.language;
         """
 
         return [result[0] for result in self.db.exec(text(query)).fetchall()]
