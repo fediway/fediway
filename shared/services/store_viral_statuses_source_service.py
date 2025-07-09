@@ -15,7 +15,7 @@ class StoreViralStatusesSourceService:
         query = """
         SELECT s.language 
         FROM status_virality_score_languages s
-        AND s.language IS NOT NULL
+        WHERE s.language IS NOT NULL
         GROUP BY s.language;
         """
 
