@@ -5,5 +5,9 @@ def id_partition(instance_id: int) -> str:
     E.g.: "000/000/123".
     """
 
-    id_str = str(instance_id)
+    id_str = str(instance_id).zfill(9)
+
+    if len(id_str) <= 9:
+        return "/".join([id_str[i : i + 3] for i in range(0, 9, 3)])
+
     return "/".join([id_str[i : i + 3] for i in range(0, 18, 3)])
