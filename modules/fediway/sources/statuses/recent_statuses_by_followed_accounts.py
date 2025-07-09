@@ -5,10 +5,15 @@ from ..base import Source
 
 
 class RecentStatusesByFollowedAccounts(Source):
-    def __init__(self, db: Session, account_id, latest_n_per_account: int = 10):
+    def __init__(self, db: Session, account_id, latest_n_per_account: int = 3):
         self.db = db
         self.account_id = account_id
         self.latest_n_per_account = latest_n_per_account
+
+    def get_params(self):
+        return {
+            "latest_n_per_account": self.latest_n_per_account,
+        }
 
     def query(self, limit: int):
         return text(f"""

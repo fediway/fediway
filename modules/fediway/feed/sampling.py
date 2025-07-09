@@ -61,7 +61,7 @@ class WeightedGroupSampler(Sampler):
                     scores.append(candidates._scores[i])
 
         perm = np.random.permutation(len(indices))
-        
+
         indices = np.array(indices)[perm]
         scores = np.array(scores)[perm]
 
