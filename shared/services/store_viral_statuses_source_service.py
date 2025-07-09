@@ -30,6 +30,10 @@ class StoreViralStatusesSourceService:
             )
 
             with utils.duration(
-                "Precomputed candidates for " + source.name() + " in {:.3f} seconds."
+                "Precomputed candidates for "
+                + source.name()
+                + "["
+                + lang
+                + "] in {:.3f} seconds."
             ):
                 source.store()

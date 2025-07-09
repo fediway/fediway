@@ -21,6 +21,9 @@ class ViralStatusesSource(RedisSource):
         self.language = language
         self.top_n = top_n
 
+    def redis_key(self):
+        return f"source:{self.name()}:{self.language}"
+
     def get_params(self):
         return {
             "language": self.language,
