@@ -34,6 +34,7 @@ class MediaAttachment(SQLModel, table=True):
             attachment="files",
             instance_id=self.id,
             file_name=self.file_file_name,
+            cache=self.remote_url is not None and self.remote_url != "",
         )
 
     @property
