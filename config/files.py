@@ -21,6 +21,7 @@ class FilesConfig(BaseConfig):
         attachment: str,
         instance_id: int,
         file_name: str,
+        cache: bool = True,
         style: str = "original",
     ) -> str:
         """
@@ -50,8 +51,8 @@ class FilesConfig(BaseConfig):
             # PAPERCLIP_ROOT_URL is typically something like '/system'
             return f"{self.paperclip_root_url}/{path}"
 
-    def prefix_url(self) -> str:
-        return "cache/" if self.s3_enabled else ""
+    def prefix_url(self, cache: bool = True) -> str:
+        return "cache/" if self.s3_enabled and cache else ""
 
     def interpolate_file_path(
         self,
@@ -59,6 +60,7 @@ class FilesConfig(BaseConfig):
         file_name: str,
         attachment: str,
         instance_id: int,
+        cache: bool = True,
         style: str = "original",
     ) -> str:
         """

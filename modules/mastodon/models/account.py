@@ -80,6 +80,7 @@ class Account(SQLModel, table=True):
             attachment="headers",
             instance_id=self.id,
             file_name=self.header_file_name,
+            cache=not self.local,
         )
 
     @property
@@ -93,6 +94,7 @@ class Account(SQLModel, table=True):
             attachment="avatars",
             instance_id=self.id,
             file_name=self.avatar_file_name,
+            cache=not self.local,
         )
 
     @property
