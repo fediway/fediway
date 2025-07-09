@@ -2,6 +2,8 @@ from datetime import datetime
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from config import config
+
 
 class PreviewCardStatus(SQLModel, table=True):
     __tablename__ = "preview_cards_statuses"
@@ -25,6 +27,7 @@ class PreviewCard(SQLModel, table=True):
     author_url: str = Field(nullable=False, default="")
     provider_url: str = Field(nullable=False, default="")
     provider_name: str = Field(nullable=False, default="")
+    image_file_name: str | None = Field()
     width: int = Field(nullable=False, default=0)
     height: int = Field(nullable=False, default=0)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
@@ -35,3 +38,12 @@ class PreviewCard(SQLModel, table=True):
     statuses: list["Status"] = Relationship(
         back_populates="preview_card", link_model=PreviewCardStatus
     )
+
+    @property
+    def image_url(self):
+        return config.files.build_file_url(
+            self.__tablename__,
+            attachment="images",
+            instance_id=self.id,
+            file_name=self.image_file_name,
+        )

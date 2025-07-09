@@ -8,6 +8,7 @@ from apps.api.dependencies.sources.statuses import (
     # get_popular_in_social_circle_sources,
     get_community_based_recommendations_source,
     get_top_statuses_from_random_communities_source,
+    get_viral_statuses_source,
 )
 from apps.api.services.feed_service import FeedService
 from config import config
@@ -45,6 +46,12 @@ def get_out_network_sources(
     return community_based_recommendations
 
 
+def get_trending_sources(
+    viral_statuses: list[Source] = Depends(get_viral_statuses_source),
+):
+    return viral_statuses
+
+
 def get_cold_start_sources(
     top_statuses_from_random_communities: list[Source] = Depends(
         get_top_statuses_from_random_communities_source
@@ -63,6 +70,7 @@ async def home_timeline(
     # in_network_sources: list[Source] = Depends(get_in_network_sources),
     # near_network_sources: list[Source] = Depends(get_near_network_sources),
     out_network_sources: list[Source] = Depends(get_out_network_sources),
+    trending_sources: list[Source] = Depends(get_trending_sources),
     cold_start_sources: list[Source] = Depends(get_cold_start_sources),
     kirby_features: KirbyFeatureService = Depends(get_kirby_feature_service),
     db: DBSession = Depends(get_db_session),
@@ -74,7 +82,7 @@ async def home_timeline(
     max_candidates_per_source = config.fediway.max_candidates_per_source(
         # len(in_network_sources) +
         # len(near_network_sources) +
-        len(out_network_sources) + len(cold_start_sources)
+        len(out_network_sources) + len(trending_sources) + len(cold_start_sources)
     )
 
     _map_sources = lambda S: [(s, max_candidates_per_source) for s in S]
@@ -85,6 +93,7 @@ async def home_timeline(
         # .sources(_map_sources(in_network_sources), group="in-network")
         # .sources(_map_sources(near_network_sources), group="near-network")
         .sources(_map_sources(out_network_sources), group="out-network")
+        .sources(_map_sources(trending_sources), group="trending")
         .sources(_map_sources(cold_start_sources), group="cold-start")
         .unique()
         .passthrough(_push_kirby_features_to_offline_store)
@@ -97,6 +106,7 @@ async def home_timeline(
                     # "in-network": 0.5,
                     # "near-network": 0.25,
                     "out-network": 0.25,
+                    "trending": 0.02,
                     "cold-start": 0.1,
                 }
             ),

@@ -41,7 +41,7 @@ class PreviewCardItem(Item):
             html=card.html,
             width=card.width,
             height=card.height,
-            image="",
+            image=card.image_url,
             embed_url=card.embed_url,
             blurhash=card.blurhash,
         )
