@@ -35,7 +35,7 @@ class FilesConfig(BaseConfig):
         # Get the interpolated path, e.g.
         # "cache/accounts/avatar/000/000/123/original/my_avatar.png" or without prefix for local.
         path = self.interpolate_file_path(
-            class_name, file_name, attachment, instance_id, style
+            class_name, file_name, attachment, instance_id, style=style, cache=cache
         )
 
         if self.s3_enabled:
@@ -52,6 +52,7 @@ class FilesConfig(BaseConfig):
             return f"{self.paperclip_root_url}/{path}"
 
     def prefix_url(self, cache: bool = True) -> str:
+        print(cache)
         return "cache/" if self.s3_enabled and cache else ""
 
     def interpolate_file_path(
@@ -68,7 +69,7 @@ class FilesConfig(BaseConfig):
         ':prefix_url:class/:attachment/:id_partition/:style/:filename'
         """
 
-        prefix_url = self.prefix_url()
+        prefix_url = self.prefix_url(cache)
         partition = paperclip.id_partition(instance_id)
 
         return f"{prefix_url}{class_name}/{attachment}/{partition}/{style}/{file_name}"
