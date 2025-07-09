@@ -45,7 +45,7 @@ class StatusItem(Item):
         return cls(
             id=str(status.id),
             uri=status.uri,
-            url=status.url,
+            url=status.local_url,
             created_at=status.created_at,
             edited_at=status.edited_at,
             language=status.language,

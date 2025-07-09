@@ -9,6 +9,7 @@ from .favourite import Favourite
 from .media_attachment import MediaAttachment
 from .preview_card import PreviewCard, PreviewCardStatus
 from .topic import StatusTopic, Topic
+from config import config
 
 
 class StatusStats(SQLModel, table=True):
@@ -30,8 +31,8 @@ class Status(SQLModel, table=True):
     __tablename__ = "statuses"
 
     id: int = Field(primary_key=True)
-    uri: int | None = Field()
-    url: int | None = Field()
+    uri: str | None = Field()
+    url: str | None = Field()
     sensitive: bool = Field(default=False)
     visibility: int = Field()
     text: str = Field()
@@ -90,3 +91,13 @@ class Status(SQLModel, table=True):
             .options(selectinload(cls.media_attachments))
             .where(cls.id.in_(ids))
         )
+
+    @property
+    def is_reblog(self):
+        return self.reblog_of_id is not None
+
+    @property
+    def local_url(self):
+        if self.is_reblog:
+            return self.uri
+        return f"https://{config.app.app_host}/@{self.account.acct}/{self.id}"
