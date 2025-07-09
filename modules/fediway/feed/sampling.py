@@ -43,6 +43,7 @@ class WeightedGroupSampler(Sampler):
             return
 
         groups = [g for g in candidates.unique_groups() if g in self.weights]
+        random.shuffle(groups)
         weights = [self.weights[g] for g in groups]
 
         assert len(groups) > 0
@@ -52,11 +53,17 @@ class WeightedGroupSampler(Sampler):
 
         indices = []
         scores = []
+
         for i, c in enumerate(candidates.get_candidates()):
             for source, g in candidates.get_source(c):
                 if target_group == g:
                     indices.append(i)
                     scores.append(candidates._scores[i])
+
+        perm = np.random.permutation(len(indices))
+        
+        indices = np.array(indices)[perm]
+        scores = np.array(scores)[perm]
 
         if sum(scores):
             p = np.array(scores) / sum(scores)
