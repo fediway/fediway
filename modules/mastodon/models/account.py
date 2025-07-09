@@ -113,3 +113,13 @@ class Account(SQLModel, table=True):
         from sqlmodel import select
 
         return select(cls).options(selectinload(cls.stats)).where(cls.id.in_(ids))
+
+    @property
+    def local_uri(self):
+        if self.uri is not None and self.uri != "":
+            return self.uri
+        return f"https://{config.app.app_host}/users/{self.username}"
+
+    @property
+    def local_url(self):
+        return f"https://{config.app.app_host}/@{self.acct}"
