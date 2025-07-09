@@ -19,8 +19,8 @@ class RecentStatusesByFollowedAccounts(Source):
         JOIN LATERAL (
             SELECT s.id
             FROM statuses s
-            left join status_stats st on st.status_id = s.id
-            WHERE s.account_id = f.target_account_id
+            WHERE s.account_id = f.target_account_id 
+              AND s.in_reply_to_id IS NULL
             ORDER BY s.created_at DESC
             LIMIT {self.latest_n_per_account}
         ) AS s ON true
