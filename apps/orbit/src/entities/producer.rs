@@ -43,12 +43,14 @@ impl<E: Embedded> UpdateEmbedding<E> for Producer {
 
         let decay = 1.0 - ((1.0 - (-ALPHA * time_since).exp()) * BETA);
 
+        let mut normalized = entity.embedding().to_owned();
+        normalized.normalize();
+
         self.embedding *= decay;
         self.embedding += &SparseVec::new(
             self.embedding.0.dim(),
             entity.embedding().0.indices().to_vec(),
-            entity
-                .embedding()
+            normalized
                 .0
                 .iter()
                 .map(
@@ -66,7 +68,7 @@ impl<E: Embedded> UpdateEmbedding<E> for Producer {
             // (self.embedding.0.dim() / 15)
             //     .max(MAX_SPARSITY)
             //     .min(MIN_SPARSITY),
-            
+
             10,
         );
 

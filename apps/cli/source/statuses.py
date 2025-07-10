@@ -27,12 +27,10 @@ def _log_candidates(candidates: list[str]):
     from shared.core.db import db_session
 
     with db_session() as db:
-        statuses = db.exec(
-            select(Status.language, Status.uri).where(Status.id.in_(candidates))
-        ).all()
+        statuses = db.exec(select(Status).where(Status.id.in_(candidates))).all()
 
         for status in statuses:
-            typer.echo(status)
+            print(status.language, status.local_url)
 
 
 @app.command("popular-in-social-circle")
