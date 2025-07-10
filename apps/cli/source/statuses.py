@@ -57,18 +57,18 @@ def triangular_loop(account_id: int, limit: int = 10):
         print(candidate)
 
 
-@app.command("community-recommendations")
-def community_recommendations(
+@app.command("community-based-recommendations")
+def community_based_recommendations(
     username: str,
     limit: int = 10,
 ):
-    from modules.fediway.sources.statuses import CommunityRecommendationsSource
+    from modules.fediway.sources.statuses import CommunityBasedRecommendationsSource
     from shared.core.redis import get_redis
     from shared.core.qdrant import client
 
     account_id = _get_account_id_from_username(username)
 
-    source = CommunityRecommendationsSource(
+    source = CommunityBasedRecommendationsSource(
         r=get_redis(), client=client, account_id=account_id
     )
 

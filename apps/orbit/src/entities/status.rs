@@ -10,7 +10,7 @@ use crate::{
 const MIN_SPARSITY: usize = 5;
 const MAX_SPARSITY: usize = 100;
 
-const ALPHA: f64 = 0.001;
+const ALPHA: f64 = 0.0001;
 const BETA: f64 = 1.0;
 const GAMMA: f64 = 0.05;
 
@@ -60,19 +60,21 @@ impl<E: Embedded> UpdateEmbedding<E> for Status {
             entity
                 .embedding()
                 .0
-                .indices()
                 .iter()
-                .map(|community| match self.embedding.0.get(*community) {
-                    Some(value) => (1.0 - value) * GAMMA,
-                    None => GAMMA,
-                })
+                .map(
+                    |(community, value_other)| match self.embedding.0.get(community) {
+                        Some(value) => (1.0 - value) * GAMMA * value_other,
+                        None => GAMMA,
+                    },
+                )
                 .collect(),
         );
 
         self.embedding.keep_top_n(
-            (self.embedding.0.dim() / 10)
-                .max(MAX_SPARSITY)
-                .min(MIN_SPARSITY),
+            // (self.embedding.0.dim() / 10)
+            //     .max(MAX_SPARSITY)
+            //     .min(MIN_SPARSITY),
+            15,
         );
         self.last_upserted = Some(event_time);
         self.is_dirty = true;

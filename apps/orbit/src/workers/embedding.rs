@@ -186,11 +186,20 @@ impl EmbeddingWorker {
         *entity.is_dirty_mut() = false;
         *entity.last_upserted_mut() = Some(SystemTime::now());
 
+        let mut embedding = entity.embedding().to_owned();
+
+        match entity_type {
+            EntityType::Consumer => {
+                embedding.normalize();
+            }
+            _ => {}
+        }
+
         self.qdrant_tx
             .send(QdrantTask::Upsert {
                 id: id as u64,
                 collection: self.get_collection_for_type(entity_type),
-                embedding: entity.embedding().to_owned(),
+                embedding,
                 metadata: serde_json::Value::default(),
             })
             .unwrap();

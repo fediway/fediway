@@ -52,7 +52,6 @@ class FilesConfig(BaseConfig):
             return f"{self.paperclip_root_url}/{path}"
 
     def prefix_url(self, cache: bool = True) -> str:
-        print(cache)
         return "cache/" if self.s3_enabled and cache else ""
 
     def interpolate_file_path(

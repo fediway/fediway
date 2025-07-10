@@ -299,8 +299,8 @@ pub async fn get_initial_engagements(
         e.sensitive,
         s.created_at,
         s.tags
-    FROM enriched_status_engagement_events e
-    JOIN enriched_statuses s ON s.status_id = e.status_id
+    FROM enriched_statuses s
+    JOIN enriched_status_engagement_events e ON s.status_id = e.status_id
     WHERE e.event_time > NOW() - INTERVAL '60 DAYS';
     "#;
 

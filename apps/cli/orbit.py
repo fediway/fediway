@@ -21,10 +21,56 @@ def _log_candidates(candidates: list[str]):
             typer.echo(status)
 
 
+def _get_account_id_from_username(username: str):
+    from sqlmodel import select
+    from modules.mastodon.models import Account
+    from shared.core.db import db_session
+
+    with db_session() as db:
+        account_id = db.scalar(select(Account.id).where(Account.username == username))
+
+    if account_id is None:
+        typer.echo(f"No account found with username '{username}'")
+
+        raise typer.Exit(1)
+
+    return account_id
+
+
+@app.command("embedding")
+def embedding(username: str):
+    import numpy as np
+    from shared.core.qdrant import client
+    from shared.core.redis import get_redis
+
+    entity = "consumers"
+    account_id = _get_account_id_from_username(username)
+
+    typer.echo(f"Account id of {username}: {account_id}")
+
+    r = get_redis()
+    version = r.get("orbit:version").decode("utf8")
+    dim = int(r.get("orbit:dim").decode("utf8"))
+
+    typer.echo(f"Orbit version hash: {version}")
+    typer.echo(f"Orbit communities: {dim}")
+
+    embedding = client.retrieve(
+        collection_name=f"orbit_{version}_{entity}", ids=[account_id], with_vectors=True
+    )[0].vector["embedding"]
+
+    indices = np.array(embedding.indices)
+    values = np.array(embedding.values)
+    sorted_indices = np.argsort(values)[::-1]
+
+    for i, v in zip(indices[sorted_indices], values[sorted_indices]):
+        print(i, v)
+
+
 @app.command("recommend")
 def create_topics(community_id: int, limit: int = 10, entity: str = "statuses"):
     from modules.mastodon.models import Status, Tag, Account
-    from shared.core.rw import rw_session
+    from shared.core.db import db_session
     from shared.core.redis import get_redis
     from shared.core.qdrant import client
     from qdrant_client import models
@@ -44,17 +90,18 @@ def create_topics(community_id: int, limit: int = 10, entity: str = "statuses"):
         collection_name=f"orbit_{version}_{entity}",
         query_vector=models.NamedSparseVector(name="embedding", vector=vector),
         limit=limit,
+        with_vectors=True,
     )
 
     entity_ids = {rec.id for rec in recommendations}
     entities = {}
-    with rw_session() as db:
+    with db_session() as db:
         if entity == "statuses":
             results = db.exec(
-                select(Status.id, Status.url).where(Status.id.in_(entity_ids))
+                select(Status).where(Status.id.in_(entity_ids))
             ).fetchall()
             for result in results:
-                entities[result[0]] = result[1]
+                entities[result.id] = result.local_url
         elif entity == "tags":
             results = db.exec(
                 select(Tag.id, Tag.name).where(Tag.id.in_(entity_ids))
@@ -63,4 +110,8 @@ def create_topics(community_id: int, limit: int = 10, entity: str = "statuses"):
                 entities[result[0]] = result[1]
 
     for recommendation in recommendations:
-        print(entities[recommendation.id], recommendation.score)
+        print(
+            entities[recommendation.id],
+            recommendation.score,
+            recommendation.vector["embedding"],
+        )
