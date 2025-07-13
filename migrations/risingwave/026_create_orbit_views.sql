@@ -4,9 +4,9 @@
 CREATE MATERIALIZED VIEW IF NOT EXISTS orbit_tag_performance AS
 SELECT
     st.tag_id,
-    APPROX_COUNT_DISTINCT(e.account_id) AS num_engaged_accounts,
-    APPROX_COUNT_DISTINCT(e.author_id) AS num_authors,
-    APPROX_COUNT_DISTINCT(e.status_id) AS num_statuses
+    COUNT(DISTINCT e.account_id) AS num_engaged_accounts,
+    COUNT(DISTINCT e.author_id) AS num_authors,
+    COUNT(DISTINCT e.status_id) AS num_statuses
 FROM enriched_status_engagement_events e
 JOIN statuses_tags st ON st.status_id = e.status_id
 WHERE e.event_time > NOW() - INTERVAL '90 DAYS'

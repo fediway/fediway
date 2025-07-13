@@ -10,6 +10,12 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   status_age_in_seconds BIGINT,
   entity_id BIGINT,
 
+  -- text
+  text_chars_count INT,
+  text_uppercase_count INT,
+  text_newlines_count INT,
+  text_custom_emojis_count INT,
+
   -- account
   source_domain VARCHAR,
   account_locked BOOLEAN DEFAULT false,
@@ -30,6 +36,7 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
 
   -- status
   sensitive BOOLEAN DEFAULT false,
+  trendable BOOLEAN DEFAULT true,
   visibility INT,
   has_link BOOLEAN DEFAULT false,
   has_photo_link BOOLEAN DEFAULT false,
@@ -70,6 +77,11 @@ SELECT
   e.event_time,
   EXTRACT(EPOCH FROM (e.event_time - s.created_at))::BIGINT AS status_age_in_seconds,
   e.entity_id,
+
+  s.text_chars_count,
+  s.text_uppercase_count,
+  s.text_newlines_count,
+  s.text_custom_emojis_count,
   
   -- account
   a.domain as source_domain,
@@ -91,6 +103,7 @@ SELECT
 
   -- status
   s.sensitive,
+  s.trendable,
   s.visibility,
   s.has_link,
   s.has_photo_link,

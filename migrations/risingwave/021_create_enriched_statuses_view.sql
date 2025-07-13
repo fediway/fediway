@@ -11,7 +11,13 @@ CREATE TABLE IF NOT EXISTS enriched_statuses (
   sensitive BOOLEAN,
   trendable BOOLEAN,
   visibility INT,
-  num_chars INT,
+  quote_approval_policy INT,
+
+  -- text
+  text_chars_count INT,
+  text_uppercase_count INT,
+  text_newlines_count INT,
+  text_custom_emojis_count INT,
 
   -- author
   author_domain VARCHAR,
@@ -70,6 +76,7 @@ INTO enriched_statuses (
   sensitive,
   trendable,
   visibility,
+  quote_approval_policy,
   num_media_attachments,
   ordered_media_attachment_ids
 ) AS
@@ -82,8 +89,62 @@ SELECT
   sensitive,
   trendable,
   visibility,
+  quote_approval_policy,
   ARRAY_LENGTH(ordered_media_attachment_ids) AS num_media_attachments,
   ordered_media_attachment_ids
+FROM statuses
+WITH (
+  type = 'append-only',
+  force_append_only = 'true',
+);
+
+CREATE SINK IF NOT EXISTS enriched_statuses_text_sink
+INTO enriched_statuses (
+  status_id, 
+  text_chars_count,
+  text_uppercase_count,
+  text_newlines_count,
+  text_custom_emojis_count
+) AS
+SELECT 
+  id, 
+  CHAR_LENGTH(REGEXP_REPLACE(
+		REGEXP_REPLACE(
+			REGEXP_REPLACE(text, '<[^>]*>', '', 'g'),
+			'https?://[^\s]+',
+			repeat('x', 23),
+			'g'
+		),
+		'@([a-zA-Z0-9_]+)(?:@[a-zA-Z0-9.-]+)?',
+		'',
+		'g'
+	)) as text_chars_count,
+	CHAR_LENGTH(REGEXP_REPLACE(
+		REGEXP_REPLACE(
+			REGEXP_REPLACE(text, '<[^>]*>', '', 'g'),
+			'https?://[^\s]+',
+			'',
+			'g'
+		)
+		, 
+		'[^A-Z]', 
+		'', 
+		'g'
+	)) AS text_uppercase_count,
+  (
+    array_length(regexp_split_to_array(text, '<p[^>]*>', 'gi'), 1) - 1 +
+    array_length(regexp_split_to_array(text, '<br[^>]*>', 'gi'), 1) - 1 +
+    array_length(regexp_split_to_array(text, '<div[^>]*>', 'gi'), 1) - 1 +
+    array_length(regexp_split_to_array(text, '<h[1-6][^>]*>', 'gi'), 1) - 1 +
+    array_length(regexp_split_to_array(text, '<li[^>]*>', 'gi'), 1) - 1
+  ) AS text_newlines_count,
+  array_length(
+    regexp_split_to_array(
+      text, 
+      '(?<=[^[:alnum:]:]|\n|^):([a-zA-Z0-9_]{2,}):(?=[^[:alnum:]:]|$)', 
+      'g'
+    ), 1
+  ) - 1 AS text_custom_emojis_count
 FROM statuses
 WITH (
   type = 'append-only',
