@@ -8,11 +8,7 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   type INT,
   event_time TIMESTAMP,
   status_age_in_seconds BIGINT,
-  favourite_id BIGINT,
-  reblog_id BIGINT,
-  reply_id BIGINT,
-  poll_vote_id BIGINT,
-  bookmark_id BIGINT,
+  entity_id BIGINT,
 
   -- account
   source_domain VARCHAR,
@@ -43,6 +39,7 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   num_poll_options INT DEFAULT 0,
   allows_multiple_poll_options BOOLEAN DEFAULT false,
   hides_total_poll_options BOOLEAN DEFAULT false,
+  has_quote BOOLEAN DEFAULT false,
   has_image BOOLEAN DEFAULT false,
   has_gifv BOOLEAN DEFAULT false,
   has_video BOOLEAN DEFAULT false,
@@ -72,11 +69,7 @@ SELECT
   e.type,
   e.event_time,
   EXTRACT(EPOCH FROM (e.event_time - s.created_at))::BIGINT AS status_age_in_seconds,
-  e.favourite_id,
-  e.reblog_id,
-  e.reply_id,
-  e.poll_vote_id,
-  e.bookmark_id,
+  e.entity_id,
   
   -- account
   a.domain as source_domain,
@@ -107,6 +100,7 @@ SELECT
   s.num_poll_options,
   s.allows_multiple_poll_options,
   s.hides_total_poll_options,
+  s.has_quote,
   s.has_image,
   s.has_gifv,
   s.has_video,

@@ -22,7 +22,10 @@ CREATE TABLE IF NOT EXISTS statuses (
     in_reply_to_account_id BIGINT,
     poll_id BIGINT,
     deleted_at TIMESTAMP,
-    edited_at TIMESTAMP
+    edited_at TIMESTAMP,
+    trendable BOOLEAN,
+    ordered_media_attachment_ids BIGINT[],
+    quote_approval_policy INT
 ) FROM pg_source TABLE 'public.statuses';
 
 CREATE INDEX IF NOT EXISTS idx_statuses_reblog_of_id ON statuses(reblog_of_id);

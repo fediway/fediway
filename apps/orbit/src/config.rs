@@ -61,7 +61,7 @@ fn default_qdrant_collection_prefix() -> String {
     "orbit".into()
 }
 fn default_qdrant_max_batch_size() -> usize {
-    100
+    500
 }
 fn default_producer_engagement_threshold() -> usize {
     50

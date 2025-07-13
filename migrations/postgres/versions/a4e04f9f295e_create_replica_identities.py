@@ -45,6 +45,7 @@ TABLES = [
     "preview_card_trends",
     "preview_cards",
     "preview_cards_statuses",
+    "quotes",
     "reports",
     "session_activations",
     "status_edits",
