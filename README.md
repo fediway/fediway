@@ -4,7 +4,7 @@
 
 # About Fediway
 
-Fediway brings algorithmic feeds to Mastodon in an attempt to make decentralised social media more attractive to new users. Fediway feeds can be integrated into an existing mastodon instance without requiring a custom fork or modifications to the core codebase. You can simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway API.
+Fediway brings algorithmic feeds to Mastodon. Fediway feeds can be integrated into an existing mastodon instance without requiring a custom fork or modifications to the core codebase. You can simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway API.
 
 > **NOTE:** This project is currently a work in progress and is in an unstable state. Features may be incomplete or subject to change. Use with caution.
 
@@ -29,7 +29,7 @@ The only discovery feed is the "trending" page, which favors posts with more rec
 
 Most importantly, Algorithms that decide what content is seen already have a significant impact on our society. They influence what we buy, what we like and what news we consume. As a society we have a great interest in ensuring these algorithms are fair. Most popular centralized platforms keep the inner workings of their algorithms a secret. However, observational studies indicate a strong bias that often aligns with the political agendas of their owners. The lack of transparency poses a significant threat to society, as it conceals potential misuse from the public. Additionally, most algorithms are designed to maximize scroll time and engagement to increase ad exposure and profits. This creates addictive patterns by triggering frequent dopamine releases, which has proven especially harmful to young users. 
 
-There is an urgent need for public discourse on how to how mitigating potential harm to users, how to ensure fairness, and how the feed algorithms should work. Rather than abandoning recommendation algorithms completely, Fediway open-sources them, allowing a debate and community participation in reaching these goals while also distributing content precisely to the right audience.
+There is an urgent need for public discourse on how to how mitigating potential harm to users, how to ensure fairness, and how feed algorithms should work. Rather than abandoning recommendation algorithms completely, Fediway open-sources them, allowing a debate and community participation in reaching these goals while also distributing content precisely to the right audience.
 
 <a name="architecture"></a>
 
