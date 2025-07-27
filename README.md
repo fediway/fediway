@@ -1,6 +1,10 @@
 # Fediway Feeds
 
-Fediway brings algorithmic feeds to Mastodon in an attempt to make decentralised social media more attractive to new users. Fediway feeds can be integrated into an existing mastodon server by simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway server.
+<p align="center">
+    <img width="350px" style="max-width:100%;" src="logo.png">
+</p>
+
+Fediway brings algorithmic feeds to Mastodon in an attempt to make decentralised social media more attractive to new users. Fediway feeds can be integrated into an existing mastodon instance without requiring a custom fork or modifications to the core codebase. You can simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway API.
 
 > **NOTE:** This project is currently a work in progress and is in an unstable state. Features may be incomplete or subject to change. Use with caution.
 
@@ -11,7 +15,7 @@ Fediway brings algorithmic feeds to Mastodon in an attempt to make decentralised
     - [Recommendation Engine](#engine)
     - [Candidate Sources](#sources)
 - [Setup](#setup)
-
+  
 <a name="architecture"></a>
 
 ## Architecture
@@ -64,7 +68,7 @@ for r in recommendations:
 
 ### Candidate Sources
 
-Narrowing down the vast pool consiting of up to billions of potential posts to recommend is a critical step in finding posts that users are actually interested in. 
+Narrowing down the vast pool consiting of up to billions of potential posts to recommend is a critical step in finding posts that are potentially relevant to the user.
 
 <a name="setup"></a>
 
@@ -72,10 +76,10 @@ Narrowing down the vast pool consiting of up to billions of potential posts to r
 
 Fediway requires the following services:
 
-- [Memgraph](https://memgraph.com/) - In memory graph database for candidate sourcing
 - [RisingWave](https://risingwave.com/) - Streaming database serving real time features for ML inference
 - [Apache Kafka](https://kafka.apache.org/) - Message broker for ingesting data into memgraph, serving real time features and more
-- [Qdrant](https://qdrant.tech/) (Optional) - Vector database for content based candidates sourcing
+- [Memgraph](https://memgraph.com/) - In memory graph database for candidate sourcing
+- [Qdrant](https://qdrant.tech/) - Vector database for content based candidate sourcing
 
 <details>
 
