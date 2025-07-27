@@ -1,8 +1,8 @@
-# Fediway Feeds
-
 <p align="center">
     <img width="350px" style="max-width:100%;" src="logo.png">
 </p>
+
+# About Fediway
 
 Fediway brings algorithmic feeds to Mastodon in an attempt to make decentralised social media more attractive to new users. Fediway feeds can be integrated into an existing mastodon instance without requiring a custom fork or modifications to the core codebase. You can simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway API.
 
