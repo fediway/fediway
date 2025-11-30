@@ -14,7 +14,6 @@ Fediway brings algorithmic feeds to Mastodon. Fediway feeds can be integrated in
 - [Architecture](#architecture)
 - [The Algorithm](#how_it_works)
     - [Recommendation Engine](#engine)
-    - [Candidate Sources](#sources)
 - [Setup](#setup)
 
 <a name="architecture"></a>
@@ -78,12 +77,6 @@ recommendations = pipeline.execute()
 for r in recommendations:
     print(r.id, r.score)
 ```
-
-<a name="sources"></a>
-
-### Candidate Sources
-
-Narrowing down the vast pool consiting of up to billions of potential posts to recommend is a critical step in finding posts that are potentially relevant to the user.
 
 <a name="setup"></a>
 
