@@ -125,7 +125,7 @@ services:
       - "-c"
       - "wal_level=logical"
     volumes:
-      - ./../postgres16:/var/lib/postgresql/data
+      - ./data/postgres16:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     networks:
