@@ -3,6 +3,7 @@ psycopg2-binary==2.9.10
 fastapi[standard]==0.115.12
 uvicorn==0.34.0
 maxminddb==2.6.3
+click==8.2
 typer==0.15.2
 loguru==0.7.3
 pydantic_settings==2.8.1
