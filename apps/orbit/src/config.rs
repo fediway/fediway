@@ -18,6 +18,23 @@ fn default_rw_pass() -> String {
 fn default_rw_name() -> String {
     "dev".into()
 }
+
+fn default_db_host() -> String {
+    "localhost".into()
+}
+fn default_db_port() -> u16 {
+    5432
+}
+fn default_db_user() -> String {
+    "mastodon".into()
+}
+fn default_db_pass() -> String {
+    "".into()
+}
+fn default_db_name() -> String {
+    "mastodon_development".into()
+}
+
 fn default_redis_host() -> String {
     "localhost".into()
 }
@@ -101,6 +118,21 @@ pub struct Config {
 
     #[serde(default = "default_rw_name")]
     pub rw_name: String,
+
+    #[serde(default = "default_db_host")]
+    pub db_host: String,
+
+    #[serde(default = "default_db_port")]
+    pub db_port: u16,
+
+    #[serde(default = "default_db_user")]
+    pub db_user: String,
+
+    #[serde(default = "default_db_pass")]
+    pub db_pass: String,
+
+    #[serde(default = "default_db_name")]
+    pub db_name: String,
 
     #[serde(default = "default_redis_host")]
     pub redis_host: String,
@@ -214,6 +246,13 @@ impl Config {
         format!(
             "host={} user={} password={} dbname={} port={}",
             self.rw_host, self.rw_user, self.rw_pass, self.rw_name, self.rw_port
+        )
+    }
+
+    pub fn db_conn(&self) -> String {
+        format!(
+            "host={} user={} password={} dbname={} port={}",
+            self.db_host, self.db_user, self.db_pass, self.db_name, self.db_port
         )
     }
 

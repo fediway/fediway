@@ -10,7 +10,7 @@ pub async fn get_tag_similarities(
     min_authors: usize,
     min_engagers: usize,
 ) -> impl Iterator<Item = (i64, i64, f64)> {
-    let query = r#"
+    let query: &str = r#"
     SELECT
         e1.tag_id AS tag1,
         e2.tag_id AS tag2,

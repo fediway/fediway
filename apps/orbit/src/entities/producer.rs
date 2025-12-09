@@ -68,7 +68,6 @@ impl<E: Embedded> UpdateEmbedding<E> for Producer {
             // (self.embedding.0.dim() / 15)
             //     .max(MAX_SPARSITY)
             //     .min(MIN_SPARSITY),
-
             10,
         );
 

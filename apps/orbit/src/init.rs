@@ -1,5 +1,6 @@
 use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
+use crate::db;
 use crate::debezium::DebeziumEvent;
 use crate::embedding::{Embeddings, FromEmbedding};
 use crate::entities::{consumer::Consumer, producer::Producer, tag::Tag};
@@ -11,6 +12,16 @@ use nalgebra_sparse::csr::CsrMatrix;
 use petgraph::graph::UnGraph;
 use std::time::Instant;
 use tokio_postgres::Client;
+
+pub async fn compute_embeddings(config: Config, communities: Communities) {
+    let (db, connection) = tokio_postgres::connect(&config.db_conn(), tokio_postgres::NoTls)
+        .await
+        .unwrap();
+
+    let (at_matrix, a_indices) = db::get_at_matrix(&db, &communities).await;
+
+    println!("{:?}", at_matrix);
+}
 
 pub async fn get_initial_embeddings(config: Config) -> Embeddings {
     let (db, connection) = tokio_postgres::connect(&config.rw_conn(), tokio_postgres::NoTls)
