@@ -20,15 +20,13 @@ Fediway brings algorithmic feeds to Mastodon. Fediway feeds can be integrated in
 
 ## Why do we need algorithmic feeds?
 
-> "... see it all in chronological order. No algorithms, ads, or clickbait in sight."
+> "... see it all in chronological order. **No algorithms**, ads, or clickbait in sight."
 
-This is how Mastodon advertises its platform on the frontpage and it sounds great right? Back to the good old times of chronological timelines without any filter bubbles. And it is great ... but only for a niche audience, many of whom already use the platform. The decision of abandoning recommendations comes at a cost. New users face empty feeds and must actively search for content they like. Ultimately, only those users stay, whose interest in using Mastodon as advertised outweighs the initial challenge of finding their way around. 
+This is how Mastodon advertises its platform on their frontpage and it sounds great right? Back to the good old times of chronological timelines. And it is great ... but only for a niche audience, many of whom already use the platform. The decision of abandoning recommendations comes at a cost. New users face empty feeds and must actively search for content they like. 
 
-The only discovery feed is the "trending" page, which favors posts with more recent engagements. This leads to mainstream bias often dominated by US politics, one of the largest filter bubbles out there. For authors of niche content (e.g.: a Café or a small shop), it is much harder to build an audience and reach potential customers on Mastodon than on popular centralized platforms as there is no system precisely distributing their content to the right audience. With social media being the most important marketing channel for many businesses, this marks a serious issue that leads to many not considering Mastodon as a viable alternative.
+Without efficient content-distribution, the "trending" page becomes dominated by mainstream content, while niche creators struggle to reach their audience. This creates a significant barrier that prevents Mastodon from becoming a true alternative to centralized platforms. 
 
-Most importantly, Algorithms that decide what content is seen have a significant impact on our society. They influence what we buy, what we like and what news we consume. As a society we have a great interest in ensuring these algorithms are fair. Most popular centralized platforms keep the inner workings of their algorithms a secret. However, observational studies indicate a strong bias aligning with the political agenda of their owners. The lack of transparency poses a significant threat to society, as it conceals potential misuse from the public. Furthermore, feed-algorithms on popular platforms are designed to maximize scroll time to increase ad exposure and profits. This creates addictive patterns by triggering frequent dopamine releases, which has proven especially harmful to young users. 
-
-There is an urgent need for public discourse on how to how mitigating potential harm to users, how to ensure fairness, and how feed algorithms should work. Rather than abandoning recommendation algorithms completely, Fediway open-sources them, allowing a debate and community participation in reaching these goals while also distributing content precisely to the right audience.
+To become a true alternative, decentralized platforms need a robust solution for content discovery that doesn't compromise their core values. Fediway implements the tool that makes this possible: An open-source framework that let's you to design, test and implement your own recommendation algorithms for your Mastodon instance. Join us to build algorithms that serve people. Let's make the Fediverse attractable to anyone!
 
 <a name="architecture"></a>
 
