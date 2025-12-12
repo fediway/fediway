@@ -32,7 +32,7 @@ To become a true alternative, decentralized platforms need a robust solution for
 
 ## Architecture
 
-![Fediway Architecture](architecture.jpg "Fediway Architecture")
+![Fediway Recommendation Pipeline](architecture.png "Fediway Recommendation Pipeline")
 
 <a name="how_it_works"></a>
 
