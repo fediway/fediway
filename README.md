@@ -16,7 +16,7 @@ Fediway brings algorithmic feeds to Mastodon. Fediway feeds can be integrated in
     - [Recommendation Engine](#engine)
 - [Setup](#setup)
 
-<a name="architecture"></a>
+<a name="why"></a>
 
 ## Why do we need algorithmic feeds?
 
