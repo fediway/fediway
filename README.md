@@ -36,7 +36,7 @@ To become a true alternative, decentralized platforms need a robust solution for
 
 Many alternatives implementing algorithmic feeds for Mastodon as client-side tools. However client-side solutions have significant limitations for distributing content to the right audience. They bring complexity to users that are not familiar with the working of decentralized social networks. Users have to action on their own to be able to use them. For example: create an API-Key, install a browser extension or install a desktop app. Client-side solutions are also inheritely limited in distributing content to the right user. 
 
-The complexity of the fediverse is a significant problem that limits user growth, attracting mostly technical users. Making the Fediverse accessible to everyone requires solutions that hide complexity from the user. Server-side recommendations shift this complexity from the user from the user to the platform itself. Furthermore, server-side recommendations enable more advanced recommendation logic that improves content discovery and can increase the likelihood of new visitors registering to an instance.
+The complexity of the fediverse is a significant problem that limits user growth, attracting mostly technical users. Making the Fediverse accessible to everyone requires solutions that hide complexity from the user. Server-side recommendations shift this complexity from the user to the platform itself. Furthermore, server-side recommendations enable more advanced recommendation logic that improves content discovery and can increase the likelihood of new visitors registering to an instance.
 
 <a name="architecture"></a>
 
