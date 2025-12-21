@@ -12,9 +12,9 @@ Fediway solves content discovery on Mastodon with the first advanced server-side
 
 - [Why do we need algorithmic feeds?](#why)
 - [Why server-side?](#server-side)
-- [Architecture](#architecture)
 - [The Algorithm](#how_it_works)
-    - [Recommendation Engine](#engine)
+  - [Architecture](#architecture)
+  - [Recommendation Engine](#engine)
 - [Alternatives](#alternatives)
 - [Setup](#setup)
 
@@ -38,12 +38,6 @@ Many alternatives implementing algorithmic feeds for Mastodon as client-side too
 
 The complexity of the fediverse is a significant problem that limits user growth, attracting mostly technical users. Making the Fediverse accessible to everyone requires solutions that hide complexity from the user. Server-side recommendations shift this complexity from the user to the platform itself. Furthermore, server-side recommendations enable more advanced recommendation logic that improves content discovery and can increase the likelihood of new visitors registering to an instance.
 
-<a name="architecture"></a>
-
-## Architecture
-
-![Fediway Recommendation Pipeline](architecture.png "Fediway Recommendation Pipeline")
-
 <a name="how_it_works"></a>
 
 ## How it works?
@@ -53,6 +47,12 @@ The algorithm follows of a multi-stage pipeline that consists of the following m
 1. **Candidate Sourcing**: ~1000 Posts are fetched from various sources which aim to preselect the best candidates from recent posts.
 2. **Ranking**: The candidates are ranked by a machine learning model that estimates the likelihood of user interaction with each candidate.
 3. **Sampling**: In the final stage, heuristics are applied to diversify recommendations which are sampled depending on the engagement scores estimated in the ranking step.
+
+<a name="architecture"></a>
+
+### Architecture
+
+![Fediway Recommendation Pipeline](architecture.png "Fediway Recommendation Pipeline")
 
 <a name="engine"></a>
 
