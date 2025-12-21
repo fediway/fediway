@@ -4,16 +4,18 @@
 
 # About Fediway
 
-Fediway brings algorithmic feeds to Mastodon. Fediway feeds can be integrated into an existing mastodon instance without requiring a custom fork or modifications to the core codebase. You can simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway API.
+Fediway solves content discovery on Mastodon with the first advanced server-side recommendation pipeline. Fediway is a server-side plugin for Mastodon that can be integrated into an existing Mastodon instance without requiring a custom fork or modifications to the core codebase. You can simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway API.
 
 > **NOTE:** This project is currently a work in progress and is in an unstable state. Features may be incomplete or subject to change. Use with caution.
 
 ## Table Of Contents
 
 - [Why do we need algorithmic feeds?](#why)
+- [Why server-side?](#server-side)
 - [Architecture](#architecture)
 - [The Algorithm](#how_it_works)
     - [Recommendation Engine](#engine)
+- [Alternatives](#alternatives)
 - [Setup](#setup)
 
 <a name="why"></a>
@@ -27,6 +29,12 @@ This is how Mastodon advertises its platform on their frontpage and it sounds gr
 Without efficient content-distribution, the "trending" page becomes dominated by mainstream content, while niche creators struggle to reach their audience. This creates a significant barrier that prevents Mastodon from becoming a true alternative to centralized platforms. 
 
 To become a true alternative, decentralized platforms need a robust solution for content discovery that doesn't compromise their core values. Fediway implements the tool that makes this possible: An open-source framework that let's you to design, test and implement your own recommendation algorithms for your Mastodon instance. Join us to build algorithms that serve people. Let's make the Fediverse attractable to anyone!
+
+<a name="server-side"></a>
+
+## Why server-side?
+
+Many alternatives implementing algorithmic feeds for Mastodon as client-side tools. However client-side solutions have significant limitations for distributing content to the right audience. They bring complexity to users that are not familiar with the working of decentralized social networks. Users have to action on their own to be able to use them. For example: create an API-Key, install a browser extension or install a desktop app. Client-side solutions are also inheritely limited distributing content to the right user. The complexity of the fediverse is a significant problem problem that limits user growth to more technical users. Making the Fediverse accessible to everyone requires solutions that hide complexity from the user. Server-side recommendations shift this complexity from the user from the user to the platform itself. Furthermore, server-side recommendations enable more advanced recommendation logic that improves content discovery and can increase the likelihood of new visitors registering to an instance.
 
 <a name="architecture"></a>
 
@@ -75,6 +83,21 @@ recommendations = pipeline.execute()
 for r in recommendations:
     print(r.id, r.score)
 ```
+
+
+
+<a name="alternatives"></a>
+
+## Alternatives
+
+| Project | Server/Client-Side | Last Activity | Description |
+| --- | --- | --- | --- |
+| Fediway | Server-Side | <img src="https://img.shields.io/github/last-commit/fediway/fediway" alt="Last commit"> | Advanced recommendation framework that can be installed into an existing mastodon server. |
+| [BYOTA](https://github.com/mozilla-ai/byota) | Client-Side | <img src="https://img.shields.io/github/last-commit/mozilla-ai/byota" alt="Last commit"> | Mozilla’s research project for user-controlled timeline ranking. |
+| [fediview](https://github.com/adamghill/fediview) | Client-Side | <img src="https://img.shields.io/github/last-commit/adamghill/fediview" alt="Last commit"> | Web-based client that provides a digest of popular posts and boosts from your Mastodon timeline. |
+| [fedialgo](https://github.com/pkreissel/fedialgo) | Client-Side | <img src="https://img.shields.io/github/last-commit/pkreissel/fedialgo" alt="Last commit"> | Local mastodon client, that reorders your chronological timeline, with customization options. |
+| [Mastodon Digest](https://github.com/hodgesmr/mastodon_digest) | Client-Side | <img src="https://img.shields.io/github/last-commit/hodgesmr/mastodon_digest" alt="Last commit"> | Generates a digest of popular posts from your Mastodon timeline, with customizable scoring algorithms and themes. |
+| [Fedi-Feed](https://github.com/pkreissel/fedifeed) | Client-Side | <img src="https://img.shields.io/github/last-commit/pkreissel/fedifeed" alt="Last commit"> | Web-based client that displays Mastodon posts in a curated feed with a user-customizable algorithm. |
 
 <a name="setup"></a>
 
