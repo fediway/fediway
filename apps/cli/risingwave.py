@@ -12,10 +12,10 @@ app = typer.Typer(help="RisingWave commands.")
 
 def get_context():
     return {
-        "db_host": config.db.rw_pg_host or db_host,
+        "db_host": config.db.rw_db_host or config.db.db_host,
         "db_port": config.db.db_port,
-        "db_user": config.db.rw_pg_user,
-        "db_pass": config.db.rw_pg_pass.get_secret_value(),
+        "db_user": config.db.rw_db_user,
+        "db_pass": config.db.rw_db_pass.get_secret_value(),
         "db_name": config.db.db_name,
         "bootstrap_server": config.db.rw_kafka_bootstrap_servers,
         "k_latest_account_favourites_embeddings": config.embed.k_latest_account_favourites_embeddings,

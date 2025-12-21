@@ -23,6 +23,61 @@ def load_tag_engagements_from_file(path):
     return df
 
 
+def load_tagsimilarities_from_db(db: Session, start: datetime, end: datetime):
+    query = text(f"""
+        WITH base_engagements AS (
+            SELECT
+                e.account_id,
+                e.author_id,
+                e.status_id,
+                st.tag_id
+            FROM enriched_status_engagement_events e
+            JOIN statuses_tags st ON st.status_id = e.status_id
+            WHERE e.event_time > :start AND e.event_time <= :end
+            AND e.author_silenced_at IS NULL 
+            AND e.account_silenced_at IS NULL
+            AND e.sensitive != true
+        ),
+        orbit_tag_performance AS (
+            SELECT
+                tag_id,
+                COUNT(DISTINCT account_id) AS num_engaged_accounts,
+                COUNT(DISTINCT author_id) AS num_authors,
+                COUNT(DISTINCT status_id) AS num_statuses
+            FROM base_engagements
+            GROUP BY tag_id
+        ),
+        orbit_account_tag_engagements AS (
+            SELECT DISTINCT account_id, tag_id
+            FROM base_engagements
+        ),
+        qualified_tags AS (
+            SELECT tag_id
+            FROM orbit_tag_performance
+            WHERE num_engaged_accounts >= 15
+        )
+        SELECT
+            e1.tag_id AS tag1,
+            e2.tag_id AS tag2,
+            COUNT(DISTINCT e1.account_id)::FLOAT / 
+                SQRT(
+                    MAX(t1.num_engaged_accounts) * 
+                    MAX(t2.num_engaged_accounts)
+                ) AS cosine_sim
+        FROM orbit_account_tag_engagements e1
+        JOIN orbit_account_tag_engagements e2 
+            ON e2.account_id = e1.account_id 
+            AND e1.tag_id < e2.tag_id
+        JOIN qualified_tags qt1 ON qt1.tag_id = e1.tag_id
+        JOIN qualified_tags qt2 ON qt2.tag_id = e2.tag_id
+        JOIN orbit_tag_performance t1 ON t1.tag_id = e1.tag_id
+        JOIN orbit_tag_performance t2 ON t2.tag_id = e2.tag_id
+        GROUP BY e1.tag_id, e2.tag_id;
+    """)
+
+    # todo:
+
+
 def load_tag_engagements_from_db(db: Session, start: datetime, end: datetime):
     query = text(f"""
         WITH engagements AS (

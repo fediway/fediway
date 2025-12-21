@@ -3,7 +3,7 @@ use crate::config::Config;
 use crate::db;
 use crate::debezium::DebeziumEvent;
 use crate::embedding::{Embeddings, FromEmbedding};
-use crate::entities::{consumer::Consumer, producer::Producer, tag::Tag};
+use crate::entities::tag::Tag;
 use crate::rw;
 use crate::sparse::SparseVec;
 use crate::types::{FastDashMap, FastHashMap, FastHashSet};
@@ -18,12 +18,18 @@ pub async fn compute_embeddings(config: Config, communities: Communities) {
         .await
         .unwrap();
 
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            tracing::error!("risingwave connection error: {}", e);
+        }
+    });
+
     let (at_matrix, a_indices) = db::get_at_matrix(&db, &communities).await;
 
     println!("{:?}", at_matrix);
 }
 
-pub async fn get_initial_embeddings(config: Config) -> Embeddings {
+pub async fn get_initial_embeddings(config: Config, communities: Communities) -> Embeddings {
     let (db, connection) = tokio_postgres::connect(&config.rw_conn(), tokio_postgres::NoTls)
         .await
         .unwrap();
@@ -34,14 +40,13 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
         }
     });
 
-    // 1. compute communities
-    let communities = get_communities(&config, &db).await;
-
     // 2. compute initial consumer embeddings
     let (tc_matrix, t_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
         communities.clone().into();
+
     let (at_matrix, a_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
         rw::get_at_matrix(&db, &t_indices).await;
+        
     let ac_matrix: CsrMatrix<f64> = &at_matrix * &tc_matrix;
     tracing::info!(
         "Computed initial embeddings for {} consumers",
@@ -76,11 +81,9 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
     // let tags: FastDashMap<i64, Tag> = FastDashMap::default();
 
     for (tag_id, community) in communities.tags.iter() {
-        // tags.insert(
-        //     *tag_id,
-        //     Tag::from_embedding(SparseVec::new(communities.dim, vec![*community], vec![1.0])),
-        // );
-        tags.get_mut(tag_id).unwrap().set_community(*community);
+        if let Some(mut tag) = tags.get_mut(tag_id) {
+            tag.set_community(*community);
+        }
     }
 
     let embeddings = Embeddings::initial(communities, consumers, producers, tags);

@@ -24,11 +24,11 @@ class DBConfig(BaseConfig):
     rw_migrations_paths: list[str] = ["migrations/risingwave"]
     rw_migrations_table: str = "migrations"
 
-    rw_pg_host: str | None = None
-    rw_pg_user: str = "risingwave"
-    rw_pg_pass: SecretStr = "password"
+    rw_db_host: str | None = None
+    rw_db_user: str = "risingwave"
+    rw_db_pass: SecretStr = "password"
 
-    rw_kafka_bootstrap_servers: str = "kafka:9092"
+    rw_kafka_bootstrap_servers: str = "localhost:9092"
 
     @property
     def url(self):

@@ -11,90 +11,73 @@ pub async fn get_at_matrix(
     communities: &Communities,
 ) -> (CsrMatrix<f64>, FastHashMap<i64, usize>) {
     let mut entries = Vec::new();
+    let mut n = 0;
     for tags in communities
         .tags
         .keys()
         .cloned()
         .collect::<Vec<i64>>()
-        .chunks(2)
+        .chunks(10)
     {
-        println!("tags: {:?}", tags);
+        n += tags.len();
+
+        println!("{:?}/{:?}", n, communities.dim);
 
         let placeholders: Vec<String> = (1..=tags.len()).map(|i| format!("${}", i)).collect();
         let query = format!(
             r#"
-            WITH engagements AS (
-                SELECT 
-                    f.account_id,
-                    f.status_id,
-                    0 AS type,
-                    f.id as entity_id,
-                    f.created_at AS event_time
-                FROM favourites f
-
-                UNION
-
-                SELECT 
-                    s.account_id,
-                    s.reblog_of_id AS status_id,
-                    1 AS type,
-                    s.id as entity_id,
-                    s.created_at AS event_time
-                FROM statuses s
-                WHERE s.reblog_of_id IS NOT NULL
-
-                UNION
-
-                SELECT
-                    s.account_id,
-                    s.in_reply_to_id AS status_id,
-                    2 AS type,
-                    s.id as entity_id,
-                    s.created_at AS event_time
-                FROM statuses s
-                WHERE s.in_reply_to_id IS NOT NULL
-
-                UNION
-
-                SELECT
-                    v.account_id,
-                    p.status_id as status_id,
-                    3 AS type,
-                    v.id as entity_id,
-                    v.created_at AS event_time
-                FROM poll_votes v
-                JOIN polls p ON p.id = v.poll_id
-
-                UNION
-
-                SELECT
-                    account_id,
-                    status_id,
-                    4 AS type,
-                    id as entity_id,
-                    created_at AS event_time
-                FROM bookmarks
-
-                UNION
-
-                SELECT
-                    account_id,
-                    quoted_status_id as status_id,
-                    5 AS type,
-                    status_id as entity_id,
-                    created_at AS event_time
-                FROM quotes
-                WHERE state = 1
+            WITH target_statuses AS (
+                SELECT status_id
+                FROM statuses_tags
+                WHERE tag_id IN ({})
             )
             SELECT 
                 e.account_id,
                 st.tag_id,
                 COUNT(*) AS interactions
             FROM 
-                statuses_tags st
+                target_statuses ts
             JOIN 
-                engagements e ON e.status_id = st.status_id
-            WHERE st.tag_id IN ({})
+                statuses_tags st ON ts.status_id = st.status_id
+            JOIN (
+                SELECT 
+                    f.account_id,
+                    f.status_id
+                FROM favourites f
+                WHERE f.status_id IN (SELECT status_id FROM target_statuses)
+                UNION ALL
+                SELECT 
+                    s.account_id,
+                    s.reblog_of_id AS status_id
+                FROM statuses s
+                WHERE s.reblog_of_id IN (SELECT status_id FROM target_statuses)
+                UNION ALL
+                SELECT
+                    s.account_id,
+                    s.in_reply_to_id AS status_id
+                FROM statuses s
+                WHERE s.in_reply_to_id IN (SELECT status_id FROM target_statuses)
+                UNION ALL
+                SELECT
+                    v.account_id,
+                    p.status_id as status_id
+                FROM poll_votes v
+                JOIN polls p ON p.id = v.poll_id
+                WHERE p.status_id IN (SELECT status_id FROM target_statuses)
+                UNION ALL
+                SELECT
+                    b.account_id,
+                    b.status_id
+                FROM bookmarks b
+                WHERE b.status_id IN (SELECT status_id FROM target_statuses)
+                UNION ALL
+                SELECT
+                    q.account_id,
+                    q.quoted_status_id as status_id
+                FROM quotes q
+                WHERE state = 1 
+                AND q.status_id IN (SELECT status_id FROM target_statuses)
+            ) e ON e.status_id = st.status_id
             GROUP BY 
                 e.account_id,
                 st.tag_id;
@@ -109,9 +92,13 @@ pub async fn get_at_matrix(
             let account_id: i64 = row.get(0);
             let tag_id: i64 = row.get(1);
             let value: i64 = row.get(2);
+
             entries.push((account_id, tag_id, value));
         }
     }
+    
+    println!("{}", entries.len());
+    std::process::exit(1);
 
     let n_rows = entries.iter().map(|(a, _, _)| a).unique().count();
     let n_cols = communities.dim;

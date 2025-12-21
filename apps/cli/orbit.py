@@ -145,8 +145,13 @@ def compute_communities(
     if source == "db":
         with db_session() as db:
             df = load_tag_engagements_from_db(db, start, date)
+    elif source == "rw":
+        # TODO
+        raise NotImplementedError
     else:
-        df = load_tag_engagements_from_file(source)
+        raise ValueError
+    # else:
+    #     df = load_tag_engagements_from_file(source)
 
     # unique account ids
     df["accounts"] = df["accounts"].apply(lambda x: set(x))
