@@ -84,7 +84,7 @@ fn default_producer_engagement_threshold() -> usize {
     50
 }
 fn default_status_engagement_threshold() -> usize {
-    5
+    1
 }
 fn default_tag_engagement_threshold() -> usize {
     10

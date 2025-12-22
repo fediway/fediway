@@ -10,7 +10,7 @@ use crate::{
 const MIN_SPARSITY: usize = 5;
 const MAX_SPARSITY: usize = 100;
 
-const ALPHA: f64 = 0.0001;
+const ALPHA: f64 = 0.00025;
 const BETA: f64 = 1.0;
 const GAMMA: f64 = 0.05;
 
@@ -106,11 +106,11 @@ impl Entity for Status {
             return false;
         }
 
-        // skip updating embeddings of statuses that are to old
-        let status_age = self.created_at.elapsed().unwrap().as_secs();
-        if status_age > config.max_status_age {
-            return false;
-        }
+        // // skip updating embeddings of statuses that are to old
+        // let status_age = self.created_at.elapsed().unwrap().as_secs();
+        // if status_age > config.max_status_age {
+        //     return false;
+        // }
 
         true
     }

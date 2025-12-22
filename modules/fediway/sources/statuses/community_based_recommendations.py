@@ -4,6 +4,7 @@ import asyncio
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import LookupLocation
+from qdrant_client.http.exceptions import UnexpectedResponse
 
 from modules.fediway.feed.features import Features
 
@@ -30,15 +31,19 @@ class CommunityBasedRecommendationsSource(Source):
     def collect(self, limit: int):
         version = self._fetch_embeddings_version().decode("utf8")
 
-        results = self.client.recommend(
-            collection_name=f"orbit_{version}_statuses",
-            positive=[self.account_id],
-            limit=limit,
-            using="embedding",
-            lookup_from=LookupLocation(
-                collection=f"orbit_{version}_consumers", vector="embedding"
-            ),
-        )
+        try:
+            results = self.client.recommend(
+                collection_name=f"orbit_{version}_statuses",
+                positive=[self.account_id],
+                limit=limit,
+                using="embedding",
+                lookup_from=LookupLocation(
+                    collection=f"orbit_{version}_consumers", vector="embedding"
+                ),
+            )
+        except UnexpectedResponse:
+            # TODO: log error
+            return
 
         for point in results:
             yield point.id

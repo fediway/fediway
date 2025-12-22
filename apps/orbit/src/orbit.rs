@@ -67,6 +67,8 @@ impl Orbit {
             })
             .collect();
 
+        
+
         // start status purge worker
         let status_purge_worker = StatusPurgeWorker::new(
             self.config.clone(),
@@ -81,7 +83,7 @@ impl Orbit {
 
         // delete old collections
         self.purge_outdated_qdrant_collections().await;
-
+        
         qdrant_worker.await.unwrap();
         for worker in embedding_workers {
             worker.await.unwrap();

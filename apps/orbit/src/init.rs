@@ -1,3 +1,4 @@
+use crate::embedding::{StatusEvent};
 use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
 use crate::db;
@@ -98,23 +99,44 @@ pub async fn get_initial_embeddings(config: Config, communities: Communities) ->
 
     let start = Instant::now();
 
-    for (status, engagement) in results {
-        if !status_ids.contains(&status.status_id) {
-            status_ids.insert(status.status_id);
+    let n: usize = results
+        .map(|(status, engagement)| {
+            let updated = if !status_ids.contains(&status.status_id) {
+                status_ids.insert(status.status_id);
 
-            embeddings.push_status(DebeziumEvent::new_create(status));
-            i += 1;
-        }
+                embeddings.push_status(DebeziumEvent::new_create(status));
+                1
+            } else {
+                0
+            };
 
-        embeddings.push_engagement(engagement);
-        i += 1;
-    }
+            (engagement, updated)
+        })
+        .map(|(engagement, updated)| {
+            embeddings.push_engagement(engagement);
+            1 + updated
+        })
+        .sum();
+
+    // for (status, engagement) in results.iter() {
+    //     if !status_ids.contains(&status.status_id) {
+    //         status_ids.insert(status.status_id);
+
+    //         embeddings.push_status(DebeziumEvent::new_create(status.to_owned()));
+    //         i += 1;
+    //     }
+    // }
+
+    // for (status, engagement) in results {
+    //     embeddings.push_engagement(engagement);
+    //     i += 1;
+    // }
 
     let duration = start.elapsed();
 
     tracing::info!(
         "Seeded initial engagements with {} udpates/second.",
-        (i as f64) / duration.as_secs_f64()
+        (n as f64) / duration.as_secs_f64()
     );
 
     embeddings

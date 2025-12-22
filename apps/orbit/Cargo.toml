@@ -13,7 +13,7 @@ envy = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 petgraph = "0.8"
-qdrant-client = "1.14.0"
+qdrant-client = "1.16.0"
 rand = "0.9.1"
 itertools = "0.14.0"
 nalgebra-sparse = "0.10.0"

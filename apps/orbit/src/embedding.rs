@@ -187,7 +187,7 @@ impl Embeddings {
         let status_id = event.status_id;
         let author_id = event.author_id;
         let event_time = event.event_time;
-
+        
         if account_id == author_id {
             return;
         }
