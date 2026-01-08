@@ -82,12 +82,12 @@ impl<E: Embedded> UpdateEmbedding<E> for Tag {
         // self.embedding *= BETA;
         // self.embedding += &(entity.embedding().to_owned() * (1.0 - BETA));
 
-        self.embedding.keep_top_n(
-            // (self.embedding.0.dim() / 10)
-            //     .max(MAX_SPARSITY)
-            //     .min(MIN_SPARSITY),
-            15,
-        );
+        // self.embedding.keep_top_n(
+        //     // (self.embedding.0.dim() / 10)
+        //     //     .max(MAX_SPARSITY)
+        //     //     .min(MIN_SPARSITY),
+        //     15,
+        // );
 
         // self.embedding.normalize();
 

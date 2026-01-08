@@ -102,6 +102,19 @@ fn default_min_tag_engagers() -> usize {
     15
 }
 
+fn default_consumer_sparsity() -> usize {
+    20
+}
+fn default_producer_sparsity() -> usize {
+    10
+}
+fn default_status_sparsity() -> usize {
+    10
+}
+fn default_tag_sparsity() -> usize {
+    10
+}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct Config {
     #[serde(default = "default_rw_host")]
@@ -232,6 +245,24 @@ pub struct Config {
 
     #[serde(rename = "orbit_tags_blacklist", default = "Vec::default")]
     pub tags_blacklist: Vec<String>,
+
+    #[serde(
+        rename = "orbit_consumer_sparsity",
+        default = "default_consumer_sparsity"
+    )]
+    pub consumer_sparsity: usize,
+
+    #[serde(
+        rename = "orbit_producer_sparsity",
+        default = "default_producer_sparsity"
+    )]
+    pub producer_sparsity: usize,
+
+    #[serde(rename = "orbit_status_sparsity", default = "default_status_sparsity")]
+    pub status_sparsity: usize,
+
+    #[serde(rename = "orbit_tag_sparsity", default = "default_tag_sparsity")]
+    pub tag_sparsity: usize,
 }
 
 impl Config {

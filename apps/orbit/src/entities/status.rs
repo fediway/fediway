@@ -15,7 +15,7 @@ const BETA: f64 = 1.0;
 const GAMMA: f64 = 0.05;
 
 pub struct Status {
-    embedding: SparseVec,
+    pub embedding: SparseVec,
     pub engagements: usize,
     pub created_at: SystemTime,
     last_upserted: Option<SystemTime>,
@@ -72,12 +72,12 @@ impl<E: Embedded> UpdateEmbedding<E> for Status {
                 .collect(),
         );
 
-        self.embedding.keep_top_n(
-            // (self.embedding.0.dim() / 10)
-            //     .max(MAX_SPARSITY)
-            //     .min(MIN_SPARSITY),
-            15,
-        );
+        // self.embedding.keep_top_n(
+        //     // (self.embedding.0.dim() / 10)
+        //     //     .max(MAX_SPARSITY)
+        //     //     .min(MIN_SPARSITY),
+        //     15,
+        // );
         self.last_upserted = Some(event_time);
         self.is_dirty = true;
     }

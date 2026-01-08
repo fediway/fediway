@@ -96,7 +96,7 @@ pub async fn get_at_matrix(
             entries.push((account_id, tag_id, value));
         }
     }
-    
+
     println!("{}", entries.len());
     std::process::exit(1);
 

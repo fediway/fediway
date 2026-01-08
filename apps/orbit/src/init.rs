@@ -1,8 +1,8 @@
-use crate::embedding::{StatusEvent};
 use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
 use crate::db;
 use crate::debezium::DebeziumEvent;
+use crate::embedding::StatusEvent;
 use crate::embedding::{Embeddings, FromEmbedding};
 use crate::entities::tag::Tag;
 use crate::rw;
@@ -47,7 +47,7 @@ pub async fn get_initial_embeddings(config: Config, communities: Communities) ->
 
     let (at_matrix, a_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
         rw::get_at_matrix(&db, &t_indices).await;
-        
+
     let ac_matrix: CsrMatrix<f64> = &at_matrix * &tc_matrix;
     tracing::info!(
         "Computed initial embeddings for {} consumers",
@@ -87,7 +87,7 @@ pub async fn get_initial_embeddings(config: Config, communities: Communities) ->
         }
     }
 
-    let embeddings = Embeddings::initial(communities, consumers, producers, tags);
+    let embeddings = Embeddings::initial(config.clone(), communities, consumers, producers, tags);
 
     // return embeddings;
 
