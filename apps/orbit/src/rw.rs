@@ -10,7 +10,7 @@ pub async fn get_tag_similarities(
     min_authors: usize,
     min_engagers: usize,
 ) -> impl Iterator<Item = (i64, i64, f64)> {
-    let query = r#"
+    let query: &str = r#"
     SELECT
         e1.tag_id AS tag1,
         e2.tag_id AS tag2,
@@ -109,7 +109,7 @@ pub async fn get_at_matrix(
                 COUNT(DISTINCT e.status_id) as count
             FROM enriched_status_engagement_events e
             JOIN statuses_tags st ON st.status_id = e.status_id AND st.tag_id IN ({})
-            WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+            -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
             GROUP BY e.account_id, st.tag_id;
             "#,
             placeholders.join(", ")
@@ -155,7 +155,7 @@ pub async fn get_ta_matrix(
         COUNT(DISTINCT e.status_id) as count
     FROM enriched_status_engagement_events e
     JOIN statuses_tags st ON st.status_id = e.status_id
-    WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+    -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
     GROUP BY e.account_id, st.tag_id;
     "#;
 
@@ -203,7 +203,7 @@ pub async fn get_pa_matrix(
         e.author_id,
         COUNT(DISTINCT e.status_id) as count
     FROM enriched_status_engagement_events e
-    WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+    -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
     GROUP BY e.account_id, e.author_id;
     "#;
 
@@ -255,7 +255,7 @@ pub async fn get_pt_matrix(
             COUNT(DISTINCT e.status_id) as count
         FROM enriched_status_engagement_events e
         JOIN statuses_tags st ON st.status_id = e.status_id AND st.tag_id IN ({})
-        WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+        -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
         GROUP BY e.author_id, st.tag_id;
         "#,
         placeholders.join(", ")
@@ -300,8 +300,8 @@ pub async fn get_initial_engagements(
         s.created_at,
         s.tags
     FROM enriched_statuses s
-    JOIN enriched_status_engagement_events e ON s.status_id = e.status_id
-    WHERE e.event_time > NOW() - INTERVAL '60 DAYS';
+    JOIN enriched_status_engagement_events e ON s.status_id = e.status_id;
+    -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS';
     "#;
 
     let rows = db.query(query, &[]).await.unwrap();

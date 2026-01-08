@@ -10,12 +10,12 @@ use crate::{
 const MIN_SPARSITY: usize = 5;
 const MAX_SPARSITY: usize = 100;
 
-const ALPHA: f64 = 0.0001;
+const ALPHA: f64 = 0.00025;
 const BETA: f64 = 1.0;
 const GAMMA: f64 = 0.05;
 
 pub struct Status {
-    embedding: SparseVec,
+    pub embedding: SparseVec,
     pub engagements: usize,
     pub created_at: SystemTime,
     last_upserted: Option<SystemTime>,
@@ -72,12 +72,12 @@ impl<E: Embedded> UpdateEmbedding<E> for Status {
                 .collect(),
         );
 
-        self.embedding.keep_top_n(
-            // (self.embedding.0.dim() / 10)
-            //     .max(MAX_SPARSITY)
-            //     .min(MIN_SPARSITY),
-            15,
-        );
+        // self.embedding.keep_top_n(
+        //     // (self.embedding.0.dim() / 10)
+        //     //     .max(MAX_SPARSITY)
+        //     //     .min(MIN_SPARSITY),
+        //     15,
+        // );
         self.last_upserted = Some(event_time);
         self.is_dirty = true;
     }
@@ -106,11 +106,11 @@ impl Entity for Status {
             return false;
         }
 
-        // skip updating embeddings of statuses that are to old
-        let status_age = self.created_at.elapsed().unwrap().as_secs();
-        if status_age > config.max_status_age {
-            return false;
-        }
+        // // skip updating embeddings of statuses that are to old
+        // let status_age = self.created_at.elapsed().unwrap().as_secs();
+        // if status_age > config.max_status_age {
+        //     return false;
+        // }
 
         true
     }

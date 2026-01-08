@@ -68,26 +68,26 @@ impl Orbit {
             .collect();
 
         // start status purge worker
-        let status_purge_worker = StatusPurgeWorker::new(
-            self.config.clone(),
-            format!("{}_statuses", self.collection_prefix),
-        )
-        .start(qdrant_tx, self.embeddings.clone())
-        .await;
+        // let status_purge_worker = StatusPurgeWorker::new(
+        //     self.config.clone(),
+        //     format!("{}_statuses", self.collection_prefix),
+        // )
+        // .start(qdrant_tx, self.embeddings.clone())
+        // .await;
 
         // start kafka event consumer
-        let group_id = format!("orbit_{}", self.embeddings.communities.version());
-        let kafka_worker = KafkaWorker::new(self.config.clone(), group_id).start(event_tx);
+        // let group_id = format!("orbit_{}", self.embeddings.communities.version());
+        // let kafka_worker = KafkaWorker::new(self.config.clone(), group_id).start(event_tx);
 
         // delete old collections
-        self.purge_outdated_qdrant_collections().await;
+        // self.purge_outdated_qdrant_collections().await;
 
         qdrant_worker.await.unwrap();
         for worker in embedding_workers {
             worker.await.unwrap();
         }
-        status_purge_worker.await.unwrap();
-        kafka_worker.await.unwrap();
+        // status_purge_worker.await.unwrap();
+        // kafka_worker.await.unwrap();
     }
 
     fn publish(&self) -> Result<(), RedisError> {

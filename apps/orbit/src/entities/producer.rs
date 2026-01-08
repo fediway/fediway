@@ -12,12 +12,12 @@ const MAX_SPARSITY: usize = 20;
 
 // const BETA: f64 = 0.95;
 
-const ALPHA: f64 = 0.0001;
+const ALPHA: f64 = 0.00025;
 const BETA: f64 = 1.0;
 const GAMMA: f64 = 0.05;
 
 pub struct Producer {
-    embedding: SparseVec,
+    pub embedding: SparseVec,
     last_upserted: Option<SystemTime>,
     pub engagements: usize,
     pub authority: f64,
@@ -64,13 +64,12 @@ impl<E: Embedded> UpdateEmbedding<E> for Producer {
 
         // self.embedding *= BETA;
         // self.embedding += &(entity.embedding().to_owned() * (1.0 - BETA));
-        self.embedding.keep_top_n(
-            // (self.embedding.0.dim() / 15)
-            //     .max(MAX_SPARSITY)
-            //     .min(MIN_SPARSITY),
-
-            10,
-        );
+        // self.embedding.keep_top_n(
+        //     // (self.embedding.0.dim() / 15)
+        //     //     .max(MAX_SPARSITY)
+        //     //     .min(MIN_SPARSITY),
+        //     10,
+        // );
 
         // self.embedding.normalize();
 

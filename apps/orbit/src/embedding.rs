@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 use crate::communities::Communities;
+use crate::config::Config;
 use crate::debezium::{DebeziumEvent, Operation, Payload};
 use crate::entities::consumer::Consumer;
 use crate::entities::producer::Producer;
@@ -50,6 +51,7 @@ pub struct EngagementEvent {
 }
 
 pub struct Embeddings {
+    pub config: Config,
     pub communities: Communities,
     pub consumers: FastDashMap<i64, Consumer>,
     pub producers: FastDashMap<i64, Producer>,
@@ -76,12 +78,14 @@ impl Embedded for Embedding {
 
 impl Embeddings {
     pub fn initial(
+        config: Config,
         communities: Communities,
         consumers: FastDashMap<i64, Consumer>,
         producers: FastDashMap<i64, Producer>,
         tags: FastDashMap<i64, Tag>,
     ) -> Self {
         Self {
+            config,
             communities,
             consumers,
             producers,
@@ -156,11 +160,15 @@ impl Embeddings {
             let tags: Vec<i64> = event.tags.unwrap_or_default().iter().cloned().collect();
 
             if let Some(producer) = self.producers.get(&event.author_id) {
-                status.update_embedding(producer.value(), event.created_at);
+                self.update_status_embedding(&mut status, producer.value(), event.created_at);
             }
 
             if let Some(weighted_tags_embedding) = self.get_weighted_tags_embedding(&tags) {
-                status.update_embedding(&weighted_tags_embedding, event.created_at);
+                self.update_status_embedding(
+                    &mut status,
+                    &weighted_tags_embedding,
+                    event.created_at,
+                );
             }
 
             self.statuses.insert(event.status_id, status);
@@ -169,6 +177,43 @@ impl Embeddings {
                 self.statuses_tags.insert(event.status_id, tags);
             }
         }
+    }
+
+    fn update_status_embedding<E: Embedded>(
+        &self,
+        status: &mut Status,
+        entity: &E,
+        event_time: SystemTime,
+    ) {
+        status.update_embedding(entity, event_time);
+        status.embedding.keep_top_n(self.config.status_sparsity * 2);
+        // TODO: implement also for consumer, producer and tag
+    }
+
+    fn update_consumer_embedding<E: Embedded>(
+        &self,
+        consumer: &mut Consumer,
+        entity: &E,
+        event_time: SystemTime,
+    ) {
+        consumer.update_embedding(entity, event_time);
+        consumer
+            .embedding
+            .keep_top_n(self.config.consumer_sparsity * 2);
+        // TODO: implement also for consumer, producer and tag
+    }
+
+    fn update_producer_embedding<E: Embedded>(
+        &self,
+        producer: &mut Producer,
+        entity: &E,
+        event_time: SystemTime,
+    ) {
+        producer.update_embedding(entity, event_time);
+        producer
+            .embedding
+            .keep_top_n(self.config.producer_sparsity * 2);
+        // TODO: implement also for consumer, producer and tag
     }
 
     fn update_status(&self, payload: Payload<StatusEvent>) {
@@ -203,13 +248,15 @@ impl Embeddings {
             self.consumers.get_mut(&account_id),
             self.statuses.get(&status_id),
         ) {
-            consumer.update_embedding(status.value(), event_time);
+            self.update_consumer_embedding(&mut consumer, status.value(), event_time);
+            // consumer.update_embedding(status.value(), event_time);
 
             // Add tag embedding if available
             if let Some(weighted_tags_embedding) =
                 self.get_weighted_statuses_tags_embedding(&status_id)
             {
-                consumer.update_embedding(&weighted_tags_embedding, event_time);
+                self.update_consumer_embedding(&mut consumer, &weighted_tags_embedding, event_time);
+                // consumer.update_embedding(&weighted_tags_embedding, event_time);
             }
         }
 
@@ -221,7 +268,7 @@ impl Embeddings {
 
         // update producer embedding
         if let Some(mut producer) = self.producers.get_mut(&author_id) {
-            producer.update_embedding(&old_consumer, event_time);
+            self.update_producer_embedding(&mut producer, &old_consumer, event_time);
             producer.engagements += 1;
         }
 

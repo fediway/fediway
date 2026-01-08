@@ -1,5 +1,6 @@
 
 -- :up
+
 CREATE TABLE IF NOT EXISTS feeds (
     id VARCHAR PRIMARY KEY,
     user_agent VARCHAR,

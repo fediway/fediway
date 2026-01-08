@@ -1,8 +1,10 @@
 use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
+use crate::db;
 use crate::debezium::DebeziumEvent;
+use crate::embedding::StatusEvent;
 use crate::embedding::{Embeddings, FromEmbedding};
-use crate::entities::{consumer::Consumer, producer::Producer, tag::Tag};
+use crate::entities::tag::Tag;
 use crate::rw;
 use crate::sparse::SparseVec;
 use crate::types::{FastDashMap, FastHashMap, FastHashSet};
@@ -12,7 +14,23 @@ use petgraph::graph::UnGraph;
 use std::time::Instant;
 use tokio_postgres::Client;
 
-pub async fn get_initial_embeddings(config: Config) -> Embeddings {
+pub async fn compute_embeddings(config: Config, communities: Communities) {
+    let (db, connection) = tokio_postgres::connect(&config.db_conn(), tokio_postgres::NoTls)
+        .await
+        .unwrap();
+
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            tracing::error!("risingwave connection error: {}", e);
+        }
+    });
+
+    let (at_matrix, a_indices) = db::get_at_matrix(&db, &communities).await;
+
+    println!("{:?}", at_matrix);
+}
+
+pub async fn get_initial_embeddings(config: Config, communities: Communities) -> Embeddings {
     let (db, connection) = tokio_postgres::connect(&config.rw_conn(), tokio_postgres::NoTls)
         .await
         .unwrap();
@@ -23,14 +41,13 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
         }
     });
 
-    // 1. compute communities
-    let communities = get_communities(&config, &db).await;
-
     // 2. compute initial consumer embeddings
     let (tc_matrix, t_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
         communities.clone().into();
+
     let (at_matrix, a_indices): (CsrMatrix<f64>, FastHashMap<i64, usize>) =
         rw::get_at_matrix(&db, &t_indices).await;
+
     let ac_matrix: CsrMatrix<f64> = &at_matrix * &tc_matrix;
     tracing::info!(
         "Computed initial embeddings for {} consumers",
@@ -65,14 +82,12 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
     // let tags: FastDashMap<i64, Tag> = FastDashMap::default();
 
     for (tag_id, community) in communities.tags.iter() {
-        // tags.insert(
-        //     *tag_id,
-        //     Tag::from_embedding(SparseVec::new(communities.dim, vec![*community], vec![1.0])),
-        // );
-        tags.get_mut(tag_id).unwrap().set_community(*community);
+        if let Some(mut tag) = tags.get_mut(tag_id) {
+            tag.set_community(*community);
+        }
     }
 
-    let embeddings = Embeddings::initial(communities, consumers, producers, tags);
+    let embeddings = Embeddings::initial(config.clone(), communities, consumers, producers, tags);
 
     // return embeddings;
 
@@ -84,23 +99,44 @@ pub async fn get_initial_embeddings(config: Config) -> Embeddings {
 
     let start = Instant::now();
 
-    for (status, engagement) in results {
-        if !status_ids.contains(&status.status_id) {
-            status_ids.insert(status.status_id);
+    let n: usize = results
+        .map(|(status, engagement)| {
+            let updated = if !status_ids.contains(&status.status_id) {
+                status_ids.insert(status.status_id);
 
-            embeddings.push_status(DebeziumEvent::new_create(status));
-            i += 1;
-        }
+                embeddings.push_status(DebeziumEvent::new_create(status));
+                1
+            } else {
+                0
+            };
 
-        embeddings.push_engagement(engagement);
-        i += 1;
-    }
+            (engagement, updated)
+        })
+        .map(|(engagement, updated)| {
+            embeddings.push_engagement(engagement);
+            1 + updated
+        })
+        .sum();
+
+    // for (status, engagement) in results.iter() {
+    //     if !status_ids.contains(&status.status_id) {
+    //         status_ids.insert(status.status_id);
+
+    //         embeddings.push_status(DebeziumEvent::new_create(status.to_owned()));
+    //         i += 1;
+    //     }
+    // }
+
+    // for (status, engagement) in results {
+    //     embeddings.push_engagement(engagement);
+    //     i += 1;
+    // }
 
     let duration = start.elapsed();
 
     tracing::info!(
         "Seeded initial engagements with {} udpates/second.",
-        (i as f64) / duration.as_secs_f64()
+        (n as f64) / duration.as_secs_f64()
     );
 
     embeddings

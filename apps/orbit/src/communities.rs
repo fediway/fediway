@@ -6,10 +6,30 @@ use nalgebra_sparse::{coo::CooMatrix, csr::CsrMatrix};
 use petgraph::graph::{NodeIndex, UnGraph};
 use rand::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Communities {
     pub tags: FastHashMap<i64, usize>,
     pub dim: usize,
+}
+
+impl From<Vec<Vec<i64>>> for Communities {
+    fn from(communies: Vec<Vec<i64>>) -> Self {
+        let dim = communies.len();
+
+        Self {
+            tags: communies
+                .into_iter()
+                .enumerate()
+                .map(|(i, tags)| {
+                    tags.into_iter()
+                        .map(|tag| (tag, i))
+                        .collect::<Vec<(i64, usize)>>()
+                })
+                .flatten()
+                .collect(),
+            dim,
+        }
+    }
 }
 
 impl Communities {

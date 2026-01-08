@@ -190,9 +190,18 @@ impl EmbeddingWorker {
 
         match entity_type {
             EntityType::Consumer => {
+                embedding.keep_top_n(self.config.consumer_sparsity);
                 embedding.normalize();
             }
-            _ => {}
+            EntityType::Producer => {
+                embedding.keep_top_n(self.config.producer_sparsity);
+            }
+            EntityType::Status => {
+                embedding.keep_top_n(self.config.status_sparsity);
+            }
+            EntityType::Tag => {
+                embedding.keep_top_n(self.config.tag_sparsity);
+            }
         }
 
         self.qdrant_tx

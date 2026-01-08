@@ -217,6 +217,7 @@ GRANT CONNECT ON DATABASE mastodon_development TO risingwave;
 GRANT USAGE ON SCHEMA public TO risingwave;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO risingwave;
 GRANT CREATE ON DATABASE mastodon_development TO risingwave;
+CREATE PUBLICATION risingwave FOR ALL TABLES;
 ```
 
 2. Setup
