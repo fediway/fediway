@@ -2,6 +2,12 @@
     <img width="350px" style="max-width:100%;" src="logo.png">
 </p>
 
+<div align="center">
+    
+[Newsletter](https://tally.so/r/vGMQll)
+
+</div>
+
 # About Fediway
 
 Fediway solves content discovery on Mastodon with the first advanced server-side recommendation pipeline. Fediway is a server-side plugin for Mastodon that can be integrated into an existing Mastodon instance without requiring a custom fork or modifications to the core codebase. You can simply redirecting desired endpoints such as `timelines/home` via nginx to the fediway API.
