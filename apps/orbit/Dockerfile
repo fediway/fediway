@@ -1,5 +1,5 @@
 # Stage 1: Build the application
-FROM rust:1.86-slim-bookworm AS builder
+FROM rust:1.92-slim-trixie AS builder
 
 # Install required system dependencies
 RUN apt-get update && \
@@ -16,7 +16,7 @@ COPY . .
 RUN cargo build --release
 
 # Stage 2: Create minimal runtime image
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 # Install runtime dependencies
 RUN apt-get update && \
