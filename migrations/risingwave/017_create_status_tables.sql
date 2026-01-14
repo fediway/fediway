@@ -60,8 +60,9 @@ CREATE TABLE IF NOT EXISTS status_stats (
     reblogs_count BIGINT,
     favourites_count BIGINT,
     replies_count BIGINT,
+    quotes_count BIGINT,
     created_at TIMESTAMP,
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP,
 ) FROM pg_source TABLE 'public.status_stats';
 
 CREATE INDEX IF NOT EXISTS idx_status_id_status_id ON status_stats(status_id);
