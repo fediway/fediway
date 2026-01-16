@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS preview_cards_statuses (
     PRIMARY KEY (preview_card_id, status_id)
 ) FROM pg_source TABLE 'public.preview_cards_statuses';
 
+CREATE INDEX IF NOT EXISTS idx_preview_cards_statuses_preview_card_id ON preview_cards_statuses(preview_card_id);
+
 CREATE MATERIALIZED VIEW preview_card_domains AS
 SELECT
     id AS preview_card_id,

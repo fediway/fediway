@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS quotes (
     legacy BOOLEAN
 ) FROM pg_source TABLE 'public.quotes';
 
+CREATE INDEX IF NOT EXISTS idx_quotes_account_id ON quotes(account_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_status_id ON quotes(status_id); 
+CREATE INDEX IF NOT EXISTS idx_quotes_quoted_status_id ON quotes(quoted_status_id);
+CREATE INDEX IF NOT EXISTS idx_quotes_quoted_account_id ON quotes(quoted_account_id); 
+
 -- :down
 
 DROP TABLE IF EXISTS quotes;

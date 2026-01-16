@@ -102,10 +102,12 @@ CREATE TABLE IF NOT EXISTS feed_ranking_runs (
 ) FORMAT PLAIN ENCODE JSON;
 
 -- :down
+
 DROP TABLE IF EXISTS feeds CASCADE;
 DROP TABLE IF EXISTS feed_pipeline_runs CASCADE;
 DROP TABLE IF EXISTS feed_pipeline_steps CASCADE;
-DROP TABLE IF EXISTS feed_sourcing_runs CASCADE;
+DROP TABLE IF EXISTS feed_candidate_sources CASCADE;
+DROP TABLE IF EXISTS feed_ranking_runs CASCADE;
 DROP TABLE IF EXISTS feed_recommendations CASCADE;
 DROP TABLE IF EXISTS feed_recommendation_sources CASCADE;
 DROP TABLE IF EXISTS feed_ranking_runs CASCADE;
