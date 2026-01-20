@@ -164,50 +164,37 @@ def load_tag_engagements_from_db(db: Session, start: datetime, end: datetime):
     return pd.DataFrame(rows)
 
 
+def load_tag_similarities(db: Session, min_tag_similarity: float):
+    query = text(f"""
+    SELECT * 
+    FROM orbit_tag_similarities
+    WHERE cosine_sim > :min_tag_similarity;
+    """).params(min_tag_similarity=min_tag_similarity)
+
+    with utils.duration("Tag similarities loaded in {:.3f} seconds."):
+        result = db.execute(query)
+        rows = result.all()
+
+    if len(rows) == 0:
+        return None
+
+    return pd.DataFrame(rows)
+
+
 def detect_communities(
-    tag_to_accounts: dict[int, set[int]], min_tag_similarity: float = 0.25
+    tag_similarities: pd.DataFrame
 ):
     from tqdm import tqdm
     import networkx as nx
 
     G = nx.Graph()
-    bar = tqdm(total=len(tag_to_accounts) ** 2)
 
-    for tag1 in tag_to_accounts.keys():
-        for tag2 in tag_to_accounts.keys():
-            bar.update(1)
-
-            if tag1 <= tag2:
-                continue
-
-            # Get the sets of accounts for each tag
-            accounts1 = tag_to_accounts[tag1]
-            accounts2 = tag_to_accounts[tag2]
-
-            # Calculate the components of the cosine similarity formula
-            # |U_A ∩ U_B|
-            intersection_size = len(accounts1.intersection(accounts2))
-
-            # If there's no overlap, similarity is 0, we can skip the rest
-            if intersection_size == 0:
-                continue
-
-            # Calculate the denominator: sqrt(|U_A|) * sqrt(|U_B|)
-            denominator = math.sqrt(len(accounts1)) * math.sqrt(len(accounts2))
-
-            # Avoid division by zero, though this shouldn't happen if a tag is in our map
-            if denominator == 0:
-                continue
-            else:
-                # Calculate the final similarity score
-                similarity = intersection_size / denominator
-
-            if similarity < min_tag_similarity:
-                continue
-
-            G.add_edge(tag1, tag2, weight=similarity)
-
-    bar.close()
+    for tag_pair in tag_similarities.iloc:
+        G.add_edge(
+            int(tag_pair.tag1), 
+            int(tag_pair.tag2), 
+            weight=tag_pair.cosine_sim
+        )
 
     print("Number of nodes:", G.number_of_nodes())
     print("Number of edges:", G.number_of_edges())
