@@ -121,58 +121,25 @@ def create_topics(community_id: int, limit: int = 10, entity: str = "statuses"):
 @app.command("compute-communities")
 def compute_communities(
     path: str,
-    date: datetime | None = None,
-    days: int = 14,
-    min_tag_engagers: int = 30,
     min_tag_similarity: float = 0.3,
-    source: str = "db",
 ):
     from modules.mastodon.models import Tag
     from modules.orbit import (
         detect_communities,
-        load_tag_engagements_from_db,
         load_tag_engagements_from_file,
+        load_tag_similarities,
     )
-    from shared.core.db import db_session
+    from shared.core.rw import rw_session
 
-    from datetime import timedelta
-    from sqlmodel import select
+    with rw_session() as db:
+        df = load_tag_similarities(db, min_tag_similarity)
 
-    if date is None:
-        date = datetime.now()
-    start = date - timedelta(days=days)
+    typer.echo(f"Computing communities for {len(df)} tag pairs.")
 
-    if source == "db":
-        with db_session() as db:
-            df = load_tag_engagements_from_db(db, start, date)
-    elif source == "rw":
-        # TODO
-        raise NotImplementedError
-    else:
-        raise ValueError
-    # else:
-    #     df = load_tag_engagements_from_file(source)
-
-    # unique account ids
-    df["accounts"] = df["accounts"].apply(lambda x: set(x))
-
-    # using only tags with enough engagers
-    df = df[df["accounts"].apply(lambda x: len(x)) >= min_tag_engagers]
-
-    typer.echo(
-        f"Computing communities for {len(df)} tags with more >= {min_tag_engagers} engagers."
-    )
-
-    communities = detect_communities(
-        tag_to_accounts=dict(df[["tag_id", "accounts"]].values),
-        min_tag_similarity=min_tag_similarity,
-    )
+    communities = detect_communities(tag_similarities=df)
 
     community_tags = []
-    # with db_session() as db:
     for community in communities:
-        # query = select(Tag.name).where(Tag.id.in_(list(community)))
-        # tags = db.exec(query).all()
         community_tags.append(",".join([str(c) for c in community]))
 
     with open(path, "w") as f:

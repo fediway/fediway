@@ -101,6 +101,7 @@ pub async fn get_at_matrix(
         .chunks(1000)
     {
         let placeholders: Vec<String> = (1..=tags.len()).map(|i| format!("${}", i)).collect();
+
         let query = format!(
             r#"
             SELECT
@@ -109,7 +110,7 @@ pub async fn get_at_matrix(
                 COUNT(DISTINCT e.status_id) as count
             FROM enriched_status_engagement_events e
             JOIN statuses_tags st ON st.status_id = e.status_id AND st.tag_id IN ({})
-            -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+            WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
             GROUP BY e.account_id, st.tag_id;
             "#,
             placeholders.join(", ")
@@ -155,7 +156,7 @@ pub async fn get_ta_matrix(
         COUNT(DISTINCT e.status_id) as count
     FROM enriched_status_engagement_events e
     JOIN statuses_tags st ON st.status_id = e.status_id
-    -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+    WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
     GROUP BY e.account_id, st.tag_id;
     "#;
 
@@ -203,7 +204,8 @@ pub async fn get_pa_matrix(
         e.author_id,
         COUNT(DISTINCT e.status_id) as count
     FROM enriched_status_engagement_events e
-    -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+    WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+      AND e.author_id IS NOT NULL
     GROUP BY e.account_id, e.author_id;
     "#;
 
@@ -255,7 +257,8 @@ pub async fn get_pt_matrix(
             COUNT(DISTINCT e.status_id) as count
         FROM enriched_status_engagement_events e
         JOIN statuses_tags st ON st.status_id = e.status_id AND st.tag_id IN ({})
-        -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+        WHERE e.event_time > NOW() - INTERVAL '60 DAYS'
+          AND e.author_id IS NOT NULL
         GROUP BY e.author_id, st.tag_id;
         "#,
         placeholders.join(", ")
@@ -290,18 +293,8 @@ pub async fn get_initial_engagements(
     db: &Client,
 ) -> impl Iterator<Item = (StatusEvent, EngagementEvent)> {
     let query = r#"
-    SELECT
-        e.status_id, 
-        e.account_id,
-        e.author_id,
-        e.event_time,
-        e.visibility,
-        e.sensitive,
-        s.created_at,
-        s.tags
-    FROM enriched_statuses s
-    JOIN enriched_status_engagement_events e ON s.status_id = e.status_id;
-    -- WHERE e.event_time > NOW() - INTERVAL '60 DAYS';
+    SELECT *
+    FROM orbit_engagements;
     "#;
 
     let rows = db.query(query, &[]).await.unwrap();
