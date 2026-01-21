@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
+from enum import Enum
 
 from sqlalchemy import ARRAY, Column, Integer
 from sqlmodel import Field, Relationship, SQLModel
@@ -8,6 +9,7 @@ from .account import Account
 from .favourite import Favourite
 from .media_attachment import MediaAttachment
 from .preview_card import PreviewCard, PreviewCardStatus
+from .quote import Quote
 from .topic import StatusTopic, Topic
 from config import config
 
@@ -73,6 +75,20 @@ class Status(SQLModel, table=True):
         }
     )
 
+    quotes: list[Quote] = Relationship(
+        back_populates="quoted_status",
+        sa_relationship_kwargs={
+            "foreign_keys": "Quote.quoted_status_id",
+        },
+    )
+    quote: Quote | None = Relationship(
+        back_populates="status",
+        sa_relationship_kwargs={
+            "foreign_keys": "Quote.status_id",
+            "uselist": False,
+        },
+    )
+
     @classmethod
     def select_by_ids(cls, ids):
         from sqlalchemy.orm import selectinload
@@ -89,6 +105,20 @@ class Status(SQLModel, table=True):
                     .options(selectinload(cls.media_attachments))
                     .options(selectinload(cls.stats))
                     .options(selectinload(cls.preview_card))
+                )
+            )
+            .options(
+                (
+                    selectinload(cls.quote)
+                    .options(selectinload(Quote.account))
+                    .options(
+                        (
+                            selectinload(Quote.quoted_status)
+                            .options(selectinload(cls.media_attachments))
+                            .options(selectinload(cls.stats))
+                            .options(selectinload(cls.preview_card))
+                        )
+                    )
                 )
             )
             .options(selectinload(cls.media_attachments))

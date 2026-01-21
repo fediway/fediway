@@ -8,6 +8,7 @@ from .emoji import EmojiItem
 from .media_attachment import MediaAttachmentItem
 from .mention import MentionItem
 from .preview_card import PreviewCardItem
+from .quote import QuoteItem
 from .tag import TagItem
 
 STATUS_VISIBILITY = {
@@ -40,14 +41,20 @@ class StatusItem(Item):
     replies_count: int
     quotes_count: int
     card: PreviewCardItem | None
+    quote: QuoteItem | None = None
+    # TODO: quote_approval
 
     @classmethod
     def from_model(cls, status: Status, with_reblog: bool = True):
         reblogs_count = 0
         favourites_count = 0
         if status.stats is not None:
-            reblogs_count=status.stats.untrusted_reblogs_count or status.stats.reblogs_count
-            favourites_count=status.stats.untrusted_favourites_count or status.stats.favourites_count
+            reblogs_count = (
+                status.stats.untrusted_reblogs_count or status.stats.reblogs_count
+            )
+            favourites_count = (
+                status.stats.untrusted_favourites_count or status.stats.favourites_count
+            )
 
         return cls(
             id=str(status.id),
@@ -74,6 +81,7 @@ class StatusItem(Item):
             card=PreviewCardItem.from_model(status.preview_card)
             if status.preview_card
             else None,
+            quote=QuoteItem.from_model(status.quote) if status.quote else None,
         )
 
 
