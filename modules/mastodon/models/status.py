@@ -19,6 +19,9 @@ class StatusStats(SQLModel, table=True):
     replies_count: int = Field(default=0)
     reblogs_count: int = Field(default=0)
     favourites_count: int = Field(default=0)
+    untrusted_favourites_count: int = Field(default=0)
+    untrusted_reblogs_count: int = Field(default=0)
+    quotes_count: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

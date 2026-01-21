@@ -38,6 +38,7 @@ class StatusItem(Item):
     reblogs_count: int
     favourites_count: int
     replies_count: int
+    quotes_count: int
     card: PreviewCardItem | None
 
     @classmethod
@@ -60,11 +61,12 @@ class StatusItem(Item):
             reblog=StatusItem.from_model(status.reblog, with_reblog=False)
             if status.reblog and with_reblog
             else None,
-            reblogs_count=status.stats.reblogs_count if status.stats is not None else 0,
-            favourites_count=status.stats.favourites_count
+            reblogs_count=status.stats.untrusted_reblogs_count if status.stats is not None else 0,
+            favourites_count=status.stats.untrusted_favourites_count
             if status.stats is not None
             else 0,
             replies_count=status.stats.replies_count if status.stats is not None else 0,
+            quotes_count=status.stats.quotes_count,
             card=PreviewCardItem.from_model(status.preview_card)
             if status.preview_card
             else None,
