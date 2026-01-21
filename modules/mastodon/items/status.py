@@ -43,6 +43,12 @@ class StatusItem(Item):
 
     @classmethod
     def from_model(cls, status: Status, with_reblog: bool = True):
+        reblogs_count = 0
+        favourites_count = 0
+        if status.stats is not None:
+            reblogs_count=status.stats.untrusted_reblogs_count or status.stats.reblogs_count
+            favourites_count=status.stats.untrusted_favourites_count or status.stats.favourites_count
+
         return cls(
             id=str(status.id),
             uri=status.uri,
@@ -61,10 +67,8 @@ class StatusItem(Item):
             reblog=StatusItem.from_model(status.reblog, with_reblog=False)
             if status.reblog and with_reblog
             else None,
-            reblogs_count=status.stats.untrusted_reblogs_count if status.stats is not None else 0,
-            favourites_count=status.stats.untrusted_favourites_count
-            if status.stats is not None
-            else 0,
+            reblogs_count=reblogs_count,
+            favourites_count=favourites_count,
             replies_count=status.stats.replies_count if status.stats is not None else 0,
             quotes_count=status.stats.quotes_count,
             card=PreviewCardItem.from_model(status.preview_card)
