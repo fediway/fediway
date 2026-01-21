@@ -70,7 +70,7 @@ class StatusItem(Item):
             reblogs_count=reblogs_count,
             favourites_count=favourites_count,
             replies_count=status.stats.replies_count if status.stats is not None else 0,
-            quotes_count=status.stats.quotes_count,
+            quotes_count=status.stats.quotes_count if status.stats is not None else 0,
             card=PreviewCardItem.from_model(status.preview_card)
             if status.preview_card
             else None,
