@@ -7,6 +7,7 @@ pub mod producer;
 pub mod status;
 pub mod tag;
 
+#[derive(Debug)]
 pub enum EntityType {
     Consumer,
     Producer,
@@ -30,6 +31,7 @@ pub trait Upsertable: Embedded + Entity {
         // - have not been changed since last udpate
         // - are zero
         if !self.is_dirty() || self.embedding().is_zero() {
+            // println!("not dirty {} or zero {}", !self.is_dirty(), self.embedding().is_zero());
             return false;
         }
 

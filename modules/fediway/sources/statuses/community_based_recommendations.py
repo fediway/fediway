@@ -32,9 +32,9 @@ class CommunityBasedRecommendationsSource(Source):
         version = self._fetch_embeddings_version().decode("utf8")
 
         try:
-            results = self.client.recommend(
+            results = self.client.query_points(
                 collection_name=f"orbit_{version}_statuses",
-                positive=[self.account_id],
+                query=self.account_id,
                 limit=limit,
                 using="embedding",
                 lookup_from=LookupLocation(
@@ -45,5 +45,5 @@ class CommunityBasedRecommendationsSource(Source):
             # TODO: log error
             return
 
-        for point in results:
+        for point in results.points:
             yield point.id

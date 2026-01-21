@@ -181,20 +181,14 @@ def load_tag_similarities(db: Session, min_tag_similarity: float):
     return pd.DataFrame(rows)
 
 
-def detect_communities(
-    tag_similarities: pd.DataFrame
-):
+def detect_communities(tag_similarities: pd.DataFrame):
     from tqdm import tqdm
     import networkx as nx
 
     G = nx.Graph()
 
     for tag_pair in tag_similarities.iloc:
-        G.add_edge(
-            int(tag_pair.tag1), 
-            int(tag_pair.tag2), 
-            weight=tag_pair.cosine_sim
-        )
+        G.add_edge(int(tag_pair.tag1), int(tag_pair.tag2), weight=tag_pair.cosine_sim)
 
     print("Number of nodes:", G.number_of_nodes())
     print("Number of edges:", G.number_of_edges())

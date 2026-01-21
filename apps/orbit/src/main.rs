@@ -51,7 +51,6 @@ async fn main() {
 
     let communities = parse_comunities();
 
-    // let embeddings = compute_embeddings(config, communities).await;
     let embeddings = init::get_initial_embeddings(config.clone(), communities).await;
 
     let orbit = orbit::Orbit::new(config.clone(), embeddings);

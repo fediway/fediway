@@ -101,16 +101,17 @@ impl Entity for Status {
     }
 
     fn should_upsert_entity(&self, config: &crate::config::Config) -> bool {
+        return true;
         // skip updating embeddings of statuses that have to few engagments
         if self.engagements < config.status_engagement_threshold {
             return false;
         }
 
-        // // skip updating embeddings of statuses that are to old
-        // let status_age = self.created_at.elapsed().unwrap().as_secs();
-        // if status_age > config.max_status_age {
-        //     return false;
-        // }
+        // skip updating embeddings of statuses that are to old
+        let status_age = self.created_at.elapsed().unwrap().as_secs();
+        if status_age > config.max_status_age {
+            return false;
+        }
 
         true
     }

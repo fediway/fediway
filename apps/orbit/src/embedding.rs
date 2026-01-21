@@ -77,6 +77,14 @@ impl Embedded for Embedding {
 }
 
 impl Embeddings {
+    pub fn new(config: Config, communities: Communities) -> Self {
+        let consumers = FastDashMap::default();
+        let producers = FastDashMap::default();
+        let tags = FastDashMap::default();
+
+        Self::initial(config, communities, consumers, producers, tags)
+    }
+
     pub fn initial(
         config: Config,
         communities: Communities,
@@ -112,7 +120,15 @@ impl Embeddings {
             })
             .collect();
 
-        if tag_embeddings.is_empty() {
+        let communities: FastHashSet<usize> = tags
+            .iter()
+            .filter_map(|t| match self.communities.tags.get(t) {
+                Some(c) => Some(*c),
+                _ => None,
+            })
+            .collect();
+
+        if tag_embeddings.is_empty() && communities.is_empty() {
             return None;
         }
 
@@ -120,19 +136,12 @@ impl Embeddings {
 
         let total_engagements: f64 = tag_embeddings.iter().map(|(_, _, e)| *e as f64).sum();
 
-        if total_engagements == 0.0 {
-            return None;
-        }
-
-        let communities: FastHashSet<usize> =
-            tag_embeddings.iter().filter_map(|(_, c, _)| *c).collect();
-
         for (embedding, _, engagements) in tag_embeddings.into_iter() {
             weighted += &(embedding * (engagements as f64 / total_engagements));
         }
 
-        if communities.is_empty() {
-            weighted.set_entries(communities.into_iter().collect(), 1.0);
+        if !communities.is_empty() {
+            weighted.set_entries(communities.clone().into_iter().collect(), 1.0);
         }
 
         Some(Embedding::new(weighted))
@@ -176,6 +185,8 @@ impl Embeddings {
             if !tags.is_empty() {
                 self.statuses_tags.insert(event.status_id, tags);
             }
+
+            // tracing::info!("Created new status embeddings for id {:?}", event.status_id);
         }
     }
 

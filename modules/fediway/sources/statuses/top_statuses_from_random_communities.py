@@ -4,7 +4,7 @@ import numpy as np
 import asyncio
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import SparseVector, NamedSparseVector, SearchRequest
+from qdrant_client.models import SparseVector, SearchRequest, QueryRequest
 
 from modules.fediway.feed.features import Features
 
@@ -52,18 +52,17 @@ class TopStatusesFromRandomCommunitiesSource(Source):
         # create sparse vectors representing the communities
         vectors = [SparseVector(indices=[c], values=[1.0]) for c in communities]
 
+        queries = [
+            QueryRequest(query=vector, limit=self.batch_size, using="embedding")
+            for vector in vectors
+        ]
+
         # query batch of items for each community
-        batches = self.client.search_batch(
+        batches = self.client.query_batch_points(
             collection_name=f"orbit_{version}_statuses",
-            requests=[
-                SearchRequest(
-                    vector=NamedSparseVector(name="embedding", vector=vector),
-                    limit=self.batch_size,
-                )
-                for vector in vectors
-            ],
+            requests=queries,
         )
 
         for batch in batches:
-            for status in batch:
+            for status in batch.points:
                 yield status.id

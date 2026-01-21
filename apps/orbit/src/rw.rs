@@ -331,3 +331,46 @@ pub async fn get_initial_engagements(
         })
         .sorted_by(|(_, e1), (_, e2)| e1.event_time.cmp(&e2.event_time))
 }
+
+pub async fn get_recent_engagements(
+    db: &Client,
+) -> impl Iterator<Item = (StatusEvent, EngagementEvent)> {
+    let query = r#"
+    SELECT *
+    FROM orbit_recent_engagements;
+    "#;
+
+    let rows = db.query(query, &[]).await.unwrap();
+
+    rows.into_iter()
+        .map(|row| {
+            let status_id: i64 = row.get(0);
+            let account_id: i64 = row.get(1);
+            let author_id: i64 = row.get(2);
+            let event_time: SystemTime = row.get(3);
+            let visibility: i32 = row.get(4);
+            let sensitive: Option<bool> = row.get(5);
+            let created_at: SystemTime = row.get(6);
+            let tags: Option<Vec<i64>> = row.get(7);
+            let tags: FastHashSet<i64> = tags.unwrap_or_default().into_iter().collect();
+
+            let status = StatusEvent {
+                status_id,
+                author_id,
+                visibility,
+                sensitive,
+                tags: Some(tags),
+                created_at,
+            };
+
+            let engagement = EngagementEvent {
+                account_id,
+                status_id,
+                author_id,
+                event_time,
+            };
+
+            (status, engagement)
+        })
+        .sorted_by(|(_, e1), (_, e2)| e1.event_time.cmp(&e2.event_time))
+}

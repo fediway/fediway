@@ -75,11 +75,11 @@ def community_based_recommendations(
 
 @app.command("random-communities")
 def random_communities(limit: int = 10, batch_size: int = 1):
-    from modules.fediway.sources.statuses import RandomCommunitiesSource
+    from modules.fediway.sources.statuses import TopStatusesFromRandomCommunitiesSource
     from shared.core.redis import get_redis
     from shared.core.qdrant import client
 
-    source = RandomCommunitiesSource(
+    source = TopStatusesFromRandomCommunitiesSource(
         r=get_redis(), client=client, batch_size=batch_size
     )
 

@@ -90,10 +90,10 @@ fn default_tag_engagement_threshold() -> usize {
     10
 }
 fn default_qdrant_upsert_delay() -> u64 {
-    60 // 60 seconds
+    1 // 1 seconds
 }
 fn default_max_status_age() -> u64 {
-    60 * 60 * 24 * 7 // 7 days
+    60 * 60 * 24 * 3 // 3 days
 }
 fn default_min_tag_authors() -> usize {
     5

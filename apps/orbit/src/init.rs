@@ -2,8 +2,8 @@ use crate::communities::{Communities, weighted_louvain};
 use crate::config::Config;
 use crate::db;
 use crate::debezium::DebeziumEvent;
-use crate::embedding::StatusEvent;
 use crate::embedding::{Embeddings, FromEmbedding};
+use crate::embedding::{EngagementEvent, StatusEvent};
 use crate::entities::tag::Tag;
 use crate::rw;
 use crate::sparse::SparseVec;
@@ -91,39 +91,34 @@ pub async fn get_initial_embeddings(config: Config, communities: Communities) ->
     let producers = FastDashMap::default();
     let tags = FastDashMap::default();
 
-    let embeddings = Embeddings::initial(
-        config.clone(), 
-        communities, 
-        consumers, 
-        producers, 
-        tags
-    );
+    let embeddings = Embeddings::initial(config.clone(), communities, consumers, producers, tags);
 
     // return embeddings;
 
     tracing::info!("Loading initial engagements...");
 
-    let mut i = 0;
     let mut status_ids: FastHashSet<i64> = FastHashSet::default();
     let results = rw::get_initial_engagements(&db).await;
 
     let start = Instant::now();
 
-    for (status, engagement) in results {
-        if !status_ids.contains(&status.status_id) {
-            status_ids.insert(status.status_id);
+    let i: usize = results
+        .map(|(status, engagement)| {
+            if !status_ids.contains(&status.status_id) {
+                status_ids.insert(status.status_id);
 
-            embeddings.push_status(DebeziumEvent::new_create(status));
-            i += 1;
-        }
+                embeddings.push_status(DebeziumEvent::new_create(status));
+                (engagement, 1)
+            } else {
+                (engagement, 0)
+            }
+        })
+        .map(|(engagement, count)| {
+            embeddings.push_engagement(engagement);
 
-        embeddings.push_engagement(engagement);
-    }
-
-    // for (status, engagement) in results {
-        
-    //     i += 1;
-    // }
+            count + 1
+        })
+        .sum();
 
     let duration = start.elapsed();
 

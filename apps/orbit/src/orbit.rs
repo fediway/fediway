@@ -1,6 +1,9 @@
 use crate::config::Config;
+use crate::debezium::DebeziumEvent;
 use crate::embedding::Embeddings;
 use crate::entities::EntityType;
+use crate::rw;
+use crate::types::{FastDashMap, FastHashMap, FastHashSet};
 use crate::workers::embedding::EmbeddingWorker;
 use crate::workers::kafka::{Event, KafkaWorker};
 use crate::workers::qdrant::{QdrantTask, QdrantWorker};
@@ -13,6 +16,7 @@ use qdrant_client::{Qdrant, QdrantError};
 use redis::{Commands, RedisError};
 
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::{mpsc, mpsc::UnboundedSender};
 use tokio::task::JoinHandle;
 
@@ -47,6 +51,9 @@ impl Orbit {
 
         // store initial embeddings
         self.store_initial_embeddings(qdrant_tx.clone()).await;
+
+        // seed initial events
+        self.seed_recent_events(event_tx.clone()).await;
 
         // publish embedding version
         if let Err(e) = self.publish() {
@@ -112,6 +119,50 @@ impl Orbit {
         );
 
         Ok(())
+    }
+
+    async fn seed_recent_events(&self, event_tx: UnboundedSender<Event>) {
+        let (db, connection) =
+            tokio_postgres::connect(&self.config.rw_conn(), tokio_postgres::NoTls)
+                .await
+                .unwrap();
+
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                tracing::error!("risingwave connection error: {}", e);
+            }
+        });
+
+        tracing::info!("Loading recent engagements...");
+
+        let mut status_ids: FastHashSet<i64> = FastHashSet::default();
+        let results = rw::get_recent_engagements(&db).await;
+
+        let start = Instant::now();
+
+        let i: usize = results
+            .map(|(status, engagement)| {
+                let count = if !status_ids.contains(&status.status_id) {
+                    status_ids.insert(status.status_id);
+
+                    event_tx.send(Event::Status(DebeziumEvent::new_create(status)));
+                    1
+                } else {
+                    0
+                };
+
+                event_tx.send(Event::Engagement(engagement));
+
+                count + 1
+            })
+            .sum();
+
+        let duration = start.elapsed();
+
+        tracing::info!(
+            "Seeded initial engagements with {} udpates/second.",
+            (i as f64) / duration.as_secs_f64()
+        );
     }
 
     async fn store_initial_embeddings(&self, qdrant_tx: UnboundedSender<QdrantTask>) {

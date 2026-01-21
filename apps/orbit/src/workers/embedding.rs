@@ -94,12 +94,6 @@ impl EmbeddingWorker {
     ) {
         if let Some(payload) = &event.payload {
             if let Some(status) = &payload.after {
-                tracing::info!(
-                    "Processing status {} in worker {}",
-                    status.status_id,
-                    self.worker_id
-                );
-
                 // skip when status is not trendable
                 if status.visibility != 0 {
                     tracing::info!(
@@ -125,6 +119,12 @@ impl EmbeddingWorker {
                     );
                     return;
                 }
+
+                tracing::info!(
+                    "Processing status {} in worker {}",
+                    status.status_id,
+                    self.worker_id
+                );
             }
         }
 
@@ -165,6 +165,7 @@ impl EmbeddingWorker {
     ) {
         if entity.should_upsert(&self.config) {
             self.upsert_embedding(id, entity, entity_type);
+        } else {
         }
     }
 
