@@ -367,9 +367,7 @@ def test_passthrough_delegates_to_pipeline(mock_feed, mock_gen_id, mock_get_key)
 @patch("apps.api.services.feed_service.Feed")
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service._get_feed_key")
-def test_save_state_stores_in_redis(
-    mock_get_key, mock_gen_id, mock_feed, mock_config
-):
+def test_save_state_stores_in_redis(mock_get_key, mock_gen_id, mock_feed, mock_config):
     mock_config.fediway.feed_session_ttl = 3600
     mock_redis = Mock()
     service = FeedService(
@@ -383,14 +381,14 @@ def test_save_state_stores_in_redis(
     service._name = "test_feed"
     service.id = "feed123"
     service.pipeline.get_state.return_value = {"counter": 1}
-    
+
     service._save_state()
-    
+
     service.r.setex.assert_called_once()
     call_args = service.r.setex.call_args
     assert call_args[0][0] == service.redis_key
     assert call_args[0][1] == 3600
-    
+
     state_data = json.loads(call_args[0][2])
     assert state_data["id"] == "feed123"
     assert state_data["pipeline"] == {"counter": 1}
@@ -620,7 +618,7 @@ def test_ingest_pipeline_steps(mock_feed, mock_gen_id, mock_get_key, mock_uuid):
         uuid.UUID("11111111-1111-1111-1111-111111111111"),
         uuid.UUID("22222222-2222-2222-2222-222222222222"),
     ]
-    
+
     mock_kafka = Mock()
     service = FeedService(
         kafka=mock_kafka,
@@ -631,24 +629,24 @@ def test_ingest_pipeline_steps(mock_feed, mock_gen_id, mock_get_key, mock_uuid):
         account=None,
     )
     service.id = "feed123"
-    
+
     step1 = Mock()
     step1.__str__ = Mock(return_value="Step1")
     step1.get_params.return_value = {"param1": "value1"}
-    
+
     step2 = Mock()
     step2.__str__ = Mock(return_value="Step2")
     step2.get_params.return_value = {}
-    
+
     service.pipeline.steps = [step1, step2]
     service.pipeline.get_durations.return_value = [100, 200]
-    
+
     mock_timestamp = Mock()
     mock_timestamp.timestamp.return_value = 1234567890.0
     service.feature_service.event_time = mock_timestamp
-    
+
     step_ids, futures = service._ingest_pipeline_steps("run123")
-    
+
     assert len(step_ids) == 2
     assert len(futures) == 2
     assert service.kafka.send.call_count == 2
@@ -830,7 +828,7 @@ async def test_execute_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_utils
     )
     service._save_state = Mock()
     service.pipeline.execute = AsyncMock()
-    
+
     await service._execute()
 
     service.pipeline.execute.assert_called_once()

@@ -195,6 +195,20 @@ def test_getitem_slice_returns_candidate_list():
     assert sliced.get_source(2) == {("source2", "g2")}
 
 
+def test_getitem_index_with_missing_source():
+    candidates = CandidateList("status_id")
+
+    candidates._ids.append(123)
+    candidates._scores.append(0.5)
+
+    candidate = candidates[0]
+
+    assert isinstance(candidate, Candidate)
+    assert candidate.id == 123
+    assert candidate.score == 0.5
+    assert candidate.sources == set()
+
+
 def test_getitem_slice_preserves_entity():
     candidates = CandidateList("user_id")
     candidates.append(42)

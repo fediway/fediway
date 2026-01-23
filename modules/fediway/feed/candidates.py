@@ -148,7 +148,7 @@ class CandidateList:
         else:
             candidate = self._ids[index]
             score = self._scores[index]
-            sources = self._sources[candidate]
+            sources = self._sources.get(candidate, set())
             return Candidate(self.entity, candidate, score, sources)
 
     def __len__(self):
