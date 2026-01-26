@@ -4,7 +4,9 @@
 
 <div align="center">
     
-[Newsletter](https://tally.so/r/vGMQll)
+[Newsletter](https://tally.so/r/vGMQll) | 
+[About](https://about.fediway.com) |
+[Sponsor](https://github.com/sponsors/fediway/)
 
 </div>
 
