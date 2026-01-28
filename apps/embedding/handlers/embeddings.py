@@ -5,8 +5,8 @@ from loguru import logger
 from pydantic import BaseModel
 from qdrant_client import QdrantClient, models
 
-import modules.utils as utils
 from modules.fediway.embedding import Embedder, MultimodalEmbedder
+from shared.utils import duration
 
 
 class StatusEmbeddings(BaseModel):
@@ -30,7 +30,7 @@ class TextEmbeddingsBatchHandler:
         if len(texts) == 0:
             return []
 
-        with utils.duration("Generated " + str(len(texts)) + " text embeddings in {:.3f} seconds."):
+        with duration("Generated " + str(len(texts)) + " text embeddings in {:.3f} seconds."):
             if isinstance(self.embedder, MultimodalEmbedder):
                 embeddings = self.embedder.texts(texts)
             else:

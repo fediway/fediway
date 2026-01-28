@@ -795,12 +795,12 @@ def test_await_kafka_futures_with_errors(mock_feed, mock_gen_id, mock_get_key, m
     service.kafka.flush.assert_called_once()
 
 
-@patch("apps.api.services.feed_service.utils")
+@patch("apps.api.services.feed_service.duration")
 @patch("apps.api.services.feed_service._get_feed_key")
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
 @pytest.mark.asyncio
-async def test_execute_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_utils):
+async def test_execute_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_duration):
     service = FeedService(
         kafka=Mock(),
         request=Mock(spec=Request),
@@ -819,12 +819,12 @@ async def test_execute_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_utils
     service.tasks.add_task.assert_called_once_with(service._save_pipeline_run)
 
 
-@patch("apps.api.services.feed_service.utils")
+@patch("apps.api.services.feed_service.duration")
 @patch("apps.api.services.feed_service._get_feed_key")
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
 @pytest.mark.asyncio
-async def test_execute_with_new_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_utils):
+async def test_execute_with_new_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_duration):
     service = FeedService(
         kafka=Mock(),
         request=Mock(spec=Request),
@@ -846,12 +846,12 @@ async def test_execute_with_new_pipeline(mock_feed, mock_gen_id, mock_get_key, m
     assert result == ["rec1", "rec2", "rec3"]
 
 
-@patch("apps.api.services.feed_service.utils")
+@patch("apps.api.services.feed_service.duration")
 @patch("apps.api.services.feed_service._get_feed_key")
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
 @pytest.mark.asyncio
-async def test_execute_with_existing_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_utils):
+async def test_execute_with_existing_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_duration):
     service = FeedService(
         kafka=Mock(),
         request=Mock(spec=Request),
@@ -872,12 +872,12 @@ async def test_execute_with_existing_pipeline(mock_feed, mock_gen_id, mock_get_k
     assert result == ["rec1", "rec2"]
 
 
-@patch("apps.api.services.feed_service.utils")
+@patch("apps.api.services.feed_service.duration")
 @patch("apps.api.services.feed_service._get_feed_key")
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
 @pytest.mark.asyncio
-async def test_fluent_interface_chaining(mock_feed, mock_gen_id, mock_get_key, mock_utils):
+async def test_fluent_interface_chaining(mock_feed, mock_gen_id, mock_get_key, mock_duration):
     service = FeedService(
         kafka=Mock(),
         request=Mock(spec=Request),

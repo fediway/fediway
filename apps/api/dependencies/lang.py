@@ -1,6 +1,6 @@
 from fastapi import Depends, Request
 
-import modules.utils as utils
+from apps.api.utils import parse_accept_language
 
 from .location import get_location
 
@@ -13,7 +13,7 @@ def get_language_from_location(location) -> None | str:
 
 
 def get_languages(request: Request, location: str | None = Depends(get_location)) -> list[str]:
-    request_lang = utils.http.parse_accept_language(request.headers.get("accept-language", ""))
+    request_lang = parse_accept_language(request.headers.get("accept-language", ""))
 
     location_lang = get_language_from_location(location)
 

@@ -6,7 +6,7 @@ import pandas as pd
 from sqlalchemy import text
 from sqlmodel import Session, select
 
-import modules.utils as utils
+from shared.utils import duration
 
 
 def load_tag_engagements_from_file(path):
@@ -152,7 +152,7 @@ def load_tag_engagements_from_db(db: Session, start: datetime, end: datetime):
         GROUP BY st.tag_id;
     """).params(start=start, end=end)
 
-    with utils.duration("Loaded engagements in {:.3f} seconds."):
+    with duration("Loaded engagements in {:.3f} seconds."):
         result = db.execute(query)
         rows = result.all()
 
@@ -169,7 +169,7 @@ def load_tag_similarities(db: Session, min_tag_similarity: float):
     WHERE cosine_sim > :min_tag_similarity;
     """).params(min_tag_similarity=min_tag_similarity)
 
-    with utils.duration("Tag similarities loaded in {:.3f} seconds."):
+    with duration("Tag similarities loaded in {:.3f} seconds."):
         result = db.execute(query)
         rows = result.all()
 

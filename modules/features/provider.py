@@ -10,7 +10,7 @@ from feast.infra.passthrough_provider import PassthroughProvider
 from kafka import KafkaProducer
 from loguru import logger
 
-from modules.utils import JSONEncoder
+from shared.utils import JSONEncoder
 
 
 class FediwayProvider(PassthroughProvider):

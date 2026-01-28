@@ -92,8 +92,8 @@ def collect(language: str = "en"):
 
     from modules.fediway.sources.qdrant import SimilarToFavourited
 
-    import modules.utils as utils
     from shared.core.qdrant import client
+    from shared.utils import duration
     from shared.services.feature_service import FeatureService
 
     # source = MostInteractedByAccountsSource(
@@ -117,10 +117,10 @@ def collect(language: str = "en"):
     #     account_id=114398075274349836
     # )
 
-    with utils.duration("Collected in {:3f} seconds"):
+    with duration("Collected in {:3f} seconds"):
         for status_id in source.collect(10):
             continue
-    with utils.duration("Collected in {:3f} seconds"):
+    with duration("Collected in {:3f} seconds"):
         for status_id in source.collect(10):
             print(status_id)
     exit(())

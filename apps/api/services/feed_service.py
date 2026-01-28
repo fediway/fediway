@@ -8,8 +8,8 @@ from kafka import KafkaProducer
 from loguru import logger
 from redis import Redis
 
-import modules.utils as utils
 from config import config
+from shared.utils import JSONEncoder, duration
 from modules.fediway.feed import Features
 from modules.fediway.feed.pipeline import (
     CandidateList,
@@ -477,7 +477,7 @@ class FeedService:
         self.r.setex(
             self.redis_key,
             config.fediway.feed_session_ttl,
-            json.dumps(state, cls=utils.JSONEncoder),
+            json.dumps(state, cls=JSONEncoder),
         )
 
     def _load_state(self):
@@ -495,7 +495,7 @@ class FeedService:
         return self.kafka.send(topic=topic, key=key, value=value)
 
     async def _execute(self):
-        with utils.duration("Executed pipeline in {:.3f} seconds."):
+        with duration("Executed pipeline in {:.3f} seconds."):
             await self.pipeline.execute()
 
         # store feed state in redis cache
@@ -505,7 +505,7 @@ class FeedService:
         self.tasks.add_task(self._save_pipeline_run)
 
     async def execute(self) -> CandidateList:
-        with utils.duration("Loaded recommendations in {:.3f} seconds."):
+        with duration("Loaded recommendations in {:.3f} seconds."):
             self._load_state()
 
             if self.pipeline.is_new():

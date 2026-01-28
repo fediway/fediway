@@ -2,8 +2,8 @@ import os
 
 import maxminddb
 
+from apps.api.utils import redis_cache
 from config import config
-from modules.utils import redis_cache
 from shared.core.redis import get_redis
 
 ipv4_reader: maxminddb.Reader = None

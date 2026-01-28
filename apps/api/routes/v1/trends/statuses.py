@@ -5,7 +5,7 @@ from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
     get_viral_statuses_source,
 )
-from apps.api.modules.utils import set_next_link
+from apps.api.utils import set_next_link
 from apps.api.services.feed_service import FeedService
 from config import config
 from modules.fediway.feed.sampling import InverseTransformSampler

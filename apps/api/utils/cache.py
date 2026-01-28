@@ -1,4 +1,5 @@
 import functools
+import json
 from typing import Callable
 
 from redis import Redis
