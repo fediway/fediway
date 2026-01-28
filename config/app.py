@@ -19,7 +19,6 @@ class AppConfig(BaseConfig):
 
     app_secret: SecretStr
     app_host: str
-    api_url: str
 
     app_title: str = "Fediway - Algorithmic Feeds for Mastodon ✨"
 

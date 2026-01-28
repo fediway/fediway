@@ -1,17 +1,17 @@
 from .api import ApiConfig
 from .app import AppConfig
+from .base import BaseConfig, FilesConfig, TasksConfig
 from .cors import CorsConfig
-from .db import DBConfig
 from .embed import EmbedConfig
 from .feast import FeastConfig
 from .fediway import FediwayConfig
-from .files import FilesConfig
 from .geo import GeoLocationConfig
 from .kafka import KafkaConfig
 from .logging import LoggingConfig
+from .postgres import PostgresConfig
 from .qdrant import QdrantConfig
 from .redis import RedisConfig
-from .tasks import TasksConfig
+from .risingwave import RisingWaveConfig
 
 
 class classproperty(property):
@@ -23,7 +23,6 @@ class config:
     api = ApiConfig()
     app = AppConfig()
     cors = CorsConfig()
-    db = DBConfig()
     embed = EmbedConfig()
     feast = FeastConfig()
     fediway = FediwayConfig()
@@ -31,9 +30,14 @@ class config:
     geo = GeoLocationConfig()
     kafka = KafkaConfig()
     logging = LoggingConfig()
+    postgres = PostgresConfig()
     qdrant = QdrantConfig()
     redis = RedisConfig()
+    risingwave = RisingWaveConfig()
     tasks = TasksConfig()
+
+    # Backward compatibility aliases
+    db = postgres  # Old code may use config.db
 
     @classproperty
     def fastapi_kwargs(cls) -> dict[str, any]:

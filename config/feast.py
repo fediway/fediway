@@ -43,17 +43,17 @@ class FeastConfig(BaseConfig):
 
     @property
     def offline_config(self):
-        from .db import DBConfig
+        from .risingwave import RisingWaveConfig
         from .kafka import KafkaConfig
 
-        db = DBConfig()
+        rw = RisingWaveConfig()
         kafka = KafkaConfig()
 
         return RisingwaveOfflineStoreConfig(
-            host=db.rw_host,
-            port=db.rw_port,
-            database=db.rw_name,
-            user=db.rw_user,
-            password=db.rw_pass.get_secret_value(),
+            host=rw.rw_host,
+            port=rw.rw_port,
+            database=rw.rw_name,
+            user=rw.rw_user,
+            password=rw.rw_pass.get_secret_value(),
             kafka_bootstrap_servers=kafka.kafka_bootstrap_servers,
         )

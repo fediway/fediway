@@ -4,17 +4,7 @@ from sqlalchemy import URL
 from .base import BaseConfig
 
 
-class DBConfig(BaseConfig):
-    # --- Postgresql ---
-
-    db_host: str = "localhost"
-    db_port: int = 5432
-    db_user: str = "mastodon"
-    db_pass: SecretStr = ""
-    db_name: str = "mastodon_production"
-
-    # --- Rising Wave ---
-
+class RisingWaveConfig(BaseConfig):
     rw_host: str = "localhost"
     rw_port: int = 4566
     rw_user: str = "root"
@@ -24,25 +14,14 @@ class DBConfig(BaseConfig):
     rw_migrations_paths: list[str] = ["migrations/risingwave"]
     rw_migrations_table: str = "migrations"
 
-    rw_db_host: str | None = None
-    rw_db_user: str = "risingwave"
-    rw_db_pass: SecretStr = "password"
+    rw_cdc_host: str | None = None
+    rw_cdc_user: str = "risingwave"
+    rw_cdc_pass: SecretStr = "password"
 
     rw_kafka_bootstrap_servers: str = "localhost:9092"
 
     @property
     def url(self):
-        return URL.create(
-            "postgresql",
-            username=self.db_user,
-            password=self.db_pass.get_secret_value(),
-            host=self.db_host,
-            database=self.db_name,
-            port=self.db_port,
-        )
-
-    @property
-    def rw_url(self):
         return URL.create(
             "postgresql",
             username=self.rw_user,

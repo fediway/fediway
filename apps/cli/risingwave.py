@@ -12,12 +12,12 @@ app = typer.Typer(help="RisingWave commands.")
 
 def get_context():
     return {
-        "db_host": config.db.rw_db_host or config.db.db_host,
-        "db_port": config.db.db_port,
-        "db_user": config.db.rw_db_user,
-        "db_pass": config.db.rw_db_pass.get_secret_value(),
-        "db_name": config.db.db_name,
-        "bootstrap_server": config.db.rw_kafka_bootstrap_servers,
+        "db_host": config.risingwave.rw_cdc_host or config.postgres.db_host,
+        "db_port": config.postgres.db_port,
+        "db_user": config.risingwave.rw_cdc_user,
+        "db_pass": config.risingwave.rw_cdc_pass.get_secret_value(),
+        "db_name": config.postgres.db_name,
+        "bootstrap_server": config.risingwave.rw_kafka_bootstrap_servers,
         "k_latest_account_favourites_embeddings": config.embed.k_latest_account_favourites_embeddings,
         "k_latest_account_reblogs_embeddings": config.embed.k_latest_account_reblogs_embeddings,
         "k_latest_account_replies_embeddings": config.embed.k_latest_account_replies_embeddings,
@@ -63,11 +63,11 @@ def get_applied_migrations(conn):
 
 def get_connection():
     return psycopg2.connect(
-        dbname=config.db.rw_name,
-        user=config.db.rw_user,
-        password=config.db.rw_pass.get_secret_value(),
-        host=config.db.rw_host,
-        port=config.db.rw_port,
+        dbname=config.risingwave.rw_name,
+        user=config.risingwave.rw_user,
+        password=config.risingwave.rw_pass.get_secret_value(),
+        host=config.risingwave.rw_host,
+        port=config.risingwave.rw_port,
     )
 
 
@@ -79,7 +79,7 @@ def migrate():
 
     context = get_context()
 
-    for path in config.db.rw_migrations_paths:
+    for path in config.risingwave.rw_migrations_paths:
         migration_dir = Path(path)
 
         for file in sorted(migration_dir.glob("*.sql")):
@@ -119,7 +119,7 @@ def rollback(version: str | None = None):
 
     context = get_context()
 
-    for path in reversed(config.db.rw_migrations_paths):
+    for path in reversed(config.risingwave.rw_migrations_paths):
         migration_dir = Path(path)
 
         for file in reversed(sorted(migration_dir.glob("*.sql"))):
@@ -146,7 +146,7 @@ def update(version: str):
 
     context = get_context()
 
-    for path in reversed(config.db.rw_migrations_paths):
+    for path in reversed(config.risingwave.rw_migrations_paths):
         migration_dir = Path(path)
 
         for file in reversed(sorted(migration_dir.glob("*.sql"))):
