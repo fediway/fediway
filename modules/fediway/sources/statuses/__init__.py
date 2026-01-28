@@ -1,12 +1,7 @@
 from .account_based_collaborative_filtering import (
     AccountBasedCollaborativeFilteringSource,
 )
-from .collaborative_filtering import CollaborativeFilteringSource
 from .community_based_recommendations import CommunityBasedRecommendationsSource
-from .newest_in_network import NewestInNetworkSource
-from .popular_by_influential_accounts import PouplarByInfluentialAccountsSource
-from .popular_in_community import PopularInCommunitySource
-from .popular_in_social_circle import PopularInSocialCircleSource
 from .recent_statuses_by_followed_accounts import RecentStatusesByFollowedAccounts
 from .similar_to_engaged import SimilarToEngagedSource
 from .status_based_collaborative_filtering import (

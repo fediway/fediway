@@ -1,6 +1,6 @@
 import typer
 
-app = typer.Typer(help="Follow sources.")
+app = typer.Typer(help="Status sources.")
 
 
 def _get_account_id_from_username(username: str):
@@ -31,28 +31,6 @@ def _log_candidates(candidates: list[str]):
 
         for status in statuses:
             print(status.language, status.local_url)
-
-
-@app.command("popular-in-social-circle")
-def triangular_loop(account_id: int, limit: int = 10):
-    from modules.fediway.sources.statuses import PopularInSocialCircleSource
-    from shared.core.herde import db
-
-    source = PopularInSocialCircleSource(db, account_id)
-
-    for candidate in source.collect(limit):
-        print(candidate)
-
-
-@app.command("newest-in-network")
-def triangular_loop(account_id: int, limit: int = 10):
-    from modules.fediway.sources.statuses import NewestInNetworkSource
-    from shared.core.herde import db
-
-    source = NewestInNetworkSource(db, account_id)
-
-    for candidate in source.collect(limit):
-        print(candidate)
 
 
 @app.command("community-based-recommendations")
@@ -91,7 +69,6 @@ def viral(
     limit: int = 10,
     language: str = "en",
 ):
-
     from modules.fediway.sources.statuses import ViralStatusesSource
     from shared.core.redis import get_redis
     from shared.core.rw import rw_session

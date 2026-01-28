@@ -50,6 +50,8 @@ class FeatureService(Features):
             cached.append(feat[~feat.index.duplicated(keep="last")])
 
         cached = pd.concat(cached, axis=1, join="inner")
+        # Filter out rows with all NaN values (entities not actually cached)
+        cached = cached.dropna(how="all")
         cached_entities = set(cached.index)
 
         return cached, [

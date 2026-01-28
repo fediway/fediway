@@ -30,6 +30,7 @@ dependencies = [
     # Utilities
     "tqdm>=4.67",
     "numpy>=1.26",
+    "pandas>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -43,6 +44,7 @@ embeddings = [
 streaming = [
     "faststream>=0.5",
     "confluent-kafka>=2.9",
+    "kafka-python>=2.0",
 ]
 ml = [
     "scikit-learn>=1.6",
@@ -57,11 +59,6 @@ geo = [
 aws = [
     "aiobotocore>=2.17",
     "boto3>=1.35",
-]
-# Graph databases (planned for future, not recommended for MVP)
-graph = [
-    "neo4j>=5.28",
-    "python-arango>=8.1",
 ]
 dev = [
     "pytest>=9.0",
