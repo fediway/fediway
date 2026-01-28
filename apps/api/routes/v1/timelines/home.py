@@ -1,7 +1,6 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
 from sqlmodel import Session as DBSession
 
-from apps.api.dependencies.features import get_kirby_feature_service
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
     get_community_based_recommendations_source,
@@ -13,9 +12,7 @@ from apps.api.dependencies.sources.statuses import (
 from apps.api.modules.utils import set_next_link
 from apps.api.services.feed_service import FeedService
 from config import config
-from modules.fediway.feed import CandidateList
 from modules.fediway.feed.sampling import WeightedGroupSampler
-from modules.fediway.rankers.kirby import KirbyFeatureService
 from modules.fediway.sources import Source
 from modules.mastodon.items import StatusItem
 from modules.mastodon.models import Status
@@ -66,7 +63,6 @@ def get_cold_start_sources(
 async def home_timeline(
     request: Request,
     response: Response,
-    background_tasks: BackgroundTasks,
     max_id: int | None = None,
     feed: FeedService = Depends(get_feed),
     in_network_sources: list[Source] = Depends(get_in_network_sources),
@@ -74,13 +70,8 @@ async def home_timeline(
     out_network_sources: list[Source] = Depends(get_out_network_sources),
     trending_sources: list[Source] = Depends(get_trending_sources),
     cold_start_sources: list[Source] = Depends(get_cold_start_sources),
-    kirby_features: KirbyFeatureService = Depends(get_kirby_feature_service),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
-    async def _push_kirby_features_to_offline_store(candidates: CandidateList):
-        background_tasks.add_task(kirby_features.get, candidates.get_entity_rows())
-        return candidates
-
     max_candidates_per_source = config.fediway.max_candidates_per_source(
         len(in_network_sources)
         # len(near_network_sources) +
@@ -101,7 +92,6 @@ async def home_timeline(
         .sources(_map_sources(trending_sources), group="trending")
         .sources(_map_sources(cold_start_sources), group="cold-start")
         .unique()
-        # .passthrough(_push_kirby_features_to_offline_store)
         .remember()
         .diversify(by="status:author_id", penalty=0.1)
         .sample(

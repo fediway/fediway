@@ -2,7 +2,6 @@ import typer
 
 from .feast import app as feast_app
 from .kafka import app as kafka_app
-from .kirby import app as kirby_app
 from .orbit import app as orbit_app
 from .qdrant import app as qdrant_app
 from .risingwave import app as risingwave_app
@@ -13,8 +12,6 @@ app = typer.Typer()
 app.add_typer(source_app, name="source")
 
 app.add_typer(feast_app, name="feast", help="Feast commands (feature store)")
-
-app.add_typer(kirby_app, name="kirby", help="Kirby commands (ranker)")
 
 app.add_typer(orbit_app, name="orbit", help="Orbit commands (community embeddings)")
 

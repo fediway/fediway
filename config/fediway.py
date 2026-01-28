@@ -27,13 +27,6 @@ class FediwayConfig(BaseConfig):
     datasets_path: str = "data/datasets"
     datasets_s3_endpoint: str | None = None
 
-    # kirby (ML ranker)
-    kirby_path: str = "models/kirby_v0.1"
-    kirby_label_weight_is_favourited: float = 0.5
-    kirby_label_weight_is_reblogged: float = 2.0
-    kirby_label_weight_is_replied: float = 2.0
-    kirby_label_weight_is_reply_engaged_by_author: float = 5.0
-
     def feed_max_age(self):
         return datetime.now() - timedelta(days=self.feed_max_age_in_days)
 

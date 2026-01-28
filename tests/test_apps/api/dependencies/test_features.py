@@ -3,10 +3,7 @@ from unittest.mock import Mock, patch
 
 from fastapi import BackgroundTasks, Request
 
-from apps.api.dependencies.features import (
-    get_feature_service,
-    get_kirby_feature_service,
-)
+from apps.api.dependencies.features import get_feature_service
 
 
 @patch("apps.api.dependencies.features.FeatureService")
@@ -58,27 +55,3 @@ def test_get_feature_service_returns_existing_instance():
     result = get_feature_service(mock_request, mock_background_tasks)
 
     assert result == existing_feature_service
-
-
-@patch("apps.api.dependencies.features.KirbyFeatureService")
-@patch("apps.api.dependencies.features.feature_store")
-def test_get_kirby_feature_service_constructs_service(
-    mock_feature_store, mock_kirby_feature_service
-):
-    mock_account = Mock()
-    mock_account.id = "1234"
-    mock_feature_service = Mock()
-
-    instance = mock_kirby_feature_service.return_value
-
-    result = get_kirby_feature_service(
-        account=mock_account,
-        feature_service=mock_feature_service,
-    )
-
-    mock_kirby_feature_service.assert_called_once_with(
-        feature_store=mock_feature_store,
-        feature_service=mock_feature_service,
-        account_id="1234",
-    )
-    assert result == instance
