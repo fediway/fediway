@@ -1,11 +1,16 @@
-from feast.feature_store import RepoConfig
-from feast.infra.online_stores.redis import RedisOnlineStoreConfig
-from feast.repo_config import FeastConfigBaseModel
 from pydantic import SecretStr
 
 from .base import BaseConfig
-from modules.features.offline_store import RisingwaveOfflineStoreConfig
-from modules.features.provider import FediwayProvider
+
+try:
+    from feast.feature_store import RepoConfig
+    from feast.infra.online_stores.redis import RedisOnlineStoreConfig
+
+    FEAST_AVAILABLE = True
+except ImportError:
+    FEAST_AVAILABLE = False
+    RepoConfig = None
+    RedisOnlineStoreConfig = None
 
 
 class FeastConfig(BaseConfig):
@@ -18,8 +23,21 @@ class FeastConfig(BaseConfig):
     feast_redis_port: int = 6379
     feast_redis_pass: SecretStr = ""
 
+    @staticmethod
+    def is_available() -> bool:
+        """Check if feast is installed."""
+        return FEAST_AVAILABLE
+
     @property
-    def repo_config(self) -> RepoConfig:
+    def repo_config(self):
+        if not FEAST_AVAILABLE:
+            raise ImportError(
+                "Feast is not installed. Install with: uv sync --extra features"
+            )
+
+        from feast.feature_store import RepoConfig
+        from modules.features.offline_store import RisingwaveOfflineStoreConfig
+
         return RepoConfig(
             project="fediway",
             provider="modules.features.provider.FediwayProvider",
@@ -31,6 +49,13 @@ class FeastConfig(BaseConfig):
 
     @property
     def online_config(self):
+        if not FEAST_AVAILABLE:
+            raise ImportError(
+                "Feast is not installed. Install with: uv sync --extra features"
+            )
+
+        from feast.infra.online_stores.redis import RedisOnlineStoreConfig
+
         connection_string = f"{self.feast_redis_host}:{self.feast_redis_port}"
 
         if self.feast_redis_pass.get_secret_value() != "":
@@ -43,6 +68,12 @@ class FeastConfig(BaseConfig):
 
     @property
     def offline_config(self):
+        if not FEAST_AVAILABLE:
+            raise ImportError(
+                "Feast is not installed. Install with: uv sync --extra features"
+            )
+
+        from modules.features.offline_store import RisingwaveOfflineStoreConfig
         from .risingwave import RisingWaveConfig
         from .kafka import KafkaConfig
 
