@@ -12,9 +12,12 @@ class KafkaConfig(BaseConfig):
     kafka_pass: SecretStr = ""
 
     @property
-    def faststream_security():
+    def faststream_security(self):
+        if not self.kafka_user:
+            return None
+
         from faststream.security import SASLPlaintext
 
-        return None
-
-        return SASLPlaintext(username=self.kafka_user, password=self.kafka_pass.get_secret_value())
+        return SASLPlaintext(
+            username=self.kafka_user, password=self.kafka_pass.get_secret_value()
+        )
