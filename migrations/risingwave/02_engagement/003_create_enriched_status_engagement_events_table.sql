@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   text_custom_emojis_count INT,
 
   -- account
-  source_domain VARCHAR,
+  source_instance VARCHAR,
   account_locked BOOLEAN DEFAULT false,
   account_discoverable BOOLEAN DEFAULT true,
   account_trendable BOOLEAN DEFAULT true,
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS enriched_status_engagement_events (
   account_suspended_at TIMESTAMP,
 
   -- author
-  target_domain VARCHAR,
+  target_instance VARCHAR,
   author_locked BOOLEAN DEFAULT false,
   author_discoverable BOOLEAN DEFAULT true,
   author_trendable BOOLEAN DEFAULT true,
@@ -84,7 +84,7 @@ SELECT
   s.text_custom_emojis_count,
   
   -- account
-  a.domain as source_domain,
+  a.domain as source_instance,
   a.locked AS account_locked,
   a.discoverable AS account_discoverable,
   a.trendable AS account_trendable,
@@ -93,7 +93,7 @@ SELECT
   a.suspended_at AS account_suspended_at,
 
   -- author
-  s.author_domain as target_domain,
+  s.author_instance as target_instance,
   s.author_locked,
   s.author_discoverable,
   s.author_trendable,
@@ -130,11 +130,12 @@ FROM status_engagements e
 JOIN accounts a ON e.account_id = a.id
 JOIN status_stats st ON st.status_id = e.status_id
 JOIN enriched_statuses s ON s.status_id = e.status_id
+WHERE e.event_time > NOW() - INTERVAL '7 DAYS'
 WITH (type = 'append-only', force_append_only='true');
 
 CREATE INDEX IF NOT EXISTS idx_enriched_status_engagement_events_event_time ON enriched_status_engagement_events(event_time DESC); 
 
-CREATE SINK IF NOT EXISTS enriched_status_engagement_events_sink AS
+CREATE SINK IF NOT EXISTS status_engagements_sink AS
 SELECT *
 FROM enriched_status_engagement_events
 WHERE event_time > NOW() - INTERVAL '3 DAYS'
@@ -142,7 +143,7 @@ WITH (
   connector='kafka',
   properties.bootstrap.server='{{ bootstrap_server }}',
   topic='status_engagements',
-  primary_key='account_id,status_id',
+  primary_key='account_id,status_id,type',
 ) FORMAT PLAIN ENCODE JSON (
   force_append_only='true'
 );

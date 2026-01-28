@@ -1,7 +1,7 @@
 from .entities import (
     account,
     author,
-    domain,
+    instance,
     preview_card,
     preview_card_domain,
     status,
@@ -16,7 +16,7 @@ from .services import (
 from .views.base import status_db_features, status_features, status_stats_features
 from .views.engagement import (
     account_author_engagement_features,
-    account_domain_engagement_features,
+    account_instance_engagement_features,
     account_engagement_features,
     account_preview_card_domain_engagement_features,
     account_preview_card_engagement_features,
@@ -27,12 +27,12 @@ from .views.engagement import (
     tag_engagement_features,
 )
 
-ENTITIES = [account, author, status, tag, domain, preview_card, preview_card_domain]
+ENTITIES = [account, author, status, tag, instance, preview_card, preview_card_domain]
 
 FEATURE_VIEWS = (
     # engagement features
     account_author_engagement_features
-    + account_domain_engagement_features
+    + account_instance_engagement_features
     + account_engagement_features
     + account_preview_card_domain_engagement_features
     + account_preview_card_engagement_features

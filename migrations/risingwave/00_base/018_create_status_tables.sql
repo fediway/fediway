@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS status_stats (
     favourites_count BIGINT,
     replies_count BIGINT,
     quotes_count BIGINT,
+    untrusted_favourites_count BIGINT,
+    untrusted_reblogs_count BIGINT,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
 ) FROM pg_source TABLE 'public.status_stats';

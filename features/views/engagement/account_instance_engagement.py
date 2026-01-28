@@ -3,7 +3,7 @@ from datetime import timedelta
 from feast import Field
 from feast.types import Float32, Int64
 
-from ...entities import account, domain
+from ...entities import account, instance
 from ...utils import make_feature_view
 
 feature_views = []
@@ -56,13 +56,13 @@ FEATURES = [
 for spec in SPECS:
     feature_views.append(
         make_feature_view(
-            f"account_domain_engagement_{spec}",
-            entities=[account, domain],
+            f"account_instance_engagement_{spec}",
+            entities=[account, instance],
             schema=FEATURES,
             online=True,
             tags={
-                "online_store": f"online_features_account_domain_engagement_{spec}",
-                "offline_store": f"offline_features_account_domain_engagement_{spec}",
+                "online_store": f"online_features_account_instance_engagement_{spec}",
+                "offline_store": f"offline_features_account_instance_engagement_{spec}",
             },
             ttl=timedelta(days=int(spec.replace("d", ""))),
         )

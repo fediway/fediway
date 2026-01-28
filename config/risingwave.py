@@ -1,4 +1,4 @@
-from pydantic import SecretStr
+from pydantic import SecretStr, computed_field
 from sqlalchemy import URL
 
 from .base import BaseConfig
@@ -11,7 +11,6 @@ class RisingWaveConfig(BaseConfig):
     rw_pass: SecretStr = ""
     rw_name: str = "dev"
 
-    rw_migrations_paths: list[str] = ["migrations/risingwave"]
     rw_migrations_table: str = "migrations"
 
     rw_cdc_host: str | None = None
@@ -30,3 +29,29 @@ class RisingWaveConfig(BaseConfig):
             database=self.rw_name,
             port=self.rw_port,
         )
+
+    @computed_field
+    @property
+    def rw_migrations_paths(self) -> list[str]:
+        """Compute migration paths based on enabled modules."""
+        from . import config
+
+        paths = [
+            "migrations/risingwave/00_base",
+            "migrations/risingwave/01_feed",
+            "migrations/risingwave/02_engagement",
+        ]
+
+        if config.fediway.collaborative_filtering_enabled:
+            paths.append("migrations/risingwave/03_collaborative_filtering")
+
+        if config.fediway.features_online_enabled:
+            paths.append("migrations/risingwave/04_features_online")
+
+        if config.fediway.features_offline_enabled:
+            paths.append("migrations/risingwave/05_features_offline")
+
+        if config.fediway.orbit_enabled:
+            paths.append("migrations/risingwave/06_orbit")
+
+        return paths

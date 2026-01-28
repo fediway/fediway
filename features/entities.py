@@ -8,8 +8,8 @@ status = Entity(name="status_id", value_type=ValueType.INT64, description="Statu
 
 tag = Entity(name="tag_id", value_type=ValueType.INT64, description="Tag identifier")
 
-domain = Entity(
-    name="domain", value_type=ValueType.STRING, description="Instance domain identifier"
+instance = Entity(
+    name="instance", value_type=ValueType.STRING, description="Fediverse instance identifier"
 )
 
 preview_card = Entity(

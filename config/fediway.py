@@ -6,6 +6,12 @@ from .base import BaseConfig
 
 
 class FediwayConfig(BaseConfig):
+    # module flags - controls both migrations and runtime sources
+    collaborative_filtering_enabled: bool = False
+    orbit_enabled: bool = False
+    features_online_enabled: bool = False
+    features_offline_enabled: bool = False
+
     # feed
     feed_max_age_in_days: int = 3
     feed_max_sourced_candidates: int = 500

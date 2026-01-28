@@ -66,6 +66,9 @@ CREATE TABLE IF NOT EXISTS enriched_statuses (
   tags BIGINT[]
 ) ON CONFLICT DO UPDATE IF NOT NULL;
 
+CREATE INDEX idx_enriched_statuses_preview_card_id ON enriched_statuses(preview_card_id);
+CREATE INDEX idx_enriched_statuses_preview_card_domain ON enriched_statuses(preview_card_domain);
+
 CREATE SINK IF NOT EXISTS enriched_statuses_statuses_sink
 INTO enriched_statuses (
   status_id, 
@@ -98,58 +101,63 @@ WITH (
   force_append_only = 'true',
 );
 
--- CREATE SINK IF NOT EXISTS enriched_statuses_text_sink
--- INTO enriched_statuses (
---   status_id, 
---   text_chars_count,
---   text_uppercase_count,
---   text_newlines_count,
---   text_custom_emojis_count
--- ) AS
--- SELECT 
---   id, 
---   CHAR_LENGTH(REGEXP_REPLACE(
--- 		REGEXP_REPLACE(
--- 			REGEXP_REPLACE(text, '<[^>]*>', '', 'g'),
--- 			'https?://[^\s]+',
--- 			repeat('x', 23),
--- 			'g'
--- 		),
--- 		'@([a-zA-Z0-9_]+)(?:@[a-zA-Z0-9.-]+)?',
--- 		'',
--- 		'g'
--- 	)) as text_chars_count,
--- 	CHAR_LENGTH(REGEXP_REPLACE(
--- 		REGEXP_REPLACE(
--- 			REGEXP_REPLACE(text, '<[^>]*>', '', 'g'),
--- 			'https?://[^\s]+',
--- 			'',
--- 			'g'
--- 		)
--- 		, 
--- 		'[^A-Z]', 
--- 		'', 
--- 		'g'
--- 	)) AS text_uppercase_count,
---   (
---     array_length(regexp_split_to_array(text, '<p[^>]*>', 'gi'), 1) - 1 +
---     array_length(regexp_split_to_array(text, '<br[^>]*>', 'gi'), 1) - 1 +
---     array_length(regexp_split_to_array(text, '<div[^>]*>', 'gi'), 1) - 1 +
---     array_length(regexp_split_to_array(text, '<h[1-6][^>]*>', 'gi'), 1) - 1 +
---     array_length(regexp_split_to_array(text, '<li[^>]*>', 'gi'), 1) - 1
---   ) AS text_newlines_count,
---   array_length(
---     regexp_split_to_array(
---       text, 
---       '(?<=[^[:alnum:]:]|\n|^):([a-zA-Z0-9_]{2,}):(?=[^[:alnum:]:]|$)', 
---       'g'
---     ), 1
---   ) - 1 AS text_custom_emojis_count
--- FROM statuses
--- WITH (
---   type = 'append-only',
---   force_append_only = 'true',
--- );
+CREATE SINK IF NOT EXISTS enriched_statuses_text_sink
+INTO enriched_statuses (
+  status_id, 
+  text_chars_count,
+  text_uppercase_count,
+  text_newlines_count,
+  text_custom_emojis_count
+) AS
+SELECT 
+  id, 
+  CHAR_LENGTH(REGEXP_REPLACE(
+		REGEXP_REPLACE(
+			REGEXP_REPLACE(text, '<[^>]*>', '', 'g'),
+			'https?://[^\s]+',
+			repeat('x', 23),
+			'g'
+		),
+		'@([a-zA-Z0-9_]+)(?:@[a-zA-Z0-9.-]+)?',
+		'',
+		'g'
+	)) as text_chars_count,
+	CHAR_LENGTH(REGEXP_REPLACE(
+		REGEXP_REPLACE(
+			REGEXP_REPLACE(text, '<[^>]*>', '', 'g'),
+			'https?://[^\s]+',
+			'',
+			'g'
+		)
+		, 
+		'[^A-Z]', 
+		'', 
+		'g'
+	)) AS text_uppercase_count,
+  (
+    array_length(regexp_split_to_array(text, '<p[^>]*>', 'gi'), 1) - 1 +
+    array_length(regexp_split_to_array(text, '<br[^>]*>', 'gi'), 1) - 1 +
+    array_length(regexp_split_to_array(text, '<div[^>]*>', 'gi'), 1) - 1 +
+    array_length(regexp_split_to_array(text, '<h[1-6][^>]*>', 'gi'), 1) - 1 +
+    array_length(regexp_split_to_array(text, '<li[^>]*>', 'gi'), 1) - 1
+  ) AS text_newlines_count,
+  array_length(
+    regexp_split_to_array(
+      REGEXP_REPLACE(
+        REGEXP_REPLACE(text, '<[^>]*>', '', 'g'),
+        'https?://[^\s]+',
+        ' ',
+        'g'
+      ),
+      '(?<=[^[:alnum:]:]|\n|^):([a-zA-Z0-9_]{2,}):(?=[^[:alnum:]:]|$)', 
+      'g'
+    ), 1
+  ) - 1 AS text_custom_emojis_count
+FROM statuses
+WITH (
+  type = 'append-only',
+  force_append_only = 'true',
+);
 
 CREATE SINK IF NOT EXISTS enriched_statuses_author_sink
 INTO enriched_statuses (

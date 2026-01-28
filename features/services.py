@@ -3,7 +3,7 @@ from feast import FeatureService
 from .views.base import status_features, status_stats_features
 from .views.engagement import (
     account_author_engagement_features,
-    account_domain_engagement_features,
+    account_instance_engagement_features,
     account_engagement_features,
     account_preview_card_domain_engagement_features,
     account_preview_card_engagement_features,
@@ -28,7 +28,7 @@ account_status_engagement_feature_service = FeatureService(
     name="account_status_engagement_features",
     features=(
         account_author_engagement_features
-        + account_domain_engagement_features
+        + account_instance_engagement_features
         + account_engagement_features
         + account_preview_card_domain_engagement_features
         + account_preview_card_engagement_features

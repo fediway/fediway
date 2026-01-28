@@ -7,9 +7,11 @@ from sqlmodel import Session as DBSession
 from config import config
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
+    AccountBasedCollaborativeFilteringSource,
     CommunityBasedRecommendationsSource,
     RecentStatusesByFollowedAccounts,
     SimilarToEngagedSource,
+    StatusBasedCollaborativeFilteringSource,
     TopStatusesFromRandomCommunitiesSource,
     ViralStatusesSource,
 )
@@ -51,12 +53,16 @@ def get_community_based_recommendations_source(
     r: Redis = Depends(get_redis),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[Source]:
+    if not config.fediway.orbit_enabled:
+        return []
     return [CommunityBasedRecommendationsSource(r=r, client=qdrant_client, account_id=account.id)]
 
 
 def get_top_statuses_from_random_communities_source(
     r: Redis = Depends(get_redis),
 ) -> list[Source]:
+    if not config.fediway.orbit_enabled:
+        return []
     return [TopStatusesFromRandomCommunitiesSource(r=r, client=qdrant_client, batch_size=5)]
 
 
@@ -74,4 +80,16 @@ def get_similar_to_engaged_sources(
             max_age=MAX_AGE,
         )
         for lang in languages
+    ]
+
+
+def get_collaborative_filtering_sources(
+    r: Redis = Depends(get_redis),
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[Source]:
+    if not config.fediway.collaborative_filtering_enabled:
+        return []
+    return [
+        AccountBasedCollaborativeFilteringSource(r=r, account_id=account.id),
+        StatusBasedCollaborativeFilteringSource(r=r, account_id=account.id),
     ]

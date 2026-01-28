@@ -48,7 +48,7 @@
   FROM enriched_status_engagement_events e
   WHERE event_time >= NOW() - INTERVAL '{{ window_size }}'
   GROUP BY e.author_id;
-  
+
   CREATE SINK IF NOT EXISTS online_features_author_engagement_{{ spec }}_sink
   FROM online_features_author_engagement_{{ spec }}
   WITH (
@@ -60,62 +60,11 @@
   ) FORMAT PLAIN ENCODE JSON (
     force_append_only='true'
   );
-
-  CREATE TABLE IF NOT EXISTS offline_features_author_engagement_{{ spec }} (
-    author_id BIGINT,
-    event_time TIMESTAMP,
-    num_all INT,
-    num_favs INT,
-    num_reblogs INT,
-    num_replies INT,
-    num_poll_votes INT,
-    num_bookmarks INT,
-    num_quotes INT,
-    num_has_link INT,
-    num_has_photo_link INT,
-    num_has_video_link INT,
-    num_has_rich_link INT,
-    num_has_poll INT,
-    num_has_image INT,
-    num_has_gifv INT,
-    num_has_video INT,
-    num_has_audio INT,
-    num_has_quote INT,
-    avg_text_chars_count FLOAT,
-    max_text_chars_count INT,
-    min_text_chars_count INT,
-    avg_text_uppercase_count FLOAT,
-    max_text_uppercase_count INT,
-    min_text_uppercase_count INT,
-    avg_text_newlines_count FLOAT,
-    max_text_newlines_count INT,
-    min_text_newlines_count INT,
-    avg_text_custom_emojis_count FLOAT,
-    max_text_custom_emojis_count INT,
-    min_text_custom_emojis_count INT,
-    avg_status_fav_count FLOAT,
-    max_status_fav_count INT,
-    min_status_fav_count INT,
-    avg_status_reblogs_count FLOAT,
-    max_status_reblogs_count INT,
-    min_status_reblogs_count INT,
-    avg_status_replies_count FLOAT,
-    max_status_replies_count INT,
-    min_status_replies_count INT,
-    avg_mentions FLOAT,
-    avg_tags FLOAT,
-    PRIMARY KEY (author_id, event_time)
-  ) APPEND ONLY ON CONFLICT IGNORE WITH (
-    connector='kafka',
-    topic='offline_features_author_engagement_{{ spec }}',
-    properties.bootstrap.server='{{ bootstrap_server }}',
-  ) FORMAT PLAIN ENCODE JSON;
 {% endfor %}
 
 -- :down
 
 {% for spec in ['1d', '7d', '60d'] -%}
-  DROP VIEW IF EXISTS online_features_author_engagement_{{ spec }};
   DROP SINK IF EXISTS online_features_author_engagement_{{ spec }}_sink;
-  DROP TABLE IF EXISTS offline_features_author_engagement_{{ spec }};
+  DROP VIEW IF EXISTS online_features_author_engagement_{{ spec }};
 {% endfor -%}

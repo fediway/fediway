@@ -66,12 +66,15 @@ CREATE TABLE IF NOT EXISTS feed_recommendations (
     sources VARCHAR[],
     groups VARCHAR[],
     score REAL,
-    event_time TIMESTAMP
+    event_time TIMESTAMP,
+    WATERMARK FOR event_time AS event_time - INTERVAL '5 MINUTES'
 ) APPEND ONLY ON CONFLICT IGNORE WITH (
     connector='kafka',
     topic='feed_recommendations',
     properties.bootstrap.server='{{ bootstrap_server }}',
 ) FORMAT PLAIN ENCODE JSON;
+
+CREATE INDEX idx_feed_recommendations_entity ON feed_recommendations(entity) INCLUDE (entity_id, event_time);
 
 CREATE TABLE IF NOT EXISTS feed_candidate_sources (
     entity_id VARCHAR,
