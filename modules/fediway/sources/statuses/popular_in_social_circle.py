@@ -1,5 +1,6 @@
-from arango.database import StandardDatabase
 from datetime import datetime, timedelta
+
+from arango.database import StandardDatabase
 
 from modules.herde.utils import parse_datetime
 
@@ -45,9 +46,9 @@ class PopularInSocialCircleSource(Source):
                 LET count = LENGTH(groups)
                 SORT count DESC
                 LIMIT @limit
-                RETURN { 
-                    status_id: status_id, 
-                    count: count, 
+                RETURN {
+                    status_id: status_id,
+                    count: count,
                 }
         """
 

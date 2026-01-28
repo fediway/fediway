@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 
 from modules.fediway.feed.sampling import TopKSampler

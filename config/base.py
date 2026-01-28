@@ -1,13 +1,13 @@
 from urllib.parse import quote
 
-from pydantic_settings import BaseSettings
 from pydantic import ConfigDict, SecretStr
+from pydantic_settings import BaseSettings
 
 from modules.mastodon import paperclip
 
 
 class BaseConfig(BaseSettings):
-    model_config = ConfigDict(env_file=f".env", extra="ignore")
+    model_config = ConfigDict(env_file=".env", extra="ignore")
 
 
 class FilesConfig(BaseConfig):

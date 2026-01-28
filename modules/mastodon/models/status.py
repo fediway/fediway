@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import List, Optional
-from enum import Enum
 
 from sqlalchemy import ARRAY, Column, Integer
 from sqlmodel import Field, Relationship, SQLModel
+
+from config import config
 
 from .account import Account
 from .favourite import Favourite
@@ -11,7 +12,6 @@ from .media_attachment import MediaAttachment
 from .preview_card import PreviewCard, PreviewCardStatus
 from .quote import Quote
 from .topic import StatusTopic, Topic
-from config import config
 
 
 class StatusStats(SQLModel, table=True):
@@ -63,9 +63,7 @@ class Status(SQLModel, table=True):
     preview_card: PreviewCard = Relationship(
         back_populates="statuses", link_model=PreviewCardStatus
     )
-    topics: list[Topic] = Relationship(
-        back_populates="statuses", link_model=StatusTopic
-    )
+    topics: list[Topic] = Relationship(back_populates="statuses", link_model=StatusTopic)
     # reblogs: list["Status"] = Relationship(back_populates="reblog")
     reblog: Optional["Status"] = Relationship(
         sa_relationship_kwargs={

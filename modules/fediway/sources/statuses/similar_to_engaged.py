@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
 import asyncio
+from datetime import datetime, timedelta
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import FieldCondition, Filter, Range
@@ -50,9 +50,7 @@ class SimilarToEngagedSource(Source):
             collection_name="status_embeddings",
             positive=status_ids,
             limit=limit,
-            query_filter=Filter(
-                must=FieldCondition(key="created_at", range=Range(gte=max_age))
-            ),
+            query_filter=Filter(must=FieldCondition(key="created_at", range=Range(gte=max_age))),
         )
 
         for point in results:

@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 
 from modules.fediway.feed import CandidateList
 from modules.fediway.feed.steps import PaginationStep
@@ -92,9 +92,7 @@ def test_get_set_state_with_data(sample_candidates):
     # Verify state was restored correctly
     assert len(new_step.candidates) == len(sample_candidates)
     assert new_step.candidates.get_candidates() == sample_candidates.get_candidates()
-    np.testing.assert_array_equal(
-        new_step.candidates.get_scores(), sample_candidates.get_scores()
-    )
+    np.testing.assert_array_equal(new_step.candidates.get_scores(), sample_candidates.get_scores())
 
 
 def test_set_state_invalid():

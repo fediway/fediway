@@ -68,8 +68,7 @@ class CandidateList:
         self._ids = state["ids"]
         self._scores = state["scores"]
         self._sources = {
-            dtype(c): set([(s, g) for s, g in sources])
-            for c, sources in state["sources"].items()
+            dtype(c): set([(s, g) for s, g in sources]) for c, sources in state["sources"].items()
         }
 
     def unique_groups(self) -> set[str]:
@@ -131,18 +130,14 @@ class CandidateList:
                 result = CandidateList(self.entity)
                 result._ids = [i for i, flag in zip(self._ids, index) if flag]
                 result._scores = [s for s, flag in zip(self._scores, index) if flag]
-                result._sources = {
-                    c: self._sources.get(c) or set() for c in result._ids
-                }
+                result._sources = {c: self._sources.get(c) or set() for c in result._ids}
                 return result
             else:
                 # Index array
                 result = CandidateList(self.entity)
                 result._ids = [self._ids[i] for i in index]
                 result._scores = [self._scores[i] for i in index]
-                result._sources = {
-                    c: self._sources.get(c) or set() for c in result._ids
-                }
+                result._sources = {c: self._sources.get(c) or set() for c in result._ids}
                 return result
 
         else:

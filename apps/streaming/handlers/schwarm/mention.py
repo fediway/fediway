@@ -17,9 +17,7 @@ class MentionEventHandler(DebeziumEventHandler):
             return
 
         self.schwarm.add_mention(mention)
-        logger.debug(
-            f"Added mention of {mention.account_id} by {mention.status_id} to memgraph."
-        )
+        logger.debug(f"Added mention of {mention.account_id} by {mention.status_id} to memgraph.")
 
     async def updated(self, old: Mention, new: Mention):
         if mention.silent:

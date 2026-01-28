@@ -1,5 +1,5 @@
-from .candidates import CandidateList, Candidate
+from .candidates import Candidate, CandidateList
 from .features import Features
-from .sampling import Sampler, TopKSampler
 from .pipeline import Feed
+from .sampling import Sampler, TopKSampler
 from .steps import PipelineStep

@@ -12,17 +12,13 @@ app = typer.Typer(help="Schwarm commands.")
 def get_driver():
     from neo4j import GraphDatabase
 
-    return GraphDatabase.driver(
-        config.fediway.memgraph_url, auth=config.fediway.memgraph_auth
-    )
+    return GraphDatabase.driver(config.fediway.memgraph_url, auth=config.fediway.memgraph_auth)
 
 
 def get_async_driver():
     from neo4j import AsyncGraphDatabase
 
-    return AsyncGraphDatabase.driver(
-        config.fediway.memgraph_url, auth=config.fediway.memgraph_auth
-    )
+    return AsyncGraphDatabase.driver(config.fediway.memgraph_url, auth=config.fediway.memgraph_auth)
 
 
 @app.command("verify-connection")

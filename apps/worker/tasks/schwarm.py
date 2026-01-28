@@ -1,10 +1,9 @@
 from loguru import logger
 
-from shared.core.schwarm import driver
-from modules.schwarm import Schwarm
 import modules.utils as utils
-
 from config import config
+from modules.schwarm import Schwarm
+from shared.core.schwarm import driver
 
 from ..main import app
 

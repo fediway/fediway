@@ -20,4 +20,4 @@ class Heuristic:
         pass
 
     def __call__(self, candidates, features: np.ndarray | None = None) -> np.ndarray:
-        raise NotImplemented
+        raise NotImplementedError

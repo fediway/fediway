@@ -1,6 +1,7 @@
 from datetime import datetime
-from sqlmodel import SQLModel, Field, Relationship
+
 from sqlalchemy import JSON, Column
+from sqlmodel import Field, SQLModel
 
 
 class SourcingRun(SQLModel, table=True):

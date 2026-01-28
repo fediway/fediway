@@ -1,8 +1,7 @@
-from feast import FeatureView, Field
-from feast.types import Float32, Int64, Bool, String, Array, UnixTimestamp
 from datetime import timedelta
 
-from config import config
+from feast import Field
+from feast.types import Int64
 
 from ...entities import status
 from ...utils import make_feature_view
@@ -17,13 +16,13 @@ FEATURES = [
 
 feature_views.append(
     make_feature_view(
-        f"status_stats",
+        "status_stats",
         entities=[status],
         schema=FEATURES,
         online=True,
         tags={
-            "online_store": f"status_stats",
-            "offline_store": f"offline_features_status_stats",
+            "online_store": "status_stats",
+            "offline_store": "offline_features_status_stats",
         },
         ttl=timedelta(days=30),
     )

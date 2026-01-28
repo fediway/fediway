@@ -1,33 +1,29 @@
 from datetime import timedelta
-from sqlmodel import Session as DBSession
+
 from fastapi import Depends
 from redis import Redis
+from sqlmodel import Session as DBSession
 
 from config import config
-from shared.core.redis import get_redis
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
-    AccountBasedCollaborativeFilteringSource,
     CollaborativeFilteringSource,
-    NewestInNetworkSource,
     CommunityBasedRecommendationsSource,
-    TopStatusesFromRandomCommunitiesSource,
     PopularInCommunitySource,
     PouplarByInfluentialAccountsSource,
-    PopularInSocialCircleSource,
     RecentStatusesByFollowedAccounts,
     SimilarToEngagedSource,
-    StatusBasedCollaborativeFilteringSource,
+    TopStatusesFromRandomCommunitiesSource,
     ViralStatusesSource,
 )
 from modules.mastodon.models import Account
+from shared.core.db import get_db_session
 from shared.core.qdrant import client as qdrant_client
+from shared.core.redis import get_redis
 from shared.core.schwarm import driver as schwarm_driver
 
 # from shared.core.herde import db as herde_db
 from shared.services.feature_service import FeatureService
-from shared.core.db import get_db_session
-from shared.core.rw import get_rw_session
 
 from ..auth import get_authenticated_account_or_fail
 from ..features import get_feature_service
@@ -77,19 +73,13 @@ def get_community_based_recommendations_source(
     r: Redis = Depends(get_redis),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[Source]:
-    return [
-        CommunityBasedRecommendationsSource(
-            r=r, client=qdrant_client, account_id=account.id
-        )
-    ]
+    return [CommunityBasedRecommendationsSource(r=r, client=qdrant_client, account_id=account.id)]
 
 
 def get_top_statuses_from_random_communities_source(
     r: Redis = Depends(get_redis),
 ) -> list[Source]:
-    return [
-        TopStatusesFromRandomCommunitiesSource(r=r, client=qdrant_client, batch_size=5)
-    ]
+    return [TopStatusesFromRandomCommunitiesSource(r=r, client=qdrant_client, batch_size=5)]
 
 
 # def get_newest_in_network_sources(

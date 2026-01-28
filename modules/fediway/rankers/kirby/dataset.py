@@ -96,7 +96,7 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
                 d.time AS time
             FROM {self.table.name} d
             INNER JOIN LATERAL (
-                SELECT * 
+                SELECT *
                 FROM statuses s
                 JOIN {self.table.name} d2
                 ON d.account_id = d2.account_id
@@ -118,14 +118,10 @@ class EngagedAuthorNegativeSampler(NegativeSampler):
         max_id = self.db.scalar(
             text(f"SELECT MAX(s.id) FROM statuses s WHERE {self._get_date_clause()}")
         )
-        count_approx = self.db.scalar(
-            text(f"SELECT COUNT(d.account_id) FROM {self.table.name} d")
-        )
+        count_approx = self.db.scalar(text(f"SELECT COUNT(d.account_id) FROM {self.table.name} d"))
         bytes_per_row = 32
         bytes_per_chunk = "64 MiB"
-        npartitions = (
-            int(round(count_approx * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
-        )
+        npartitions = int(round(count_approx * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
 
         ddf = utils.read_sql_join_query(
             sql=query,
@@ -173,7 +169,7 @@ class FollowingNegativeSampler(NegativeSampler):
             INNER JOIN LATERAL (
                 SELECT *
                 FROM accounts a
-                JOIN follows f 
+                JOIN follows f
                 ON f.account_id = a.id
                 AND f.target_account_id = d.author_id
                 JOIN {self.table.name} d2
@@ -193,14 +189,10 @@ class FollowingNegativeSampler(NegativeSampler):
         max_id = self.db.scalar(
             text(f"SELECT MAX(s.id) FROM statuses s WHERE {self._get_date_clause()}")
         )
-        count_approx = self.db.scalar(
-            text(f"SELECT COUNT(d.account_id) FROM {self.table.name} d")
-        )
+        count_approx = self.db.scalar(text(f"SELECT COUNT(d.account_id) FROM {self.table.name} d"))
         bytes_per_row = 32
         bytes_per_chunk = "64 MiB"
-        npartitions = (
-            int(round(count_approx * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
-        )
+        npartitions = int(round(count_approx * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
 
         ddf = utils.read_sql_join_query(
             sql=query,
@@ -230,7 +222,7 @@ class FollowingNegativeSampler(NegativeSampler):
 class RandomNegativeSampler(NegativeSampler):
     def __call__(self):
         query = select(
-            text(f""" 
+            text(f"""
             n.account_id AS id,
             n.account_id,
             d.status_id,
@@ -252,14 +244,10 @@ class RandomNegativeSampler(NegativeSampler):
         max_id = self.db.scalar(
             text(f"SELECT MAX(s.id) FROM statuses s WHERE {self._get_date_clause()}")
         )
-        count_approx = self.db.scalar(
-            text(f"SELECT COUNT(d.account_id) FROM {self.table.name} d")
-        )
+        count_approx = self.db.scalar(text(f"SELECT COUNT(d.account_id) FROM {self.table.name} d"))
         bytes_per_row = 32
         bytes_per_chunk = "64 MiB"
-        npartitions = (
-            int(round(count_approx * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
-        )
+        npartitions = int(round(count_approx * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
 
         ddf = utils.read_sql_join_query(
             sql=query,
@@ -286,9 +274,7 @@ class RandomNegativeSampler(NegativeSampler):
 
 
 def _sample_positives(db, table, start_date, end_date):
-    query = select(AccountStatusLabel).where(
-        AccountStatusLabel.status_created_at < end_date
-    )
+    query = select(AccountStatusLabel).where(AccountStatusLabel.status_created_at < end_date)
     if start_date is not None:
         query = query.where(AccountStatusLabel.status_created_at >= start_date)
 
@@ -357,17 +343,13 @@ def create_dataset(
         ddf = get_historical_features_ddf(
             entity_table=table.name, feature_views=feature_views, db=db
         )
-        ddf.to_parquet(
-            f"{path}/data/", write_index=False, storage_options=storage_options
-        )
+        ddf.to_parquet(f"{path}/data/", write_index=False, storage_options=storage_options)
 
     db.exec(text(f"DROP TABLE IF EXISTS {table.name};"))
     db.commit()
 
     unique_account_ids = (
-        dd.read_parquet(
-            f"{path}/data/", columns=["account_id"], storage_options=storage_options
-        )
+        dd.read_parquet(f"{path}/data/", columns=["account_id"], storage_options=storage_options)
         .drop_duplicates()
         .compute()
     )
@@ -379,20 +361,12 @@ def create_dataset(
     train_accounts_dd = dd.from_pandas(
         train_accounts, npartitions=(len(train_accounts) // 10_000) + 1
     )
-    test_accounts_dd = dd.from_pandas(
-        test_accounts, npartitions=(len(test_accounts) // 10_000) + 1
-    )
+    test_accounts_dd = dd.from_pandas(test_accounts, npartitions=(len(test_accounts) // 10_000) + 1)
 
-    df_full = dd.read_parquet(
-        f"{path}/data/", storage_options=storage_options, blocksize="64MB"
-    )
+    df_full = dd.read_parquet(f"{path}/data/", storage_options=storage_options, blocksize="64MB")
 
     train_ddf = df_full.merge(train_accounts_dd, on="account_id", how="inner")
     test_ddf = df_full.merge(test_accounts_dd, on="account_id", how="inner")
 
-    train_ddf.to_parquet(
-        f"{path}/train/", write_index=False, storage_options=storage_options
-    )
-    test_ddf.to_parquet(
-        f"{path}/test/", write_index=False, storage_options=storage_options
-    )
+    train_ddf.to_parquet(f"{path}/train/", write_index=False, storage_options=storage_options)
+    test_ddf.to_parquet(f"{path}/test/", write_index=False, storage_options=storage_options)

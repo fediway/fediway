@@ -1,7 +1,8 @@
 from datetime import datetime
-from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy.dialects.postgresql import JSONB
+
 from sqlalchemy import Column
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import Field, SQLModel
 
 
 class RankedEntity(SQLModel, table=True):

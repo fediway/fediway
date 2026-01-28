@@ -1,7 +1,8 @@
-from sqlmodel import Session, text
-from datetime import datetime, timedelta
-from redis import Redis
+from datetime import timedelta
+
 import numpy as np
+from redis import Redis
+from sqlmodel import Session, text
 
 from ..base import RedisSource
 
@@ -31,10 +32,10 @@ class ViralStatusesSource(RedisSource):
         }
 
     def name(self):
-        return f"viral"
+        return "viral"
 
     def compute(self):
-        query = f"""
+        query = """
         SELECT v.status_id, v.score
         FROM status_virality_score_languages v
         WHERE v.language = :language

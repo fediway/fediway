@@ -3,8 +3,8 @@ import os
 import maxminddb
 
 from config import config
-from shared.core.redis import get_redis
 from modules.utils import redis_cache
+from shared.core.redis import get_redis
 
 ipv4_reader: maxminddb.Reader = None
 ipv6_reader: maxminddb.Reader = None

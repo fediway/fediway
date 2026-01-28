@@ -1,9 +1,9 @@
-import pytest
 import json
 import uuid
-from unittest.mock import AsyncMock, Mock, patch, MagicMock, call
-from types import SimpleNamespace
-from fastapi import Request, BackgroundTasks
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+from fastapi import BackgroundTasks, Request
 
 from apps.api.services.feed_service import (
     FeedService,
@@ -32,17 +32,6 @@ def test_generate_feed_id_returns_shortened_uuid(mock_uuid):
 
     assert result == "12345678"
     assert len(result) == 8
-
-
-def test_get_feed_key_returns_hashed_key():
-    mock_request = Mock(spec=Request)
-    mock_request.client.host = "192.168.1.1"
-    mock_request.headers.get.return_value = "Mozilla/5.0"
-
-    result = _get_feed_key(mock_request, length=32)
-
-    assert len(result) == 32
-    assert isinstance(result, str)
 
 
 def test_get_feed_key_returns_hashed_key():
@@ -560,9 +549,7 @@ def test_ingest_pipeline_run(mock_feed, mock_gen_id, mock_get_key):
 @patch("apps.api.services.feed_service._get_feed_key")
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
-def test_ingest_recommendations(
-    mock_feed, mock_gen_id, mock_get_key, mock_uuid, mock_np
-):
+def test_ingest_recommendations(mock_feed, mock_gen_id, mock_get_key, mock_uuid, mock_np):
     mock_uuid.uuid4.side_effect = [
         uuid.UUID("11111111-1111-1111-1111-111111111111"),
         uuid.UUID("22222222-2222-2222-2222-222222222222"),
@@ -657,9 +644,7 @@ def test_ingest_pipeline_steps(mock_feed, mock_gen_id, mock_get_key, mock_uuid):
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
 @patch("apps.api.services.feed_service.SourcingStep")
-def test_ingest_sourcing_runs(
-    mock_sourcing_step, mock_feed, mock_gen_id, mock_get_key, mock_uuid
-):
+def test_ingest_sourcing_runs(mock_sourcing_step, mock_feed, mock_gen_id, mock_get_key, mock_uuid):
     mock_uuid.uuid4.return_value = uuid.UUID("11111111-1111-1111-1111-111111111111")
 
     mock_kafka = Mock()
@@ -786,9 +771,7 @@ def test_await_kafka_futures_success(mock_feed, mock_gen_id, mock_get_key):
 @patch("apps.api.services.feed_service._get_feed_key")
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
-def test_await_kafka_futures_with_errors(
-    mock_feed, mock_gen_id, mock_get_key, mock_logger
-):
+def test_await_kafka_futures_with_errors(mock_feed, mock_gen_id, mock_get_key, mock_logger):
     mock_kafka = Mock()
     service = FeedService(
         kafka=mock_kafka,
@@ -841,9 +824,7 @@ async def test_execute_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_utils
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
 @pytest.mark.asyncio
-async def test_execute_with_new_pipeline(
-    mock_feed, mock_gen_id, mock_get_key, mock_utils
-):
+async def test_execute_with_new_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_utils):
     service = FeedService(
         kafka=Mock(),
         request=Mock(spec=Request),
@@ -870,9 +851,7 @@ async def test_execute_with_new_pipeline(
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
 @pytest.mark.asyncio
-async def test_execute_with_existing_pipeline(
-    mock_feed, mock_gen_id, mock_get_key, mock_utils
-):
+async def test_execute_with_existing_pipeline(mock_feed, mock_gen_id, mock_get_key, mock_utils):
     service = FeedService(
         kafka=Mock(),
         request=Mock(spec=Request),
@@ -898,9 +877,7 @@ async def test_execute_with_existing_pipeline(
 @patch("apps.api.services.feed_service._generate_feed_id")
 @patch("apps.api.services.feed_service.Feed")
 @pytest.mark.asyncio
-async def test_fluent_interface_chaining(
-    mock_feed, mock_gen_id, mock_get_key, mock_utils
-):
+async def test_fluent_interface_chaining(mock_feed, mock_gen_id, mock_get_key, mock_utils):
     service = FeedService(
         kafka=Mock(),
         request=Mock(spec=Request),

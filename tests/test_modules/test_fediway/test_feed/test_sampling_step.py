@@ -1,11 +1,10 @@
-import pytest
-import numpy as np
 import pandas as pd
+import pytest
 
-from modules.fediway.feed import CandidateList, Sampler, Features
+from modules.fediway.feed import CandidateList, Features
 from modules.fediway.feed.sampling import TopKSampler
 from modules.fediway.feed.steps import SamplingStep
-from modules.fediway.heuristics import Heuristic, DiversifyHeuristic
+from modules.fediway.heuristics import DiversifyHeuristic
 
 
 class MockFeatureService(Features):
@@ -100,9 +99,7 @@ def test_sampling_step_init(mock_sampler, mock_feature_service):
     assert step.feature_service == mock_feature_service
 
 
-def test_sampling_step_init_with_params(
-    mock_sampler, mock_feature_service, mock_heuristic
-):
+def test_sampling_step_init_with_params(mock_sampler, mock_feature_service, mock_heuristic):
     step = SamplingStep(
         sampler=mock_sampler,
         feature_service=mock_feature_service,

@@ -26,9 +26,7 @@ class SeedSchwarmService:
         self.db = db
         self.driver = driver
         self.schwarm = Schwarm(self.driver)
-        self.max_age = datetime.now() - timedelta(
-            days=config.fediway.feed_max_age_in_days
-        )
+        self.max_age = datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)
 
     def seed(self):
         with utils.duration("Set up memgraph in {:.3f} seconds"):
@@ -83,7 +81,7 @@ class SeedSchwarmService:
 
         logger.info(f"Inserting {total} statuses.")
 
-        ddf = (
+        (
             dd.read_sql_query(
                 sql=query,
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
@@ -124,7 +122,7 @@ class SeedSchwarmService:
 
         logger.info(f"Inserting {total} reblogs.")
 
-        ddf = (
+        (
             dd.read_sql_query(
                 sql=query,
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
@@ -155,9 +153,7 @@ class SeedSchwarmService:
         total = self.db.scalar(
             select(func.count(Favourite.id)).join(
                 Status,
-                and_(
-                    Status.id == Favourite.status_id, Status.created_at > self.max_age
-                ),
+                and_(Status.id == Favourite.status_id, Status.created_at > self.max_age),
             )
         )
 
@@ -166,7 +162,7 @@ class SeedSchwarmService:
 
         logger.info(f"Inserting {total} favourites.")
 
-        ddf = (
+        (
             dd.read_sql_query(
                 sql=query,
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
@@ -211,7 +207,7 @@ class SeedSchwarmService:
 
         logger.info(f"Inserting {total} status stats.")
 
-        ddf = (
+        (
             dd.read_sql_query(
                 sql=query,
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
@@ -252,7 +248,7 @@ class SeedSchwarmService:
 
         logger.info(f"Inserting {total} status tags.")
 
-        ddf = (
+        (
             dd.read_sql_query(
                 sql=query,
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
@@ -291,7 +287,7 @@ class SeedSchwarmService:
 
         logger.info(f"Inserting {total} mentions.")
 
-        ddf = (
+        (
             dd.read_sql_query(
                 sql=query,
                 con=self.db.get_bind().url.render_as_string(hide_password=False),
@@ -336,10 +332,7 @@ class InsertStatusStats(InsertBatch):
         if len(rows) == 0:
             return
 
-        stats = [
-            StatusStats(status_id=status_id, **data)
-            for status_id, data in rows.iterrows()
-        ]
+        stats = [StatusStats(status_id=status_id, **data) for status_id, data in rows.iterrows()]
 
         if stats[0].status_id in (0, 1):
             return
@@ -353,8 +346,7 @@ class InsertStatusTags(InsertBatch):
             return
 
         status_tags = [
-            StatusTag(status_id=status_id, **data)
-            for status_id, data in rows.iterrows()
+            StatusTag(status_id=status_id, **data) for status_id, data in rows.iterrows()
         ]
 
         if status_tags[0].status_id == 1:

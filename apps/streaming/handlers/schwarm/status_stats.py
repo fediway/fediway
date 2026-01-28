@@ -1,19 +1,16 @@
 from datetime import datetime, timedelta
+
 from loguru import logger
 
+from config import config
 from modules.debezium import DebeziumEventHandler
 from modules.mastodon.models import StatusStats
 from modules.schwarm import Schwarm
 
-from config import config
-
 
 def _limit():
     return int(
-        (
-            datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)
-        ).timestamp()
-        * 1000
+        (datetime.now() - timedelta(days=config.fediway.feed_max_age_in_days)).timestamp() * 1000
     )
 
 

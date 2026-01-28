@@ -1,1 +1,1 @@
-from .base import Source, RedisSource
+from .base import RedisSource, Source

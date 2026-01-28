@@ -4,4 +4,4 @@ def get_scaler(scaler: str):
 
         return StandardScaler()
 
-    raise NotImplemented
+    raise NotImplementedError

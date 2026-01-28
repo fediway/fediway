@@ -1,1 +1,1 @@
-from .features import FeaturesJsonEventHandler, FeaturesDebeziumEventHandler
+from .features import FeaturesDebeziumEventHandler, FeaturesJsonEventHandler

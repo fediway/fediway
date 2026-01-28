@@ -1,11 +1,8 @@
 from celery import Celery
-from celery.schedules import crontab
-from loguru import logger
 
-import modules.utils as utils
 from config import config
-from .config import Config
 
+from .config import Config
 
 config.logging.configure_logging()
 

@@ -1,16 +1,15 @@
-from fastapi import APIRouter, Depends, Response, Request
+from fastapi import APIRouter, Depends, Request, Response
 from sqlmodel import Session as DBSession
 
-from apps.api.modules.utils import set_next_link
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.follows import get_recently_popular_sources
+from apps.api.modules.utils import set_next_link
 from apps.api.services.feed_service import FeedService
+from config import config
 from modules.fediway.sources import Source
 from modules.mastodon.items import AccountItem
 from modules.mastodon.models import Account
 from shared.core.db import get_db_session
-
-from config import config
 
 router = APIRouter()
 
@@ -31,7 +30,7 @@ async def follow_suggestions(
 ):
     max_candidates_per_source = 20
 
-    pipeline = (
+    (
         feed.name("v2/suggestions")
         .select("account_id")
         .sources([(source, max_candidates_per_source) for source in sources])

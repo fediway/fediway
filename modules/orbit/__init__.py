@@ -1,10 +1,12 @@
-from datetime import datetime
-from sqlmodel import Session, select
-from sqlalchemy import text
-import dask.dataframe as dd
-import modules.utils as utils
-import pandas as pd
 import math
+from datetime import datetime
+
+import dask.dataframe as dd
+import pandas as pd
+from sqlalchemy import text
+from sqlmodel import Session, select
+
+import modules.utils as utils
 
 
 def load_tag_engagements_from_file(path):
@@ -12,19 +14,15 @@ def load_tag_engagements_from_file(path):
 
     df = pd.read_csv(path)
     df["accounts"] = df["accounts"].apply(
-        lambda x: ast.literal_eval(x)
-        if isinstance(x, str) and x != "None" and x != "nan"
-        else []
+        lambda x: ast.literal_eval(x) if isinstance(x, str) and x != "None" and x != "nan" else []
     )
-    df["accounts"] = df["accounts"].apply(
-        lambda x: [] if len(x) == 1 and x[0] is None else x
-    )
+    df["accounts"] = df["accounts"].apply(lambda x: [] if len(x) == 1 and x[0] is None else x)
 
     return df
 
 
 def load_tagsimilarities_from_db(db: Session, start: datetime, end: datetime):
-    query = text(f"""
+    text("""
         WITH base_engagements AS (
             SELECT
                 e.account_id,
@@ -34,7 +32,7 @@ def load_tagsimilarities_from_db(db: Session, start: datetime, end: datetime):
             FROM enriched_status_engagement_events e
             JOIN statuses_tags st ON st.status_id = e.status_id
             WHERE e.event_time > :start AND e.event_time <= :end
-            AND e.author_silenced_at IS NULL 
+            AND e.author_silenced_at IS NULL
             AND e.account_silenced_at IS NULL
             AND e.sensitive != true
         ),
@@ -59,14 +57,14 @@ def load_tagsimilarities_from_db(db: Session, start: datetime, end: datetime):
         SELECT
             e1.tag_id AS tag1,
             e2.tag_id AS tag2,
-            COUNT(DISTINCT e1.account_id)::FLOAT / 
+            COUNT(DISTINCT e1.account_id)::FLOAT /
                 SQRT(
-                    MAX(t1.num_engaged_accounts) * 
+                    MAX(t1.num_engaged_accounts) *
                     MAX(t2.num_engaged_accounts)
                 ) AS cosine_sim
         FROM orbit_account_tag_engagements e1
-        JOIN orbit_account_tag_engagements e2 
-            ON e2.account_id = e1.account_id 
+        JOIN orbit_account_tag_engagements e2
+            ON e2.account_id = e1.account_id
             AND e1.tag_id < e2.tag_id
         JOIN qualified_tags qt1 ON qt1.tag_id = e1.tag_id
         JOIN qualified_tags qt2 ON qt2.tag_id = e2.tag_id
@@ -79,9 +77,9 @@ def load_tagsimilarities_from_db(db: Session, start: datetime, end: datetime):
 
 
 def load_tag_engagements_from_db(db: Session, start: datetime, end: datetime):
-    query = text(f"""
+    query = text("""
         WITH engagements AS (
-            SELECT 
+            SELECT
                 f.account_id,
                 f.status_id,
                 0 AS type,
@@ -91,7 +89,7 @@ def load_tag_engagements_from_db(db: Session, start: datetime, end: datetime):
 
             UNION
 
-            SELECT 
+            SELECT
                 s.account_id,
                 s.reblog_of_id AS status_id,
                 1 AS type,
@@ -143,12 +141,12 @@ def load_tag_engagements_from_db(db: Session, start: datetime, end: datetime):
             FROM quotes
             WHERE state = 1
         )
-        SELECT 
+        SELECT
             st.tag_id,
             array_agg(e.account_id) as accounts
-        FROM 
+        FROM
             engagements e
-        JOIN 
+        JOIN
             statuses_tags st ON st.status_id = e.status_id
         WHERE e.event_time > :start AND e.event_time <= :end
         GROUP BY st.tag_id;
@@ -165,8 +163,8 @@ def load_tag_engagements_from_db(db: Session, start: datetime, end: datetime):
 
 
 def load_tag_similarities(db: Session, min_tag_similarity: float):
-    query = text(f"""
-    SELECT * 
+    query = text("""
+    SELECT *
     FROM orbit_tag_similarities
     WHERE cosine_sim > :min_tag_similarity;
     """).params(min_tag_similarity=min_tag_similarity)
@@ -182,8 +180,8 @@ def load_tag_similarities(db: Session, min_tag_similarity: float):
 
 
 def detect_communities(tag_similarities: pd.DataFrame):
-    from tqdm import tqdm
     import networkx as nx
+    from tqdm import tqdm
 
     G = nx.Graph()
 

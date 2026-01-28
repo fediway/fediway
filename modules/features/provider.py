@@ -1,14 +1,14 @@
-from typing import Sequence, Union, Optional, Any, Callable
-from kafka import KafkaProducer
-from feast.feature_store import RepoConfig
-from feast.infra.passthrough_provider import PassthroughProvider
-from feast import OnDemandFeatureView
-from feast.feature_view import FeatureView
-from feast.entity import Entity
-import numpy as np
-from loguru import logger
-import pyarrow
 import json
+from typing import Any, Callable, Optional, Sequence, Union
+
+import pyarrow
+from feast import OnDemandFeatureView
+from feast.entity import Entity
+from feast.feature_store import RepoConfig
+from feast.feature_view import FeatureView
+from feast.infra.passthrough_provider import PassthroughProvider
+from kafka import KafkaProducer
+from loguru import logger
 
 from modules.utils import JSONEncoder
 
@@ -62,9 +62,7 @@ class FediwayProvider(PassthroughProvider):
         for row in data.to_pylist():
             key = ",".join([str(row[e]) for e in feature_view.entities])
 
-            future = producer.send(
-                feature_view.tags["offline_store"], key=key, value=row
-            )
+            future = producer.send(feature_view.tags["offline_store"], key=key, value=row)
 
             futures.append(future)
 

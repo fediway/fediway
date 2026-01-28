@@ -1,7 +1,7 @@
-import pytest
-from unittest.mock import Mock, patch
-from fastapi import Request, BackgroundTasks
 from types import SimpleNamespace
+from unittest.mock import Mock, patch
+
+from fastapi import BackgroundTasks, Request
 
 from apps.api.dependencies.features import (
     get_feature_service,
@@ -41,9 +41,8 @@ def test_get_feature_service_creates_feature_service_with_offline_store_disabled
     mock_background_tasks = Mock(spec=BackgroundTasks)
 
     mock_config.feast.offline_store_enabled = False
-    instance = mock_feature_service.return_value
 
-    result = get_feature_service(mock_request, mock_background_tasks)
+    get_feature_service(mock_request, mock_background_tasks)
 
     mock_feature_service.assert_called_once_with(
         background_tasks=mock_background_tasks, offline_store=False

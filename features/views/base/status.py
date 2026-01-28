@@ -1,8 +1,7 @@
-from feast import FeatureView, Field
-from feast.types import Float32, Int64, Bool, String, Array, UnixTimestamp
 from datetime import timedelta
 
-from config import config
+from feast import Field
+from feast.types import Array, Bool, Int64, String
 
 from ...entities import status
 from ...utils import make_feature_view
@@ -42,7 +41,7 @@ FEATURES = [
 
 feature_views.append(
     make_feature_view(
-        f"status",
+        "status",
         entities=[status],
         schema=FEATURES,
         online=True,

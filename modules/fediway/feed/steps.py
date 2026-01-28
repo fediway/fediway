@@ -1,14 +1,15 @@
-import pandas as pd
-from loguru import logger
-from copy import deepcopy
-import numpy as np
 import asyncio
 import time
+from copy import deepcopy
 
+import numpy as np
+import pandas as pd
+from loguru import logger
+
+from ..heuristics import Heuristic
 from ..rankers import Ranker
 from ..sources import Source
-from ..heuristics import Heuristic
-from .candidates import Candidate, CandidateList
+from .candidates import CandidateList
 from .features import Features
 from .sampling import Sampler
 
@@ -104,9 +105,7 @@ class RememberStep(PipelineStep):
 
 
 class PaginationStep(PipelineStep):
-    def __init__(
-        self, entity: str, limit: int, offset: int = 0, max_id: int | None = None
-    ):
+    def __init__(self, entity: str, limit: int, offset: int = 0, max_id: int | None = None):
         self.entity = entity
         self.candidates = CandidateList(entity)
         self.limit = max(limit, 0)
@@ -124,7 +123,7 @@ class PaginationStep(PipelineStep):
         return {"candidates": self.candidates.get_state()}
 
     def set_state(self, state):
-        if not "candidates" in state:
+        if "candidates" not in state:
             logger.warning("Candidates missing in state.")
             return
         self.candidates.set_state(state["candidates"])
@@ -222,9 +221,7 @@ class SourcingStep(PipelineStep):
         n_sourced = 0
         for batch, (source, _) in zip(results, self.sources):
             for candidate in batch:
-                candidates.append(
-                    candidate, source=source.name(), source_group=self.group
-                )
+                candidates.append(candidate, source=source.name(), source_group=self.group)
                 n_sourced += 1
 
         logger.info(
@@ -287,9 +284,7 @@ class SamplingStep(PipelineStep):
             features = None
             if heuristic.features and len(heuristic.features) > 0:
                 entity_rows = candidates.get_entity_rows()
-                features = await self.feature_service.get(
-                    entity_rows, heuristic.features
-                )
+                features = await self.feature_service.get(entity_rows, heuristic.features)
 
             adjusted_candidates._scores = heuristic(adjusted_candidates, features)
 
@@ -320,9 +315,7 @@ class SamplingStep(PipelineStep):
                 del candidates[candidate.id]
 
                 if self.unique and candidate.id in self.seen:
-                    logger.debug(
-                        f"Candidates {candidate.id} already seen ({self.seen})"
-                    )
+                    logger.debug(f"Candidates {candidate.id} already seen ({self.seen})")
                     continue
 
                 sampled_candidates.append(candidate)

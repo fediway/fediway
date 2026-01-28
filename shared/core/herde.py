@@ -1,4 +1,4 @@
-from arango import ArangoClient, ServerConnectionError, ArangoClientError
+from arango import ArangoClient, ArangoClientError, ServerConnectionError
 from loguru import logger
 
 from config import config

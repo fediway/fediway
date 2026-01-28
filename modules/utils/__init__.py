@@ -1,7 +1,7 @@
+import json
 import logging
 import time
 from contextlib import contextmanager
-import json
 
 from loguru import logger
 

@@ -17,6 +17,4 @@ class KafkaConfig(BaseConfig):
 
         return None
 
-        return SASLPlaintext(
-            username=self.kafka_user, password=self.kafka_pass.get_secret_value()
-        )
+        return SASLPlaintext(username=self.kafka_user, password=self.kafka_pass.get_secret_value())

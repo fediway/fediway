@@ -130,9 +130,7 @@ class InsertBatch:
 
 
 class InsertRows(InsertBatch):
-    def __init__(
-        self, db: DBSession, herde: Herde, model_cls, herde_fn: str | None = None
-    ):
+    def __init__(self, db: DBSession, herde: Herde, model_cls, herde_fn: str | None = None):
         self.db = db
         self.herde = herde
         self.model_cls = model_cls
@@ -160,8 +158,7 @@ class InsertStatusTags(InsertBatch):
             return
 
         status_tags = [
-            StatusTag(status_id=status_id, **data)
-            for status_id, data in rows.iterrows()
+            StatusTag(status_id=status_id, **data) for status_id, data in rows.iterrows()
         ]
 
         if status_tags[0].status_id == 1:

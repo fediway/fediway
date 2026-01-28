@@ -1,10 +1,11 @@
-import numpy as np
-import pandas as pd
-from feast import FeatureStore, FeatureService as FeastFeatureService
-from loguru import logger
-from fastapi import BackgroundTasks
-from datetime import datetime
 import time
+from datetime import datetime
+
+import pandas as pd
+from fastapi import BackgroundTasks
+from feast import FeatureService as FeastFeatureService
+from feast import FeatureStore
+from loguru import logger
 
 from modules.fediway.feed.features import Features
 from shared.core.feast import feature_store
@@ -29,24 +30,21 @@ class FeatureService(Features):
     def _cache_key(self, entities: list[dict[str, int]]) -> str:
         return ",".join(list(entities[0].keys()))
 
-    def get_cached(
-        self, entities: list[dict[str, int]], features: list[str] | FeastFeatureService
-    ):
+    def get_cached(self, entities: list[dict[str, int]], features: list[str] | FeastFeatureService):
         if isinstance(features, FeastFeatureService):
             return None, entities
 
         cache_key = self._cache_key(entities)
 
-        if not cache_key in self.cache:
+        if cache_key not in self.cache:
             return None, entities
 
-        missing_entities = []
         entity_ids = pd.DataFrame(entities).values[:, 0]
         cached = []
 
         for feature in features:
             feature = feature.replace(":", "__")
-            if not feature in self.cache[cache_key]:
+            if feature not in self.cache[cache_key]:
                 return None, entities
             feat = self.cache[cache_key][feature].reindex(entity_ids)
             cached.append(feat[~feat.index.duplicated(keep="last")])
@@ -55,9 +53,7 @@ class FeatureService(Features):
         cached_entities = set(cached.index)
 
         return cached, [
-            {cache_key: entity}
-            for entity in entity_ids
-            if not entity in cached_entities
+            {cache_key: entity} for entity in entity_ids if entity not in cached_entities
         ]
 
     def _remember(self, entities, df, features):
@@ -71,7 +67,7 @@ class FeatureService(Features):
 
         entity_ids = pd.DataFrame(entities).values[:, 0]
 
-        if not cache_key in self.cache:
+        if cache_key not in self.cache:
             self.cache[cache_key] = {}
 
         for feature in features:
@@ -79,15 +75,11 @@ class FeatureService(Features):
             feat = df[feature]
             feat.index = entity_ids
 
-            if not feature in self.cache[cache_key]:
-                self.cache[cache_key][feature] = feat[
-                    ~feat.index.duplicated(keep="last")
-                ]
+            if feature not in self.cache[cache_key]:
+                self.cache[cache_key][feature] = feat[~feat.index.duplicated(keep="last")]
             else:
                 feat = pd.concat([self.cache[cache_key][feature], feat])
-                self.cache[cache_key][feature] = feat[
-                    ~feat.index.duplicated(keep="last")
-                ]
+                self.cache[cache_key][feature] = feat[~feat.index.duplicated(keep="last")]
 
     def ingest_to_offline_store(
         self,
@@ -136,9 +128,7 @@ class FeatureService(Features):
             feature_names = [c.split("__")[-1] for c in feature_columns]
 
             # filter feature and entity values for feature view
-            df = pd.concat(
-                [entities_df[feature_view.entities], features[feature_columns]], axis=1
-            )
+            df = pd.concat([entities_df[feature_view.entities], features[feature_columns]], axis=1)
 
             # filter rows with only nan values
             df = df[~df[feature_columns].isna().all(axis=1)]

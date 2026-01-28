@@ -1,12 +1,12 @@
-from fastapi import Request, Depends, BackgroundTasks
+from fastapi import BackgroundTasks, Depends, Request
 
-from shared.core.feast import feature_store
-from shared.services.feature_service import FeatureService
+from config import config
 from modules.fediway.rankers.kirby import KirbyFeatureService
 from modules.mastodon.models import Account
+from shared.core.feast import feature_store
+from shared.services.feature_service import FeatureService
 
 from .auth import get_authenticated_account_or_fail
-from config import config
 
 
 def get_feature_service(request: Request, background_tasks: BackgroundTasks):

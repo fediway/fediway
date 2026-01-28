@@ -1,43 +1,29 @@
+import hashlib
 import json
 import uuid
-import hashlib
 
 import numpy as np
-from fastapi import BackgroundTasks, Request, Response
+from fastapi import BackgroundTasks, Request
 from kafka import KafkaProducer
-from redis import Redis
-from sqlmodel import Session as DBSession
-from datetime import datetime
 from loguru import logger
+from redis import Redis
 
 import modules.utils as utils
 from config import config
-from modules.mastodon.models import Account
 from modules.fediway.feed import Features
 from modules.fediway.feed.pipeline import (
+    CandidateList,
     Feed,
-    PaginationStep,
-    SourcingStep,
+    PipelineStep,
     RankingStep,
+    SourcingStep,
 )
-from modules.fediway.feed.pipeline import CandidateList, PipelineStep
 from modules.fediway.feed.sampling import Sampler, TopKSampler
 from modules.fediway.heuristics import Heuristic
-from modules.fediway.models.risingwave import (
-    Feed as FeedModel,
-    Recommendation,
-    RecPipelineRun,
-    RecPipelineStep,
-    RankedEntity,
-    RankingRun,
-    SourcingRun,
-    RecommendationSource,
-)
 from modules.fediway.rankers import Ranker
 from modules.fediway.sources import Source
+from modules.mastodon.models import Account
 from shared.services.feature_service import FeatureService
-
-from ..modules.sessions import Session
 
 
 def request_key(request: Request):
@@ -171,7 +157,7 @@ class FeedService:
 
     def _ingest_recommendations(self, run_id: str):
         futures = []
-        
+
         for recommendation in self.pipeline.results():
             rec_id = str(uuid.uuid4())
             futures.append(
@@ -191,13 +177,13 @@ class FeedService:
                     },
                 )
             )
-        
+
         return futures
 
     def _ingest_pipeline_steps(self, run_id: str):
         futures = []
         step_ids = [str(uuid.uuid4()) for _ in range(len(self.pipeline.steps))]
-        
+
         for step_id, step, duration_ns in zip(
             step_ids, self.pipeline.steps, self.pipeline.get_durations()
         ):
@@ -216,12 +202,12 @@ class FeedService:
                     },
                 )
             )
-        
+
         return step_ids, futures
 
     def _ingest_sourcing_runs(self, step_id: str, step: SourcingStep):
         futures = []
-        
+
         for (source, limit), duration_ns, count, candidates in zip(
             step.sources,
             step.get_durations(),
@@ -229,7 +215,7 @@ class FeedService:
             step.get_sourced_candidates(),
         ):
             sourcing_run_id = str(uuid.uuid4())
-            
+
             futures.append(
                 self._send_kafka_message(
                     topic="feed_sourcing_runs",
@@ -247,14 +233,14 @@ class FeedService:
                     },
                 )
             )
-            
+
             futures.extend(self._ingest_candidate_sources(sourcing_run_id, candidates))
-        
+
         return futures
 
     def _ingest_candidate_sources(self, sourcing_run_id: str, candidates):
         futures = []
-        
+
         for candidate in candidates:
             futures.append(
                 self._send_kafka_message(
@@ -267,7 +253,7 @@ class FeedService:
                     },
                 )
             )
-        
+
         return futures
 
     def _ingest_ranking_runs(self, step_id: str, run_id: str, step: RankingStep):
@@ -275,7 +261,7 @@ class FeedService:
             return []
 
         ranking_run_id = str(uuid.uuid4())
-        
+
         return [
             self._send_kafka_message(
                 topic="feed_rankin_runs",
@@ -310,12 +296,11 @@ class FeedService:
         for step_id, step in zip(step_ids, self.pipeline.steps):
             if isinstance(step, SourcingStep):
                 futures.extend(self._ingest_sourcing_runs(step_id, step))
-            
+
             if isinstance(step, RankingStep):
                 futures.extend(self._ingest_ranking_runs(step_id, run_id, step))
 
         self._await_kafka_futures(futures)
-
 
     def _await_kafka_futures(self, futures):
         for future in futures:
@@ -325,7 +310,6 @@ class FeedService:
                 logger.error(f"Kafka message delivery failed: {str(e)}")
 
         self.kafka.flush()
-
 
     # async def _save_pipeline_run(self):
     #     event_time = int(self.feature_service.event_time.timestamp())

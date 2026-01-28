@@ -1,7 +1,8 @@
 import asyncio
-from feast import FeatureStore, FeatureView
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+from feast import FeatureStore, FeatureView
 
 from modules.fediway.feed import Features
 
@@ -15,9 +16,7 @@ LABELS = [
 
 def get_feature_views(feature_store: FeatureStore) -> list[FeatureView]:
     projections = feature_store.get_feature_service("kirby").feature_view_projections
-    return [
-        feature_store.get_feature_view(projection.name) for projection in projections
-    ]
+    return [feature_store.get_feature_view(projection.name) for projection in projections]
 
 
 def _is_none_or_nan(value):
@@ -182,9 +181,7 @@ class KirbyFeatureService(Features):
         return df
 
     async def get(self, entities: list[dict[str, int]], *pargs, **kwargs):
-        statuses = await self.feature_service.get(
-            entities, features=self.status_features
-        )
+        statuses = await self.feature_service.get(entities, features=self.status_features)
 
         features = await asyncio.gather(
             self._get_account_status_features(entities, statuses),

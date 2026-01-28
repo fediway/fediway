@@ -1,5 +1,6 @@
-from sqlmodel import text, Session
 from collections import deque
+
+from sqlmodel import Session, text
 
 from ..base import Source
 
@@ -17,14 +18,14 @@ class RecentStatusesByFollowedAccounts(Source):
 
     def query(self, limit: int):
         return text(f"""
-        SELECT 
+        SELECT
             f.target_account_id,
             s.id            AS status_id
         FROM follows AS f
         JOIN LATERAL (
             SELECT s.id
             FROM statuses s
-            WHERE s.account_id = f.target_account_id 
+            WHERE s.account_id = f.target_account_id
               AND s.in_reply_to_id IS NULL
             ORDER BY s.created_at DESC
             LIMIT {self.latest_n_per_account}

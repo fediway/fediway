@@ -9,9 +9,11 @@ app = typer.Typer(help="Feast commands.")
 def apply():
     from confluent_kafka import KafkaException
     from confluent_kafka.admin import AdminClient
-    from features import ENTITIES, FEATURE_VIEWS, FEATURES_SERVICES
     from feast import OnDemandFeatureView
+
+    from features import ENTITIES, FEATURE_VIEWS, FEATURES_SERVICES
     from shared.core.feast import feature_store
+
     from .kafka import _topic
 
     feature_store.apply(ENTITIES)

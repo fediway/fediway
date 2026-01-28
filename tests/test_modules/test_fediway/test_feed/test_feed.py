@@ -1,11 +1,10 @@
-import pytest
 import asyncio
-import time
-from datetime import datetime
+
+import pytest
 
 from modules.fediway.feed import Feed
-from modules.fediway.feed.steps import PipelineStep
 from modules.fediway.feed.candidates import CandidateList
+from modules.fediway.feed.steps import PipelineStep
 
 
 class DummyStep(PipelineStep):

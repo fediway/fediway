@@ -1,13 +1,12 @@
-import typer
-from datetime import datetime
 
-from config import config
+import typer
 
 app = typer.Typer(help="Orbit commands.")
 
 
 def _log_candidates(candidates: list[str]):
     from sqlmodel import select
+
     from modules.mastodon.models import Status
     from shared.core.db import db_session
 
@@ -24,6 +23,7 @@ def _log_candidates(candidates: list[str]):
 
 def _get_account_id_from_username(username: str):
     from sqlmodel import select
+
     from modules.mastodon.models import Account
     from shared.core.db import db_session
 
@@ -41,6 +41,7 @@ def _get_account_id_from_username(username: str):
 @app.command("embedding")
 def embedding(username: str):
     import numpy as np
+
     from shared.core.qdrant import client
     from shared.core.redis import get_redis
 
@@ -70,12 +71,13 @@ def embedding(username: str):
 
 @app.command("recommend")
 def create_topics(community_id: int, limit: int = 10, entity: str = "statuses"):
-    from modules.mastodon.models import Status, Tag, Account
-    from shared.core.db import db_session
-    from shared.core.redis import get_redis
-    from shared.core.qdrant import client
     from qdrant_client import models
     from sqlmodel import select
+
+    from modules.mastodon.models import Status, Tag
+    from shared.core.db import db_session
+    from shared.core.qdrant import client
+    from shared.core.redis import get_redis
 
     r = get_redis()
 
@@ -98,15 +100,11 @@ def create_topics(community_id: int, limit: int = 10, entity: str = "statuses"):
     entities = {}
     with db_session() as db:
         if entity == "statuses":
-            results = db.exec(
-                select(Status).where(Status.id.in_(entity_ids))
-            ).fetchall()
+            results = db.exec(select(Status).where(Status.id.in_(entity_ids))).fetchall()
             for result in results:
                 entities[result.id] = result.local_url
         elif entity == "tags":
-            results = db.exec(
-                select(Tag.id, Tag.name).where(Tag.id.in_(entity_ids))
-            ).fetchall()
+            results = db.exec(select(Tag.id, Tag.name).where(Tag.id.in_(entity_ids))).fetchall()
             for result in results:
                 entities[result[0]] = result[1]
 
@@ -123,10 +121,8 @@ def compute_communities(
     path: str,
     min_tag_similarity: float = 0.3,
 ):
-    from modules.mastodon.models import Tag
     from modules.orbit import (
         detect_communities,
-        load_tag_engagements_from_file,
         load_tag_similarities,
     )
     from shared.core.rw import rw_session

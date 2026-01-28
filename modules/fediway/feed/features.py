@@ -1,5 +1,5 @@
-from feast import FeatureService
 import pandas as pd
+from feast import FeatureService
 
 
 class Features:

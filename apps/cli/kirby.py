@@ -19,19 +19,15 @@ def create_dataset(
     from shared.core.feast import feature_store
     from shared.core.rw import rw_session
 
-    typer.echo(f"Creating dataset...")
+    typer.echo("Creating dataset...")
 
     if start_date:
-        name = (
-            f"kirby_{start_date.strftime('%Y_%m_%d')}-{end_date.strftime('%Y_%m_%d')}"
-        )
+        name = f"kirby_{start_date.strftime('%Y_%m_%d')}-{end_date.strftime('%Y_%m_%d')}"
     else:
         name = f"kirby_{end_date.strftime('%Y_%m_%d')}"
     dataset_path = f"{path}/{name}"
 
-    storage_options = {
-        "client_kwargs": {"endpoint_url": config.fediway.datasets_s3_endpoint}
-    }
+    storage_options = {"client_kwargs": {"endpoint_url": config.fediway.datasets_s3_endpoint}}
 
     with rw_session() as db:
         create_dataset(
@@ -66,20 +62,19 @@ def train_kirby(
         ...,
         help="Name of dataset used for training",
     ),
-    model: str = typer.Option(
-        "linear", help="Model name", callback=validate_kirby_model
-    ),
+    model: str = typer.Option("linear", help="Model name", callback=validate_kirby_model),
     labels: list[str] | None = None,
     path: str = config.fediway.datasets_path,
     save_path: str | None = None,
     seed: int = 42,
 ) -> int:
-    import numpy as np
     from pathlib import Path
+
+    import numpy as np
     from dask import dataframe as dd
 
-    from modules.fediway.rankers.kirby.features import LABELS
     from modules.fediway.rankers.kirby import Kirby, get_feature_views
+    from modules.fediway.rankers.kirby.features import LABELS
     from shared.core.feast import feature_store
 
     if labels is None:
@@ -88,9 +83,7 @@ def train_kirby(
     np.random.seed(seed)
     dataset_path = f"{path}/{dataset}"
 
-    storage_options = {
-        "client_kwargs": {"endpoint_url": config.fediway.datasets_s3_endpoint}
-    }
+    storage_options = {"client_kwargs": {"endpoint_url": config.fediway.datasets_s3_endpoint}}
     train = dd.read_parquet(
         f"{dataset_path}/train/",
         storage_options=storage_options,
@@ -111,15 +104,11 @@ def train_kirby(
     logger.info(f"[Train] size: {len(train)}")
     for label in labels:
         logger.info(f"[Train] {label} count: {train[label].values.sum()}")
-    logger.info(
-        f"[Train] negatives count: {(train[labels].values.sum(axis=1) == 0).sum()}"
-    )
+    logger.info(f"[Train] negatives count: {(train[labels].values.sum(axis=1) == 0).sum()}")
     logger.info(f"[Test] size: {len(test)}")
     for label in labels:
         logger.info(f"[Test] {label} count: {test[label].values.sum()}")
-    logger.info(
-        f"[Test] negatives count: {(test[labels].values.sum(axis=1) == 0).sum()}"
-    )
+    logger.info(f"[Test] negatives count: {(test[labels].values.sum(axis=1) == 0).sum()}")
 
     ranker = getattr(Kirby, model)(features=features, labels=labels)
     ranker.train(train)
@@ -151,13 +140,12 @@ def test_kirby(
     path: str = config.fediway.datasets_path,
     seed: int = 42,
 ) -> int:
+
     import numpy as np
-    from pathlib import Path
     from dask import dataframe as dd
 
+    from modules.fediway.rankers.kirby import Kirby
     from modules.fediway.rankers.kirby.features import LABELS
-    from modules.fediway.rankers.kirby import Kirby, get_feature_views
-    from shared.core.feast import feature_store
 
     if labels is None:
         labels = LABELS
@@ -168,9 +156,7 @@ def test_kirby(
 
     dataset_path = f"{path}/{dataset}"
 
-    storage_options = {
-        "client_kwargs": {"endpoint_url": config.fediway.datasets_s3_endpoint}
-    }
+    storage_options = {"client_kwargs": {"endpoint_url": config.fediway.datasets_s3_endpoint}}
     test = dd.read_parquet(
         f"{dataset_path}/test/",
         storage_options=storage_options,

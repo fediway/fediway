@@ -97,9 +97,7 @@ def read_sql_join_query(
         if meta is None:
             raise ValueError("Must provide 'meta' if 'head_rows' is 0")
         if divisions is None and npartitions is None:
-            raise ValueError(
-                "Must provide 'divisions' or 'npartitions' if 'head_rows' is 0"
-            )
+            raise ValueError("Must provide 'divisions' or 'npartitions' if 'head_rows' is 0")
     if divisions and npartitions:
         raise TypeError("Must supply either 'divisions' or 'npartitions', not both")
 
@@ -157,10 +155,7 @@ def read_sql_join_query(
                     sa.sql.func.count(sa.Column(index_col.split(".")[-1]))
                 ).select_from(sa.text("(" + q + f" {sql_append})"))
                 count = pd.read_sql(q, engine)["count_1"][0]
-                npartitions = (
-                    int(round(count * bytes_per_row / parse_bytes(bytes_per_chunk)))
-                    or 1
-                )
+                npartitions = int(round(count * bytes_per_row / parse_bytes(bytes_per_chunk))) or 1
         if dtype.kind == "M":
             divisions = methods.tolist(
                 pd.date_range(
@@ -192,11 +187,7 @@ def read_sql_join_query(
             q += f"{index} < {upper}"
         q += f" {sql_append}"
         # q = sql.where(sa.sql.and_(index >= lower, cond))
-        parts.append(
-            delayed(_read_sql_chunk)(
-                q, con, meta, engine_kwargs=engine_kwargs, **kwargs
-            )
-        )
+        parts.append(delayed(_read_sql_chunk)(q, con, meta, engine_kwargs=engine_kwargs, **kwargs))
 
     engine.dispose()
 

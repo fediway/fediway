@@ -1,9 +1,7 @@
-from datetime import datetime
 from typing import Optional
 
-from .base import Item
-
 from ..models import Quote
+from .base import Item
 
 QUOTE_STATUS = {
     0: "pending",
@@ -20,7 +18,7 @@ class QuoteItem(Item):
 
     @classmethod
     def from_model(cls, quote: Quote):
-        state = cls.get_state(quote)
+        cls.get_state(quote)
         quoted_status = cls.get_quoted_status(quote)
 
         return cls(state=QUOTE_STATUS[quote.state], quoted_status=quoted_status)

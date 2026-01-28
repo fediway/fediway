@@ -1,6 +1,7 @@
-from redis import Redis
-from typing import Callable
 import functools
+from typing import Callable
+
+from redis import Redis
 
 
 def redis_cache(client: Redis | Callable[[], Redis], key: str, ttl: int = 300):

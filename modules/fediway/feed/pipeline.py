@@ -1,22 +1,23 @@
-from loguru import logger
-from datetime import datetime
-import numpy as np
 import time
+from datetime import datetime
 
+import numpy as np
+from loguru import logger
+
+from ..heuristics import DiversifyHeuristic, Heuristic
 from ..rankers import Ranker
 from ..sources import Source
-from ..heuristics import Heuristic, DiversifyHeuristic
-from .candidates import Candidate, CandidateList
-from .sampling import TopKSampler, Sampler
+from .candidates import CandidateList
+from .features import Features
+from .sampling import Sampler, TopKSampler
 from .steps import (
+    PaginationStep,
     PipelineStep,
     RankingStep,
     RememberStep,
-    PaginationStep,
-    SourcingStep,
     SamplingStep,
+    SourcingStep,
 )
-from .features import Features
 
 
 class Feed:
@@ -40,8 +41,7 @@ class Feed:
         return {
             "counter": self.counter,
             "steps": [
-                step.get_state() if hasattr(step, "get_state") else None
-                for step in self.steps
+                step.get_state() if hasattr(step, "get_state") else None for step in self.steps
             ],
         }
 
@@ -92,9 +92,8 @@ class Feed:
         current_step = self.steps[-1] if len(self.steps) > 0 else None
 
         current_step_is_sourcing_step = self._is_current_step_type(SourcingStep)
-        is_different_group = (
-            lambda: current_step is not None and current_step.group != group
-        )
+        def is_different_group():
+            return current_step is not None and current_step.group != group
 
         if not current_step_is_sourcing_step or is_different_group():
             self.step(SourcingStep(group))
@@ -110,9 +109,7 @@ class Feed:
         return self
 
     def rank(self, ranker: Ranker, feature_service: Features | None = None):
-        self.step(
-            RankingStep(ranker, feature_service or self.feature_service, self.entity)
-        )
+        self.step(RankingStep(ranker, feature_service or self.feature_service, self.entity))
 
         return self
 

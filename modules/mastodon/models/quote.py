@@ -1,9 +1,6 @@
-from datetime import datetime
 from typing import Optional
 
 from sqlmodel import Field, Relationship, SQLModel
-
-from config import config
 
 
 class Quote(SQLModel, table=True):
@@ -11,12 +8,8 @@ class Quote(SQLModel, table=True):
 
     account_id: str = Field(nullable=False, primary_key=True, foreign_key="accounts.id")
     status_id: str = Field(nullable=True, primary_key=True, foreign_key="statuses.id")
-    quoted_status_id: str = Field(
-        nullable=True, primary_key=True, foreign_key="statuses.id"
-    )
-    quoted_account_id: str = Field(
-        nullable=True, primary_key=True, foreign_key="accounts.id"
-    )
+    quoted_status_id: str = Field(nullable=True, primary_key=True, foreign_key="statuses.id")
+    quoted_account_id: str = Field(nullable=True, primary_key=True, foreign_key="accounts.id")
 
     state: int = Field(nullable=False)
 

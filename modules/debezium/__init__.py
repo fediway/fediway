@@ -103,9 +103,7 @@ async def process_debezium_batch(events: list[DebeziumEvent], handler_cls, args)
     return results
 
 
-def make_debezium_handler(
-    broker, topic: str, event_handler, args, group_id: str | None = None
-):
+def make_debezium_handler(broker, topic: str, event_handler, args, group_id: str | None = None):
     @broker.subscriber(topic, group_id=group_id)
     async def _handler(event: DebeziumEvent):
         logger.debug(f"Consuming debezium event {topic}.")

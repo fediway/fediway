@@ -43,9 +43,7 @@ class SchwarmInteractionFeatures:
         """
 
         results = self._run_query(query, src_id=src_id, tgt_ids=tgt_ids)
-        results_map = {
-            result["target_id"]: result["mutual_follows"] for result in results
-        }
+        results_map = {result["target_id"]: result["mutual_follows"] for result in results}
 
         return [results_map[target_id] for target_id in target_ids]
 
@@ -57,9 +55,7 @@ class SchwarmInteractionFeatures:
         """
 
         results = self._run_query(query, src_id=src_id, tgt_ids=tgt_ids)
-        results_map = {
-            result["target_id"]: result["following_friends"] for result in results
-        }
+        results_map = {result["target_id"]: result["following_friends"] for result in results}
 
         return [results_map[target_id] for target_id in target_ids]
 
@@ -83,9 +79,7 @@ class SchwarmTwoHopFeatures:
         """
 
         results = self._run_query(query, source_id=source_id, target_ids=target_ids)
-        results_map = {
-            result["target_id"]: result["two_hop_favourites"] for result in results
-        }
+        results_map = {result["target_id"]: result["two_hop_favourites"] for result in results}
 
         return [results_map[target_id] for target_id in target_ids]
 
@@ -97,8 +91,6 @@ class SchwarmTwoHopFeatures:
         """
 
         results = self._run_query(query, source_id=source_id, target_ids=target_ids)
-        results_map = {
-            result["target_id"]: result["two_hop_follows"] for result in results
-        }
+        results_map = {result["target_id"]: result["two_hop_follows"] for result in results}
 
         return [results_map[target_id] for target_id in target_ids]

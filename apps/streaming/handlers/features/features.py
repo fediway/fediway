@@ -26,13 +26,9 @@ class FeaturesJsonEventHandler:
             print(features)
             raise e
 
-        entities_desc = ",".join(
-            [f"{e}:{features.get(e)}" for e in self.feature_view.entities]
-        )
+        entities_desc = ",".join([f"{e}:{features.get(e)}" for e in self.feature_view.entities])
 
-        logger.debug(
-            f"Pushed {self.feature_view.name}[{entities_desc}] features to online store."
-        )
+        logger.debug(f"Pushed {self.feature_view.name}[{entities_desc}] features to online store.")
 
 
 class FeaturesDebeziumEventHandler(DebeziumEventHandler, FeaturesJsonEventHandler):

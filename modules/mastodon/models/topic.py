@@ -22,6 +22,4 @@ class Topic(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     reviewed_at: datetime | None = Field(nullable=False)
 
-    statuses: list["Status"] = Relationship(
-        back_populates="topics", link_model=StatusTopic
-    )
+    statuses: list["Status"] = Relationship(back_populates="topics", link_model=StatusTopic)

@@ -1,4 +1,3 @@
-from datetime import timedelta
 
 from ..base import Source
 

@@ -1,13 +1,11 @@
-import pytest
-import pandas as pd
-import numpy as np
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
+
+import pandas as pd
+import pytest
 from fastapi import BackgroundTasks
 from feast import FeatureService as FeastFeatureService
-from unittest.mock import MagicMock, AsyncMock, patch
 
-from modules.fediway.feed.features import Features
-from shared.core.feast import feature_store
 from shared.services.feature_service import FeatureService
 
 ENTITIES = [{"status_id": 1}, {"status_id": 2}, {"status_id": 3}]
@@ -166,9 +164,7 @@ async def test_get_with_cache_hit(feature_service):
         }
     }
 
-    result = await feature_service.get(
-        ENTITIES, ["status__author_id", "status__engagements"]
-    )
+    result = await feature_service.get(ENTITIES, ["status__author_id", "status__engagements"])
 
     # Should not call online features since cache hit
     feature_service.feature_store.get_online_features_async.assert_not_called()
@@ -195,9 +191,7 @@ async def test_get_with_partial_cache_hit(feature_service, mock_feature_store):
     mock_response.to_df.return_value = mock_df
     mock_feature_store.get_online_features_async.return_value = mock_response
 
-    result = await feature_service.get(
-        ENTITIES, ["status:author_id", "status:engagements"]
-    )
+    result = await feature_service.get(ENTITIES, ["status:author_id", "status:engagements"])
 
     # Should only call for missing entity
     mock_feature_store.get_online_features_async.assert_called_once_with(

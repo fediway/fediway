@@ -41,18 +41,18 @@ def migrate():
         graph = db.graph(config.fediway.arango_graph)
 
     if not graph.has_vertex_collection("accounts"):
-        accounts = graph.create_vertex_collection("accounts")
-        typer.echo(f"✅ Created vertex 'accounts'.")
+        graph.create_vertex_collection("accounts")
+        typer.echo("✅ Created vertex 'accounts'.")
 
     if not graph.has_vertex_collection("statuses"):
         statuses = graph.create_vertex_collection("statuses")
         statuses.add_index(fields=["created_at"], type="skiplist")
         statuses.add_index(fields=["language"], type="hash")
-        typer.echo(f"✅ Created vertex 'statuses'.")
+        typer.echo("✅ Created vertex 'statuses'.")
 
     if not graph.has_vertex_collection("tags"):
-        tags = graph.create_vertex_collection("tags")
-        typer.echo(f"✅ Created vertex 'tags'.")
+        graph.create_vertex_collection("tags")
+        typer.echo("✅ Created vertex 'tags'.")
 
     if not graph.has_edge_definition("follows"):
         graph.create_edge_definition(
@@ -60,7 +60,7 @@ def migrate():
             from_vertex_collections=["accounts"],
             to_vertex_collections=["accounts"],
         )
-        typer.echo(f"✅ Created edge 'follows'.")
+        typer.echo("✅ Created edge 'follows'.")
 
     if not graph.has_edge_definition("tagged"):
         graph.create_edge_definition(
@@ -68,7 +68,7 @@ def migrate():
             from_vertex_collections=["statuses"],
             to_vertex_collections=["tags"],
         )
-        typer.echo(f"✅ Created edge 'tagged'.")
+        typer.echo("✅ Created edge 'tagged'.")
 
     if not graph.has_edge_definition("mentioned"):
         graph.create_edge_definition(
@@ -76,7 +76,7 @@ def migrate():
             from_vertex_collections=["statuses"],
             to_vertex_collections=["accounts"],
         )
-        typer.echo(f"✅ Created edge 'mentioned'.")
+        typer.echo("✅ Created edge 'mentioned'.")
 
     if not graph.has_edge_definition("created"):
         graph.create_edge_definition(
@@ -84,7 +84,7 @@ def migrate():
             from_vertex_collections=["accounts"],
             to_vertex_collections=["statuses"],
         )
-        typer.echo(f"✅ Created edge 'created'.")
+        typer.echo("✅ Created edge 'created'.")
 
     if not graph.has_edge_definition("engaged"):
         engaged = graph.create_edge_definition(
@@ -94,7 +94,7 @@ def migrate():
         )
         engaged.add_index(fields=["event_time"], type="skiplist")
         engaged.add_index(fields=["type"], type="hash")
-        typer.echo(f"✅ Created edge 'engaged'.")
+        typer.echo("✅ Created edge 'engaged'.")
 
 
 @app.command("seed")
@@ -171,7 +171,7 @@ def compute_affinities():
     from modules.herde import Herde
     from shared.core.herde import db, graph
 
-    herde = Herde(graph)
+    Herde(graph)
 
     with utils.duration("✅ Computed affinities in {:.3f} seconds."):
         query = """

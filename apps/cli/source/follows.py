@@ -46,7 +46,6 @@ def recently_engaged(
 
 @app.command("recently-popular")
 def recently_popular(account_id: int, lang: str = "en", limit: int = 10):
-    from datetime import timedelta
 
     from modules.fediway.sources.follows import RecentlyPopularSource
     from shared.core.schwarm import driver

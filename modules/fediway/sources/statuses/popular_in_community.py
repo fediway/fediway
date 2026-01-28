@@ -25,7 +25,7 @@ class PopularInCommunitySource(Source):
         WITH timestamp() / 1000 AS now
         MATCH (u:Account {id: $account_id})
         MATCH (s:Status {community_id: u.community_id})
-        WHERE 
+        WHERE
             s.score IS NOT NULL
         WITH s, now
         ORDER BY s.score DESC

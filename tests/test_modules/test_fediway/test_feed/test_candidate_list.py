@@ -1,6 +1,7 @@
 import json
-import pytest
+
 import numpy as np
+import pytest
 
 from modules.fediway.feed import Candidate, CandidateList
 

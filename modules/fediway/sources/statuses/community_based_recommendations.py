@@ -1,12 +1,8 @@
-from redis import Redis
-from datetime import datetime, timedelta
-import asyncio
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import LookupLocation
 from qdrant_client.http.exceptions import UnexpectedResponse
-
-from modules.fediway.feed.features import Features
+from qdrant_client.models import LookupLocation
+from redis import Redis
 
 from ..base import Source
 
@@ -23,7 +19,7 @@ class CommunityBasedRecommendationsSource(Source):
         self.account_id = account_id
 
     def name(self):
-        return f"community_based_recommendations"
+        return "community_based_recommendations"
 
     def _fetch_embeddings_version(self):
         return self.r.get("orbit:version")

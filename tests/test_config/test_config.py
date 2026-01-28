@@ -1,27 +1,7 @@
-import pytest
 
 
 def test_config_imports():
     """All config classes should be importable."""
-    from config import (
-        config,
-        ApiConfig,
-        AppConfig,
-        BaseConfig,
-        CorsConfig,
-        EmbedConfig,
-        FeastConfig,
-        FediwayConfig,
-        FilesConfig,
-        GeoLocationConfig,
-        KafkaConfig,
-        LoggingConfig,
-        PostgresConfig,
-        QdrantConfig,
-        RedisConfig,
-        RisingWaveConfig,
-        TasksConfig,
-    )
 
 
 def test_config_class_attributes():
@@ -67,8 +47,9 @@ def test_postgres_config():
 
 def test_postgres_url_property():
     """PostgresConfig.url should return a SQLAlchemy URL."""
-    from config import PostgresConfig
     from sqlalchemy import URL
+
+    from config import PostgresConfig
 
     pg = PostgresConfig()
     url = pg.url
@@ -96,8 +77,9 @@ def test_risingwave_config():
 
 def test_risingwave_url_property():
     """RisingWaveConfig.url should return a SQLAlchemy URL."""
-    from config import RisingWaveConfig
     from sqlalchemy import URL
+
+    from config import RisingWaveConfig
 
     rw = RisingWaveConfig()
     url = rw.url

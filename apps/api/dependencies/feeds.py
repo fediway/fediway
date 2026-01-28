@@ -1,17 +1,15 @@
+from fastapi import BackgroundTasks, Depends, Request
 from kafka import KafkaProducer
-from fastapi import BackgroundTasks, Depends, Request, Response
-from sqlmodel import Session as DBSession
 from redis import Redis
 
 from modules.mastodon.models import Account
-
 from shared.core.kafka import get_kafka_producer
+from shared.core.redis import get_redis
 from shared.services.feature_service import FeatureService
 
-from shared.core.redis import get_redis
 from ..services.feed_service import FeedService
-from .features import get_feature_service
 from .auth import get_authenticated_account
+from .features import get_feature_service
 
 
 def get_feed(

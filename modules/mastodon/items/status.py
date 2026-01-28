@@ -49,9 +49,7 @@ class StatusItem(Item):
         reblogs_count = 0
         favourites_count = 0
         if status.stats is not None:
-            reblogs_count = (
-                status.stats.untrusted_reblogs_count or status.stats.reblogs_count
-            )
+            reblogs_count = status.stats.untrusted_reblogs_count or status.stats.reblogs_count
             favourites_count = (
                 status.stats.untrusted_favourites_count or status.stats.favourites_count
             )
@@ -64,9 +62,7 @@ class StatusItem(Item):
             edited_at=status.edited_at,
             language=status.language,
             account=AccountItem.from_model(account=status.account),
-            media_attachments=[
-                MediaAttachmentItem.from_model(m) for m in status.media_attachments
-            ],
+            media_attachments=[MediaAttachmentItem.from_model(m) for m in status.media_attachments],
             content=status.text,
             visibility=STATUS_VISIBILITY[status.visibility],
             sensitive=status.sensitive,
@@ -78,9 +74,7 @@ class StatusItem(Item):
             favourites_count=favourites_count,
             replies_count=status.stats.replies_count if status.stats is not None else 0,
             quotes_count=status.stats.quotes_count if status.stats is not None else 0,
-            card=PreviewCardItem.from_model(status.preview_card)
-            if status.preview_card
-            else None,
+            card=PreviewCardItem.from_model(status.preview_card) if status.preview_card else None,
             quote=QuoteItem.from_model(status.quote) if status.quote else None,
         )
 

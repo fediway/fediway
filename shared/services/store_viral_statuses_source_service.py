@@ -1,7 +1,6 @@
-from sqlmodel import Session, text
 from redis import Redis
+from sqlmodel import Session, text
 
-from config import config
 import modules.utils as utils
 from modules.fediway.sources.statuses import ViralStatusesSource
 
@@ -13,7 +12,7 @@ class StoreViralStatusesSourceService:
 
     def _get_languages(self) -> list[str]:
         query = """
-        SELECT s.language 
+        SELECT s.language
         FROM status_virality_score_languages s
         WHERE s.language IS NOT NULL
         GROUP BY s.language;
@@ -30,10 +29,6 @@ class StoreViralStatusesSourceService:
             )
 
             with utils.duration(
-                "Precomputed candidates for "
-                + source.name()
-                + "["
-                + lang
-                + "] in {:.3f} seconds."
+                "Precomputed candidates for " + source.name() + "[" + lang + "] in {:.3f} seconds."
             ):
                 source.store()

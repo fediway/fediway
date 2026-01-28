@@ -31,12 +31,10 @@ class FeastConfig(BaseConfig):
     @property
     def repo_config(self):
         if not FEAST_AVAILABLE:
-            raise ImportError(
-                "Feast is not installed. Install with: uv sync --extra features"
-            )
+            raise ImportError("Feast is not installed. Install with: uv sync --extra features")
 
         from feast.feature_store import RepoConfig
-        from modules.features.offline_store import RisingwaveOfflineStoreConfig
+
 
         return RepoConfig(
             project="fediway",
@@ -50,9 +48,7 @@ class FeastConfig(BaseConfig):
     @property
     def online_config(self):
         if not FEAST_AVAILABLE:
-            raise ImportError(
-                "Feast is not installed. Install with: uv sync --extra features"
-            )
+            raise ImportError("Feast is not installed. Install with: uv sync --extra features")
 
         from feast.infra.online_stores.redis import RedisOnlineStoreConfig
 
@@ -69,13 +65,12 @@ class FeastConfig(BaseConfig):
     @property
     def offline_config(self):
         if not FEAST_AVAILABLE:
-            raise ImportError(
-                "Feast is not installed. Install with: uv sync --extra features"
-            )
+            raise ImportError("Feast is not installed. Install with: uv sync --extra features")
 
         from modules.features.offline_store import RisingwaveOfflineStoreConfig
-        from .risingwave import RisingWaveConfig
+
         from .kafka import KafkaConfig
+        from .risingwave import RisingWaveConfig
 
         rw = RisingWaveConfig()
         kafka = KafkaConfig()

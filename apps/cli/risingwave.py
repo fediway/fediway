@@ -26,9 +26,7 @@ def get_context():
 
 
 def env_substitute(sql: str, context: dict):
-    return re.sub(
-        r"\$\{(\w+)\}", lambda m: str(context.get(m.group(1), m.group(0))), sql
-    )
+    return re.sub(r"\$\{(\w+)\}", lambda m: str(context.get(m.group(1), m.group(0))), sql)
 
 
 def parse_migration(sql):
@@ -103,9 +101,7 @@ def migrate():
                             continue
                         print(query)
                         raise e
-                cur.execute(
-                    "INSERT INTO _migrations (version) VALUES (%s);", (version,)
-                )
+                cur.execute("INSERT INTO _migrations (version) VALUES (%s);", (version,))
                 conn.commit()
 
             typer.echo(f"Applied migration {version}")
@@ -115,7 +111,7 @@ def migrate():
 def rollback(version: str | None = None):
     conn = get_connection()
     ensure_migration_table(conn)
-    applied = get_applied_migrations(conn)
+    get_applied_migrations(conn)
 
     context = get_context()
 
@@ -176,9 +172,7 @@ def update(version: str):
                             continue
                         print(query)
                         raise e
-                cur.execute(
-                    "INSERT INTO _migrations (version) VALUES (%s);", (version,)
-                )
+                cur.execute("INSERT INTO _migrations (version) VALUES (%s);", (version,))
                 conn.commit()
 
                 typer.echo(f"Applied migration {version}")

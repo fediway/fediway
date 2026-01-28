@@ -13,7 +13,7 @@ class AccountBasedCollaborativeFilteringSource(Source):
         self.account_id = account_id
 
     def name(self):
-        return f"account_based_collaborative_filtering"
+        return "account_based_collaborative_filtering"
 
     def redis_key(self):
         return f"rec:account_sim:{self.account_id}"

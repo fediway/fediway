@@ -1,12 +1,11 @@
 import typer
 
-from config import config
-
 app = typer.Typer(help="Follow sources.")
 
 
 def _get_account_id_from_username(username: str):
     from sqlmodel import select
+
     from modules.mastodon.models import Account
     from shared.core.db import db_session
 
@@ -23,6 +22,7 @@ def _get_account_id_from_username(username: str):
 
 def _log_candidates(candidates: list[str]):
     from sqlmodel import select
+
     from modules.mastodon.models import Status
     from shared.core.db import db_session
 
@@ -61,8 +61,8 @@ def community_based_recommendations(
     limit: int = 10,
 ):
     from modules.fediway.sources.statuses import CommunityBasedRecommendationsSource
-    from shared.core.redis import get_redis
     from shared.core.qdrant import client
+    from shared.core.redis import get_redis
 
     account_id = _get_account_id_from_username(username)
 
@@ -76,8 +76,8 @@ def community_based_recommendations(
 @app.command("random-communities")
 def random_communities(limit: int = 10, batch_size: int = 1):
     from modules.fediway.sources.statuses import TopStatusesFromRandomCommunitiesSource
-    from shared.core.redis import get_redis
     from shared.core.qdrant import client
+    from shared.core.redis import get_redis
 
     source = TopStatusesFromRandomCommunitiesSource(
         r=get_redis(), client=client, batch_size=batch_size
@@ -91,10 +91,10 @@ def viral(
     limit: int = 10,
     language: str = "en",
 ):
+
     from modules.fediway.sources.statuses import ViralStatusesSource
-    from shared.core.rw import rw_session
     from shared.core.redis import get_redis
-    import time
+    from shared.core.rw import rw_session
 
     with rw_session() as rw:
         source = ViralStatusesSource(

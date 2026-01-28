@@ -1,26 +1,25 @@
-from fastapi import APIRouter, Depends, Request, Response, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from sqlmodel import Session as DBSession
 
-from apps.api.modules.utils import set_next_link
 from apps.api.dependencies.features import get_kirby_feature_service
 from apps.api.dependencies.feeds import get_feed
 from apps.api.dependencies.sources.statuses import (
+    get_community_based_recommendations_source,
     # get_popular_in_social_circle_sources,
     get_recent_statuses_by_followed_accounts_source,
-    get_community_based_recommendations_source,
     get_top_statuses_from_random_communities_source,
     get_viral_statuses_source,
 )
+from apps.api.modules.utils import set_next_link
 from apps.api.services.feed_service import FeedService
 from config import config
-from modules.fediway.rankers.kirby import KirbyFeatureService
 from modules.fediway.feed import CandidateList
 from modules.fediway.feed.sampling import WeightedGroupSampler
+from modules.fediway.rankers.kirby import KirbyFeatureService
 from modules.fediway.sources import Source
 from modules.mastodon.items import StatusItem
 from modules.mastodon.models import Status
 from shared.core.db import get_db_session
-
 
 router = APIRouter()
 
@@ -90,7 +89,8 @@ async def home_timeline(
         + len(cold_start_sources)
     )
 
-    _map_sources = lambda S: [(s, max_candidates_per_source) for s in S]
+    def _map_sources(S):
+        return [(s, max_candidates_per_source) for s in S]
 
     pipeline = (
         feed.name("timelines/home")

@@ -1,12 +1,8 @@
-from redis import Redis
-from datetime import datetime, timedelta
+
 import numpy as np
-import asyncio
-
 from qdrant_client import QdrantClient
-from qdrant_client.models import SparseVector, SearchRequest, QueryRequest
-
-from modules.fediway.feed.features import Features
+from qdrant_client.models import QueryRequest, SparseVector
+from redis import Redis
 
 from ..base import Source
 
@@ -30,7 +26,7 @@ class TopStatusesFromRandomCommunitiesSource(Source):
         }
 
     def name(self):
-        return f"top_statuses_from_random_communities"
+        return "top_statuses_from_random_communities"
 
     def _fetch_embeddings_version(self) -> str:
         return self.r.get("orbit:version").decode("utf8")
@@ -45,9 +41,7 @@ class TopStatusesFromRandomCommunitiesSource(Source):
         n_communities = limit // self.batch_size
 
         # sample random communities
-        communities = np.random.choice(
-            np.arange(dim), size=min(dim, n_communities), replace=False
-        )
+        communities = np.random.choice(np.arange(dim), size=min(dim, n_communities), replace=False)
 
         # create sparse vectors representing the communities
         vectors = [SparseVector(indices=[c], values=[1.0]) for c in communities]

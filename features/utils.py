@@ -5,17 +5,13 @@ from functools import reduce
 import pyarrow as pa
 
 # from feast.infra.offline_stores.contrib.spark_offline_store.spark_source import SparkSource
-from feast import Entity, FeatureView, Field, PushSource, KafkaSource
-from feast.infra.offline_stores.contrib.postgres_offline_store.postgres_source import (
-    PostgreSQLSource,
-)
-
-from feast.data_format import JsonFormat, StreamFormat
+from feast import Entity, FeatureView, Field, KafkaSource, PushSource
+from feast.data_format import JsonFormat
 from feast.types import (
-    FeastType,
     Array,
     Bool,
     Bytes,
+    FeastType,
     Float32,
     Float64,
     Int32,
@@ -25,7 +21,6 @@ from feast.types import (
 )
 
 from modules.features.sources import RisingWaveSource
-from config import config
 
 
 def make_feature_view(
@@ -89,10 +84,7 @@ def _feast_type_to_json_type(dtype: FeastType):
 def _schema_to_json_format(schema: list[Field]) -> JsonFormat:
     return JsonFormat(
         schema_json=", ".join(
-            [
-                f"{field.name} {_feast_type_to_json_type(field.dtype)}"
-                for field in schema
-            ]
+            [f"{field.name} {_feast_type_to_json_type(field.dtype)}" for field in schema]
         )
     )
 

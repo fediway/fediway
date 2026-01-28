@@ -1,5 +1,4 @@
-import time
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
 
 from neo4j import Driver
 
@@ -77,7 +76,7 @@ class Schwarm:
     def add_account_stats(self, stats: dict[str, int]):
         query = """
         MERGE (a:Account {id: $id})
-        ON MATCH SET 
+        ON MATCH SET
             a.avg_favs = $avg_favs,
             a.avg_replies = $avg_replies,
             a.avg_reblogs = $avg_reblogs;
@@ -122,7 +121,7 @@ class Schwarm:
     def add_status_stats(self, stats: StatusStats):
         query = """
         MATCH (a:Account)-[:CREATED]->(s:Status {id: $id})
-        SET 
+        SET
             s.num_favs = $num_favs,
             s.num_replies = $num_replies,
             s.num_reblogs = $num_reblogs,
@@ -141,7 +140,7 @@ class Schwarm:
         query = """
         UNWIND $stats as row
         MATCH (a:Account)-[:CREATED]->(s:Status {id: row.id})
-        SET 
+        SET
             s.num_favs = row.num_favs,
             s.num_replies = row.num_replies,
             s.num_reblogs = row.num_reblogs,
@@ -165,8 +164,8 @@ class Schwarm:
         query = """
         MERGE (a:Account {id: $account_id})
         MERGE (s:Status {id: $id})
-        ON CREATE SET 
-            s.language = $language, 
+        ON CREATE SET
+            s.language = $language,
             s.created_at = $created_at,
             s.score_v1 = $score_v1
         ON MERGE SET
@@ -204,8 +203,8 @@ class Schwarm:
         UNWIND $statuses AS status
         MERGE (a:Account {id: status.account_id})
         MERGE (s:Status {id: status.id})
-        ON CREATE SET 
-            s.language = status.language, 
+        ON CREATE SET
+            s.language = status.language,
             s.created_at = status.created_at
         CREATE (a)-[:CREATED]->(s)
         """
@@ -383,9 +382,7 @@ class Schwarm:
         MERGE (a)-[:FAVOURITES]->(s)
         """
 
-        self._run_query(
-            query, account_id=favourite.account_id, status_id=favourite.status_id
-        )
+        self._run_query(query, account_id=favourite.account_id, status_id=favourite.status_id)
 
     def add_favourites(self, favourites: list[Favourite]):
         query = """
@@ -412,9 +409,7 @@ class Schwarm:
         DELETE r;
         """
 
-        self._run_query(
-            query, account_id=favourite.account_id, status_id=favourite.status_id
-        )
+        self._run_query(query, account_id=favourite.account_id, status_id=favourite.status_id)
 
     def compute_account_rank(self):
         query = """
@@ -458,11 +453,11 @@ class Schwarm:
         query = """
         MATCH (s:Status)<-[:FAVOURITES]-(a:Account)
         WITH s, a.community_id AS comm, COUNT(*) AS interactions
-        WITH s, 
+        WITH s,
             COLLECT(interactions) AS comm_counts,
             SUM(interactions) AS total
-        WITH s, 
-            REDUCE(ent=0.0, c IN comm_counts | 
+        WITH s,
+            REDUCE(ent=0.0, c IN comm_counts |
             ent - (c/total) * log(c/total)) AS entropy
         SET s.diversity_score = entropy
         """

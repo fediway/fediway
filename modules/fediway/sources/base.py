@@ -6,7 +6,7 @@ from redis import Redis
 
 class Source:
     def collect(self, limit: int, offset: int | None = None):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_params(self):
         return {}
@@ -21,7 +21,7 @@ class RedisSource(Source):
         self.ttl = ttl.seconds
 
     def compute(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def redis_key(self):
         return "source:" + self.name()

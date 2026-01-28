@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
-from redis import Redis
+from datetime import timedelta
+
 from neo4j import Driver
+from redis import Redis
 
 from ..base import RedisSource
 

@@ -23,9 +23,7 @@ class InfluentialSource(Source):
         max_age = int((datetime.now() - self.max_age).timestamp() * 1000)
 
         with self.driver.session() as session:
-            results = session.run(
-                query, language=self.language, limit=limit, max_age=max_age
-            )
+            results = session.run(query, language=self.language, limit=limit, max_age=max_age)
 
             for result in list(results):
                 yield result["tag_id"]

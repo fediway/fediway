@@ -3,30 +3,11 @@ from faststream.confluent import KafkaBroker
 
 from config import config
 from modules.debezium import (
-    DebeziumEvent,
     make_debezium_handler,
-    process_debezium_event,
 )
-from modules.schwarm import Schwarm
 from shared.core.feast import feature_store
-from shared.core.schwarm import driver
 
-from .handlers.features import FeaturesJsonEventHandler, FeaturesDebeziumEventHandler
-from .handlers.schwarm import (
-    FavouriteEventHandler as SchwarmFavouriteEventHandler,
-)
-from .handlers.schwarm import (
-    MentionEventHandler as SchwarmMentionEventHandler,
-)
-from .handlers.schwarm import (
-    StatusEventHandler as SchwarmStatusEventHandler,
-)
-from .handlers.schwarm import (
-    StatusStatsEventHandler as SchwarmStatusStatsEventHandler,
-)
-from .handlers.schwarm import (
-    StatusTagEventHandler as SchwarmStatusTagEventHandler,
-)
+from .handlers.features import FeaturesDebeziumEventHandler, FeaturesJsonEventHandler
 from .utils import make_handler
 
 broker = KafkaBroker(

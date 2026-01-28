@@ -28,7 +28,7 @@ class RecentlyEngagedSource(Source):
             )
 
             LIMIT @limit
-            
+
             RETURN { target: target._key }
         """
 

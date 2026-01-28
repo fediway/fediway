@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 
-from sqlmodel import Field, SQLModel, Session
+from sqlmodel import Field, Session, SQLModel
 
 SHORTCODE_RE_FRAGMENT = r"[a-zA-Z0-9_]{2,}"
 SCAN_RE = re.compile(

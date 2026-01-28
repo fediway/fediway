@@ -8,9 +8,7 @@ from config import config
 class PreviewCardStatus(SQLModel, table=True):
     __tablename__ = "preview_cards_statuses"
 
-    preview_card_id: int = Field(
-        nullable=False, primary_key=True, foreign_key="preview_cards.id"
-    )
+    preview_card_id: int = Field(nullable=False, primary_key=True, foreign_key="preview_cards.id")
     status_id: str = Field(nullable=False, primary_key=True, foreign_key="statuses.id")
 
 

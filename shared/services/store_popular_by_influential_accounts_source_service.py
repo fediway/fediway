@@ -1,8 +1,8 @@
 from neo4j import Driver
 from redis import Redis
 
-from config import config
 import modules.utils as utils
+from config import config
 from modules.fediway.sources.statuses import PouplarByInfluentialAccountsSource
 
 

@@ -13,7 +13,7 @@ class StatusBasedCollaborativeFilteringSource(Source):
         self.account_id = account_id
 
     def name(self):
-        return f"status_based_collaborative_filtering"
+        return "status_based_collaborative_filtering"
 
     def redis_key(self):
         return f"rec:status_sim:{self.account_id}"

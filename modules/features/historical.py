@@ -7,13 +7,13 @@ from sqlalchemy import text
 from sqlalchemy.schema import CreateTable
 from sqlmodel import (
     BigInteger,
+    Boolean,
     Column,
     DateTime,
     MetaData,
     Session,
     Table,
     select,
-    Boolean,
 )
 
 from modules.utils import compile_sql, read_sql_join_query
@@ -51,9 +51,7 @@ def create_entities_table(name: str, db: Session) -> Table:
     return table
 
 
-def _get_historical_features_query(
-    entity_table: str, feature_views: list[FeatureView]
-) -> str:
+def _get_historical_features_query(entity_table: str, feature_views: list[FeatureView]) -> str:
     queries = []
     for fv in feature_views:
         table = f"{fv.name}_historical"
@@ -61,11 +59,11 @@ def _get_historical_features_query(
             [f"f.{f.name}" for f in fv.schema if f.name not in fv.entities]
         )
         entities_and_clause = " AND ".join([f"f.{e} = ds.{e}" for e in fv.entities])
-        null_columns = ", ".join(
+        ", ".join(
             [f"NULL AS {_fv.name}" for _fv in feature_views if _fv.name != fv.name]
         )
 
-        entities_select = ",\n    ".join([f"ds.{e}" for e in fv.entities])
+        ",\n    ".join([f"ds.{e}" for e in fv.entities])
         fv_select = f"(ARRAY[{schema_select_clause}])::REAL[] AS {fv.name}"
 
         columns = []
@@ -77,26 +75,24 @@ def _get_historical_features_query(
         columns = ",\n   ".join(columns)
 
         query = f"""
-        SELECT 
+        SELECT
             ds.account_id,
             ds.status_id,
             {columns}
         FROM {entity_table} ds
-        ASOF JOIN {table} f 
+        ASOF JOIN {table} f
         ON {entities_and_clause} AND f.event_time < ds.time
         """
 
         queries.append(query)
 
-    entities_and_clause = " AND ".join(
-        [f"data.{e} = ds.{e}" for e in ["account_id", "status_id"]]
-    )
-    features_clause = " AND ".join([f"{fv.name} IS NOT NULL" for fv in feature_views])
+    entities_and_clause = " AND ".join([f"data.{e} = ds.{e}" for e in ["account_id", "status_id"]])
+    " AND ".join([f"{fv.name} IS NOT NULL" for fv in feature_views])
     fv_select = ",\n    ".join(f"MAX({fv.name}) as {fv.name}" for fv in feature_views)
 
     query = select(
-        text(f"""ds.account_id, 
-        ds.status_id, 
+        text(f"""ds.account_id,
+        ds.status_id,
         COALESCE(BOOL_OR(l.is_favourited), FALSE) AS is_favourited,
         COALESCE(BOOL_OR(l.is_replied), FALSE) AS is_replied,
         COALESCE(BOOL_OR(l.is_reblogged), FALSE) AS is_reblogged,
@@ -116,7 +112,7 @@ class FlattenFeatureViews:
     def __init__(self, feature_views, drop_all_nans: bool = True):
         self.feature_views = feature_views
         self.drop_all_nans = drop_all_nans
-        self.schema = schema = {
+        self.schema = {
             "status_id": pd.Series([], dtype="int64"),
             "account_id": pd.Series([], dtype="int64"),
             "label.is_favourited": pd.Series([], dtype="boolean"),
@@ -145,8 +141,7 @@ class FlattenFeatureViews:
                         row[fv.name] = json.loads(row[fv.name])
                     feature_names = [f.name for f in fv.schema if f not in fv.entities]
                     feats |= {
-                        f"{fv.name}__{f}": value
-                        for f, value in zip(feature_names, row[fv.name])
+                        f"{fv.name}__{f}": value for f, value in zip(feature_names, row[fv.name])
                     }
             all_nans = not any(feat is not None for feat in feats.values())
             if all_nans and self.drop_all_nans:
@@ -185,7 +180,7 @@ def get_historical_features_ddf(
     db: Session,
     drop_all_nans: bool = True,
 ):
-    total = db.scalar(text(f"SELECT COUNT(*) FROM {entity_table}"))
+    db.scalar(text(f"SELECT COUNT(*) FROM {entity_table}"))
     query = _get_historical_features_query(entity_table, feature_views)
 
     schema = {
@@ -207,6 +202,4 @@ def get_historical_features_ddf(
         sql_append="GROUP BY ds.account_id, ds.status_id",
     )
 
-    return ddf.map_partitions(
-        FlattenFeatureViews(feature_views, drop_all_nans=drop_all_nans)
-    )
+    return ddf.map_partitions(FlattenFeatureViews(feature_views, drop_all_nans=drop_all_nans))

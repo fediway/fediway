@@ -1,6 +1,6 @@
 from feast.infra.offline_stores.contrib.postgres_offline_store.postgres import (
-    PostgreSQLOfflineStoreConfig,
     PostgreSQLOfflineStore,
+    PostgreSQLOfflineStoreConfig,
 )
 
 

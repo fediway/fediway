@@ -36,7 +36,7 @@ class TriangularLoopsSource(Source):
                     LIMIT 1
                     RETURN 1
                 ) == 0
-                
+
                 LIMIT @limit
                 RETURN { source: v._key, via: w._key, target: u._key }
         """

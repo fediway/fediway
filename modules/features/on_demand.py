@@ -65,9 +65,7 @@ def on_demand_feature_view(
             udf=user_function,
             udf_string=udf_string,
         )
-        functools.update_wrapper(
-            wrapper=on_demand_feature_view_obj, wrapped=user_function
-        )
+        functools.update_wrapper(wrapper=on_demand_feature_view_obj, wrapped=user_function)
         return on_demand_feature_view_obj
 
     return decorator

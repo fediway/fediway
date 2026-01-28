@@ -1,5 +1,6 @@
-from kafka import KafkaProducer
 import json
+
+from kafka import KafkaProducer
 
 import modules.utils as utils
 from config import config
