@@ -5,10 +5,10 @@ import pandas as pd
 from fastapi import BackgroundTasks
 from feast import FeatureService as FeastFeatureService
 from feast import FeatureStore
-from loguru import logger
 
 from modules.fediway.feed.features import Features
 from shared.core.feast import feature_store
+from shared.utils.logging import log_debug, log_error, log_warning
 
 
 class FeatureService(Features):
@@ -93,8 +93,11 @@ class FeatureService(Features):
             return
 
         if len(features) != len(entities):
-            logger.warning(
-                f"Features and entities do not match: {len(features)} != {len(entities)}"
+            log_warning(
+                "Features and entities mismatch",
+                module="features",
+                features_count=len(features),
+                entities_count=len(entities),
             )
             return
 
@@ -121,8 +124,11 @@ class FeatureService(Features):
 
             missing_entites = [e for e in feature_view.entities if e not in entities[0]]
             if len(missing_entites) > 0:
-                logger.warning(
-                    f"Skip ingesting {fv_name} features: missing entities {', '.join(missing_entites)}"
+                log_warning(
+                    "Skip ingesting features: missing entities",
+                    module="features",
+                    feature_view=fv_name,
+                    missing=missing_entites,
                 )
                 continue
 
@@ -139,7 +145,7 @@ class FeatureService(Features):
             df.rename(columns=dict(zip(feature_columns, feature_names)), inplace=True)
 
             if len(df) == 0:
-                logger.info(f"Skip ingesting {fv_name} features: all entries missing")
+                log_debug("Skip ingesting features: all entries missing", module="features", feature_view=fv_name)
                 continue
 
             df["event_time"] = event_time
@@ -150,7 +156,7 @@ class FeatureService(Features):
                     df=df,
                 )
             except Exception as e:
-                logger.error(f"Failed to ingest feature view {fv_name}: {e}")
+                log_error("Failed to ingest feature view", module="features", feature_view=fv_name, error=str(e))
 
     async def get(
         self,
@@ -182,8 +188,9 @@ class FeatureService(Features):
         # ingest into offline store
         if (offline_store or self.offline_store) and len(df) > 0:
             if self.background_tasks is None:
-                logger.warning(
-                    "Ingesting features to offline store sequentially: missing background task manager"
+                log_warning(
+                    "Ingesting features to offline store sequentially: missing background task manager",
+                    module="features",
                 )
                 self.ingest_to_offline_store(df, entities, event_time)
             else:
@@ -202,13 +209,11 @@ class FeatureService(Features):
             df = pd.concat([df, cached_df])
             df = df[~df.index.duplicated()].reindex(pd.DataFrame(entities).values[:, 0])
 
-        features_name = (
-            f" {features.name} features"
-            if isinstance(features, FeastFeatureService)
-            else f" {', '.join(features)}"
-        )
-        logger.info(
-            f"Fetched{features_name} for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds."
+        log_debug(
+            "Fetched features",
+            module="features",
+            entities=len(missing_entities),
+            duration_ms=int((time.time() - start) * 1000),
         )
 
         return df

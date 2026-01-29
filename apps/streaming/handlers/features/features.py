@@ -3,9 +3,9 @@ import time
 import pandas as pd
 from feast import FeatureStore
 from feast.data_source import PushMode
-from loguru import logger
 
 from modules.debezium import DebeziumEventHandler
+from shared.utils.logging import log_debug
 
 
 class FeaturesJsonEventHandler:
@@ -26,9 +26,12 @@ class FeaturesJsonEventHandler:
             print(features)
             raise e
 
-        entities_desc = ",".join([f"{e}:{features.get(e)}" for e in self.feature_view.entities])
-
-        logger.debug(f"Pushed {self.feature_view.name}[{entities_desc}] features to online store.")
+        log_debug(
+            "Pushed features to online store",
+            module="streaming",
+            feature_view=self.feature_view.name,
+            entities={e: features.get(e) for e in self.feature_view.entities},
+        )
 
 
 class FeaturesDebeziumEventHandler(DebeziumEventHandler, FeaturesJsonEventHandler):

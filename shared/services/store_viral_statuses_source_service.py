@@ -2,7 +2,7 @@ from redis import Redis
 from sqlmodel import Session, text
 
 from modules.fediway.sources.statuses import ViralStatusesSource
-from shared.utils import duration
+from shared.utils.logging import Timer, log_debug
 
 
 class StoreViralStatusesSourceService:
@@ -28,7 +28,13 @@ class StoreViralStatusesSourceService:
                 language=lang,
             )
 
-            with duration(
-                "Precomputed candidates for " + source.name() + "[" + lang + "] in {:.3f} seconds."
-            ):
+            with Timer() as t:
                 source.store()
+
+            log_debug(
+                "Precomputed candidates",
+                module="viral_statuses",
+                source=source.name(),
+                language=lang,
+                duration_ms=round(t.elapsed_ms, 2),
+            )

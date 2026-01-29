@@ -5,11 +5,12 @@ import uuid
 import numpy as np
 from fastapi import BackgroundTasks, Request
 from kafka import KafkaProducer
-from loguru import logger
 from redis import Redis
 
 from config import config
-from shared.utils import JSONEncoder, duration
+from shared.utils import JSONEncoder
+from shared.utils.logging import Timer, log_debug
+from shared.utils.logging import log_debug, log_error, log_info
 from modules.fediway.feed import Features
 from modules.fediway.feed.pipeline import (
     CandidateList,
@@ -307,7 +308,7 @@ class FeedService:
             try:
                 future.get(timeout=10)
             except Exception as e:
-                logger.error(f"Kafka message delivery failed: {str(e)}")
+                log_error("Kafka message delivery failed", module="feed", error=str(e))
 
         self.kafka.flush()
 
@@ -495,8 +496,15 @@ class FeedService:
         return self.kafka.send(topic=topic, key=key, value=value)
 
     async def _execute(self):
-        with duration("Executed pipeline in {:.3f} seconds."):
+        with Timer() as t:
             await self.pipeline.execute()
+
+        log_debug(
+            "Executed pipeline",
+            module="feed",
+            name=self._name,
+            duration_ms=round(t.elapsed_ms, 2),
+        )
 
         # store feed state in redis cache
         self._save_state()
@@ -505,7 +513,7 @@ class FeedService:
         self.tasks.add_task(self._save_pipeline_run)
 
     async def execute(self) -> CandidateList:
-        with duration("Loaded recommendations in {:.3f} seconds."):
+        with Timer() as t:
             self._load_state()
 
             if self.pipeline.is_new():
@@ -513,16 +521,15 @@ class FeedService:
 
             recommendations = self.pipeline.results()
 
-            print(
-                str(self.request.url),
-                len(self.pipeline[-1]),
-                len(recommendations),
-                self.pipeline[-1].offset,
-                self.pipeline[-1].max_id,
-                self.pipeline.counter,
-            )
-
             # load new candidates
             self.tasks.add_task(self._execute)
 
-            return recommendations
+        log_debug(
+            "Loaded recommendations",
+            module="feed",
+            name=self._name,
+            count=len(recommendations),
+            duration_ms=round(t.elapsed_ms, 2),
+        )
+
+        return recommendations

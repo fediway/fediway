@@ -1,12 +1,11 @@
 from datetime import datetime
 
 import numpy as np
-from loguru import logger
 from pydantic import BaseModel
 from qdrant_client import QdrantClient, models
 
 from modules.fediway.embedding import Embedder, MultimodalEmbedder
-from shared.utils import duration
+from shared.utils.logging import Timer, log_debug
 
 
 class StatusEmbeddings(BaseModel):
@@ -30,11 +29,18 @@ class TextEmbeddingsBatchHandler:
         if len(texts) == 0:
             return []
 
-        with duration("Generated " + str(len(texts)) + " text embeddings in {:.3f} seconds."):
+        with Timer() as t:
             if isinstance(self.embedder, MultimodalEmbedder):
                 embeddings = self.embedder.texts(texts)
             else:
                 embeddings = self.embedder(texts)
+
+        log_debug(
+            "Generated text embeddings",
+            module="embedding",
+            count=len(texts),
+            duration_ms=round(t.elapsed_ms, 2),
+        )
         created_at = datetime.now()
 
         return [
@@ -66,6 +72,9 @@ class AccountEmbeddingsEventHandler:
             points=[models.PointStruct(id=data["account_id"], vector=embeddings)],
         )
 
-        logger.info(
-            f"Updated account embeddings for {data['account_id']} in '{self.topic}' collection."
+        log_debug(
+            "Updated account embeddings",
+            module="embedding",
+            account_id=data["account_id"],
+            collection=self.topic,
         )

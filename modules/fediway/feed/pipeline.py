@@ -2,7 +2,8 @@ import time
 from datetime import datetime
 
 import numpy as np
-from loguru import logger
+
+from shared.utils.logging import log_error
 
 from ..heuristics import DiversifyHeuristic, Heuristic
 from ..rankers import Ranker
@@ -162,7 +163,7 @@ class Feed:
 
     async def execute(self) -> list[int]:
         if self._running:
-            logger.error("Pipeline is already running.")
+            log_error("Pipeline is already running", module="feed")
             return
 
         self._running = True

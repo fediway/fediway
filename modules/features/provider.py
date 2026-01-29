@@ -8,9 +8,9 @@ from feast.feature_store import RepoConfig
 from feast.feature_view import FeatureView
 from feast.infra.passthrough_provider import PassthroughProvider
 from kafka import KafkaProducer
-from loguru import logger
 
 from shared.utils import JSONEncoder
+from shared.utils.logging import log_debug, log_error
 
 
 class FediwayProvider(PassthroughProvider):
@@ -72,11 +72,15 @@ class FediwayProvider(PassthroughProvider):
                 future.get(timeout=10)
                 successful_deliveries += 1
             except Exception as e:
-                logger.error(f"Kafka message delivery failed: {str(e)}")
+                log_error("Kafka message delivery failed", module="features", error=str(e))
 
         # Ensure all messages are sent
         producer.flush()
 
-        logger.info(
-            f"Ingested {successful_deliveries}/{len(data)} {feature_view.name} features to offline store"
+        log_debug(
+            "Ingested features to offline store",
+            module="features",
+            feature_view=feature_view.name,
+            successful=successful_deliveries,
+            total=len(data),
         )

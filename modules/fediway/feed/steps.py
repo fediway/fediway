@@ -4,7 +4,8 @@ from copy import deepcopy
 
 import numpy as np
 import pandas as pd
-from loguru import logger
+
+from shared.utils.logging import log_debug, log_error, log_warning
 
 from ..heuristics import Heuristic
 from ..rankers import Ranker
@@ -71,8 +72,12 @@ class RankingStep(PipelineStep):
         scores = self.ranker.predict(X)
         self._ranking_duration = time.perf_counter_ns() - start_time
 
-        logger.info(
-            f"Ranked {len(candidates)} candidates by {self.ranker.name} in {self._ranking_duration / 1_000_000} ms"
+        log_debug(
+            "Ranked candidates",
+            module="feed",
+            ranker=self.ranker.name,
+            count=len(candidates),
+            duration_ms=round(self._ranking_duration / 1_000_000, 2),
         )
 
         self._features = X
@@ -124,7 +129,7 @@ class PaginationStep(PipelineStep):
 
     def set_state(self, state):
         if "candidates" not in state:
-            logger.warning("Candidates missing in state.")
+            log_warning("Candidates missing in state", module="feed")
             return
         self.candidates.set_state(state["candidates"])
 
@@ -135,7 +140,7 @@ class PaginationStep(PipelineStep):
             try:
                 start = self.candidates.index(self.max_id) + 1
             except ValueError:
-                logger.warning(f"Missing candidate {self.max_id}")
+                log_warning("Missing candidate", module="feed", max_id=self.max_id)
                 return CandidateList(self.entity)
         elif self.offset is not None:
             start = self.offset
@@ -189,7 +194,7 @@ class SourcingStep(PipelineStep):
         try:
             candidates = [c for c in source.collect(*args)]
         except Exception as e:
-            logger.error(e)
+            log_error("Source collection failed", module="feed", error=str(e))
 
         self._durations[idx] = time.perf_counter_ns() - start_time
         self._counts[idx] = len(candidates)
@@ -197,8 +202,12 @@ class SourcingStep(PipelineStep):
         for c in candidates:
             self._sourced_candidates[idx].add(c)
 
-        logger.info(
-            f"Collected {len(candidates)} candidates from {source.name()}{source.get_params()} in {self._durations[idx] / 1_000_000} ms"
+        log_debug(
+            "Source collected",
+            module="feed",
+            source=source.name(),
+            count=len(candidates),
+            duration_ms=round(self._durations[idx] / 1_000_000, 2),
         )
 
         return candidates
@@ -224,8 +233,12 @@ class SourcingStep(PipelineStep):
                 candidates.append(candidate, source=source.name(), source_group=self.group)
                 n_sourced += 1
 
-        logger.info(
-            f"Collected {n_sourced} candidates from {len(self.sources)} sources in {self._duration / 1_000_000} ms"
+        log_debug(
+            "Sourcing completed",
+            module="feed",
+            total_candidates=n_sourced,
+            sources=len(self.sources),
+            duration_ms=round(self._duration / 1_000_000, 2),
         )
 
         return candidates
@@ -315,7 +328,7 @@ class SamplingStep(PipelineStep):
                 del candidates[candidate.id]
 
                 if self.unique and candidate.id in self.seen:
-                    logger.debug(f"Candidates {candidate.id} already seen ({self.seen})")
+                    log_debug("Candidate already seen", module="feed", candidate_id=candidate.id)
                     continue
 
                 sampled_candidates.append(candidate)
