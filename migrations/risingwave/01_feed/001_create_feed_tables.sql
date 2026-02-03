@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS feed_pipeline_runs (
     feed_id VARCHAR,
     iteration INT,
     duration_ns BIGINT,
+    code_version VARCHAR,
     event_time TIMESTAMP
 ) APPEND ONLY ON CONFLICT IGNORE WITH (
     connector='kafka',
@@ -94,7 +95,7 @@ CREATE TABLE IF NOT EXISTS feed_ranking_runs (
     pipeline_step_id VARCHAR,
     ranker VARCHAR,
     params JSONB,
-    feature_retrival_duration_ns BIGINT,
+    feature_retrieval_duration_ns BIGINT,
     ranking_duration_ns BIGINT,
     candidates_count BIGINT,
     event_time TIMESTAMP

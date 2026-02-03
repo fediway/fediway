@@ -34,7 +34,7 @@ class StoreViralStatusesSourceService:
             log_debug(
                 "Precomputed candidates",
                 module="viral_statuses",
-                source=source.name(),
+                source=source.id,
                 language=lang,
                 duration_ms=round(t.elapsed_ms, 2),
             )

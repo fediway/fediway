@@ -5,6 +5,11 @@ from ..base import Source
 
 
 class AccountBasedCollaborativeFilteringSource(Source):
+    """Recommends content from accounts similar users follow."""
+
+    _id = "account_based_collaborative_filtering"
+    _tracked_params = []
+
     def __init__(
         self,
         r: Redis,
@@ -12,9 +17,6 @@ class AccountBasedCollaborativeFilteringSource(Source):
     ):
         self.r = r
         self.account_id = account_id
-
-    def name(self):
-        return "account_based_collaborative_filtering"
 
     def redis_key(self):
         return f"rec:account_sim:{self.account_id}"

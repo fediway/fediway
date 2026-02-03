@@ -16,6 +16,7 @@ class AppConfig(BaseConfig):
 
     app_env: AppEnvTypes = AppEnvTypes.prod
     app_version: str = "v0.0.1"
+    code_version: str | None = None  # Git commit hash, set via CODE_VERSION env var
 
     app_secret: SecretStr
     app_host: str

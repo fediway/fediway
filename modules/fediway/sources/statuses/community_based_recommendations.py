@@ -8,6 +8,11 @@ from ..base import Source
 
 
 class CommunityBasedRecommendationsSource(Source):
+    """Recommends content from communities matching user interests."""
+
+    _id = "community_based_recommendations"
+    _tracked_params = []
+
     def __init__(
         self,
         r: Redis,
@@ -17,9 +22,6 @@ class CommunityBasedRecommendationsSource(Source):
         self.r = r
         self.client = client
         self.account_id = account_id
-
-    def name(self):
-        return "community_based_recommendations"
 
     def _fetch_embeddings_version(self):
         return self.r.get("orbit:version")

@@ -8,6 +8,11 @@ from ..base import RedisSource
 
 
 class ViralStatusesSource(RedisSource):
+    """Trending posts with high engagement velocity."""
+
+    _id = "viral"
+    _tracked_params = ["language", "top_n"]
+
     def __init__(
         self,
         r: Redis,
@@ -23,16 +28,7 @@ class ViralStatusesSource(RedisSource):
         self.top_n = top_n
 
     def redis_key(self):
-        return f"source:{self.name()}:{self.language}"
-
-    def get_params(self):
-        return {
-            "language": self.language,
-            "top_n": self.top_n,
-        }
-
-    def name(self):
-        return "viral"
+        return f"source:{self.id}:{self.language}"
 
     def compute(self):
         query = """

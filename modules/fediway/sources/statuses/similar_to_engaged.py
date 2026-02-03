@@ -10,6 +10,11 @@ from ..base import Source
 
 
 class SimilarToEngagedSource(Source):
+    """Finds content similar to what user has engaged with."""
+
+    _id = "similar_engaged"
+    _tracked_params = ["language", "max_age"]
+
     def __init__(
         self,
         client: QdrantClient,
@@ -29,9 +34,6 @@ class SimilarToEngagedSource(Source):
             "language": self.language,
             "max_age": self.max_age.total_seconds(),
         }
-
-    def name(self):
-        return "similar_to_engaged"
 
     def collect(self, limit: int):
         status_ids = asyncio.run(

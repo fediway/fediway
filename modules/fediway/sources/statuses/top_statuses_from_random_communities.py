@@ -8,25 +8,15 @@ from ..base import Source
 
 
 class TopStatusesFromRandomCommunitiesSource(Source):
-    """
-    Queryies top statuses for random communities.
+    """Top statuses from random communities for cold start diversity."""
 
-    This source can be used as an effective cold start to show new users diverse
-    content to find out what they like more quickly.
-    """
+    _id = "top_statuses_from_random_communities"
+    _tracked_params = ["batch_size"]
 
     def __init__(self, r: Redis, client: QdrantClient, batch_size: int = 5):
         self.r = r
         self.client = client
         self.batch_size = batch_size
-
-    def get_params(self):
-        return {
-            "batch_size": self.batch_size,
-        }
-
-    def name(self):
-        return "top_statuses_from_random_communities"
 
     def _fetch_embeddings_version(self) -> str:
         return self.r.get("orbit:version").decode("utf8")

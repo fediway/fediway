@@ -4,9 +4,12 @@ from .base import Heuristic
 
 
 class DiversifyHeuristic(Heuristic):
-    features = []
+    """Penalize candidates that share attribute with previously seen items."""
+
+    _tracked_params = ["by", "penalty"]
 
     def __init__(self, by: str, penalty: float = 0.5, seen_ids=set()):
+        self.by = by
         self.features = [by]
         self.penalty = penalty
         self.seen_ids = set(seen_ids)

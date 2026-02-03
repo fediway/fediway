@@ -131,8 +131,8 @@ def test_get_params(mock_sampler, mock_feature_service, mock_heuristic):
     assert params["n"] == 5
     assert params["unique"] is False
     assert len(params["heuristics"]) == 1
-    assert params["heuristics"][0]["name"] == "DiversifyHeuristic"
-    assert params["sampler"]["name"] == "TopKSampler"
+    assert params["heuristics"][0]["name"] == "diversify_heuristic"
+    assert params["sampler"]["name"] == "top_k_sampler"
 
 
 def test_get_state_empty(mock_sampler, mock_feature_service):

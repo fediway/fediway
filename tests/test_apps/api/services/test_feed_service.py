@@ -660,7 +660,7 @@ def test_ingest_sourcing_runs(mock_sourcing_step, mock_feed, mock_gen_id, mock_g
     service.pipeline.entity = "status"
 
     mock_source = Mock()
-    mock_source.name.return_value = "TestSource"
+    mock_source.id = "TestSource"
     mock_source.get_params.return_value = {"param1": "value1"}
 
     step = Mock()
@@ -704,7 +704,7 @@ def test_ingest_ranking_runs_with_duration(
     step.get_ranking_duration.return_value = 250
     step.get_feature_retrieval_duration.return_value = 100
     step.get_candidates.return_value = ["cand1", "cand2", "cand3"]
-    step.ranker.name = "TestRanker"
+    step.ranker.id = "TestRanker"
 
     mock_timestamp = Mock()
     mock_timestamp.timestamp.return_value = 1234567890.0

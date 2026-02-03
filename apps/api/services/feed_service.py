@@ -9,8 +9,7 @@ from redis import Redis
 
 from config import config
 from shared.utils import JSONEncoder
-from shared.utils.logging import Timer, log_debug
-from shared.utils.logging import log_debug, log_error, log_info
+from shared.utils.logging import Timer, log_debug, log_error, log_info
 from modules.fediway.feed import Features
 from modules.fediway.feed.pipeline import (
     CandidateList,
@@ -152,6 +151,7 @@ class FeedService:
                 "feed_id": self.id,
                 "iteration": self.pipeline.counter - 1,
                 "duration_ns": sum(self.pipeline.get_durations()),
+                "code_version": config.app.code_version,
                 "event_time": self.event_time,
             },
         )
@@ -196,7 +196,7 @@ class FeedService:
                         "id": step_id,
                         "feed_id": self.id,
                         "pipeline_run_id": run_id,
-                        "name": str(step),
+                        "name": step.__class__.__name__,
                         "params": step.get_params() if isinstance(step, PipelineStep) else {},
                         "duration_ns": duration_ns,
                         "event_time": self.event_time,
@@ -226,7 +226,7 @@ class FeedService:
                         "feed_id": self.id,
                         "pipeline_step_id": step_id,
                         "params": source.get_params(),
-                        "source": source.name(),
+                        "source": source.id,
                         "candidates_limit": limit,
                         "candidates_count": count,
                         "duration_ns": duration_ns,
@@ -265,15 +265,16 @@ class FeedService:
 
         return [
             self._send_kafka_message(
-                topic="feed_rankin_runs",
+                topic="feed_ranking_runs",
                 key=ranking_run_id,
                 value={
                     "id": ranking_run_id,
                     "feed_id": self.id,
                     "pipeline_run_id": run_id,
                     "pipeline_step_id": step_id,
-                    "ranker": step.ranker.name,
-                    "feature_retrival_duration_ns": step.get_feature_retrieval_duration(),
+                    "ranker": step.ranker.id,
+                    "ranker_params": step.ranker.get_params(),
+                    "feature_retrieval_duration_ns": step.get_feature_retrieval_duration(),
                     "ranking_duration_ns": step.get_ranking_duration(),
                     "candidates_count": len(step.get_candidates()),
                     "event_time": self.event_time,
@@ -311,163 +312,6 @@ class FeedService:
                 log_error("Kafka message delivery failed", module="feed", error=str(e))
 
         self.kafka.flush()
-
-    # async def _save_pipeline_run(self):
-    #     event_time = int(self.feature_service.event_time.timestamp())
-
-    #     futures = []
-
-    #     # ingest feed
-    #     futures.append(
-    #         self.kafka.send(
-    #             topic="feeds",
-    #             key=self.id,
-    #             value={
-    #                 "id": self.id,
-    #                 "user_agent": self.request.headers.get("User-Agent"),
-    #                 "ip": self.request.client.host,
-    #                 "account_id": self.account.id if self.account else None,
-    #                 "name": self._name,
-    #                 "entity": self.pipeline.entity,
-    #                 "event_time": event_time,
-    #             },
-    #         )
-    #     )
-
-    #     # ingest pipeline run
-    #     run_id = str(uuid.uuid4())
-    #     futures.append(
-    #         self.kafka.send(
-    #             topic="feed_pipeline_runs",
-    #             key=run_id,
-    #             value={
-    #                 "id": run_id,
-    #                 "feed_id": self.id,
-    #                 "iteration": self.pipeline.counter - 1,
-    #                 "duration_ns": sum(self.pipeline.get_durations()),
-    #                 "event_time": event_time,
-    #             },
-    #         )
-    #     )
-
-    #     # ingest recommendations
-    #     for recommendation in self.pipeline.results():
-    #         rec_id = str(uuid.uuid4())
-    #         futures.append(
-    #             self.kafka.send(
-    #                 topic="feed_recommendations",
-    #                 key=rec_id,
-    #                 value={
-    #                     "id": rec_id,
-    #                     "feed_id": self.id,
-    #                     "pipeline_run_id": run_id,
-    #                     "entity": self.pipeline.entity,
-    #                     "entity_id": recommendation.id,
-    #                     "sources": [s for s, _ in recommendation.sources],
-    #                     "groups": [g for _, g in recommendation.sources],
-    #                     "score": np.clip(recommendation.score, 1e-10, None),
-    #                     "event_time": event_time,
-    #                 },
-    #             )
-    #         )
-
-    #     # ingest pipeline steps
-    #     rec_step_ids = [str(uuid.uuid4()) for _ in range(len(self.pipeline.steps))]
-    #     for step_id, step, duration_ns in zip(
-    #         rec_step_ids, self.pipeline.steps, self.pipeline.get_durations()
-    #     ):
-    #         futures.append(
-    #             self.kafka.send(
-    #                 topic="feed_pipeline_steps",
-    #                 key=step_id,
-    #                 value={
-    #                     "id": step_id,
-    #                     "feed_id": self.id,
-    #                     "pipeline_run_id": run_id,
-    #                     "name": str(step),
-    #                     "params": (
-    #                         step.get_params() if isinstance(step, PipelineStep) else {}
-    #                     ),
-    #                     "duration_ns": duration_ns,
-    #                     "event_time": event_time,
-    #                 },
-    #             )
-    #         )
-
-    #     # ingest sourcing runs
-    #     for step_id, step in zip(rec_step_ids, self.pipeline.steps):
-    #         if not isinstance(step, SourcingStep):
-    #             continue
-    #         for (source, limit), duration_ns, count, candidates in zip(
-    #             step.sources,
-    #             step.get_durations(),
-    #             step.get_counts(),
-    #             step.get_sourced_candidates(),
-    #         ):
-    #             sourcing_run_id = str(uuid.uuid4())
-    #             futures.append(
-    #                 self.kafka.send(
-    #                     topic="feed_sourcing_runs",
-    #                     key=sourcing_run_id,
-    #                     value={
-    #                         "id": sourcing_run_id,
-    #                         "feed_id": self.id,
-    #                         "pipeline_step_id": step_id,
-    #                         "params": source.get_params(),
-    #                         "source": source.name(),
-    #                         "candidates_limit": limit,
-    #                         "candidates_count": count,
-    #                         "duration_ns": duration_ns,
-    #                         "event_time": event_time,
-    #                     },
-    #                 )
-    #             )
-
-    #             for c in candidates:
-    #                 futures.append(
-    #                     self.kafka.send(
-    #                         topic="feed_candidate_sources",
-    #                         key=f"{sourcing_run_id},{c},{self.pipeline.entity}",
-    #                         value={
-    #                             "entity_id": c,
-    #                             "entity": self.pipeline.entity,
-    #                             "sourcing_run_id": sourcing_run_id,
-    #                         },
-    #                     )
-    #                 )
-
-    #     for step_id, step in zip(rec_step_ids, self.pipeline.steps):
-    #         if not isinstance(step, RankingStep):
-    #             continue
-    #         if step.get_ranking_duration() == 0:
-    #             continue
-
-    #         ranking_run_id = str(uuid.uuid4())
-    #         futures.append(
-    #             self.kafka.send(
-    #                 topic="feed_rankin_runs",
-    #                 key=sourcing_run_id,
-    #                 value={
-    #                     "id": ranking_run_id,
-    #                     "feed_id": self.id,
-    #                     "pipeline_run_id": run_id,
-    #                     "pipeline_step_id": step_id,
-    #                     "ranker": step.ranker.name,
-    #                     "feature_retrival_duration_ns": step.get_feature_retrieval_duration(),
-    #                     "ranking_duration_ns": step.get_ranking_duration(),
-    #                     "candidates_count": len(step.get_candidates()),
-    #                     "event_time": event_time,
-    #                 },
-    #             )
-    #         )
-
-    #     for future in futures:
-    #         try:
-    #             future.get(timeout=10)
-    #         except Exception as e:
-    #             logger.error(f"Kafka message delivery failed: {str(e)}")
-
-    #     self.kafka.flush()
 
     def flush(self):
         self.r.delete(self.redis_key)

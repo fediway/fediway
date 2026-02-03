@@ -5,6 +5,11 @@ from ..base import Source
 
 
 class StatusBasedCollaborativeFilteringSource(Source):
+    """Recommends content similar to what similar users engaged with."""
+
+    _id = "status_based_collaborative_filtering"
+    _tracked_params = []
+
     def __init__(
         self,
         r: Redis,
@@ -12,9 +17,6 @@ class StatusBasedCollaborativeFilteringSource(Source):
     ):
         self.r = r
         self.account_id = account_id
-
-    def name(self):
-        return "status_based_collaborative_filtering"
 
     def redis_key(self):
         return f"rec:status_sim:{self.account_id}"

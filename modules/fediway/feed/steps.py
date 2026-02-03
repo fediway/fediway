@@ -75,7 +75,7 @@ class RankingStep(PipelineStep):
         log_debug(
             "Ranked candidates",
             module="feed",
-            ranker=self.ranker.name,
+            ranker=self.ranker.id,
             count=len(candidates),
             duration_ms=round(self._ranking_duration / 1_000_000, 2),
         )
@@ -170,7 +170,7 @@ class SourcingStep(PipelineStep):
 
     def get_params(self):
         return {
-            "sources": [[s.name(), n] for s, n in self.sources],
+            "sources": [[s.id, n] for s, n in self.sources],
             "group": self.group,
         }
 
@@ -205,7 +205,7 @@ class SourcingStep(PipelineStep):
         log_debug(
             "Source collected",
             module="feed",
-            source=source.name(),
+            source=source.id,
             count=len(candidates),
             duration_ms=round(self._durations[idx] / 1_000_000, 2),
         )
@@ -230,7 +230,7 @@ class SourcingStep(PipelineStep):
         n_sourced = 0
         for batch, (source, _) in zip(results, self.sources):
             for candidate in batch:
-                candidates.append(candidate, source=source.name(), source_group=self.group)
+                candidates.append(candidate, source=source.id, source_group=self.group)
                 n_sourced += 1
 
         log_debug(
@@ -268,13 +268,13 @@ class SamplingStep(PipelineStep):
             "unique": self.unique,
             "heuristics": [
                 {
-                    "name": h.name(),
+                    "name": h.id,
                     "params": h.get_params(),
                 }
                 for h in self.heuristics
             ],
             "sampler": {
-                "name": self.sampler.name(),
+                "name": self.sampler.id,
                 "params": self.sampler.get_params(),
             },
         }
