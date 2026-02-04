@@ -1040,7 +1040,6 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "celery" },
-    { name = "click" },
     { name = "fastapi", extra = ["standard"] },
     { name = "loguru" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -1083,6 +1082,8 @@ full = [
     { name = "lightgbm" },
     { name = "maxminddb" },
     { name = "multilingual-clip" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "qdrant-client" },
     { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
@@ -1095,6 +1096,10 @@ ml = [
     { name = "lightgbm" },
     { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+orbit = [
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 streaming = [
     { name = "confluent-kafka" },
@@ -1116,17 +1121,17 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.15" },
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.35" },
     { name = "celery", specifier = ">=5.4" },
-    { name = "click", specifier = ">=8.2" },
     { name = "confluent-kafka", marker = "extra == 'streaming'", specifier = ">=2.9" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115" },
     { name = "faststream", marker = "extra == 'streaming'", specifier = ">=0.5" },
     { name = "feast", extras = ["redis", "postgres"], marker = "extra == 'features'", specifier = ">=0.48" },
-    { name = "fediway", extras = ["vectors", "embeddings", "streaming", "ml", "features", "geo", "aws"], marker = "extra == 'full'" },
+    { name = "fediway", extras = ["vectors", "embeddings", "streaming", "ml", "features", "geo", "aws", "orbit"], marker = "extra == 'full'" },
     { name = "kafka-python", marker = "extra == 'streaming'", specifier = ">=2.0" },
     { name = "lightgbm", marker = "extra == 'ml'", specifier = ">=4.6" },
     { name = "loguru", specifier = ">=0.7" },
     { name = "maxminddb", marker = "extra == 'geo'", specifier = ">=2.6" },
     { name = "multilingual-clip", marker = "extra == 'embeddings'", specifier = ">=1.0" },
+    { name = "networkx", marker = "extra == 'orbit'", specifier = ">=3.0" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pandas", specifier = ">=2.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.0" },
@@ -1144,7 +1149,7 @@ requires-dist = [
     { name = "typer", specifier = ">=0.15" },
     { name = "uvicorn", specifier = ">=0.34" },
 ]
-provides-extras = ["vectors", "embeddings", "streaming", "ml", "features", "geo", "aws", "dev", "full"]
+provides-extras = ["vectors", "embeddings", "streaming", "ml", "features", "geo", "aws", "orbit", "dev", "full"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest-cov", specifier = ">=7.0.0" }]
