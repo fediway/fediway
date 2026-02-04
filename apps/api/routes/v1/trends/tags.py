@@ -1,10 +1,10 @@
 import random
 
-from apps.api.dependencies.sources.tags import get_influential_sources
 from fastapi import APIRouter, Depends
 from sqlmodel import Session as DBSession
 from sqlmodel import select
 
+from apps.api.dependencies.sources.tags import get_influential_sources
 from modules.mastodon.items import TagItem
 from modules.mastodon.models import Tag
 from shared.core.db import get_db_session
@@ -27,10 +27,4 @@ async def tag_trends(
 
     tags = db.exec(select(Tag).where(Tag.id.in_(candidates))).all()
 
-    return [
-        TagItem(
-            name=tag.name,
-            url="",
-        )
-        for tag in tags
-    ]
+    return [TagItem.from_model(tag) for tag in tags]

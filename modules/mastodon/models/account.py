@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 from config import config
@@ -52,6 +53,7 @@ class Account(SQLModel, table=True):
     locked: bool = Field(default=False)
     moved_to_account_id: int | None = Field(foreign_key="accounts.id")
     actor_type: str = Field(default="")
+    fields: list | None = Field(sa_column=Column(JSON), default=None)
 
     favourites: list[Favourite] = Relationship(back_populates="account")
     statuses: list["Status"] = Relationship(back_populates="account")
