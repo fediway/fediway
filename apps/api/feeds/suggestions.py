@@ -7,19 +7,9 @@ from modules.fediway.feed.sampling import WeightedGroupSampler
 class SuggestionsFeed(Feed):
     entity = "account_id"
 
-    def __init__(
-        self,
-        account_id: int,
-        redis=None,
-        rw=None,
-        state_key: str | None = None,
-    ):
-        if state_key is None and redis is not None:
-            state_key = str(account_id)
-
-        super().__init__(redis=redis, state_key=state_key)
+    def __init__(self, account_id: int, rw=None):
+        super().__init__()
         self.account_id = account_id
-        self._redis = redis
         self.rw = rw
         self._config = algorithm_config.suggestions
 

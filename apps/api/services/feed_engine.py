@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 from fastapi import BackgroundTasks, Request
 from redis import Redis
 
-from shared.utils import JSONEncoder
-from shared.utils.logging import Timer, log_debug, log_error
+from config import config
+from shared.utils.logging import Timer, get_request_id, log_debug, log_error, log_warning
 
 if TYPE_CHECKING:
     from kafka import KafkaProducer
@@ -20,17 +20,15 @@ if TYPE_CHECKING:
 CODE_VERSION = "0.1.0"
 
 
-def _request_key(request: Request) -> str:
-    host = request.client.host if request.client else "unknown"
-    return f"{host}.{request.headers.get('User-Agent', '')}"
-
-
-def _generate_feed_id(length: int = 8) -> str:
+def _generate_id(length: int = 8) -> str:
     return str(uuid.uuid4()).replace("-", "")[:length]
 
 
-def _get_feed_key(request: Request, length: int = 32) -> str:
-    return hashlib.sha256(_request_key(request).encode("utf-8")).hexdigest()[:length]
+def get_request_state_key(request: Request, length: int = 16) -> str:
+    """Generate a state key from request for anonymous feeds (trending, tags)."""
+    host = request.client.host if request.client else "unknown"
+    ua = request.headers.get("User-Agent", "")
+    return hashlib.sha256(f"{host}.{ua}".encode("utf-8")).hexdigest()[:length]
 
 
 class FeedEngine:
@@ -47,41 +45,121 @@ class FeedEngine:
         self._request = request
         self._tasks = tasks
         self._account = account
-        self._id = _generate_feed_id()
-        self._key = _get_feed_key(request)
+        self._feed_id = _generate_id()
+        self._request_id = get_request_id()
+        self._session_id: str | None = None
+
+    def _get_session_key(self) -> str:
+        """Redis key for session storage."""
+        if self._account:
+            return f"feed_session:account:{self._account.id}"
+        return f"feed_session:guest:{get_request_state_key(self._request)}"
+
+    def get_session_id(self) -> str:
+        """Get or create a session ID, persisted in Redis for correlation."""
+        if self._session_id is not None:
+            return self._session_id
+
+        key = self._get_session_key()
+        ttl = config.fediway.feed_session_ttl
+
+        try:
+            existing = self._redis.get(key)
+            if existing:
+                self._session_id = existing.decode() if isinstance(existing, bytes) else existing
+                # Refresh TTL on access
+                self._redis.expire(key, ttl)
+                return self._session_id
+        except Exception as e:
+            log_error("Failed to get session from Redis", module="feed_engine", error=str(e))
+
+        # Generate new session
+        self._session_id = _generate_id(12)
+
+        try:
+            self._redis.setex(key, ttl, self._session_id)
+        except Exception as e:
+            log_error("Failed to save session to Redis", module="feed_engine", error=str(e))
+
+        return self._session_id
+
+    def _get_feed_state_key(self, feed: "Feed", state_key: str) -> str:
+        """Redis key for feed state storage."""
+        return f"feed:{feed.__class__.__name__}:{state_key}"
+
+    def _load_feed_state(self, feed: "Feed", state_key: str) -> None:
+        """Load feed state from Redis."""
+        key = self._get_feed_state_key(feed, state_key)
+        try:
+            data = self._redis.get(key)
+            if data:
+                state = json.loads(data)
+                feed.set_state(state)
+                log_debug(
+                    "Feed state loaded",
+                    module="feed_engine",
+                    feed=feed.__class__.__name__,
+                    remembered_count=len(feed._remembered),
+                )
+        except Exception as e:
+            log_warning(f"Failed to load feed state: {e}", module="feed_engine")
+
+    def _save_feed_state(self, feed: "Feed", state_key: str) -> None:
+        """Save feed state to Redis."""
+        key = self._get_feed_state_key(feed, state_key)
+        try:
+            state = feed.get_state()
+            self._redis.setex(key, config.fediway.feed_session_ttl, json.dumps(state))
+        except Exception as e:
+            log_warning(f"Failed to save feed state: {e}", module="feed_engine")
+
+    def _delete_feed_state(self, feed: "Feed", state_key: str) -> None:
+        """Delete feed state from Redis."""
+        key = self._get_feed_state_key(feed, state_key)
+        try:
+            self._redis.delete(key)
+        except Exception as e:
+            log_warning(f"Failed to delete feed state: {e}", module="feed_engine")
 
     async def run(
         self,
         feed: "Feed",
+        state_key: str,
         flush: bool = False,
-        cache_ttl: int | None = None,
-        prefetch: bool = False,
+        prefetch: bool = True,
         **kwargs,
     ) -> "CandidateList":
-        with Timer() as t:
-            if cache_ttl and not flush:
-                cached = self._get_cached(feed, **kwargs)
-                if cached is not None:
-                    log_debug(
-                        "Cache hit",
-                        module="feed_engine",
-                        feed=feed.__class__.__name__,
-                    )
-                    return cached
+        """Execute feed and return results.
 
+        Args:
+            feed: The feed instance to execute
+            state_key: Unique key for state persistence (e.g., account_id or request hash)
+            flush: Clear cached state before executing
+            prefetch: Collect more candidates in background after returning
+
+        After returning results, schedules background tasks:
+        1. Emit metrics to Kafka (if pipeline exists)
+        2. Prefetch more candidates for next request (if prefetch=True)
+
+        The prefetch collects MORE candidates while user reads current page,
+        so subsequent requests return instantly from cache.
+        """
+        with Timer() as t:
             if flush:
                 feed.flush()
+                self._delete_feed_state(feed, state_key)
+            else:
+                self._load_feed_state(feed, state_key)
 
             results = await feed.execute(**kwargs)
 
-            if cache_ttl:
-                self._cache_results(feed, results, cache_ttl, **kwargs)
+            self._save_feed_state(feed, state_key)
 
             if feed.pipeline:
                 self._tasks.add_task(self._emit_metrics, feed, results)
 
             if prefetch and len(results) > 0:
-                self._tasks.add_task(self._prefetch_next, feed, results, **kwargs)
+                self._tasks.add_task(self._prefetch, feed, state_key)
 
         log_debug(
             "Feed executed",
@@ -93,35 +171,6 @@ class FeedEngine:
 
         return results
 
-    def _cache_key(self, feed: "Feed", **kwargs) -> str:
-        kwarg_hash = hashlib.md5(json.dumps(kwargs, sort_keys=True).encode()).hexdigest()[:8]
-        return f"feed_cache:{feed.__class__.__name__}:{self._key}:{kwarg_hash}"
-
-    def _get_cached(self, feed: "Feed", **kwargs) -> "CandidateList | None":
-        from modules.fediway.feed.candidates import CandidateList
-
-        key = self._cache_key(feed, **kwargs)
-        data = self._redis.get(key)
-        if not data:
-            return None
-
-        try:
-            state = json.loads(data)
-            candidates = CandidateList(feed.entity)
-            candidates.set_state(state)
-            return candidates
-        except Exception as e:
-            log_error("Cache deserialization failed", module="feed_engine", error=str(e))
-            return None
-
-    def _cache_results(self, feed: "Feed", results: "CandidateList", ttl: int, **kwargs):
-        key = self._cache_key(feed, **kwargs)
-        try:
-            state = results.get_state()
-            self._redis.setex(key, ttl, json.dumps(state, cls=JSONEncoder))
-        except Exception as e:
-            log_error("Cache serialization failed", module="feed_engine", error=str(e))
-
     def _emit_metrics(self, feed: "Feed", results: "CandidateList"):
         from modules.fediway.feed.steps import RankingStep, SourcingStep
 
@@ -130,7 +179,7 @@ class FeedEngine:
             if not pipeline:
                 return
 
-            feed_id = self._id
+            feed_id = self._feed_id
             run_id = str(uuid.uuid4())
             event_time = pipeline.event_time.isoformat()
 
@@ -139,6 +188,8 @@ class FeedEngine:
                 key=feed_id,
                 value={
                     "id": feed_id,
+                    "request_id": self._request_id,
+                    "session_id": self.get_session_id(),
                     "user_agent": self._request.headers.get("User-Agent"),
                     "ip": self._request.client.host if self._request.client else None,
                     "account_id": self._account.id if self._account else None,
@@ -281,12 +332,21 @@ class FeedEngine:
             },
         )
 
-    async def _prefetch_next(self, feed: "Feed", results: "CandidateList", **kwargs):
-        if len(results) == 0:
-            return
+    async def _prefetch(self, feed: "Feed", state_key: str):
+        """Collect more candidates in background for next request.
 
+        This runs after returning results to the user. While they read
+        the current page, we collect fresh candidates so subsequent
+        requests return instantly from the cached _remembered list.
+        """
         try:
-            last_id = results[-1].id
-            await feed.execute(max_id=last_id, **kwargs)
+            await feed.collect()
+            self._save_feed_state(feed, state_key)
+            log_debug(
+                "Prefetch completed",
+                module="feed_engine",
+                feed=feed.__class__.__name__,
+                remembered_count=len(feed._remembered),
+            )
         except Exception as e:
             log_error("Prefetch failed", module="feed_engine", error=str(e))

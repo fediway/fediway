@@ -14,19 +14,16 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# State bounds to prevent unbounded growth
+MAX_SEEN_ITEMS = 500
+MAX_REMEMBERED_ITEMS = 200
+
 
 class Feed(ABC):
     entity: str = "status_id"
 
-    def __init__(
-        self,
-        feature_service=None,
-        redis=None,
-        state_key: str | None = None,
-    ):
+    def __init__(self, feature_service=None):
         self._feature_service = feature_service
-        self._redis = redis
-        self._state_key = state_key
         self._pipeline: Pipeline | None = None
         self._config = None
         self._remembered = CandidateList(self.entity)
@@ -130,38 +127,73 @@ class Feed(ABC):
 
         return combined
 
+    def is_new(self) -> bool:
+        """Check if this feed has no cached candidates."""
+        return len(self._remembered) == 0
+
+    def get_state(self) -> dict:
+        """Get serializable state for persistence."""
+        return {
+            "seen": list(self._seen),
+            "remembered": self._remembered.get_state(),
+            "heuristics": self._heuristic_states,
+        }
+
+    def set_state(self, state: dict) -> None:
+        """Restore state from persistence."""
+        self._seen = set(state.get("seen", []))
+        remembered_state = state.get("remembered")
+        if remembered_state:
+            self._remembered.set_state(remembered_state)
+        self._heuristic_states = state.get("heuristics", {})
+
+    async def collect(self) -> None:
+        """Collect new candidates from sources.
+
+        This is called:
+        1. On first request when no cached state exists
+        2. In background after serving results to prefetch for next request
+        """
+        candidates = await self._collect_sources()
+
+        if len(candidates) < self.get_min_candidates():
+            fallback_candidates = await self._collect_fallback()
+            candidates += fallback_candidates
+
+        candidates = self._remove_seen(candidates)
+        candidates = await self.forward(candidates)
+
+        if candidates is None:
+            raise RuntimeError(
+                f"{self.__class__.__name__}.forward() returned None. "
+                "Did you forget to return candidates?"
+            )
+
+        self._remembered += candidates
+        self._trim_state()
+
     async def execute(
-        self, max_id: int | None = None, offset: int | None = None, limit: int = 20
+        self,
+        max_id: int | None = None,
+        offset: int | None = None,
+        limit: int = 20,
     ) -> CandidateList:
-        self._load_state()
+        """Execute feed and return paginated results.
 
-        is_first_request = max_id is None and (offset is None or offset == 0)
-        need_fresh = is_first_request or len(self._remembered) == 0
+        Flow:
+        1. If no cached candidates, collect from sources
+        2. Return paginated slice from _remembered
+        3. Mark returned items as seen
 
-        if need_fresh:
-            candidates = await self._collect_sources()
-
-            if len(candidates) < self.get_min_candidates():
-                fallback_candidates = await self._collect_fallback()
-                candidates += fallback_candidates
-
-            candidates = self._remove_seen(candidates)
-            candidates = await self.forward(candidates)
-
-            if candidates is None:
-                raise RuntimeError(
-                    f"{self.__class__.__name__}.forward() returned None. "
-                    "Did you forget to return candidates?"
-                )
-
-            self._remembered += candidates
+        State persistence is handled by FeedEngine.
+        """
+        if self.is_new():
+            await self.collect()
 
         results = self._paginate(max_id=max_id, offset=offset, limit=limit)
 
         for c in results:
             self._seen.add(c.id)
-
-        self._save_state()
 
         return results
 
@@ -250,58 +282,14 @@ class Feed(ABC):
 
         return sampled
 
-    def _get_redis_key(self) -> str | None:
-        if not self._state_key:
-            return None
-        return f"feed:{self.__class__.__name__}:{self._state_key}"
+    def _trim_state(self):
+        """Trim state to prevent unbounded growth."""
+        if len(self._seen) > MAX_SEEN_ITEMS:
+            seen_list = list(self._seen)
+            self._seen = set(seen_list[-MAX_SEEN_ITEMS:])
 
-    def _load_state(self):
-        key = self._get_redis_key()
-        if not key or not self._redis:
-            return
-
-        try:
-            data = self._redis.get(key)
-            if not data:
-                return
-
-            import json
-
-            state = json.loads(data)
-
-            self._seen = set(state.get("seen", []))
-            remembered_state = state.get("remembered")
-            if remembered_state:
-                self._remembered.set_state(remembered_state)
-            self._heuristic_states = state.get("heuristics", {})
-        except Exception as e:
-            logger.warning(f"Failed to load state: {e}")
-
-    def _save_state(self):
-        key = self._get_redis_key()
-        if not key or not self._redis:
-            return
-
-        try:
-            import json
-
-            state = {
-                "seen": list(self._seen),
-                "remembered": self._remembered.get_state(),
-                "heuristics": self._heuristic_states,
-            }
-
-            ttl = 3600
-            try:
-                from config import config
-
-                ttl = getattr(config.fediway, "feed_session_ttl", 3600)
-            except Exception:
-                pass
-
-            self._redis.setex(key, ttl, json.dumps(state))
-        except Exception as e:
-            logger.warning(f"Failed to save state: {e}")
+        if len(self._remembered) > MAX_REMEMBERED_ITEMS:
+            self._remembered = self._remembered[-MAX_REMEMBERED_ITEMS:]
 
     def _paginate(self, max_id: int | None, offset: int | None, limit: int) -> CandidateList:
         if len(self._remembered) == 0:
@@ -320,13 +308,7 @@ class Feed(ABC):
         return self._remembered[:limit]
 
     def flush(self):
-        key = self._get_redis_key()
-        if key and self._redis:
-            try:
-                self._redis.delete(key)
-            except Exception as e:
-                logger.warning(f"Failed to delete state: {e}")
-
+        """Clear all local state."""
         self._seen = set()
         self._remembered = CandidateList(self.entity)
         self._heuristic_states = {}

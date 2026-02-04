@@ -19,7 +19,7 @@ class FediwayConfig(BaseConfig):
     feed_max_heavy_candidates: int = 100
     feed_batch_size: int = 20
     feed_decay_rate: float = 1.0
-    feed_session_ttl: int = 6_000
+    feed_session_ttl: int = 3600
 
     # sources configuration
     sources: SourcesConfig = SourcesConfig()

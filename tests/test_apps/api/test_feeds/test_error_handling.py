@@ -140,8 +140,9 @@ async def test_feed_continues_with_remaining_sources_on_partial_failure():
 
 
 @pytest.mark.asyncio
-async def test_feed_state_load_handles_invalid_json():
-    """Verify that corrupted state in Redis doesn't crash the feed."""
+async def test_feed_engine_state_load_handles_invalid_json():
+    """Verify that corrupted state in Redis doesn't crash the FeedEngine."""
+    from apps.api.services.feed_engine import FeedEngine
     from modules.fediway.feed import Feed
 
     class TestFeed(Feed):
@@ -155,16 +156,24 @@ async def test_feed_state_load_handles_invalid_json():
 
     mock_redis = MagicMock()
     mock_redis.get.return_value = "not valid json {"
+    mock_kafka = MagicMock()
+    mock_request = MagicMock()
+    mock_request.client.host = "127.0.0.1"
+    mock_request.headers.get.return_value = "Test"
+    mock_tasks = MagicMock()
 
-    feed = TestFeed(redis=mock_redis, state_key="test_user")
-    result = await feed.execute()
+    engine = FeedEngine(mock_kafka, mock_redis, mock_request, mock_tasks, None)
+    feed = TestFeed()
+
+    result = await engine.run(feed, state_key="test_user")
 
     assert result is not None
 
 
 @pytest.mark.asyncio
-async def test_feed_state_save_handles_redis_failure():
-    """Verify that Redis failure on save doesn't crash the feed."""
+async def test_feed_engine_state_save_handles_redis_failure():
+    """Verify that Redis failure on save doesn't crash the FeedEngine."""
+    from apps.api.services.feed_engine import FeedEngine
     from modules.fediway.feed import Feed
 
     class TestFeed(Feed):
@@ -179,32 +188,49 @@ async def test_feed_state_save_handles_redis_failure():
     mock_redis = MagicMock()
     mock_redis.get.return_value = None
     mock_redis.setex.side_effect = Exception("Redis connection lost")
+    mock_kafka = MagicMock()
+    mock_request = MagicMock()
+    mock_request.client.host = "127.0.0.1"
+    mock_request.headers.get.return_value = "Test"
+    mock_tasks = MagicMock()
 
-    feed = TestFeed(redis=mock_redis, state_key="test_user")
-    result = await feed.execute()
+    engine = FeedEngine(mock_kafka, mock_redis, mock_request, mock_tasks, None)
+    feed = TestFeed()
+
+    result = await engine.run(feed, state_key="test_user")
 
     assert result is not None
 
 
 @pytest.mark.asyncio
-async def test_feed_flush_handles_redis_failure():
-    """Verify that Redis failure on flush doesn't raise."""
+async def test_feed_engine_flush_deletes_redis_state():
+    """Verify that flush deletes Redis state via FeedEngine."""
+    from apps.api.services.feed_engine import FeedEngine
     from modules.fediway.feed import Feed
 
     class TestFeed(Feed):
         entity = "test_id"
 
         def sources(self):
-            return {}
+            return {"test": [(WorkingSource(), 10)]}
 
         async def forward(self, candidates):
             return candidates
 
     mock_redis = MagicMock()
-    mock_redis.delete.side_effect = Exception("Redis connection lost")
+    mock_redis.get.return_value = None
+    mock_kafka = MagicMock()
+    mock_request = MagicMock()
+    mock_request.client.host = "127.0.0.1"
+    mock_request.headers.get.return_value = "Test"
+    mock_tasks = MagicMock()
 
-    feed = TestFeed(redis=mock_redis, state_key="test_user")
-    feed.flush()
+    engine = FeedEngine(mock_kafka, mock_redis, mock_request, mock_tasks, None)
+    feed = TestFeed()
+
+    await engine.run(feed, state_key="test_user", flush=True)
+
+    mock_redis.delete.assert_called_once()
 
 
 @pytest.mark.asyncio

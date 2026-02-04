@@ -50,16 +50,6 @@ def test_home_feed_with_languages(mock_algorithm_config):
         assert feed.languages == ["en", "de"]
 
 
-def test_home_feed_state_key_from_account_id(mock_algorithm_config):
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
-        from apps.api.feeds.home import HomeFeed
-
-        mock_redis = MagicMock()
-        feed = HomeFeed(account_id=456, redis=mock_redis)
-
-        assert feed._state_key == "456"
-
-
 def test_home_feed_get_min_candidates(mock_algorithm_config):
     mock_algorithm_config.home.settings.batch_size = 25
 

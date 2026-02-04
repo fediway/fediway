@@ -73,7 +73,6 @@ def test_simple_feed_instantiation():
     feed = SimpleFeed()
     assert feed.entity == "status_id"
     assert feed._feature_service is None
-    assert feed._redis is None
 
 
 @pytest.mark.asyncio

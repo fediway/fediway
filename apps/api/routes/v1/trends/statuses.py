@@ -5,7 +5,7 @@ from sqlmodel import Session as RWSession
 from apps.api.dependencies.feeds import get_feed_engine
 from apps.api.dependencies.lang import get_languages
 from apps.api.feeds import TrendingStatusesFeed
-from apps.api.services.feed_engine import FeedEngine
+from apps.api.services.feed_engine import FeedEngine, get_request_state_key
 from apps.api.utils import set_next_link
 from config import config
 from modules.mastodon.items import StatusItem
@@ -28,14 +28,13 @@ async def status_trends(
     languages: list[str] = Depends(get_languages),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
-    feed = TrendingStatusesFeed(
-        redis=redis,
-        rw=rw,
-        languages=languages,
-    )
+    state_key = get_request_state_key(request)
+
+    feed = TrendingStatusesFeed(redis=redis, rw=rw, languages=languages)
 
     results = await engine.run(
         feed,
+        state_key=state_key,
         flush=(offset == 0),
         offset=offset,
         limit=config.fediway.feed_batch_size,

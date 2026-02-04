@@ -42,16 +42,6 @@ def test_suggestions_feed_instantiation(mock_algorithm_config):
         assert feed.entity == "account_id"
 
 
-def test_suggestions_feed_state_key_from_account_id(mock_algorithm_config):
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
-        from apps.api.feeds.suggestions import SuggestionsFeed
-
-        mock_redis = MagicMock()
-        feed = SuggestionsFeed(account_id=456, redis=mock_redis)
-
-        assert feed._state_key == "456"
-
-
 def test_suggestions_feed_get_min_candidates(mock_algorithm_config):
     with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.suggestions import SuggestionsFeed

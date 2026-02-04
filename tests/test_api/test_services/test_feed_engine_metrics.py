@@ -30,7 +30,7 @@ def mock_kafka():
 @pytest.fixture
 def mock_redis():
     redis = MagicMock()
-    redis.get.return_value = None
+    redis.get.return_value = b"testsession1"  # Return existing session
     return redis
 
 
@@ -115,6 +115,8 @@ def test_emit_metrics_sends_feed_record(
     assert feed_data["user_agent"] == "FediwayTest/1.0"
     assert feed_data["ip"] == "192.168.1.100"
     assert "event_time" in feed_data
+    assert "request_id" in feed_data
+    assert "session_id" in feed_data
 
 
 def test_emit_metrics_sends_pipeline_run(

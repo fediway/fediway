@@ -7,14 +7,8 @@ from modules.fediway.feed.sampling import InverseTransformSampler
 class TrendingStatusesFeed(Feed):
     entity = "status_id"
 
-    def __init__(
-        self,
-        redis=None,
-        rw=None,
-        languages: list[str] | None = None,
-        state_key: str | None = None,
-    ):
-        super().__init__(redis=redis, state_key=state_key)
+    def __init__(self, redis=None, rw=None, languages: list[str] | None = None):
+        super().__init__()
         self._redis = redis
         self.rw = rw
         self.languages = languages or ["en"]

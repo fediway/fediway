@@ -42,6 +42,7 @@ async def home_timeline(
 
     results = await engine.run(
         feed,
+        state_key=str(account.id),
         flush=(max_id is None),
         max_id=max_id,
         limit=config.fediway.feed_batch_size,

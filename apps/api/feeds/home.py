@@ -14,19 +14,11 @@ class HomeFeed(Feed):
         redis=None,
         feature_service=None,
         languages: list[str] | None = None,
-        state_key: str | None = None,
     ):
-        if state_key is None and redis is not None:
-            state_key = str(account_id)
-
-        super().__init__(
-            feature_service=feature_service,
-            redis=redis,
-            state_key=state_key,
-        )
-
+        super().__init__(feature_service=feature_service)
         self.account_id = account_id
         self.rw = rw
+        self._redis = redis
         self.languages = languages or ["en"]
         self._config = algorithm_config.home
 

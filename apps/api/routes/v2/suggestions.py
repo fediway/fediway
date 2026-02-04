@@ -11,7 +11,6 @@ from config import config
 from modules.mastodon.items import AccountItem
 from modules.mastodon.models import Account
 from shared.core.db import get_db_session
-from shared.core.redis import get_redis
 from shared.core.rw import get_rw_session
 
 router = APIRouter()
@@ -24,18 +23,14 @@ async def follow_suggestions(
     offset: int = 0,
     engine: FeedEngine = Depends(get_feed_engine),
     rw: RWSession = Depends(get_rw_session),
-    redis=Depends(get_redis),
     account: Account = Depends(get_authenticated_account_or_fail),
     db: DBSession = Depends(get_db_session),
 ):
-    feed = SuggestionsFeed(
-        account_id=account.id,
-        redis=redis,
-        rw=rw,
-    )
+    feed = SuggestionsFeed(account_id=account.id, rw=rw)
 
     results = await engine.run(
         feed,
+        state_key=str(account.id),
         flush=(offset == 0),
         offset=offset,
         limit=config.fediway.feed_batch_size,
