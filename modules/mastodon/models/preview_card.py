@@ -1,8 +1,12 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
 
 from config import config
+
+if TYPE_CHECKING:
+    from .status import Status
 
 
 class PreviewCardStatus(SQLModel, table=True):

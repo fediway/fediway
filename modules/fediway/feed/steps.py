@@ -188,13 +188,48 @@ class SourcingStep(PipelineStep):
 
     async def _collect_source(self, idx, source: Source, args):
         start_time = time.perf_counter_ns()
+        limit = args[0] if args else 0
 
         candidates = []
+        current_source = source
+        sources_used = [source.id]
 
         try:
-            candidates = [c for c in source.collect(*args)]
+            candidates = [c for c in current_source.collect(*args)]
         except Exception as e:
-            log_error("Source collection failed", module="feed", error=str(e))
+            log_error("Source collection failed", module="feed", source=source.id, error=str(e))
+
+        # Follow fallback chain if insufficient results
+        while (
+            len(candidates) < limit * current_source.fallback_threshold
+            and current_source.has_fallback()
+        ):
+            fallback = current_source.get_fallback()
+            remaining = limit - len(candidates)
+            sources_used.append(fallback.id)
+
+            log_debug(
+                "Triggering fallback",
+                module="feed",
+                primary_source=current_source.id,
+                fallback_source=fallback.id,
+                current_count=len(candidates),
+                threshold=current_source.fallback_threshold,
+                remaining=remaining,
+            )
+
+            try:
+                fallback_candidates = [c for c in fallback.collect(remaining)]
+                # Avoid duplicates
+                existing_ids = set(candidates)
+                for fc in fallback_candidates:
+                    if fc not in existing_ids:
+                        candidates.append(fc)
+            except Exception as e:
+                log_error("Fallback collection failed", module="feed", source=fallback.id, error=str(e))
+                break
+
+            current_source = fallback
 
         self._durations[idx] = time.perf_counter_ns() - start_time
         self._counts[idx] = len(candidates)
@@ -206,6 +241,7 @@ class SourcingStep(PipelineStep):
             "Source collected",
             module="feed",
             source=source.id,
+            sources_used=sources_used,
             count=len(candidates),
             duration_ms=round(self._durations[idx] / 1_000_000, 2),
         )
@@ -238,6 +274,96 @@ class SourcingStep(PipelineStep):
             module="feed",
             total_candidates=n_sourced,
             sources=len(self.sources),
+            duration_ms=round(self._duration / 1_000_000, 2),
+        )
+
+        return candidates
+
+
+class FallbackStep(PipelineStep):
+    def __init__(self, source: Source, target: int, group: str = "fallback"):
+        self.source = source
+        self.target = target
+        self.group = group
+        self._filled_count = 0
+        self._duration = 0
+
+    def get_params(self):
+        return {
+            "source": self.source.id,
+            "target": self.target,
+            "group": self.group,
+        }
+
+    def get_filled_count(self) -> int:
+        return self._filled_count
+
+    def get_duration(self) -> int:
+        return self._duration
+
+    def results(self) -> CandidateList:
+        return self._candidates
+
+    async def __call__(self, candidates: CandidateList) -> CandidateList:
+        self._candidates = candidates
+        self._filled_count = 0
+
+        if len(candidates) >= self.target:
+            log_debug(
+                "Fallback not needed",
+                module="feed",
+                current_count=len(candidates),
+                target=self.target,
+            )
+            return candidates
+
+        gap = self.target - len(candidates)
+        existing_ids = set(candidates.get_candidates())
+
+        log_debug(
+            "Fallback triggered",
+            module="feed",
+            source=self.source.id,
+            current_count=len(candidates),
+            target=self.target,
+            gap=gap,
+        )
+
+        start_time = time.perf_counter_ns()
+
+        try:
+            # Oversample to account for duplicates
+            filler_candidates = [c for c in self.source.collect(gap * 2)]
+
+            for candidate in filler_candidates:
+                if candidate not in existing_ids:
+                    candidates.append(
+                        candidate,
+                        source=self.source.id,
+                        source_group=self.group,
+                    )
+                    existing_ids.add(candidate)
+                    self._filled_count += 1
+
+                    if len(candidates) >= self.target:
+                        break
+
+        except Exception as e:
+            log_error(
+                "Fallback collection failed",
+                module="feed",
+                source=self.source.id,
+                error=str(e),
+            )
+
+        self._duration = time.perf_counter_ns() - start_time
+
+        log_debug(
+            "Fallback completed",
+            module="feed",
+            source=self.source.id,
+            filled_count=self._filled_count,
+            final_count=len(candidates),
             duration_ms=round(self._duration / 1_000_000, 2),
         )
 

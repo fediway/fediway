@@ -1,8 +1,13 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship
 
 from .base import ReadOnlyModel
+
+if TYPE_CHECKING:
+    from .account import Account
+    from .status import Status
 
 
 class Favourite(ReadOnlyModel, table=True):

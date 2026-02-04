@@ -2,6 +2,7 @@ import json
 from typing import Dict, Iterable, Optional, Tuple
 
 from feast.data_source import DataSource
+from feast.errors import ZeroColumnQueryResult
 from feast.infra.utils.postgres.connection_utils import _get_conn
 from feast.protos.feast.core.DataSource_pb2 import DataSource as DataSourceProto
 from feast.repo_config import RepoConfig

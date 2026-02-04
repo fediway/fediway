@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from modules.fediway.heuristics import Heuristic
 
 from .base import BaseConfig
+from .sources import SourcesConfig
 
 
 class FediwayConfig(BaseConfig):
@@ -20,7 +21,10 @@ class FediwayConfig(BaseConfig):
     feed_decay_rate: float = 1.0
     feed_session_ttl: int = 6_000
 
-    # sources
+    # sources configuration
+    sources: SourcesConfig = SourcesConfig()
+
+    # legacy source params (for backward compatibility)
     follows_source_recently_engaged_age_in_days: int = 7
 
     # datasets
@@ -38,3 +42,13 @@ class FediwayConfig(BaseConfig):
 
     def max_candidates_per_source(self, n_sources: int):
         return self.feed_max_sourced_candidates // n_sources
+
+    def is_source_enabled(self, source_name: str) -> bool:
+        cfg = self.sources.get_source_config(source_name)
+        return cfg.enabled if cfg else False
+
+    def get_source_param(self, source_name: str, param: str, default=None):
+        cfg = self.sources.get_source_config(source_name)
+        if cfg:
+            return cfg.params.get(param, default)
+        return default

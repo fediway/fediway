@@ -1,3 +1,11 @@
+import functools
+from typing import List, Optional, Union
+
+import dill
+from feast import Entity, Field, FeatureView, FeatureViewProjection, RequestSource
+from feast.on_demand_feature_view import OnDemandFeatureView
+
+
 def on_demand_feature_view(
     *,
     name: Optional[str] = None,

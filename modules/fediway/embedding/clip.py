@@ -1,3 +1,5 @@
+import torch
+
 from .base import MultimodalEmbedder
 
 
@@ -32,6 +34,8 @@ class ClipEmbedder(MultimodalEmbedder):
 
 
 if __name__ == "__main__":
+    import time
+
     texts = [
         "Three blind horses listening to Mozart.",
         "Älgen är skogens konung!",

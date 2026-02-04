@@ -1,7 +1,10 @@
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from ..models import Quote
 from .base import Item
+
+if TYPE_CHECKING:
+    from .status import StatusItem
 
 QUOTE_STATUS = {
     0: "pending",

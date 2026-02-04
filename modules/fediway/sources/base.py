@@ -13,6 +13,7 @@ class Source:
     _description: ClassVar[str | None] = None
     _tracked_params: ClassVar[list[str]] = []
     _skip_params_validation: ClassVar[bool] = False
+    _default_fallback_threshold: ClassVar[float] = 0.5
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -24,6 +25,24 @@ class Source:
                 f"{cls.__name__} must define _tracked_params. "
                 f"Use empty list [] if no params to track."
             )
+
+    def fallback(self, source: "Source", threshold: float | None = None) -> "Source":
+        self._fallback_source = source
+        if threshold is not None:
+            self._fallback_threshold_value = threshold
+        return self
+
+    def get_fallback(self) -> "Source | None":
+        return getattr(self, "_fallback_source", None)
+
+    @property
+    def fallback_threshold(self) -> float:
+        return getattr(
+            self, "_fallback_threshold_value", self._default_fallback_threshold
+        )
+
+    def has_fallback(self) -> bool:
+        return self.get_fallback() is not None
 
     @property
     def id(self) -> str:

@@ -12,6 +12,7 @@ from .postgres import PostgresConfig
 from .qdrant import QdrantConfig
 from .redis import RedisConfig
 from .risingwave import RisingWaveConfig
+from .sources import SourceConfig, SourcesConfig
 
 
 class classproperty(property):

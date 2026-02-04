@@ -1,9 +1,13 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 from config import config
+
+if TYPE_CHECKING:
+    from .status import Status
 
 
 class MediaAttachment(SQLModel, table=True):

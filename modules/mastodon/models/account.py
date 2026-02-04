@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -6,6 +7,9 @@ from config import config
 
 from .favourite import Favourite
 from .user import User
+
+if TYPE_CHECKING:
+    from .status import Status
 
 AUTOMATED_ACTOR_TYPES = ["Service", "Application"]
 

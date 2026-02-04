@@ -46,8 +46,6 @@ class FilesConfig(BaseConfig):
         if self.s3_enabled:
             if self.s3_alias_host:
                 domain = f"{self.s3_protocol}://{self.s3_alias_host}"
-            elif S3_HOST_NAME:
-                domain = f"{self.s3_protocol}://{self.s3_alias_host}"
             else:
                 domain = f"{self.s3_protocol}://s3.amazonaws.com"
             return f"{domain}/{path}"

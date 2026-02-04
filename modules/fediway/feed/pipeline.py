@@ -12,6 +12,7 @@ from .candidates import CandidateList
 from .features import Features
 from .sampling import Sampler, TopKSampler
 from .steps import (
+    FallbackStep,
     PaginationStep,
     PipelineStep,
     RankingStep,
@@ -115,6 +116,7 @@ class Feed:
         return self
 
     def sample(self, n: int, sampler: Sampler = TopKSampler(), unique=True):
+        self._sample_target = n
         self.step(
             SamplingStep(
                 sampler,
@@ -126,6 +128,14 @@ class Feed:
             )
         )
         self._heuristics = []
+
+        return self
+
+    def fallback(self, source: Source, target: int | None = None, group: str = "fallback"):
+        if target is None:
+            target = getattr(self, "_sample_target", 20)
+
+        self.step(FallbackStep(source, target, group))
 
         return self
 
