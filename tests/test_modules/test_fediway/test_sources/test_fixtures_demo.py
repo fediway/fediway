@@ -5,7 +5,6 @@ These tests verify that the fixtures work correctly and serve as
 documentation for how to write source tests.
 """
 
-import pytest
 
 
 def test_test_data_builder_creates_accounts(test_data):
@@ -107,7 +106,7 @@ def test_engagement_scenario_fixture(engagement_scenario):
 
 
 def test_tag_scenario_fixture(tag_scenario):
-    user = tag_scenario["user"]
+    _user = tag_scenario["user"]  # noqa: F841
     tags = tag_scenario["tags"]
     statuses_by_tag = tag_scenario["statuses_by_tag"]
     data = tag_scenario["data"]
@@ -136,7 +135,7 @@ def test_tag_scenario_fixture(tag_scenario):
 
 def test_second_degree_scenario_fixture(second_degree_scenario):
     user = second_degree_scenario["user"]
-    direct_follows = second_degree_scenario["direct_follows"]
+    _direct_follows = second_degree_scenario["direct_follows"]  # noqa: F841
     second_degree = second_degree_scenario["second_degree"]
     mutual_counts = second_degree_scenario["mutual_counts"]
     data = second_degree_scenario["data"]

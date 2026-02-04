@@ -1,10 +1,7 @@
-import math
 import sys
 from datetime import UTC, datetime, timedelta
 from types import ModuleType
 from unittest.mock import MagicMock
-
-import pytest
 
 
 def _import_without_init(module_path: str, module_name: str):

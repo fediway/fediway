@@ -1,10 +1,10 @@
 import random
 
+from apps.api.dependencies.sources.tags import get_influential_sources
 from fastapi import APIRouter, Depends
 from sqlmodel import Session as DBSession
 from sqlmodel import select
 
-from apps.api.dependencies.sources.tags import get_influential_sources
 from modules.mastodon.items import TagItem
 from modules.mastodon.models import Tag
 from shared.core.db import get_db_session

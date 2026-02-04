@@ -20,14 +20,14 @@ def redis_cache(client: Redis | Callable[[], Redis], key: str, ttl: int = 300):
                 cached = redis_client.get(cache_key)
                 if cached:
                     return json.loads(cached.decode())
-            except:
+            except Exception:
                 pass
 
             result = func(*pargs, **kwargs)
 
             try:
                 redis_client.setex(cache_key, ttl, json.dumps(result))
-            except:
+            except Exception:
                 pass
 
             return result

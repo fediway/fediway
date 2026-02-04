@@ -2,7 +2,7 @@ import functools
 from typing import List, Optional, Union
 
 import dill
-from feast import Entity, Field, FeatureView, FeatureViewProjection, RequestSource
+from feast import Entity, FeatureView, FeatureViewProjection, Field, RequestSource
 from feast.on_demand_feature_view import OnDemandFeatureView
 
 

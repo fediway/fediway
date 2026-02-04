@@ -13,7 +13,7 @@ class JSONEncoder(json.JSONEncoder):
             return float(obj)
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-        elif type(obj) == tuple:
+        elif isinstance(obj, tuple):
             return list(obj)
         else:
             return super(JSONEncoder, self).default(obj)

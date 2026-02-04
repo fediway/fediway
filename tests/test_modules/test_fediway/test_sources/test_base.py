@@ -1,6 +1,6 @@
 import pytest
 
-from modules.fediway.sources.base import Source, RedisSource
+from modules.fediway.sources.base import RedisSource, Source
 
 
 def test_source_without_tracked_params_raises():

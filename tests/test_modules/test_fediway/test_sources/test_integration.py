@@ -158,12 +158,6 @@ def test_sources_config_group_weights():
 
 def test_mvp_sources_includes_fallback_weight():
     """Verify MVPSources includes fallback group weight for WeightedGroupSampler."""
-    # Import MVPSources directly to test without full dependency injection
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(
-        "statuses_deps",
-        "apps/api/dependencies/sources/statuses.py"
-    )
     # Can't fully test without all dependencies, but verify the pattern exists
     with open("apps/api/dependencies/sources/statuses.py") as f:
         content = f.read()

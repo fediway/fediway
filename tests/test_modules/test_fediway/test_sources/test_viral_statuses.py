@@ -5,7 +5,6 @@ from types import ModuleType
 from unittest.mock import MagicMock
 
 import numpy as np
-import pytest
 
 
 def _import_without_init(module_path: str, module_name: str):

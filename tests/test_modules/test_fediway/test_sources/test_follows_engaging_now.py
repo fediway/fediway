@@ -4,8 +4,6 @@ from datetime import UTC, datetime, timedelta, timezone
 from types import ModuleType
 from unittest.mock import MagicMock
 
-import pytest
-
 
 def _import_without_init(module_path: str, module_name: str):
     """Import a module directly without going through __init__.py."""

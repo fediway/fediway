@@ -2,8 +2,6 @@ import asyncio
 import time
 from unittest.mock import patch
 
-import pytest
-
 
 def test_timer_measures_elapsed_time():
     from shared.utils.logging import Timer

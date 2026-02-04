@@ -93,8 +93,8 @@ def collect(language: str = "en"):
     from modules.fediway.sources.qdrant import SimilarToFavourited
 
     from shared.core.qdrant import client
-    from shared.utils.logging import Timer, log_debug
     from shared.services.feature_service import FeatureService
+    from shared.utils.logging import Timer, log_debug
 
     # source = MostInteractedByAccountsSource(
     #     driver=get_driver(),

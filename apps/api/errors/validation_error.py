@@ -14,7 +14,7 @@ async def http422_error_handler(
     exc: RequestValidationError | ValidationError,
 ) -> JSONResponse:
     errors = exc.errors()
-    if type(errors) == list:
+    if isinstance(errors, list):
         for i in range(len(errors)):
             if "input" in errors[i]:
                 del errors[i]["input"]

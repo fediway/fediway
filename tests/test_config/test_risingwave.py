@@ -1,6 +1,4 @@
-from unittest.mock import patch, MagicMock
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from config import config
 from config.risingwave import RisingWaveConfig

@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -8,7 +8,6 @@ from apps.cli.risingwave import (
     get_version,
     parse_migration,
 )
-
 
 # parse_migration tests (12.1)
 

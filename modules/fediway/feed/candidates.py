@@ -29,7 +29,7 @@ class CandidateList:
         source: str | list[str] | None = None,
         source_group: str | list[str] | None = None,
     ):
-        if type(candidate) == Candidate:
+        if isinstance(candidate, Candidate):
             source = [s for s, _ in candidate.sources]
             source_group = [g for _, g in candidate.sources]
             score = candidate.score
@@ -37,10 +37,10 @@ class CandidateList:
 
         if source is None:
             sources = set()
-        elif type(source) == str:
+        elif isinstance(source, str):
             sources = set([(source, source_group)])
         else:
-            if source_group is None or type(source_group) == str:
+            if source_group is None or isinstance(source_group, str):
                 source_group = [source_group for _ in range(len(source))]
             sources = set(zip(source, source_group))
 
@@ -62,7 +62,7 @@ class CandidateList:
 
     def set_state(self, state):
         dtype = int
-        if len(state["ids"]) > 0 and type(state["ids"][0]) == str:
+        if len(state["ids"]) > 0 and isinstance(state["ids"][0], str):
             dtype = str
 
         self._ids = state["ids"]
@@ -85,7 +85,7 @@ class CandidateList:
         return np.array(self._scores)
 
     def set_scores(self, scores):
-        if type(scores) == np.ndarray:
+        if isinstance(scores, np.ndarray):
             self._scores = scores.tolist()
         else:
             self._scores = scores
@@ -99,7 +99,7 @@ class CandidateList:
         return set()
 
     def __iadd__(self, other):
-        assert type(other) == type(self)
+        assert isinstance(other, CandidateList)
 
         self._ids += other._ids
         self._scores += other._scores

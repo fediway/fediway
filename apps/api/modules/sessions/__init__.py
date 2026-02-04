@@ -1,12 +1,11 @@
 import hashlib
 import json
-import threading
-import time
 from uuid import uuid4
 
-import numpy as np
 from aioredis import Redis
-from fastapi import FastAPI, Request, Response
+from fastapi import Request
+
+from shared.utils.json import JSONEncoder
 
 
 def request_key(request: Request):

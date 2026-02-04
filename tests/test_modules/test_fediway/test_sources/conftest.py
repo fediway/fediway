@@ -1,7 +1,8 @@
-import pytest
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock, patch
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock
+
+import pytest
 
 
 def utcnow() -> datetime:

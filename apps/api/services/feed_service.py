@@ -8,8 +8,6 @@ from kafka import KafkaProducer
 from redis import Redis
 
 from config import config
-from shared.utils import JSONEncoder
-from shared.utils.logging import Timer, log_debug, log_error, log_info
 from modules.fediway.feed import Features
 from modules.fediway.feed.pipeline import (
     CandidateList,
@@ -24,6 +22,8 @@ from modules.fediway.rankers import Ranker
 from modules.fediway.sources import Source
 from modules.mastodon.models import Account
 from shared.services.feature_service import FeatureService
+from shared.utils import JSONEncoder
+from shared.utils.logging import Timer, log_debug, log_error
 
 
 def request_key(request: Request):

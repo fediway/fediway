@@ -1,10 +1,10 @@
+from apps.api.dependencies.sources.follows import get_recently_popular_sources
 from fastapi import APIRouter, Depends, Request, Response
 from sqlmodel import Session as DBSession
 
 from apps.api.dependencies.feeds import get_feed
-from apps.api.dependencies.sources.follows import get_recently_popular_sources
-from apps.api.utils import set_next_link
 from apps.api.services.feed_service import FeedService
+from apps.api.utils import set_next_link
 from config import config
 from modules.fediway.sources import Source
 from modules.mastodon.items import AccountItem

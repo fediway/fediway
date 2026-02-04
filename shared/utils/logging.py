@@ -1,7 +1,6 @@
 import time
 from contextvars import ContextVar
 from functools import wraps
-from typing import Any
 from uuid import uuid4
 
 from loguru import logger

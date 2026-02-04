@@ -103,7 +103,7 @@ class FeatureService(Features):
 
         entities_df = pd.DataFrame(entities)
 
-        if type(event_time) != int:
+        if not isinstance(event_time, int):
             event_time = int((event_time or self.event_time).timestamp())
 
         event_time = event_time - (event_time % self.offline_event_time_precision)
@@ -165,7 +165,7 @@ class FeatureService(Features):
         offline_store: bool | None = None,
         event_time: datetime | None = None,
     ) -> pd.DataFrame | None:
-        if type(features) == list and len(features) == 0:
+        if isinstance(features, list) and len(features) == 0:
             return None
 
         if len(entities) == 0:
