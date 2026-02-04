@@ -4,7 +4,7 @@ from sqlmodel import Session, create_engine
 
 from config import config
 
-engine = create_engine(config.risingwave.url)
+engine = create_engine(config.risingwave.url, echo=config.app.debug)
 
 
 def get_rw_session():
