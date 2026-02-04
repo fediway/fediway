@@ -7,8 +7,8 @@ from sqlmodel import Session, text
 from modules.fediway.sources.base import RedisSource
 
 
-class ViralStatusesSource(RedisSource):
-    _id = "viral"
+class TrendingStatusesSource(RedisSource):
+    _id = "trending"
     _tracked_params = ["language", "top_n", "max_per_author"]
 
     def __init__(

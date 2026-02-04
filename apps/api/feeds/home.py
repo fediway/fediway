@@ -28,7 +28,7 @@ class HomeFeed(Feed):
             SecondDegreeSource,
             SmartFollowsSource,
             TagAffinitySource,
-            ViralStatusesSource,
+            TrendingStatusesSource,
         )
 
         cfg = self._config
@@ -100,7 +100,7 @@ class HomeFeed(Feed):
             for lang in self.languages:
                 sources["trending"].append(
                     (
-                        ViralStatusesSource(
+                        TrendingStatusesSource(
                             r=self._redis,
                             rw=self.rw,
                             language=lang,
@@ -112,7 +112,7 @@ class HomeFeed(Feed):
         for lang in self.languages:
             sources["_fallback"].append(
                 (
-                    ViralStatusesSource(
+                    TrendingStatusesSource(
                         r=self._redis,
                         rw=self.rw,
                         language=lang,

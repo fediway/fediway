@@ -15,7 +15,7 @@ class TrendingStatusesFeed(Feed):
         self._config = algorithm_config.trends.statuses
 
     def sources(self) -> dict[str, list[tuple]]:
-        from modules.fediway.sources.statuses import ViralStatusesSource
+        from modules.fediway.sources.statuses import TrendingStatusesSource
 
         cfg = self._config
         sources = {"trending": []}
@@ -23,7 +23,7 @@ class TrendingStatusesFeed(Feed):
         for lang in self.languages:
             sources["trending"].append(
                 (
-                    ViralStatusesSource(
+                    TrendingStatusesSource(
                         r=self._redis,
                         rw=self.rw,
                         language=lang,

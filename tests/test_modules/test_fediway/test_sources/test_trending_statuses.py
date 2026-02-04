@@ -32,23 +32,23 @@ def _import_without_init(module_path: str, module_name: str):
 
 
 _module = _import_without_init(
-    "modules/fediway/sources/statuses/viral_statuses.py",
-    "modules.fediway.sources.statuses.viral_statuses",
+    "modules/fediway/sources/statuses/trending_statuses.py",
+    "modules.fediway.sources.statuses.trending_statuses",
 )
-ViralStatusesSource = _module.ViralStatusesSource
+TrendingStatusesSource = _module.TrendingStatusesSource
 
 
 def test_source_id():
     mock_redis = MagicMock()
     mock_redis.exists.return_value = False
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock())
-    assert source.id == "viral"
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock())
+    assert source.id == "trending"
 
 
 def test_source_tracked_params():
     mock_redis = MagicMock()
     mock_redis.exists.return_value = False
-    source = ViralStatusesSource(
+    source = TrendingStatusesSource(
         r=mock_redis,
         rw=MagicMock(),
         language="de",
@@ -62,8 +62,8 @@ def test_source_tracked_params():
 def test_redis_key_includes_language():
     mock_redis = MagicMock()
     mock_redis.exists.return_value = False
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock(), language="fr")
-    assert source.redis_key() == "source:viral:fr"
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock(), language="fr")
+    assert source.redis_key() == "source:trending:fr"
 
 
 def test_compute_queries_risingwave():
@@ -75,7 +75,7 @@ def test_compute_queries_risingwave():
         (102, 202, 3.2),
     ]
 
-    source = ViralStatusesSource(r=mock_redis, rw=mock_rw, language="en", top_n=100)
+    source = TrendingStatusesSource(r=mock_redis, rw=mock_rw, language="en", top_n=100)
     results = list(source.compute())
 
     assert len(results) == 2
@@ -94,7 +94,7 @@ def test_diversity_limits_per_author():
 
     mock_redis = MagicMock()
     mock_redis.exists.return_value = False
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock(), max_per_author=2)
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock(), max_per_author=2)
 
     diversified = source._apply_diversity(candidates, 10)
 
@@ -113,7 +113,7 @@ def test_diversity_preserves_score_order():
 
     mock_redis = MagicMock()
     mock_redis.exists.return_value = False
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock(), max_per_author=2)
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock(), max_per_author=2)
 
     diversified = source._apply_diversity(candidates, 10)
 
@@ -126,7 +126,7 @@ def test_diversity_respects_limit():
 
     mock_redis = MagicMock()
     mock_redis.exists.return_value = False
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock(), max_per_author=2)
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock(), max_per_author=2)
 
     diversified = source._apply_diversity(candidates, 5)
 
@@ -138,7 +138,7 @@ def test_collect_empty_returns_nothing():
     mock_redis.exists.return_value = True
     mock_redis.get.return_value = json.dumps([])
 
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock())
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock())
     results = list(source.collect(10))
 
     assert results == []
@@ -155,7 +155,7 @@ def test_collect_returns_status_ids():
     mock_redis.exists.return_value = True
     mock_redis.get.return_value = json.dumps(candidates)
 
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock())
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock())
 
     np.random.seed(42)
     results = list(source.collect(3))
@@ -173,7 +173,7 @@ def test_collect_respects_limit():
     mock_redis.exists.return_value = True
     mock_redis.get.return_value = json.dumps(candidates)
 
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock())
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock())
 
     np.random.seed(42)
     results = list(source.collect(10))
@@ -191,7 +191,7 @@ def test_collect_probabilistic_sampling():
     mock_redis.exists.return_value = True
     mock_redis.get.return_value = json.dumps(candidates)
 
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock())
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock())
 
     high_score_count = 0
     for _ in range(100):
@@ -213,7 +213,7 @@ def test_collect_handles_zero_scores():
     mock_redis.exists.return_value = True
     mock_redis.get.return_value = json.dumps(candidates)
 
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock())
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock())
     results = list(source.collect(2))
 
     assert len(results) == 2
@@ -232,7 +232,7 @@ def test_collect_with_diversity_applied():
     mock_redis.exists.return_value = True
     mock_redis.get.return_value = json.dumps(candidates)
 
-    source = ViralStatusesSource(r=mock_redis, rw=MagicMock(), max_per_author=2)
+    source = TrendingStatusesSource(r=mock_redis, rw=MagicMock(), max_per_author=2)
 
     np.random.seed(42)
     results = list(source.collect(5))
@@ -251,7 +251,7 @@ def test_store_computes_and_caches():
         (101, 201, 5.5),
     ]
 
-    source = ViralStatusesSource(
+    source = TrendingStatusesSource(
         r=mock_redis,
         rw=mock_rw,
         ttl=timedelta(minutes=10),
@@ -261,5 +261,5 @@ def test_store_computes_and_caches():
     assert len(results) == 1
     mock_redis.setex.assert_called_once()
     call_args = mock_redis.setex.call_args
-    assert call_args[0][0] == "source:viral:en"
+    assert call_args[0][0] == "source:trending:en"
     assert call_args[0][1] == 600  # 10 minutes in seconds

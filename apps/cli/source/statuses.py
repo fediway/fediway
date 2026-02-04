@@ -64,38 +64,22 @@ def random_communities(limit: int = 10, batch_size: int = 1):
     _log_candidates([c for c in source.collect(limit)])
 
 
-@app.command("viral")
-def viral(
+@app.command("trending")
+def trending(
     limit: int = 10,
     language: str = "en",
 ):
-    from modules.fediway.sources.statuses import ViralStatusesSource
+    from modules.fediway.sources.statuses import TrendingStatusesSource
     from shared.core.redis import get_redis
     from shared.core.rw import rw_session
 
     with rw_session() as rw:
-        source = ViralStatusesSource(
+        source = TrendingStatusesSource(
             r=get_redis(),
             rw=rw,
             language=language,
         )
 
         source.reset()
-
-        _log_candidates([c for c in source.collect(limit)])
-
-
-@app.command("recent-statuses-by-followed-accounts")
-def recent_statuses_by_followed_accounts(username: str, limit=10):
-    from modules.fediway.sources.statuses import RecentStatusesByFollowedAccounts
-    from shared.core.db import db_session
-
-    account_id = _get_account_id_from_username(username)
-
-    with db_session() as db:
-        source = RecentStatusesByFollowedAccounts(
-            db=db,
-            account_id=account_id,
-        )
 
         _log_candidates([c for c in source.collect(limit)])

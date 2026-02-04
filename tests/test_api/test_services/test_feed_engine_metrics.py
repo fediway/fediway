@@ -87,7 +87,7 @@ def mock_feed(mock_pipeline):
     candidates = CandidateList("status_id")
     candidates.append(101, score=0.95, source="smart_follows", source_group="in-network")
     candidates.append(102, score=0.87, source="tag_affinity", source_group="discovery")
-    candidates.append(103, score=0.72, source="viral", source_group="trending")
+    candidates.append(103, score=0.72, source="trending", source_group="trending")
     feed.execute = AsyncMock(return_value=candidates)
     feed.flush = MagicMock()
 

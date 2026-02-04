@@ -62,7 +62,7 @@ async def test_trending_feed_forward(mock_algorithm_config):
 
         candidates = CandidateList("status_id")
         for i in range(50):
-            candidates.append(i, score=1.0, source="viral", source_group="trending")
+            candidates.append(i, score=1.0, source="trending", source_group="trending")
 
         result = await feed.forward(candidates)
 
@@ -78,9 +78,9 @@ async def test_trending_feed_forward_unique(mock_algorithm_config):
         feed = TrendingStatusesFeed()
 
         candidates = CandidateList("status_id")
-        candidates.append(1, source="viral", source_group="trending")
+        candidates.append(1, source="trending", source_group="trending")
         candidates.append(1, source="viral2", source_group="trending")  # duplicate
-        candidates.append(2, source="viral", source_group="trending")
+        candidates.append(2, source="trending", source_group="trending")
 
         result = await feed.forward(candidates)
 
@@ -112,7 +112,7 @@ def test_trending_feed_is_feed_subclass(mock_algorithm_config):
 
 # Tests that require the actual sources module
 try:
-    from modules.fediway.sources.statuses import ViralStatusesSource  # noqa: F401
+    from modules.fediway.sources.statuses import TrendingStatusesSource  # noqa: F401
 
     HAS_SOURCES = True
 except ImportError:

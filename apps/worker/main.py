@@ -8,8 +8,8 @@ config.logging.configure_logging()
 
 BEAT_SCHEDULE = {
     # --- queue: sources ---
-    "viral-statuses-source": {
-        "task": "sources.viral_statuses",
+    "trending-statuses-source": {
+        "task": "sources.trending_statuses",
         "schedule": 60,  # every 60 seconds
         "options": {"queue": "sources"},
     },

@@ -1,11 +1,11 @@
 from redis import Redis
 from sqlmodel import Session, text
 
-from modules.fediway.sources.statuses import ViralStatusesSource
+from modules.fediway.sources.statuses import TrendingStatusesSource
 from shared.utils.logging import Timer, log_debug
 
 
-class StoreViralStatusesSourceService:
+class StoreTrendingStatusesSourceService:
     def __init__(self, r: Redis, db: Session):
         self.r = r
         self.db = db
@@ -22,7 +22,7 @@ class StoreViralStatusesSourceService:
 
     def __call__(self):
         for lang in self._get_languages():
-            source = ViralStatusesSource(
+            source = TrendingStatusesSource(
                 r=self.r,
                 rw=self.db,
                 language=lang,
@@ -33,7 +33,7 @@ class StoreViralStatusesSourceService:
 
             log_debug(
                 "Precomputed candidates",
-                module="viral_statuses",
+                module="trending_statuses",
                 source=source.id,
                 language=lang,
                 duration_ms=round(t.elapsed_ms, 2),

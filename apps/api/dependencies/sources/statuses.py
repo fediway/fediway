@@ -2,28 +2,23 @@ from datetime import timedelta
 
 from fastapi import Depends
 from redis import Redis
-from sqlmodel import Session as DBSession
 from sqlmodel import Session as RWSession
 
 from config import config
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
-    AccountBasedCollaborativeFilteringSource,
     CollaborativeFilteringFallbackSource,
     CollaborativeFilteringSource,
     CommunityBasedRecommendationsSource,
     FollowsEngagingNowSource,
-    RecentStatusesByFollowedAccounts,
     SecondDegreeSource,
     SimilarToEngagedSource,
     SmartFollowsSource,
-    StatusBasedCollaborativeFilteringSource,
     TagAffinitySource,
     TopStatusesFromRandomCommunitiesSource,
-    ViralStatusesSource,
+    TrendingStatusesSource,
 )
 from modules.mastodon.models import Account
-from shared.core.db import get_db_session
 from shared.core.qdrant import client as qdrant_client
 from shared.core.redis import get_redis
 from shared.core.rw import get_rw_session
@@ -34,27 +29,6 @@ from ..features import get_feature_service
 from ..lang import get_languages
 
 MAX_AGE = timedelta(days=config.fediway.feed_max_age_in_days)
-
-
-def get_recent_statuses_by_followed_accounts_source(
-    db: DBSession = Depends(get_db_session),
-    account: Account = Depends(get_authenticated_account_or_fail),
-) -> list[Source]:
-    return [RecentStatusesByFollowedAccounts(db=db, account_id=account.id)]
-
-
-def get_viral_statuses_source(
-    r: Redis = Depends(get_redis),
-    languages: list[str] = Depends(get_languages),
-) -> list[Source]:
-    return [
-        ViralStatusesSource(
-            r=r,
-            language=lang,
-            ttl=timedelta(minutes=10),
-        )
-        for lang in languages
-    ]
 
 
 def get_community_based_recommendations_source(
@@ -88,18 +62,6 @@ def get_similar_to_engaged_sources(
             max_age=MAX_AGE,
         )
         for lang in languages
-    ]
-
-
-def get_collaborative_filtering_sources(
-    r: Redis = Depends(get_redis),
-    account: Account = Depends(get_authenticated_account_or_fail),
-) -> list[Source]:
-    if not config.fediway.collaborative_filtering_enabled:
-        return []
-    return [
-        AccountBasedCollaborativeFilteringSource(r=r, account_id=account.id),
-        StatusBasedCollaborativeFilteringSource(r=r, account_id=account.id),
     ]
 
 
@@ -189,7 +151,7 @@ def get_trending_mvp_source(
         return []
     cfg = config.fediway.sources.trending
     return [
-        ViralStatusesSource(
+        TrendingStatusesSource(
             r=r,
             rw=rw,
             language=lang,
@@ -207,7 +169,7 @@ def get_trending_fallback_source(
 ) -> list[Source]:
     """Trending source for pipeline-level fallback (always enabled)."""
     return [
-        ViralStatusesSource(
+        TrendingStatusesSource(
             r=r,
             rw=rw,
             language=lang,
