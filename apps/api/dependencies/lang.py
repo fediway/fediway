@@ -17,8 +17,6 @@ def get_languages(request: Request, location: str | None = Depends(get_location)
 
     location_lang = get_language_from_location(location)
 
-    print("location_lang", location_lang, "| request_lang", request_lang)
-
     languages = [location_lang, request_lang, "en"]
 
     return [lang for lang in set(languages) if lang is not None]

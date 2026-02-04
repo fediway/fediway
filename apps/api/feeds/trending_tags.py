@@ -1,7 +1,6 @@
 from config.algorithm import algorithm_config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
-from modules.fediway.feed.sampling import InverseTransformSampler
 
 
 class TrendingTagsFeed(Feed):
@@ -33,7 +32,7 @@ class TrendingTagsFeed(Feed):
                     velocity_boost=cfg.scoring.velocity_boost,
                     blocked_tags=cfg.filters.blocked_tags,
                 ),
-                100,  # weight
+                100,
             )
         )
 
@@ -47,10 +46,6 @@ class TrendingTagsFeed(Feed):
 
         candidates = self.unique(candidates)
 
-        candidates = self.sample(
-            candidates,
-            n=cfg.settings.max_results,
-            sampler=InverseTransformSampler(),
-        )
+        candidates = self.sample(candidates, n=cfg.settings.max_results)
 
         return candidates

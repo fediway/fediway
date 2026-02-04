@@ -7,7 +7,7 @@ import numpy as np
 
 from .candidates import CandidateList
 from .pipeline import Pipeline
-from .sampling import Sampler, TopKSampler
+from .sampling import InverseTransformSampler, Sampler, WeightedGroupSampler
 
 if TYPE_CHECKING:
     from ..sources import Source
@@ -42,6 +42,21 @@ class Feed(ABC):
 
     def get_min_candidates(self) -> int:
         return 10
+
+    def _get_group_weights(self) -> dict[str, float]:
+        """Return group weights for sampling. Override in subclass."""
+        return {}
+
+    def _get_sampler(self) -> Sampler:
+        """Return appropriate sampler based on group structure.
+
+        - Multiple groups: WeightedGroupSampler (balances across groups)
+        - Single/no groups: InverseTransformSampler (score-weighted random)
+        """
+        weights = self._get_group_weights()
+        if len(weights) > 1:
+            return WeightedGroupSampler(weights)
+        return InverseTransformSampler()
 
     @property
     def pipeline(self) -> Pipeline | None:
@@ -261,7 +276,7 @@ class Feed(ABC):
         sampler: Sampler | None = None,
     ) -> CandidateList:
         if sampler is None:
-            sampler = TopKSampler()
+            sampler = self._get_sampler()
 
         if len(candidates) == 0:
             return candidates

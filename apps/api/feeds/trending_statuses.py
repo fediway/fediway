@@ -1,7 +1,6 @@
 from config.algorithm import algorithm_config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
-from modules.fediway.feed.sampling import InverseTransformSampler
 
 
 class TrendingStatusesFeed(Feed):
@@ -50,10 +49,6 @@ class TrendingStatusesFeed(Feed):
             penalty=cfg.settings.diversity_penalty,
         )
 
-        candidates = self.sample(
-            candidates,
-            n=cfg.settings.batch_size,
-            sampler=InverseTransformSampler(),
-        )
+        candidates = self.sample(candidates, n=cfg.settings.batch_size)
 
         return candidates

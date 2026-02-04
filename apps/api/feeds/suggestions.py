@@ -1,7 +1,6 @@
 from config.algorithm import algorithm_config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
-from modules.fediway.feed.sampling import WeightedGroupSampler
 
 
 class SuggestionsFeed(Feed):
@@ -22,7 +21,7 @@ class SuggestionsFeed(Feed):
 
         cfg = self._config
         sources_cfg = cfg.sources
-        max_results = cfg.settings.max_results
+        max_per_source = 25
 
         sources = {
             "social_proof": [],
@@ -31,7 +30,6 @@ class SuggestionsFeed(Feed):
         }
 
         if sources_cfg.social_proof.enabled:
-            n = int(max_results * self._get_weight("social_proof"))
             sources["social_proof"].append(
                 (
                     MutualFollowsSource(
@@ -40,12 +38,11 @@ class SuggestionsFeed(Feed):
                         min_mutual_follows=sources_cfg.social_proof.min_mutual_follows,
                         exclude_following=cfg.settings.exclude_following,
                     ),
-                    n,
+                    max_per_source,
                 )
             )
 
         if sources_cfg.similar_interests.enabled:
-            n = int(max_results * self._get_weight("similar"))
             sources["similar"].append(
                 (
                     SimilarInterestsSource(
@@ -54,12 +51,11 @@ class SuggestionsFeed(Feed):
                         min_tag_overlap=sources_cfg.similar_interests.min_tag_overlap,
                         exclude_following=cfg.settings.exclude_following,
                     ),
-                    n,
+                    max_per_source,
                 )
             )
 
         if sources_cfg.popular.enabled:
-            n = int(max_results * self._get_weight("popular"))
             sources["popular"].append(
                 (
                     PopularAccountsSource(
@@ -70,33 +66,25 @@ class SuggestionsFeed(Feed):
                         exclude_following=cfg.settings.exclude_following,
                         min_account_age_days=cfg.settings.min_account_age_days,
                     ),
-                    n,
+                    max_per_source,
                 )
             )
 
         return sources
 
-    def _get_weight(self, group: str) -> float:
-        w = self._config.weights
-        if not w:
-            defaults = {"social_proof": 40, "similar": 35, "popular": 25}
-            return defaults.get(group, 0) / 100
-
-        mapping = {
-            "social_proof": w.social_proof,
-            "similar": w.similar_interests,
-            "popular": w.popular,
-        }
-        return mapping.get(group, 0) / 100
-
     def get_min_candidates(self) -> int:
         return 5
 
     def _get_group_weights(self) -> dict[str, float]:
+        w = self._config.weights
+        w_social = w.social_proof if w else 40
+        w_similar = w.similar_interests if w else 35
+        w_popular = w.popular if w else 25
+
         return {
-            "social_proof": self._get_weight("social_proof"),
-            "similar": self._get_weight("similar"),
-            "popular": self._get_weight("popular"),
+            "social_proof": w_social / 100,
+            "similar": w_similar / 100,
+            "popular": w_popular / 100,
         }
 
     async def forward(self, candidates: CandidateList) -> CandidateList:
@@ -104,10 +92,6 @@ class SuggestionsFeed(Feed):
 
         candidates = self.unique(candidates)
 
-        candidates = self.sample(
-            candidates,
-            n=cfg.settings.max_results,
-            sampler=WeightedGroupSampler(self._get_group_weights()),
-        )
+        candidates = self.sample(candidates, n=cfg.settings.max_results)
 
         return candidates

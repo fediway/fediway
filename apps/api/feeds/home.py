@@ -1,7 +1,6 @@
 from config.algorithm import algorithm_config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
-from modules.fediway.feed.sampling import WeightedGroupSampler
 
 
 class HomeFeed(Feed):
@@ -32,12 +31,8 @@ class HomeFeed(Feed):
         )
 
         cfg = self._config
-        max_candidates = 500
-
-        w = cfg.weights
-        w_in = w.in_network if w else 50
-        w_disc = w.discovery if w else 35
-        w_trend = w.trending if w else 15
+        max_per_source = 50
+        fallback_per_source = 25
 
         sources = {
             "in-network": [],
@@ -47,7 +42,6 @@ class HomeFeed(Feed):
         }
 
         if cfg.sources.smart_follows.enabled:
-            n = int(max_candidates * w_in / 100 * 0.6)
             sources["in-network"].append(
                 (
                     SmartFollowsSource(
@@ -55,48 +49,44 @@ class HomeFeed(Feed):
                         account_id=self.account_id,
                         max_per_author=cfg.settings.max_per_author,
                     ),
-                    n,
+                    max_per_source,
                 )
             )
 
         if cfg.sources.follows_engaging.enabled:
-            n = int(max_candidates * w_in / 100 * 0.4)
             sources["in-network"].append(
                 (
                     FollowsEngagingNowSource(
                         rw=self.rw,
                         account_id=self.account_id,
                     ),
-                    n,
+                    max_per_source,
                 )
             )
 
         if cfg.sources.tag_affinity.enabled:
-            n = int(max_candidates * w_disc / 100 * 0.5)
             sources["discovery"].append(
                 (
                     TagAffinitySource(
                         rw=self.rw,
                         account_id=self.account_id,
                     ),
-                    n,
+                    max_per_source,
                 )
             )
 
         if cfg.sources.second_degree.enabled:
-            n = int(max_candidates * w_disc / 100 * 0.5)
             sources["discovery"].append(
                 (
                     SecondDegreeSource(
                         rw=self.rw,
                         account_id=self.account_id,
                     ),
-                    n,
+                    max_per_source,
                 )
             )
 
         if cfg.sources.trending.enabled:
-            n = int(max_candidates * w_trend / 100)
             for lang in self.languages:
                 sources["trending"].append(
                     (
@@ -105,7 +95,7 @@ class HomeFeed(Feed):
                             rw=self.rw,
                             language=lang,
                         ),
-                        n // len(self.languages),
+                        max_per_source,
                     )
                 )
 
@@ -118,7 +108,7 @@ class HomeFeed(Feed):
                         language=lang,
                         top_n=200,
                     ),
-                    40 // len(self.languages),
+                    fallback_per_source,
                 )
             )
 
@@ -151,10 +141,6 @@ class HomeFeed(Feed):
             penalty=cfg.settings.diversity_penalty,
         )
 
-        candidates = self.sample(
-            candidates,
-            n=cfg.settings.batch_size,
-            sampler=WeightedGroupSampler(self._get_group_weights()),
-        )
+        candidates = self.sample(candidates, n=cfg.settings.batch_size)
 
         return candidates
