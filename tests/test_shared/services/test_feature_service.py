@@ -1,8 +1,12 @@
+import pytest
+
+# Skip entire module if feast is not available
+pytest.importorskip("feast")
+
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pandas as pd
-import pytest
 from fastapi import BackgroundTasks
 from feast import FeatureService as FeastFeatureService
 

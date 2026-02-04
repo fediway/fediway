@@ -3,8 +3,13 @@ from datetime import datetime
 
 import pandas as pd
 from fastapi import BackgroundTasks
-from feast import FeatureService as FeastFeatureService
-from feast import FeatureStore
+
+try:
+    from feast import FeatureService as FeastFeatureService
+    from feast import FeatureStore
+except ImportError:
+    FeastFeatureService = None
+    FeatureStore = None
 
 from modules.fediway.feed.features import Features
 from shared.core.feast import feature_store
