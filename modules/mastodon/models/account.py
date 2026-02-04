@@ -74,7 +74,6 @@ class Account(SQLModel, table=True):
     def pretty_acct(self):
         if self.domain is None:
             return self.username
-        # TODO:
         return f"{self.username}@{self.domain}"
 
     @property

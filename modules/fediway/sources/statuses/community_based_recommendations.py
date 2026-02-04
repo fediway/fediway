@@ -1,8 +1,9 @@
-
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import LookupLocation
 from redis import Redis
+
+from shared.utils.logging import log_warning
 
 from ..base import Source
 
@@ -39,8 +40,8 @@ class CommunityBasedRecommendationsSource(Source):
                     collection=f"orbit_{version}_consumers", vector="embedding"
                 ),
             )
-        except UnexpectedResponse:
-            # TODO: log error
+        except UnexpectedResponse as e:
+            log_warning("Qdrant query failed", module="sources", error=str(e))
             return
 
         for point in results.points:

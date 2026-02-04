@@ -3,8 +3,6 @@ from datetime import timedelta
 from functools import reduce
 
 import pyarrow as pa
-
-# from feast.infra.offline_stores.contrib.spark_offline_store.spark_source import SparkSource
 from feast import Entity, FeatureView, Field, KafkaSource, PushSource
 from feast.data_format import JsonFormat
 from feast.types import (
