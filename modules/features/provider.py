@@ -7,10 +7,14 @@ from feast.entity import Entity
 from feast.feature_store import RepoConfig
 from feast.feature_view import FeatureView
 from feast.infra.passthrough_provider import PassthroughProvider
-from kafka import KafkaProducer
 
 from shared.utils import JSONEncoder
 from shared.utils.logging import log_debug, log_error
+
+try:
+    from kafka import KafkaProducer
+except ImportError:
+    KafkaProducer = None
 
 
 class FediwayProvider(PassthroughProvider):

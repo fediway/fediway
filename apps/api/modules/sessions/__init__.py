@@ -2,7 +2,7 @@ import hashlib
 import json
 from uuid import uuid4
 
-from aioredis import Redis
+from redis.asyncio import Redis
 from fastapi import Request
 
 from shared.utils.json import JSONEncoder

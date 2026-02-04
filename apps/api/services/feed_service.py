@@ -1,10 +1,10 @@
 import hashlib
 import json
 import uuid
+from typing import TYPE_CHECKING
 
 import numpy as np
 from fastapi import BackgroundTasks, Request
-from kafka import KafkaProducer
 from redis import Redis
 
 from config import config
@@ -21,9 +21,13 @@ from modules.fediway.heuristics import Heuristic
 from modules.fediway.rankers import Ranker
 from modules.fediway.sources import Source
 from modules.mastodon.models import Account
-from shared.services.feature_service import FeatureService
 from shared.utils import JSONEncoder
 from shared.utils.logging import Timer, log_debug, log_error
+
+if TYPE_CHECKING:
+    from kafka import KafkaProducer
+
+    from shared.services.feature_service import FeatureService
 
 
 def request_key(request: Request):
@@ -41,11 +45,11 @@ def _get_feed_key(request: Request, length: int = 32):
 class FeedService:
     def __init__(
         self,
-        kafka: KafkaProducer,
+        kafka: "KafkaProducer",
         request: Request,
         tasks: BackgroundTasks,
         redis: Redis,
-        feature_service: FeatureService,
+        feature_service: "FeatureService",
         account: Account | None,
     ):
         self.r = redis

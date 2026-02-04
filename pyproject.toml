@@ -17,7 +17,7 @@ dependencies = [
     "sqlmodel>=0.0.24",
     "alembic>=1.15",
     # Redis
-    "aioredis>=2.0",
+    "redis>=4.5",
     # CLI
     "typer>=0.15",
     "click>=8.2",

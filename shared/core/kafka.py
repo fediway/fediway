@@ -1,12 +1,17 @@
 import json
 
-from kafka import KafkaProducer
-
 from config import config
 from shared.utils import JSONEncoder
 
+try:
+    from kafka import KafkaProducer
+except ImportError:
+    KafkaProducer = None
 
-def get_kafka_producer() -> KafkaProducer:
+
+def get_kafka_producer():
+    if KafkaProducer is None:
+        raise ImportError("kafka-python is not installed. Install with: uv sync --extra streaming")
     return KafkaProducer(
         bootstrap_servers=config.kafka.kafka_bootstrap_servers,
         value_serializer=lambda v: json.dumps(v, cls=JSONEncoder).encode("utf-8"),
