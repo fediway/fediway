@@ -1,4 +1,9 @@
 import os
+import sys
+from unittest.mock import MagicMock
+
+# Mock optional dependencies that may not be installed in test environment
+sys.modules["maxminddb"] = MagicMock()
 
 # Set required environment variables before any imports
 os.environ.setdefault("API_URL", "http://localhost:8000")
