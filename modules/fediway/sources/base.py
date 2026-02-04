@@ -37,9 +37,7 @@ class Source:
 
     @property
     def fallback_threshold(self) -> float:
-        return getattr(
-            self, "_fallback_threshold_value", self._default_fallback_threshold
-        )
+        return getattr(self, "_fallback_threshold_value", self._default_fallback_threshold)
 
     def has_fallback(self) -> bool:
         return self.get_fallback() is not None

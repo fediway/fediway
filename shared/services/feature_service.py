@@ -150,7 +150,11 @@ class FeatureService(Features):
             df.rename(columns=dict(zip(feature_columns, feature_names)), inplace=True)
 
             if len(df) == 0:
-                log_debug("Skip ingesting features: all entries missing", module="features", feature_view=fv_name)
+                log_debug(
+                    "Skip ingesting features: all entries missing",
+                    module="features",
+                    feature_view=fv_name,
+                )
                 continue
 
             df["event_time"] = event_time
@@ -161,7 +165,12 @@ class FeatureService(Features):
                     df=df,
                 )
             except Exception as e:
-                log_error("Failed to ingest feature view", module="features", feature_view=fv_name, error=str(e))
+                log_error(
+                    "Failed to ingest feature view",
+                    module="features",
+                    feature_view=fv_name,
+                    error=str(e),
+                )
 
     async def get(
         self,

@@ -10,13 +10,12 @@ def _import_without_init(module_path: str, module_name: str):
     parent_name = "modules.fediway.sources"
     if parent_name not in sys.modules:
         for i, part in enumerate(parent_name.split(".")):
-            full_name = ".".join(parent_name.split(".")[:i+1])
+            full_name = ".".join(parent_name.split(".")[: i + 1])
             if full_name not in sys.modules:
                 sys.modules[full_name] = ModuleType(full_name)
 
     base_spec = importlib.util.spec_from_file_location(
-        "modules.fediway.sources.base",
-        "modules/fediway/sources/base.py"
+        "modules.fediway.sources.base", "modules/fediway/sources/base.py"
     )
     base_module = importlib.util.module_from_spec(base_spec)
     sys.modules["modules.fediway.sources.base"] = base_module
@@ -31,7 +30,7 @@ def _import_without_init(module_path: str, module_name: str):
 
 _module = _import_without_init(
     "modules/fediway/sources/statuses/smart_follows.py",
-    "modules.fediway.sources.statuses.smart_follows"
+    "modules.fediway.sources.statuses.smart_follows",
 )
 SmartFollowsSource = _module.SmartFollowsSource
 
@@ -173,7 +172,7 @@ def test_volume_penalty_applied():
         elif "statuses" in query_str:
             mock_result.fetchall.return_value = [
                 (101, 201, now, 50),  # high volume author
-                (102, 202, now, 1),   # low volume author
+                (102, 202, now, 1),  # low volume author
             ]
         else:
             mock_result.fetchall.return_value = []
@@ -289,13 +288,11 @@ def test_respects_limit():
         mock_result = MagicMock()
         if "user_followed_affinity" in query_str:
             mock_result.fetchall.return_value = [
-                (200 + i, 10.0 - i, 0.0, 10.0 - i, "direct")
-                for i in range(10)
+                (200 + i, 10.0 - i, 0.0, 10.0 - i, "direct") for i in range(10)
             ]
         elif "statuses" in query_str:
             mock_result.fetchall.return_value = [
-                (100 + i, 200 + i, now - timedelta(minutes=i), 1)
-                for i in range(10)
+                (100 + i, 200 + i, now - timedelta(minutes=i), 1) for i in range(10)
             ]
         else:
             mock_result.fetchall.return_value = []

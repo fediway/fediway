@@ -11,6 +11,7 @@ from apps.cli.risingwave import (
 
 # parse_migration tests (12.1)
 
+
 def test_parse_migration_basic():
     sql = """
     -- :up
@@ -66,6 +67,7 @@ def test_parse_migration_multiline():
 
 
 # Jinja templating tests (12.2)
+
 
 def _mock_context(**overrides):
     context = {
@@ -140,7 +142,10 @@ def test_parse_migration_renders_kafka_bootstrap():
         properties.bootstrap.server = '{{ bootstrap_server }}'
     );
     """
-    with patch("apps.cli.risingwave.get_context", return_value=_mock_context(bootstrap_server="kafka:29092")):
+    with patch(
+        "apps.cli.risingwave.get_context",
+        return_value=_mock_context(bootstrap_server="kafka:29092"),
+    ):
         up_sql, _ = parse_migration(sql)
 
     assert "properties.bootstrap.server = 'kafka:29092'" in up_sql
@@ -158,6 +163,7 @@ def test_parse_migration_no_variables_unchanged():
 
 
 # get_version tests (12.4)
+
 
 def test_get_version_includes_folder_and_filename():
     migration_dir = Path("/path/to/migrations/risingwave/00_base")

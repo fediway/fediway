@@ -191,9 +191,7 @@ def migrate(
 
 @app.command("rollback")
 def rollback(
-    version: Annotated[
-        str | None, typer.Argument(help="Specific migration to rollback")
-    ] = None,
+    version: Annotated[str | None, typer.Argument(help="Specific migration to rollback")] = None,
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="Preview rollback without applying")
     ] = False,
@@ -233,7 +231,9 @@ def rollback(
                 raise typer.Exit(1)
 
             if not down_sql:
-                typer.secho(f"Warning: {file_version} has no down migration", fg=typer.colors.YELLOW)
+                typer.secho(
+                    f"Warning: {file_version} has no down migration", fg=typer.colors.YELLOW
+                )
                 if version is not None:
                     raise typer.Exit(1)
                 continue

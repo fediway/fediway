@@ -94,6 +94,7 @@ class Feed:
         current_step = self.steps[-1] if len(self.steps) > 0 else None
 
         current_step_is_sourcing_step = self._is_current_step_type(SourcingStep)
+
         def is_different_group():
             return current_step is not None and current_step.group != group
 

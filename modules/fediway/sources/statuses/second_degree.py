@@ -31,11 +31,14 @@ class SecondDegreeSource(Source):
             ORDER BY followed_by_count DESC, created_at DESC
             LIMIT :limit
         """)
-        return self.rw.execute(query, {
-            "user_id": self.account_id,
-            "min_mutual": self.min_mutual_follows,
-            "limit": limit,
-        }).fetchall()
+        return self.rw.execute(
+            query,
+            {
+                "user_id": self.account_id,
+                "min_mutual": self.min_mutual_follows,
+                "limit": limit,
+            },
+        ).fetchall()
 
     def _score_candidates(self, candidates, max_followed_by):
         now = datetime.now(UTC).replace(tzinfo=None)
@@ -54,12 +57,14 @@ class SecondDegreeSource(Source):
 
             score = social_proof * recency
 
-            scored.append({
-                "status_id": status_id,
-                "author_id": author_id,
-                "followed_by_count": followed_by_count,
-                "score": score,
-            })
+            scored.append(
+                {
+                    "status_id": status_id,
+                    "author_id": author_id,
+                    "followed_by_count": followed_by_count,
+                    "score": score,
+                }
+            )
 
         return scored
 

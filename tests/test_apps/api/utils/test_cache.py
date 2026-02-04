@@ -52,9 +52,7 @@ def test_stores_result_in_cache():
 
     my_func("mykey")
 
-    mock_redis.setex.assert_called_with(
-        "test:mykey", 600, json.dumps({"data": [1, 2, 3]})
-    )
+    mock_redis.setex.assert_called_with("test:mykey", 600, json.dumps({"data": [1, 2, 3]}))
 
 
 def test_default_ttl_is_300():

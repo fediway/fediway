@@ -226,7 +226,9 @@ class SourcingStep(PipelineStep):
                     if fc not in existing_ids:
                         candidates.append(fc)
             except Exception as e:
-                log_error("Fallback collection failed", module="feed", source=fallback.id, error=str(e))
+                log_error(
+                    "Fallback collection failed", module="feed", source=fallback.id, error=str(e)
+                )
                 break
 
             current_source = fallback

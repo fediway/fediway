@@ -13,6 +13,7 @@ def utcnow() -> datetime:
 # Data Models for Test Fixtures
 # ============================================================================
 
+
 @dataclass
 class MockAccount:
     id: int
@@ -69,6 +70,7 @@ class MockStatusTag:
 # Test Data Builder
 # ============================================================================
 
+
 class TestDataBuilder:
     """Builder for creating consistent test data scenarios."""
 
@@ -96,27 +98,19 @@ class TestDataBuilder:
         return status
 
     def add_follow(self, follower: MockAccount, target: MockAccount) -> MockFollow:
-        follow = MockFollow(
-            id=self._next_id(),
-            account_id=follower.id,
-            target_account_id=target.id
-        )
+        follow = MockFollow(id=self._next_id(), account_id=follower.id, target_account_id=target.id)
         self.follows.append(follow)
         return follow
 
     def add_engagement(
-        self,
-        account: MockAccount,
-        status: MockStatus,
-        engagement_type: int,
-        **kwargs
+        self, account: MockAccount, status: MockStatus, engagement_type: int, **kwargs
     ) -> MockEngagement:
         engagement = MockEngagement(
             account_id=account.id,
             status_id=status.id,
             author_id=status.account_id,
             type=engagement_type,
-            **kwargs
+            **kwargs,
         )
         self.engagements.append(engagement)
         return engagement
@@ -151,6 +145,7 @@ class TestDataBuilder:
 # Mock Database Session
 # ============================================================================
 
+
 class MockQueryResult:
     """Mock for SQLAlchemy query results."""
 
@@ -183,7 +178,7 @@ class MockDBSession:
 
     def exec(self, query) -> MockQueryResult:
         """Execute a query and return mock results."""
-        query_str = str(query) if hasattr(query, '__str__') else ""
+        query_str = str(query) if hasattr(query, "__str__") else ""
 
         for pattern, handler in self._query_handlers.items():
             if pattern.lower() in query_str.lower():
@@ -199,6 +194,7 @@ class MockDBSession:
 # ============================================================================
 # Pytest Fixtures
 # ============================================================================
+
 
 @pytest.fixture
 def test_data() -> TestDataBuilder:
@@ -227,6 +223,7 @@ def mock_redis():
 # Pre-built Test Scenarios
 # ============================================================================
 
+
 @pytest.fixture
 def basic_social_graph(test_data) -> dict:
     """
@@ -238,15 +235,9 @@ def basic_social_graph(test_data) -> dict:
     """
     user = test_data.add_account(username="main_user")
 
-    followed = [
-        test_data.add_account(username=f"followed_{i}")
-        for i in range(3)
-    ]
+    followed = [test_data.add_account(username=f"followed_{i}") for i in range(3)]
 
-    not_followed = [
-        test_data.add_account(username=f"not_followed_{i}")
-        for i in range(2)
-    ]
+    not_followed = [test_data.add_account(username=f"not_followed_{i}") for i in range(2)]
 
     for account in followed:
         test_data.add_follow(user, account)
@@ -279,10 +270,7 @@ def engagement_scenario(test_data) -> dict:
     """
     user = test_data.add_account(username="engaged_user")
 
-    authors = [
-        test_data.add_account(username=f"author_{i}")
-        for i in range(5)
-    ]
+    authors = [test_data.add_account(username=f"author_{i}") for i in range(5)]
 
     high_affinity = authors[0]
     low_affinity = authors[4]
@@ -327,10 +315,7 @@ def tag_scenario(test_data) -> dict:
         "golang": test_data.add_tag("golang"),
     }
 
-    authors = [
-        test_data.add_account(username=f"tag_author_{i}")
-        for i in range(3)
-    ]
+    authors = [test_data.add_account(username=f"tag_author_{i}") for i in range(3)]
 
     for author in authors:
         test_data.add_follow(user, author)
@@ -377,15 +362,9 @@ def second_degree_scenario(test_data) -> dict:
     """
     user = test_data.add_account(username="second_degree_user")
 
-    direct_follows = [
-        test_data.add_account(username=f"direct_{i}")
-        for i in range(5)
-    ]
+    direct_follows = [test_data.add_account(username=f"direct_{i}") for i in range(5)]
 
-    second_degree = [
-        test_data.add_account(username=f"second_degree_{i}")
-        for i in range(3)
-    ]
+    second_degree = [test_data.add_account(username=f"second_degree_{i}") for i in range(3)]
 
     for df in direct_follows:
         test_data.add_follow(user, df)
@@ -429,39 +408,27 @@ def trending_scenario(test_data) -> dict:
     - normal_status: moderate engagement
     - stale_status: old high engagement (should not trend)
     """
-    authors = [
-        test_data.add_account(username=f"trending_author_{i}")
-        for i in range(3)
-    ]
+    authors = [test_data.add_account(username=f"trending_author_{i}") for i in range(3)]
 
-    engagers = [
-        test_data.add_account(username=f"engager_{i}")
-        for i in range(10)
-    ]
+    engagers = [test_data.add_account(username=f"engager_{i}") for i in range(10)]
 
     now = utcnow()
 
     viral_status = test_data.add_status(
-        authors[0],
-        text="This is going viral!",
-        created_at=now - timedelta(hours=2)
+        authors[0], text="This is going viral!", created_at=now - timedelta(hours=2)
     )
     for engager in engagers[:8]:
         test_data.add_fav(engager, viral_status, event_time=now - timedelta(hours=1))
         test_data.add_reblog(engager, viral_status, event_time=now - timedelta(minutes=30))
 
     normal_status = test_data.add_status(
-        authors[1],
-        text="Normal post",
-        created_at=now - timedelta(hours=4)
+        authors[1], text="Normal post", created_at=now - timedelta(hours=4)
     )
     for engager in engagers[:3]:
         test_data.add_fav(engager, normal_status, event_time=now - timedelta(hours=2))
 
     stale_status = test_data.add_status(
-        authors[2],
-        text="This was popular yesterday",
-        created_at=now - timedelta(hours=30)
+        authors[2], text="This was popular yesterday", created_at=now - timedelta(hours=30)
     )
     for engager in engagers:
         test_data.add_fav(engager, stale_status, event_time=now - timedelta(hours=25))

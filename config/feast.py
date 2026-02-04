@@ -35,7 +35,6 @@ class FeastConfig(BaseConfig):
 
         from feast.feature_store import RepoConfig
 
-
         return RepoConfig(
             project="fediway",
             provider="modules.features.provider.FediwayProvider",

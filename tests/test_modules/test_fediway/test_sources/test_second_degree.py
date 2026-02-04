@@ -10,13 +10,12 @@ def _import_without_init(module_path: str, module_name: str):
     parent_name = "modules.fediway.sources"
     if parent_name not in sys.modules:
         for i, part in enumerate(parent_name.split(".")):
-            full_name = ".".join(parent_name.split(".")[:i+1])
+            full_name = ".".join(parent_name.split(".")[: i + 1])
             if full_name not in sys.modules:
                 sys.modules[full_name] = ModuleType(full_name)
 
     base_spec = importlib.util.spec_from_file_location(
-        "modules.fediway.sources.base",
-        "modules/fediway/sources/base.py"
+        "modules.fediway.sources.base", "modules/fediway/sources/base.py"
     )
     base_module = importlib.util.module_from_spec(base_spec)
     sys.modules["modules.fediway.sources.base"] = base_module
@@ -31,7 +30,7 @@ def _import_without_init(module_path: str, module_name: str):
 
 _module = _import_without_init(
     "modules/fediway/sources/statuses/second_degree.py",
-    "modules.fediway.sources.statuses.second_degree"
+    "modules.fediway.sources.statuses.second_degree",
 )
 SecondDegreeSource = _module.SecondDegreeSource
 
@@ -134,8 +133,7 @@ def test_respects_limit():
     now = datetime.now(UTC).replace(tzinfo=None)
 
     mock_rw.execute.return_value.fetchall.return_value = [
-        (100 + i, 200 + i, 10 - i, now - timedelta(minutes=i))
-        for i in range(10)
+        (100 + i, 200 + i, 10 - i, now - timedelta(minutes=i)) for i in range(10)
     ]
 
     source = SecondDegreeSource(rw=mock_rw, account_id=1)

@@ -145,9 +145,7 @@ def test_log_includes_request_context(mock_logger):
     set_request_context(request_id="req-123", account_id=456)
     log_info("test", module="api")
 
-    mock_logger.bind.assert_called_with(
-        request_id="req-123", account_id=456, module="api"
-    )
+    mock_logger.bind.assert_called_with(request_id="req-123", account_id=456, module="api")
     clear_request_context()
 
 

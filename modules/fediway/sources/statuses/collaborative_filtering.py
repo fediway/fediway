@@ -29,11 +29,14 @@ class CollaborativeFilteringSource(Source):
               AND similarity >= :min_similarity
             LIMIT :limit
         """)
-        return self.rw.execute(query, {
-            "user_id": self.account_id,
-            "min_similarity": self.min_similarity,
-            "limit": limit,
-        }).fetchall()
+        return self.rw.execute(
+            query,
+            {
+                "user_id": self.account_id,
+                "min_similarity": self.min_similarity,
+                "limit": limit,
+            },
+        ).fetchall()
 
     def _get_followed_ids(self) -> set:
         query = text("SELECT target_account_id FROM follows WHERE account_id = :user_id")

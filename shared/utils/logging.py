@@ -88,6 +88,7 @@ class Timer:
 
 def timed(module: str | None = None, operation: str | None = None):
     """Decorator that logs execution time at DEBUG level."""
+
     def decorator(func):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
@@ -108,10 +109,12 @@ def timed(module: str | None = None, operation: str | None = None):
         if asyncio_iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
+
     return decorator
 
 
 def asyncio_iscoroutinefunction(func) -> bool:
     """Check if function is async."""
     import asyncio
+
     return asyncio.iscoroutinefunction(func)

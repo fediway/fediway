@@ -15,6 +15,7 @@ def _mock_fediway_config(**flags):
 
 # rw_migrations_paths computed property tests (12.5)
 
+
 def test_migrations_paths_base_always_present():
     with patch.object(config, "fediway", _mock_fediway_config()):
         paths = RisingWaveConfig().rw_migrations_paths
@@ -25,14 +26,18 @@ def test_migrations_paths_base_always_present():
 
 
 def test_migrations_paths_collaborative_filtering_enabled():
-    with patch.object(config, "fediway", _mock_fediway_config(collaborative_filtering_enabled=True)):
+    with patch.object(
+        config, "fediway", _mock_fediway_config(collaborative_filtering_enabled=True)
+    ):
         paths = RisingWaveConfig().rw_migrations_paths
 
     assert "migrations/risingwave/03_collaborative_filtering" in paths
 
 
 def test_migrations_paths_collaborative_filtering_disabled():
-    with patch.object(config, "fediway", _mock_fediway_config(collaborative_filtering_enabled=False)):
+    with patch.object(
+        config, "fediway", _mock_fediway_config(collaborative_filtering_enabled=False)
+    ):
         paths = RisingWaveConfig().rw_migrations_paths
 
     assert "migrations/risingwave/03_collaborative_filtering" not in paths
@@ -67,12 +72,16 @@ def test_migrations_paths_features_offline_enabled():
 
 
 def test_migrations_paths_multiple_flags():
-    with patch.object(config, "fediway", _mock_fediway_config(
-        collaborative_filtering_enabled=True,
-        orbit_enabled=True,
-        features_online_enabled=True,
-        features_offline_enabled=True,
-    )):
+    with patch.object(
+        config,
+        "fediway",
+        _mock_fediway_config(
+            collaborative_filtering_enabled=True,
+            orbit_enabled=True,
+            features_online_enabled=True,
+            features_offline_enabled=True,
+        ),
+    ):
         paths = RisingWaveConfig().rw_migrations_paths
 
     assert "migrations/risingwave/03_collaborative_filtering" in paths
@@ -82,12 +91,16 @@ def test_migrations_paths_multiple_flags():
 
 
 def test_migrations_paths_order_preserved():
-    with patch.object(config, "fediway", _mock_fediway_config(
-        collaborative_filtering_enabled=True,
-        orbit_enabled=True,
-        features_online_enabled=True,
-        features_offline_enabled=True,
-    )):
+    with patch.object(
+        config,
+        "fediway",
+        _mock_fediway_config(
+            collaborative_filtering_enabled=True,
+            orbit_enabled=True,
+            features_online_enabled=True,
+            features_offline_enabled=True,
+        ),
+    ):
         paths = RisingWaveConfig().rw_migrations_paths
 
     folder_numbers = [int(p.split("/")[-1].split("_")[0]) for p in paths]

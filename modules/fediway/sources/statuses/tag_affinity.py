@@ -59,10 +59,13 @@ class TagAffinitySource(Source):
             ORDER BY created_at DESC
             LIMIT :limit
         """)
-        return self.rw.execute(query, {
-            "tag_ids": tag_ids,
-            "limit": limit,
-        }).fetchall()
+        return self.rw.execute(
+            query,
+            {
+                "tag_ids": tag_ids,
+                "limit": limit,
+            },
+        ).fetchall()
 
     def _score_candidates(self, candidates, tag_affinities, max_affinity, followed_ids):
         now = datetime.now(UTC).replace(tzinfo=None)
@@ -83,12 +86,14 @@ class TagAffinitySource(Source):
             penalty = self.in_network_penalty if author_id in followed_ids else 0
             score = affinity_weight * recency * (1 - penalty)
 
-            scored.append({
-                "status_id": status_id,
-                "author_id": author_id,
-                "tag_id": tag_id,
-                "score": score,
-            })
+            scored.append(
+                {
+                    "status_id": status_id,
+                    "author_id": author_id,
+                    "tag_id": tag_id,
+                    "score": score,
+                }
+            )
 
         return scored
 

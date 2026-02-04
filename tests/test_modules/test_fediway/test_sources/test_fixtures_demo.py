@@ -6,7 +6,6 @@ documentation for how to write source tests.
 """
 
 
-
 def test_test_data_builder_creates_accounts(test_data):
     account = test_data.add_account(username="alice")
 
@@ -91,14 +90,12 @@ def test_engagement_scenario_fixture(engagement_scenario):
 
     # Count engagements with high_affinity author
     high_affinity_engagements = [
-        e for e in data.engagements
-        if e.author_id == high_affinity.id and e.account_id == user.id
+        e for e in data.engagements if e.author_id == high_affinity.id and e.account_id == user.id
     ]
 
     # Count engagements with low_affinity author
     low_affinity_engagements = [
-        e for e in data.engagements
-        if e.author_id == low_affinity.id and e.account_id == user.id
+        e for e in data.engagements if e.author_id == low_affinity.id and e.account_id == user.id
     ]
 
     assert len(high_affinity_engagements) > len(low_affinity_engagements)
@@ -121,12 +118,10 @@ def test_tag_scenario_fixture(tag_scenario):
 
     # User has engagements with rust and python, not golang
     rust_engagements = [
-        e for e in data.engagements
-        if e.status_id in [s.id for s in statuses_by_tag["rust"]]
+        e for e in data.engagements if e.status_id in [s.id for s in statuses_by_tag["rust"]]
     ]
     golang_engagements = [
-        e for e in data.engagements
-        if e.status_id in [s.id for s in statuses_by_tag["golang"]]
+        e for e in data.engagements if e.status_id in [s.id for s in statuses_by_tag["golang"]]
     ]
 
     assert len(rust_engagements) == 3
@@ -159,15 +154,9 @@ def test_trending_scenario_fixture(trending_scenario):
     stale_status = trending_scenario["stale_status"]
     data = trending_scenario["data"]
 
-    viral_engagements = [
-        e for e in data.engagements if e.status_id == viral_status.id
-    ]
-    normal_engagements = [
-        e for e in data.engagements if e.status_id == normal_status.id
-    ]
-    stale_engagements = [
-        e for e in data.engagements if e.status_id == stale_status.id
-    ]
+    viral_engagements = [e for e in data.engagements if e.status_id == viral_status.id]
+    normal_engagements = [e for e in data.engagements if e.status_id == normal_status.id]
+    stale_engagements = [e for e in data.engagements if e.status_id == stale_status.id]
 
     # Viral has most recent engagements
     assert len(viral_engagements) > len(normal_engagements)

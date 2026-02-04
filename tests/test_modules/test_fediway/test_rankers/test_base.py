@@ -5,6 +5,7 @@ from modules.fediway.rankers.base import Ranker
 
 def test_ranker_without_tracked_params_raises():
     with pytest.raises(TypeError, match="must define _tracked_params"):
+
         class BadRanker(Ranker):
             pass
 
@@ -54,6 +55,7 @@ def test_ranker_display_name_explicit_override():
 def test_ranker_description_from_docstring():
     class SimpleStatsRanker(Ranker):
         """A simple linear regression ranking model."""
+
         _tracked_params = []
 
     ranker = SimpleStatsRanker()

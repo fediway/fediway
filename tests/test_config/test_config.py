@@ -1,5 +1,3 @@
-
-
 def test_config_imports():
     """All config classes should be importable."""
 

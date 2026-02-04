@@ -9,13 +9,12 @@ def _import_module_bypass_init(module_path: str, module_name: str):
     parent_name = "modules.fediway.sources"
     if parent_name not in sys.modules:
         for i, part in enumerate(parent_name.split(".")):
-            full_name = ".".join(parent_name.split(".")[:i+1])
+            full_name = ".".join(parent_name.split(".")[: i + 1])
             if full_name not in sys.modules:
                 sys.modules[full_name] = ModuleType(full_name)
 
     base_spec = importlib.util.spec_from_file_location(
-        "modules.fediway.sources.base",
-        "modules/fediway/sources/base.py"
+        "modules.fediway.sources.base", "modules/fediway/sources/base.py"
     )
     base_module = importlib.util.module_from_spec(base_spec)
     sys.modules["modules.fediway.sources.base"] = base_module
@@ -30,23 +29,23 @@ def _import_module_bypass_init(module_path: str, module_name: str):
 
 _smart_follows = _import_module_bypass_init(
     "modules/fediway/sources/statuses/smart_follows.py",
-    "modules.fediway.sources.statuses.smart_follows"
+    "modules.fediway.sources.statuses.smart_follows",
 )
 _follows_engaging = _import_module_bypass_init(
     "modules/fediway/sources/statuses/follows_engaging_now.py",
-    "modules.fediway.sources.statuses.follows_engaging_now"
+    "modules.fediway.sources.statuses.follows_engaging_now",
 )
 _tag_affinity = _import_module_bypass_init(
     "modules/fediway/sources/statuses/tag_affinity.py",
-    "modules.fediway.sources.statuses.tag_affinity"
+    "modules.fediway.sources.statuses.tag_affinity",
 )
 _second_degree = _import_module_bypass_init(
     "modules/fediway/sources/statuses/second_degree.py",
-    "modules.fediway.sources.statuses.second_degree"
+    "modules.fediway.sources.statuses.second_degree",
 )
 _collaborative = _import_module_bypass_init(
     "modules/fediway/sources/statuses/collaborative_filtering.py",
-    "modules.fediway.sources.statuses.collaborative_filtering"
+    "modules.fediway.sources.statuses.collaborative_filtering",
 )
 
 SmartFollowsSource = _smart_follows.SmartFollowsSource
@@ -87,6 +86,7 @@ def test_all_sources_have_tracked_params():
 
 def _import_sources_config():
     import importlib.util
+
     spec = importlib.util.spec_from_file_location("config.sources", "config/sources.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -100,12 +100,12 @@ def test_source_weights_sum_to_one():
     cfg = SourcesConfig()
 
     total = (
-        cfg.smart_follows.weight +
-        cfg.follows_engaging_now.weight +
-        cfg.tag_affinity.weight +
-        cfg.second_degree.weight +
-        cfg.collaborative_filtering.weight +
-        cfg.trending.weight
+        cfg.smart_follows.weight
+        + cfg.follows_engaging_now.weight
+        + cfg.tag_affinity.weight
+        + cfg.second_degree.weight
+        + cfg.collaborative_filtering.weight
+        + cfg.trending.weight
     )
 
     assert abs(total - 1.0) < 0.01, f"Weights should sum to 1.0, got {total}"

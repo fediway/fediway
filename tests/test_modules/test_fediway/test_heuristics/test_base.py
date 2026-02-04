@@ -5,6 +5,7 @@ from modules.fediway.heuristics.base import Heuristic
 
 def test_heuristic_without_tracked_params_raises():
     with pytest.raises(TypeError, match="must define _tracked_params"):
+
         class BadHeuristic(Heuristic):
             pass
 
@@ -54,6 +55,7 @@ def test_heuristic_display_name_explicit_override():
 def test_heuristic_description_from_docstring():
     class DiversifyHeuristic(Heuristic):
         """Penalize repeated authors in feed."""
+
         _tracked_params = []
 
     heuristic = DiversifyHeuristic()
@@ -63,6 +65,7 @@ def test_heuristic_description_from_docstring():
 def test_heuristic_description_explicit_override():
     class DiversifyHeuristic(Heuristic):
         """This docstring is ignored."""
+
         _description = "Custom description"
         _tracked_params = []
 

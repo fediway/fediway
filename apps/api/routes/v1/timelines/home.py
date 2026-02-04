@@ -83,8 +83,7 @@ def _build_mvp_pipeline(
         pipeline.fallback(fallback_source, target=config.fediway.feed_batch_size, group="fallback")
 
     pipeline = (
-        pipeline
-        .unique()
+        pipeline.unique()
         .remember()
         .diversify(by="status:author_id", penalty=0.1)
         .sample(

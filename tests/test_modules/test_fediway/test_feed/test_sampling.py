@@ -10,6 +10,7 @@ from modules.fediway.feed.sampling import (
 
 def test_sampler_without_tracked_params_raises():
     with pytest.raises(TypeError, match="must define _tracked_params"):
+
         class BadSampler(Sampler):
             pass
 
@@ -59,6 +60,7 @@ def test_sampler_display_name_explicit_override():
 def test_sampler_description_from_docstring():
     class WeightedGroupSampler(Sampler):
         """Samples based on group weights."""
+
         _tracked_params = []
 
     sampler = WeightedGroupSampler()

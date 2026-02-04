@@ -36,11 +36,14 @@ class FollowsEngagingNowSource(Source):
             ORDER BY engaged_follows_count DESC, latest_engagement_time DESC
             LIMIT :limit
         """)
-        return self.rw.execute(query, {
-            "user_id": self.account_id,
-            "min_follows": self.min_engaged_follows,
-            "limit": limit * 5,
-        }).fetchall()
+        return self.rw.execute(
+            query,
+            {
+                "user_id": self.account_id,
+                "min_follows": self.min_engaged_follows,
+                "limit": limit * 5,
+            },
+        ).fetchall()
 
     def _score_candidates(self, candidates):
         now = datetime.now(UTC).replace(tzinfo=None)
@@ -49,7 +52,7 @@ class FollowsEngagingNowSource(Source):
         for row in candidates:
             status_id, author_id, engaged_count, latest_time, engagement_weight = row
 
-            social_proof = engaged_count ** 1.5
+            social_proof = engaged_count**1.5
 
             engagement_age_hours = (now - latest_time).total_seconds() / 3600
             recency_boost = 0.5 ** (engagement_age_hours / 2)
@@ -58,11 +61,13 @@ class FollowsEngagingNowSource(Source):
 
             score = social_proof * recency_boost * type_weight
 
-            scored.append({
-                "status_id": status_id,
-                "author_id": author_id,
-                "score": score,
-            })
+            scored.append(
+                {
+                    "status_id": status_id,
+                    "author_id": author_id,
+                    "score": score,
+                }
+            )
 
         return scored
 

@@ -13,13 +13,12 @@ def _import_without_init(module_path: str, module_name: str):
     parent_name = "modules.fediway.sources"
     if parent_name not in sys.modules:
         for i, part in enumerate(parent_name.split(".")):
-            full_name = ".".join(parent_name.split(".")[:i+1])
+            full_name = ".".join(parent_name.split(".")[: i + 1])
             if full_name not in sys.modules:
                 sys.modules[full_name] = ModuleType(full_name)
 
     base_spec = importlib.util.spec_from_file_location(
-        "modules.fediway.sources.base",
-        "modules/fediway/sources/base.py"
+        "modules.fediway.sources.base", "modules/fediway/sources/base.py"
     )
     base_module = importlib.util.module_from_spec(base_spec)
     sys.modules["modules.fediway.sources.base"] = base_module
@@ -34,7 +33,7 @@ def _import_without_init(module_path: str, module_name: str):
 
 _module = _import_without_init(
     "modules/fediway/sources/statuses/viral_statuses.py",
-    "modules.fediway.sources.statuses.viral_statuses"
+    "modules.fediway.sources.statuses.viral_statuses",
 )
 ViralStatusesSource = _module.ViralStatusesSource
 
@@ -123,10 +122,7 @@ def test_diversity_preserves_score_order():
 
 
 def test_diversity_respects_limit():
-    candidates = [
-        {"status_id": i, "author_id": i * 100, "score": 10.0 - i}
-        for i in range(20)
-    ]
+    candidates = [{"status_id": i, "author_id": i * 100, "score": 10.0 - i} for i in range(20)]
 
     mock_redis = MagicMock()
     mock_redis.exists.return_value = False
@@ -170,8 +166,7 @@ def test_collect_returns_status_ids():
 
 def test_collect_respects_limit():
     candidates = [
-        {"status_id": i, "author_id": i * 100, "score": 10.0 - i * 0.1}
-        for i in range(50)
+        {"status_id": i, "author_id": i * 100, "score": 10.0 - i * 0.1} for i in range(50)
     ]
 
     mock_redis = MagicMock()

@@ -5,6 +5,7 @@ from modules.fediway.sources.base import RedisSource, Source
 
 def test_source_without_tracked_params_raises():
     with pytest.raises(TypeError, match="must define _tracked_params"):
+
         class BadSource(Source):
             pass
 
@@ -54,6 +55,7 @@ def test_source_display_name_explicit_override():
 def test_source_description_from_docstring():
     class ViralStatusesSource(Source):
         """Trending posts with high engagement velocity."""
+
         _tracked_params = []
 
     source = ViralStatusesSource()
@@ -63,6 +65,7 @@ def test_source_description_from_docstring():
 def test_source_description_explicit_override():
     class ViralStatusesSource(Source):
         """This docstring is ignored."""
+
         _description = "Custom description"
         _tracked_params = []
 
@@ -106,6 +109,7 @@ def test_redis_source_skips_validation():
 
 def test_redis_source_subclass_requires_tracked_params():
     with pytest.raises(TypeError, match="must define _tracked_params"):
+
         class BadRedisSubclass(RedisSource):
             pass
 

@@ -57,7 +57,9 @@ async def process_debezium_event(event: DebeziumEvent, handler_cls, args):
         return
 
     if not hasattr(handler_cls, method):
-        log_debug("Handler missing method", module="debezium", handler=str(handler_cls), method=method)
+        log_debug(
+            "Handler missing method", module="debezium", handler=str(handler_cls), method=method
+        )
         return
 
     if event.payload.op == "u":

@@ -1,5 +1,3 @@
-
-
 from modules.mastodon.paperclip import id_partition
 
 

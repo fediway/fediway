@@ -8,7 +8,12 @@ from modules.fediway.sources.base import Source
 
 class SmartFollowsSource(Source):
     _id = "smart_follows"
-    _tracked_params = ["recency_half_life_hours", "max_age_hours", "max_per_author", "volume_threshold"]
+    _tracked_params = [
+        "recency_half_life_hours",
+        "max_age_hours",
+        "max_per_author",
+        "volume_threshold",
+    ]
 
     def __init__(
         self,
@@ -68,11 +73,14 @@ class SmartFollowsSource(Source):
             ORDER BY s.created_at DESC
             LIMIT :limit
         """)
-        return self.rw.execute(query, {
-            "user_id": self.account_id,
-            "max_age_hours": self.max_age_hours,
-            "limit": limit,
-        }).fetchall()
+        return self.rw.execute(
+            query,
+            {
+                "user_id": self.account_id,
+                "max_age_hours": self.max_age_hours,
+                "limit": limit,
+            },
+        ).fetchall()
 
     def _score_posts(self, posts, affinities, max_affinity):
         now = datetime.now(UTC).replace(tzinfo=None)
@@ -95,11 +103,13 @@ class SmartFollowsSource(Source):
 
             score = affinity_weight * recency * volume_penalty
 
-            scored.append({
-                "status_id": status_id,
-                "author_id": author_id,
-                "score": score,
-            })
+            scored.append(
+                {
+                    "status_id": status_id,
+                    "author_id": author_id,
+                    "score": score,
+                }
+            )
 
         return scored
 
@@ -120,10 +130,7 @@ class SmartFollowsSource(Source):
 
     def collect(self, limit: int):
         affinities = self._get_affinities()
-        max_affinity = max(
-            (a["effective_affinity"] for a in affinities.values()),
-            default=0
-        )
+        max_affinity = max((a["effective_affinity"] for a in affinities.values()), default=0)
 
         posts = self._get_recent_posts(limit * 5)
         if not posts:

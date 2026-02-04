@@ -1,4 +1,3 @@
-
 import pytest
 
 from modules.fediway.feed import Feed

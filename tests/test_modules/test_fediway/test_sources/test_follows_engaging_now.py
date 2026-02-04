@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 def _import_without_init(module_path: str, module_name: str):
     """Import a module directly without going through __init__.py."""
     import importlib.util
+
     spec = importlib.util.spec_from_file_location(module_name, module_path)
     module = importlib.util.module_from_spec(spec)
 
@@ -16,14 +17,13 @@ def _import_without_init(module_path: str, module_name: str):
     if parent_name not in sys.modules:
         # Create stub parent modules
         for i, part in enumerate(parent_name.split(".")):
-            full_name = ".".join(parent_name.split(".")[:i+1])
+            full_name = ".".join(parent_name.split(".")[: i + 1])
             if full_name not in sys.modules:
                 sys.modules[full_name] = ModuleType(full_name)
 
     # Import base first
     base_spec = importlib.util.spec_from_file_location(
-        "modules.fediway.sources.base",
-        "modules/fediway/sources/base.py"
+        "modules.fediway.sources.base", "modules/fediway/sources/base.py"
     )
     base_module = importlib.util.module_from_spec(base_spec)
     sys.modules["modules.fediway.sources.base"] = base_module
@@ -36,7 +36,7 @@ def _import_without_init(module_path: str, module_name: str):
 
 _module = _import_without_init(
     "modules/fediway/sources/statuses/follows_engaging_now.py",
-    "modules.fediway.sources.statuses.follows_engaging_now"
+    "modules.fediway.sources.statuses.follows_engaging_now",
 )
 FollowsEngagingNowSource = _module.FollowsEngagingNowSource
 
@@ -121,7 +121,7 @@ def test_scoring_favors_higher_engagement_weight():
     now = datetime.now(UTC).replace(tzinfo=None)
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 2, now, 10.0),  # high weight (reblogs/replies)
-        (102, 202, 2, now, 1.0),   # low weight (just favs)
+        (102, 202, 2, now, 1.0),  # low weight (just favs)
     ]
 
     source = FollowsEngagingNowSource(rw=mock_rw, account_id=1)
@@ -217,7 +217,7 @@ def test_score_formula():
     # recency_boost = 0.5 ** (2 / 2) = 0.5
     # type_weight = log(1 + 5) = 1.791...
     # score = 5.196 * 0.5 * 1.791 = 4.65...
-    expected_social = 3 ** 1.5
+    expected_social = 3**1.5
     expected_recency = 0.5  # 2h with 2h half-life
     expected_type = math.log(1 + 5.0)
     expected_score = expected_social * expected_recency * expected_type
