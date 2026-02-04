@@ -22,8 +22,8 @@ from .steps import (
 )
 
 
-class Feed:
-    def __init__(self, feature_service: Features):
+class Pipeline:
+    def __init__(self, feature_service: Features | None = None):
         self.feature_service = feature_service
         self.steps = []
         self.entity = None
@@ -151,8 +151,7 @@ class Feed:
         return self
 
     def diversify(self, by, penalty: float = 0.1):
-        return self._heuristics.append(DiversifyHeuristic(by, penalty))
-
+        self._heuristics.append(DiversifyHeuristic(by, penalty))
         return self
 
     async def _execute_step(self, idx, candidates: CandidateList) -> CandidateList:
@@ -192,7 +191,7 @@ class Feed:
         self.counter += 1
         self._running = False
 
-        return self
+        return candidates
 
     def results(self, step_idx=None) -> CandidateList:
         step_idx = step_idx or len(self.steps) - 1
@@ -201,3 +200,7 @@ class Feed:
 
     def __getitem__(self, idx):
         return self.steps[idx]
+
+
+# Deprecated alias - use Pipeline instead
+Feed = Pipeline

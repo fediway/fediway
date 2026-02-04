@@ -161,6 +161,27 @@ class CandidateList:
     def __iter__(self):
         return CandidateListIterator(self)
 
+    def copy(self) -> "CandidateList":
+        """Create a shallow copy of this list."""
+        new = CandidateList(self.entity)
+        new._ids = list(self._ids)
+        new._scores = list(self._scores)
+        new._sources = {k: set(v) for k, v in self._sources.items()}
+        return new
+
+    def remove_at(self, idx: int) -> None:
+        """Remove candidate at index."""
+        if idx < 0 or idx >= len(self._ids):
+            raise IndexError(
+                f"index {idx} out of range for CandidateList of length {len(self._ids)}"
+            )
+        candidate_id = self._ids[idx]
+        del self._ids[idx]
+        del self._scores[idx]
+        # Only remove from _sources if this candidate no longer appears
+        if candidate_id not in self._ids:
+            self._sources.pop(candidate_id, None)
+
 
 class CandidateListIterator:
     def __init__(self, candidates: CandidateList):

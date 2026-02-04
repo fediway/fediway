@@ -1,0 +1,25 @@
+# Follow Suggestions Preset: Popular
+# Emphasize high-follower accounts.
+
+[settings]
+max_results = 40
+exclude_following = true
+min_account_age_days = 7
+
+[weights]
+social_proof = 20
+similar_interests = 20
+popular = 60
+
+[sources.social_proof]
+enabled = true
+min_mutual_follows = 3
+
+[sources.similar_interests]
+enabled = true
+min_tag_overlap = 3
+
+[sources.popular]
+enabled = true
+local_only = true
+min_followers = 50

@@ -3,8 +3,7 @@ repos:
     rev: v0.9.1
     hooks:
       - id: ruff
-        name: ruff (fix)
-        args: [--fix]
+        name: ruff (lint)
       - id: ruff-format
-      - id: ruff
-        name: ruff (check)
+        name: ruff (format check)
+        args: [--check]

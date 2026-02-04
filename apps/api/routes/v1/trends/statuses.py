@@ -1,26 +1,20 @@
 from fastapi import APIRouter, Depends, Request, Response
 from sqlmodel import Session as DBSession
+from sqlmodel import Session as RWSession
 
-from apps.api.dependencies.feeds import get_feed
-from apps.api.dependencies.sources.statuses import (
-    get_viral_statuses_source,
-)
-from apps.api.services.feed_service import FeedService
+from apps.api.dependencies.feeds import get_feed_engine
+from apps.api.dependencies.lang import get_languages
+from apps.api.feeds import TrendingStatusesFeed
+from apps.api.services.feed_engine import FeedEngine
 from apps.api.utils import set_next_link
 from config import config
-from modules.fediway.feed.sampling import InverseTransformSampler
-from modules.fediway.sources import Source
 from modules.mastodon.items import StatusItem
 from modules.mastodon.models import Status
 from shared.core.db import get_db_session
+from shared.core.redis import get_redis
+from shared.core.rw import get_rw_session
 
 router = APIRouter()
-
-
-def statuses_trend_sources(
-    viral_statuses: list[Source] = Depends(get_viral_statuses_source),
-):
-    return viral_statuses
 
 
 @router.get("/statuses")
@@ -28,27 +22,28 @@ async def status_trends(
     request: Request,
     response: Response,
     offset: int = 0,
-    feed: FeedService = Depends(get_feed),
-    sources=Depends(statuses_trend_sources),
+    engine: FeedEngine = Depends(get_feed_engine),
+    rw: RWSession = Depends(get_rw_session),
+    redis=Depends(get_redis),
+    languages: list[str] = Depends(get_languages),
     db: DBSession = Depends(get_db_session),
 ) -> list[StatusItem]:
-    pipeline = (
-        feed.name("trends/statuses")
-        .select("status_id")
-        .sources([(source, 50) for source in sources])
-        .remember()
-        .diversify(by="status:author_id", penalty=0.1)
-        .sample(config.fediway.feed_batch_size, sampler=InverseTransformSampler())
-        .paginate(config.fediway.feed_batch_size, offset=offset)
+    feed = TrendingStatusesFeed(
+        redis=redis,
+        rw=rw,
+        languages=languages,
     )
 
-    if offset == 0:
-        feed.flush()
+    results = await engine.run(
+        feed,
+        flush=(offset == 0),
+        offset=offset,
+        limit=config.fediway.feed_batch_size,
+    )
 
-    recommendations = await pipeline.execute()
-    status_ids = [r.id for r in recommendations]
+    status_ids = [r.id for r in results]
 
-    set_next_link(request, response, {"offset": offset + len(recommendations)})
+    set_next_link(request, response, {"offset": offset + len(results)})
 
     statuses = db.exec(Status.select_by_ids(status_ids)).all()
 

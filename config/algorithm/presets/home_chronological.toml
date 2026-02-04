@@ -1,0 +1,38 @@
+# Home Timeline Preset: Chronological
+# Pure follows-based timeline, time-ordered. No algorithmic ranking.
+
+[weights]
+in_network = 100
+discovery = 0
+trending = 0
+
+[settings]
+max_per_author = 10
+diversity_penalty = 0.0
+batch_size = 20
+include_replies = true
+include_boosts = true
+
+[ranking]
+decay_rate = 0.0
+
+[sources.smart_follows]
+enabled = true
+weight = 100
+recency_hours = 72
+max_per_author = 10
+
+[sources.follows_engaging]
+enabled = false
+
+[sources.tag_affinity]
+enabled = false
+
+[sources.second_degree]
+enabled = false
+
+[sources.trending]
+enabled = false
+
+[sources.collaborative]
+enabled = false

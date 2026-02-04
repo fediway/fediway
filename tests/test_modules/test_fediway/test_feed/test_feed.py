@@ -1,6 +1,6 @@
 import pytest
 
-from modules.fediway.feed import Feed
+from modules.fediway.feed import Feed, Pipeline
 from modules.fediway.feed.candidates import CandidateList
 from modules.fediway.feed.steps import FallbackStep, PipelineStep
 from modules.fediway.sources.base import Source
@@ -31,7 +31,7 @@ class DummyStep(PipelineStep):
 
 
 def test_feed_init():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
 
     assert f.feature_service is None
     assert f.steps == []
@@ -42,7 +42,7 @@ def test_feed_init():
 
 
 def test_select_and_step_and_indexing():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
 
     # select should set entity and return self
     ret = f.select("status_id")
@@ -61,7 +61,7 @@ def test_select_and_step_and_indexing():
 
 
 def test_get_state_and_set_state():
-    f1 = Feed(feature_service=None)
+    f1 = Pipeline(feature_service=None)
     f1.counter = 42
     ds = DummyStep()
     f1.step(ds)
@@ -70,7 +70,7 @@ def test_get_state_and_set_state():
     state = f1.get_state()
 
     # simulate new feed
-    f2 = Feed(feature_service=None)
+    f2 = Pipeline(feature_service=None)
     ds2 = DummyStep()
     f2.step(ds2)
     assert ds2.get_state() == {"foo": "bar"}
@@ -83,18 +83,18 @@ def test_get_state_and_set_state():
 
 @pytest.mark.asyncio
 async def test_execute_no_steps():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     before = f.counter
     ret = await f.execute()
 
-    assert ret is f
+    assert isinstance(ret, CandidateList)
     assert f.counter == before + 1
     assert f.get_durations() == []
 
 
 @pytest.mark.asyncio
 async def test_execute_with_steps_records_durations_and_calls_steps():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     step1 = DummyStep()
     step2 = DummyStep()
     f.step(step1)
@@ -102,7 +102,7 @@ async def test_execute_with_steps_records_durations_and_calls_steps():
 
     before_counter = f.counter
     ret = await f.execute()
-    assert ret is f
+    assert isinstance(ret, CandidateList)
     assert step1.called
     assert step2.called
     assert f.counter == before_counter + 1
@@ -114,7 +114,7 @@ async def test_execute_with_steps_records_durations_and_calls_steps():
 
 
 def test_results_returns_last_step_results():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     f.step(DummyStep())
     out = f.results()
 
@@ -124,7 +124,7 @@ def test_results_returns_last_step_results():
 
 @pytest.mark.asyncio
 async def test_is_new_after_execute():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
 
     assert f.is_new()
 
@@ -151,7 +151,7 @@ class MockFallbackSource(Source):
 
 
 def test_feed_fallback_returns_self_for_chaining():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     source = MockFallbackSource("test", [1, 2, 3])
 
     result = f.fallback(source, target=10)
@@ -160,7 +160,7 @@ def test_feed_fallback_returns_self_for_chaining():
 
 
 def test_feed_fallback_adds_fallback_step():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     source = MockFallbackSource("test", [1, 2, 3])
 
     f.fallback(source, target=10)
@@ -170,7 +170,7 @@ def test_feed_fallback_adds_fallback_step():
 
 
 def test_feed_fallback_uses_sample_target_when_not_specified():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     f._sample_target = 25
     source = MockFallbackSource("test", [1, 2, 3])
 
@@ -180,7 +180,7 @@ def test_feed_fallback_uses_sample_target_when_not_specified():
 
 
 def test_feed_fallback_uses_default_when_no_sample_target():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     source = MockFallbackSource("test", [1, 2, 3])
 
     f.fallback(source)
@@ -189,7 +189,7 @@ def test_feed_fallback_uses_default_when_no_sample_target():
 
 
 def test_feed_fallback_custom_group():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     source = MockFallbackSource("test", [1, 2, 3])
 
     f.fallback(source, target=10, group="trending")
@@ -199,7 +199,7 @@ def test_feed_fallback_custom_group():
 
 @pytest.mark.asyncio
 async def test_feed_fallback_integration():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     f.select("status_id")
 
     class PartialStep(PipelineStep):
@@ -227,7 +227,7 @@ async def test_feed_fallback_integration():
 
 @pytest.mark.asyncio
 async def test_feed_fallback_not_triggered_when_sufficient():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     f.select("status_id")
 
     class FullStep(PipelineStep):
@@ -251,7 +251,7 @@ async def test_feed_fallback_not_triggered_when_sufficient():
 
 @pytest.mark.asyncio
 async def test_feed_fallback_chaining_with_sample():
-    f = Feed(feature_service=None)
+    f = Pipeline(feature_service=None)
     f.select("status_id")
     f._sample_target = 10
 
@@ -263,3 +263,22 @@ async def test_feed_fallback_chaining_with_sample():
     result = f.results()
 
     assert len(result) == 10
+
+
+def test_feed_is_abstract_base_class():
+    from abc import ABC
+
+    assert issubclass(Feed, ABC)
+    assert Feed is not Pipeline
+
+    # Feed should not be instantiable directly
+    with pytest.raises(TypeError, match="Can't instantiate abstract class"):
+        Feed()
+
+
+def test_pipeline_alias_in_pipeline_module():
+    from modules.fediway.feed.pipeline import Feed as PipelineFeed
+    from modules.fediway.feed.pipeline import Pipeline as PipelineClass
+
+    # The alias in pipeline.py still works
+    assert PipelineFeed is PipelineClass

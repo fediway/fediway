@@ -91,7 +91,6 @@ def collect(language: str = "en"):
     from datetime import timedelta
 
     from modules.fediway.sources.qdrant import SimilarToFavourited
-
     from shared.core.qdrant import client
     from shared.services.feature_service import FeatureService
     from shared.utils.logging import Timer, log_debug

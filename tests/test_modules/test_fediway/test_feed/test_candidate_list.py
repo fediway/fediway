@@ -345,3 +345,101 @@ def test_index_raises_for_missing_candidate():
 
     with pytest.raises(ValueError):
         cl.index(999)  # not in the list
+
+
+def test_copy_creates_independent_copy():
+    cl = CandidateList("status_id")
+    cl.append(1, score=0.5, source="s1", source_group="g1")
+    cl.append(2, score=0.6, source="s2", source_group="g2")
+
+    copy = cl.copy()
+
+    assert copy.entity == cl.entity
+    assert copy.get_candidates() == [1, 2]
+    assert copy._scores == [0.5, 0.6]
+    assert copy.get_source(1) == {("s1", "g1")}
+
+    # Modify original, copy should be unaffected
+    cl.append(3, score=0.7, source="s3", source_group="g3")
+    assert len(cl) == 3
+    assert len(copy) == 2
+
+
+def test_copy_creates_independent_sources():
+    cl = CandidateList("status_id")
+    cl.append(1, source="s1", source_group="g1")
+
+    copy = cl.copy()
+
+    # Modify original sources
+    cl._sources[1].add(("s2", "g2"))
+
+    # Copy should be unaffected
+    assert copy.get_source(1) == {("s1", "g1")}
+
+
+def test_copy_empty_list():
+    cl = CandidateList("status_id")
+    copy = cl.copy()
+
+    assert len(copy) == 0
+    assert copy.entity == "status_id"
+
+
+def test_remove_at_removes_candidate_at_index():
+    cl = CandidateList("status_id")
+    cl.append(1, score=0.1, source="s1", source_group="g1")
+    cl.append(2, score=0.2, source="s2", source_group="g2")
+    cl.append(3, score=0.3, source="s3", source_group="g3")
+
+    cl.remove_at(1)
+
+    assert len(cl) == 2
+    assert cl.get_candidates() == [1, 3]
+    assert cl._scores == [0.1, 0.3]
+    assert 2 not in cl._sources
+
+
+def test_remove_at_first_element():
+    cl = CandidateList("status_id")
+    cl.append(1, score=0.1, source="s1", source_group="g1")
+    cl.append(2, score=0.2, source="s2", source_group="g2")
+
+    cl.remove_at(0)
+
+    assert cl.get_candidates() == [2]
+    assert cl._scores == [0.2]
+
+
+def test_remove_at_last_element():
+    cl = CandidateList("status_id")
+    cl.append(1, score=0.1, source="s1", source_group="g1")
+    cl.append(2, score=0.2, source="s2", source_group="g2")
+
+    cl.remove_at(1)
+
+    assert cl.get_candidates() == [1]
+    assert cl._scores == [0.1]
+
+
+def test_remove_at_keeps_sources_for_duplicate_ids():
+    cl = CandidateList("status_id")
+    cl.append(1, score=0.1, source="s1", source_group="g1")
+    cl.append(1, score=0.2, source="s2", source_group="g2")  # duplicate id
+
+    cl.remove_at(0)  # Remove first occurrence
+
+    assert cl.get_candidates() == [1]
+    # Sources should still be present since id 1 still exists
+    assert 1 in cl._sources
+
+
+def test_remove_at_out_of_bounds_raises():
+    cl = CandidateList("status_id")
+    cl.append(1)
+
+    with pytest.raises(IndexError):
+        cl.remove_at(5)
+
+    with pytest.raises(IndexError):
+        cl.remove_at(-1)
