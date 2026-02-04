@@ -188,6 +188,9 @@ class CandidateListIterator:
         self.candidates = candidates
         self.index = 0
 
+    def __iter__(self):
+        return self
+
     def __next__(self) -> Candidate:
         if self.index < len(self.candidates):
             c = self.candidates[self.index]
