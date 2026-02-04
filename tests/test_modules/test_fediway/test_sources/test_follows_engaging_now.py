@@ -1,6 +1,6 @@
 import math
 import sys
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from types import ModuleType
 from unittest.mock import MagicMock
 
@@ -75,7 +75,7 @@ def test_collect_empty_results():
 
 def test_collect_returns_status_ids():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 3, now - timedelta(hours=1), 5.0),
         (102, 202, 2, now - timedelta(hours=2), 3.0),
@@ -90,7 +90,7 @@ def test_collect_returns_status_ids():
 
 def test_scoring_favors_more_engaged_follows():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 5, now, 1.0),  # 5 follows engaged
         (102, 202, 1, now, 1.0),  # 1 follow engaged
@@ -104,7 +104,7 @@ def test_scoring_favors_more_engaged_follows():
 
 def test_scoring_favors_recent_engagements():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 2, now - timedelta(hours=4), 1.0),  # older
         (102, 202, 2, now - timedelta(minutes=30), 1.0),  # fresher
@@ -118,7 +118,7 @@ def test_scoring_favors_recent_engagements():
 
 def test_scoring_favors_higher_engagement_weight():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 2, now, 10.0),  # high weight (reblogs/replies)
         (102, 202, 2, now, 1.0),  # low weight (just favs)
@@ -132,7 +132,7 @@ def test_scoring_favors_higher_engagement_weight():
 
 def test_diversity_limits_per_author():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     # Same author (201) has 4 posts
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 5, now, 1.0),
@@ -152,7 +152,7 @@ def test_diversity_limits_per_author():
 
 def test_diversity_allows_multiple_authors():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 3, now, 1.0),
         (102, 202, 3, now, 1.0),
@@ -169,7 +169,7 @@ def test_diversity_allows_multiple_authors():
 
 def test_respects_limit():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 5, now, 1.0),
         (102, 202, 4, now, 1.0),
@@ -206,7 +206,7 @@ def test_score_formula():
     mock_rw = MagicMock()
     source = FollowsEngagingNowSource(rw=mock_rw, account_id=1)
 
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     candidates = [
         (100, 200, 3, now - timedelta(hours=2), 5.0),
     ]
@@ -227,7 +227,7 @@ def test_score_formula():
 
 def test_handles_large_network():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     # Simulate 500 candidates from many authors
     candidates = [

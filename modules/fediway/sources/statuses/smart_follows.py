@@ -1,5 +1,5 @@
 import math
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlmodel import Session, text
 
@@ -83,7 +83,7 @@ class SmartFollowsSource(Source):
         ).fetchall()
 
     def _score_posts(self, posts, affinities, max_affinity):
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         scored = []
 
         for row in posts:

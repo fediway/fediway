@@ -1,5 +1,5 @@
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from types import ModuleType
 from unittest.mock import MagicMock
 
@@ -64,7 +64,7 @@ class TestCollaborativeFilteringSource:
 
     def test_collect_filters_followed_authors(self):
         mock_rw = MagicMock()
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         def mock_execute(query, params):
             query_str = str(query)
@@ -90,7 +90,7 @@ class TestCollaborativeFilteringSource:
 
     def test_collect_aggregates_multiple_engagements(self):
         mock_rw = MagicMock()
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         def mock_execute(query, params):
             query_str = str(query)
@@ -117,7 +117,7 @@ class TestCollaborativeFilteringSource:
 
     def test_diversity_limits_per_author(self):
         mock_rw = MagicMock()
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         def mock_execute(query, params):
             query_str = str(query)
@@ -146,7 +146,7 @@ class TestCollaborativeFilteringSource:
 
     def test_scoring_uses_similarity_and_recency(self):
         mock_rw = MagicMock()
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         def mock_execute(query, params):
             query_str = str(query)

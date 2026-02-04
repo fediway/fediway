@@ -1,5 +1,5 @@
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from types import ModuleType
 from unittest.mock import MagicMock
 
@@ -72,7 +72,7 @@ def test_collect_empty_affinities():
 
 def test_collect_returns_status_ids():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -102,7 +102,7 @@ def test_collect_returns_status_ids():
 
 def test_scoring_favors_high_affinity():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -131,7 +131,7 @@ def test_scoring_favors_high_affinity():
 
 def test_scoring_favors_recent_posts():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -159,7 +159,7 @@ def test_scoring_favors_recent_posts():
 
 def test_volume_penalty_applied():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -189,7 +189,7 @@ def test_volume_penalty_applied():
 
 def test_diversity_limits_per_author():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -223,7 +223,7 @@ def test_diversity_limits_per_author():
 
 def test_cold_start_equal_weights():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -251,7 +251,7 @@ def test_cold_start_equal_weights():
 
 def test_inferred_affinity_used():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -281,7 +281,7 @@ def test_inferred_affinity_used():
 
 def test_respects_limit():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)

@@ -1,5 +1,5 @@
 import math
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlmodel import Session, text
 
@@ -68,7 +68,7 @@ class TagAffinitySource(Source):
         ).fetchall()
 
     def _score_candidates(self, candidates, tag_affinities, max_affinity, followed_ids):
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         scored = []
 
         for row in candidates:

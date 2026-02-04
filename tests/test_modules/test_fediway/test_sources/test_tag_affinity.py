@@ -1,5 +1,5 @@
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from types import ModuleType
 from unittest.mock import MagicMock
 
@@ -72,7 +72,7 @@ def test_collect_empty_affinities():
 
 def test_collect_returns_status_ids():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -106,7 +106,7 @@ def test_collect_returns_status_ids():
 
 def test_in_network_penalty_applied():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -137,7 +137,7 @@ def test_in_network_penalty_applied():
 
 def test_diversity_limits_per_tag():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -171,7 +171,7 @@ def test_diversity_limits_per_tag():
 
 def test_diversity_limits_per_author():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -205,7 +205,7 @@ def test_diversity_limits_per_author():
 
 def test_inferred_affinity_used_as_fallback():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -234,7 +234,7 @@ def test_inferred_affinity_used_as_fallback():
 
 def test_direct_affinity_overrides_inferred():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)
@@ -267,7 +267,7 @@ def test_direct_affinity_overrides_inferred():
 
 def test_respects_limit():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def mock_execute(query, params):
         query_str = str(query)

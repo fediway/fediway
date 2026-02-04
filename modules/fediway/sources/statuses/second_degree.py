@@ -1,5 +1,5 @@
 import math
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlmodel import Session, text
 
@@ -41,7 +41,7 @@ class SecondDegreeSource(Source):
         ).fetchall()
 
     def _score_candidates(self, candidates, max_followed_by):
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         scored = []
 
         for row in candidates:

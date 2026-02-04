@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlmodel import Session, text
 
@@ -44,7 +44,7 @@ class CollaborativeFilteringSource(Source):
         return {row[0] for row in result.fetchall()}
 
     def _aggregate_scores(self, candidates):
-        now = datetime.now(UTC).replace(tzinfo=None)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         status_data = {}
 
         for row in candidates:

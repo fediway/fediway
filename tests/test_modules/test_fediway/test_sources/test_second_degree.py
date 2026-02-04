@@ -1,5 +1,5 @@
 import sys
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from types import ModuleType
 from unittest.mock import MagicMock
 
@@ -65,7 +65,7 @@ def test_collect_empty():
 
 def test_collect_returns_status_ids():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 5, now),  # status_id, author_id, followed_by_count, created_at
@@ -81,7 +81,7 @@ def test_collect_returns_status_ids():
 
 def test_scoring_favors_more_mutual_follows():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 10, now),
@@ -96,7 +96,7 @@ def test_scoring_favors_more_mutual_follows():
 
 def test_scoring_favors_recent_posts():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 5, now - timedelta(hours=24)),
@@ -111,7 +111,7 @@ def test_scoring_favors_recent_posts():
 
 def test_diversity_limits_per_author():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     mock_rw.execute.return_value.fetchall.return_value = [
         (101, 201, 10, now),
@@ -130,7 +130,7 @@ def test_diversity_limits_per_author():
 
 def test_respects_limit():
     mock_rw = MagicMock()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     mock_rw.execute.return_value.fetchall.return_value = [
         (100 + i, 200 + i, 10 - i, now - timedelta(minutes=i)) for i in range(10)
