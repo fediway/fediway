@@ -443,3 +443,52 @@ def test_remove_at_out_of_bounds_raises():
 
     with pytest.raises(IndexError):
         cl.remove_at(-1)
+
+
+def test_iteration_with_for_loop():
+    cl = CandidateList("status_id")
+    cl.append(1, score=0.9, source="s1", source_group="g1")
+    cl.append(2, score=0.8, source="s2", source_group="g2")
+    cl.append(3, score=0.7, source="s3", source_group="g3")
+
+    ids = [c.id for c in cl]
+
+    assert ids == [1, 2, 3]
+
+
+def test_iteration_yields_candidate_objects():
+    cl = CandidateList("status_id")
+    cl.append(100, score=0.5, source="src", source_group="grp")
+
+    for c in cl:
+        assert isinstance(c, Candidate)
+        assert c.id == 100
+        assert c.score == 0.5
+        assert c.sources == {("src", "grp")}
+
+
+def test_iteration_with_list_conversion():
+    cl = CandidateList("status_id")
+    cl.append(1)
+    cl.append(2)
+
+    candidates = list(cl)
+
+    assert len(candidates) == 2
+    assert all(isinstance(c, Candidate) for c in candidates)
+
+
+def test_iteration_empty_list():
+    cl = CandidateList("status_id")
+
+    result = list(cl)
+
+    assert result == []
+
+
+def test_iterator_is_iterable():
+    cl = CandidateList("status_id")
+    cl.append(1)
+
+    iterator = iter(cl)
+    assert iter(iterator) is iterator
