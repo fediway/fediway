@@ -51,8 +51,18 @@ def mock_home_config():
     return config
 
 
+@pytest.fixture
+def mock_sources():
+    return {
+        "in-network": [],
+        "discovery": [],
+        "trending": [],
+        "_fallback": [],
+    }
+
+
 @pytest.mark.asyncio
-async def test_feed_forward_returns_empty_on_empty_input(mock_home_config):
+async def test_feed_forward_returns_empty_on_empty_input(mock_home_config, mock_sources):
     """Verify forward() handles empty candidate list."""
     mock_algorithm_config = MagicMock()
     mock_algorithm_config.home = mock_home_config
@@ -60,7 +70,7 @@ async def test_feed_forward_returns_empty_on_empty_input(mock_home_config):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
         candidates = CandidateList("status_id")
 
         result = await feed.forward(candidates)
@@ -69,7 +79,7 @@ async def test_feed_forward_returns_empty_on_empty_input(mock_home_config):
 
 
 @pytest.mark.asyncio
-async def test_feed_forward_returns_candidates_not_none(mock_home_config):
+async def test_feed_forward_returns_candidates_not_none(mock_home_config, mock_sources):
     """Verify forward() always returns a CandidateList, never None."""
     mock_algorithm_config = MagicMock()
     mock_algorithm_config.home = mock_home_config
@@ -77,7 +87,7 @@ async def test_feed_forward_returns_candidates_not_none(mock_home_config):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
         candidates = CandidateList("status_id")
 
         result = await feed.forward(candidates)
@@ -234,7 +244,7 @@ async def test_feed_engine_flush_deletes_redis_state():
 
 
 @pytest.mark.asyncio
-async def test_feed_handles_none_weights_gracefully(mock_home_config):
+async def test_feed_handles_none_weights_gracefully(mock_home_config, mock_sources):
     """Verify that feed works when weights config is None."""
     mock_home_config.weights = None
     mock_algorithm_config = MagicMock()
@@ -243,7 +253,7 @@ async def test_feed_handles_none_weights_gracefully(mock_home_config):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
 
         candidates = CandidateList("status_id")
         for i in range(30):

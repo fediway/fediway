@@ -30,42 +30,42 @@ def mock_algorithm_config(mock_home_config):
     return config
 
 
-def test_home_feed_instantiation(mock_algorithm_config):
+@pytest.fixture
+def mock_sources():
+    return {
+        "in-network": [],
+        "discovery": [],
+        "trending": [],
+        "_fallback": [],
+    }
+
+
+def test_home_feed_instantiation(mock_algorithm_config, mock_sources):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
 
         assert feed.account_id == 123
         assert feed.entity == "status_id"
-        assert feed.languages == ["en"]
 
 
-def test_home_feed_with_languages(mock_algorithm_config):
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
-        from apps.api.feeds.home import HomeFeed
-
-        feed = HomeFeed(account_id=123, languages=["en", "de"])
-
-        assert feed.languages == ["en", "de"]
-
-
-def test_home_feed_get_min_candidates(mock_algorithm_config):
+def test_home_feed_get_min_candidates(mock_algorithm_config, mock_sources):
     mock_algorithm_config.home.settings.batch_size = 25
 
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
 
         assert feed.get_min_candidates() == 25
 
 
-def test_home_feed_group_weights(mock_algorithm_config):
+def test_home_feed_group_weights(mock_algorithm_config, mock_sources):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
         weights = feed._get_group_weights()
 
         assert weights["in-network"] == 0.5
@@ -74,13 +74,13 @@ def test_home_feed_group_weights(mock_algorithm_config):
         assert weights["fallback"] == 0.1
 
 
-def test_home_feed_group_weights_without_config_weights(mock_algorithm_config):
+def test_home_feed_group_weights_without_config_weights(mock_algorithm_config, mock_sources):
     mock_algorithm_config.home.weights = None
 
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
         weights = feed._get_group_weights()
 
         # Should use defaults
@@ -90,12 +90,12 @@ def test_home_feed_group_weights_without_config_weights(mock_algorithm_config):
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward(mock_algorithm_config):
+async def test_home_feed_forward(mock_algorithm_config, mock_sources):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed.candidates import CandidateList
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
 
         candidates = CandidateList("status_id")
         for i in range(50):
@@ -108,12 +108,12 @@ async def test_home_feed_forward(mock_algorithm_config):
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_unique(mock_algorithm_config):
+async def test_home_feed_forward_unique(mock_algorithm_config, mock_sources):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed.candidates import CandidateList
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
 
         candidates = CandidateList("status_id")
         # Add duplicates
@@ -128,12 +128,12 @@ async def test_home_feed_forward_unique(mock_algorithm_config):
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_empty(mock_algorithm_config):
+async def test_home_feed_forward_empty(mock_algorithm_config, mock_sources):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed.candidates import CandidateList
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
 
         candidates = CandidateList("status_id")
 
@@ -142,7 +142,7 @@ async def test_home_feed_forward_empty(mock_algorithm_config):
         assert len(result) == 0
 
 
-def test_home_feed_is_feed_subclass(mock_algorithm_config):
+def test_home_feed_is_feed_subclass(mock_algorithm_config, mock_sources):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed import Feed
@@ -150,45 +150,17 @@ def test_home_feed_is_feed_subclass(mock_algorithm_config):
         assert issubclass(HomeFeed, Feed)
 
 
-# Tests that require the actual sources module (may skip if dependencies missing)
-try:
-    from modules.fediway.sources.statuses import SmartFollowsSource  # noqa: F401
-
-    HAS_SOURCES = True
-except ImportError:
-    HAS_SOURCES = False
-
-
-@pytest.mark.skipif(not HAS_SOURCES, reason="Source dependencies not installed")
-def test_home_feed_sources_returns_dict(mock_algorithm_config):
+def test_home_feed_sources_returns_injected_dict(mock_algorithm_config, mock_sources):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        mock_rw = MagicMock()
-        mock_redis = MagicMock()
-        feed = HomeFeed(account_id=123, rw=mock_rw, redis=mock_redis)
+        feed = HomeFeed(account_id=123, sources=mock_sources)
 
         sources = feed.sources()
 
+        assert sources is mock_sources
         assert isinstance(sources, dict)
         assert "in-network" in sources
         assert "discovery" in sources
         assert "trending" in sources
         assert "_fallback" in sources
-
-
-@pytest.mark.skipif(not HAS_SOURCES, reason="Source dependencies not installed")
-def test_home_feed_sources_respects_enabled_flags(mock_algorithm_config):
-    mock_algorithm_config.home.sources.smart_follows.enabled = False
-    mock_algorithm_config.home.sources.follows_engaging.enabled = False
-
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
-        from apps.api.feeds.home import HomeFeed
-
-        mock_rw = MagicMock()
-        feed = HomeFeed(account_id=123, rw=mock_rw)
-
-        sources = feed.sources()
-
-        # In-network should be empty since both sources disabled
-        assert sources["in-network"] == []

@@ -55,6 +55,25 @@ def mock_suggestions_config():
     return config
 
 
+@pytest.fixture
+def mock_home_sources():
+    return {
+        "in-network": [],
+        "discovery": [],
+        "trending": [],
+        "_fallback": [],
+    }
+
+
+@pytest.fixture
+def mock_suggestions_sources():
+    return {
+        "social_proof": [],
+        "similar": [],
+        "popular": [],
+    }
+
+
 def _create_candidates_with_groups(
     entity: str, groups: dict[str, int], base_score: float = 1.0
 ) -> CandidateList:
@@ -83,7 +102,7 @@ def _get_group_from_candidate(candidate) -> str | None:
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_samples_according_to_weights(mock_home_config):
+async def test_home_feed_forward_samples_according_to_weights(mock_home_config, mock_home_sources):
     """Verify that forward() samples candidates roughly according to configured weights."""
     mock_algorithm_config = MagicMock()
     mock_algorithm_config.home = mock_home_config
@@ -91,7 +110,7 @@ async def test_home_feed_forward_samples_according_to_weights(mock_home_config):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_home_sources)
 
         candidates = _create_candidates_with_groups(
             "status_id",
@@ -117,7 +136,7 @@ async def test_home_feed_forward_samples_according_to_weights(mock_home_config):
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_removes_duplicates(mock_home_config):
+async def test_home_feed_forward_removes_duplicates(mock_home_config, mock_home_sources):
     """Verify that forward() removes duplicate candidate IDs."""
     mock_algorithm_config = MagicMock()
     mock_algorithm_config.home = mock_home_config
@@ -125,7 +144,7 @@ async def test_home_feed_forward_removes_duplicates(mock_home_config):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_home_sources)
 
         candidates = CandidateList("status_id")
         for i in range(10):
@@ -140,7 +159,9 @@ async def test_home_feed_forward_removes_duplicates(mock_home_config):
 
 
 @pytest.mark.asyncio
-async def test_suggestions_feed_forward_samples_according_to_weights(mock_suggestions_config):
+async def test_suggestions_feed_forward_samples_according_to_weights(
+    mock_suggestions_config, mock_suggestions_sources
+):
     """Verify that SuggestionsFeed samples according to configured weights."""
     mock_algorithm_config = MagicMock()
     mock_algorithm_config.suggestions = mock_suggestions_config
@@ -148,7 +169,7 @@ async def test_suggestions_feed_forward_samples_according_to_weights(mock_sugges
     with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
 
-        feed = SuggestionsFeed(account_id=123)
+        feed = SuggestionsFeed(account_id=123, sources=mock_suggestions_sources)
 
         candidates = _create_candidates_with_groups(
             "account_id",
@@ -174,7 +195,7 @@ async def test_suggestions_feed_forward_samples_according_to_weights(mock_sugges
 
 
 @pytest.mark.asyncio
-async def test_feed_forward_handles_insufficient_candidates(mock_home_config):
+async def test_feed_forward_handles_insufficient_candidates(mock_home_config, mock_home_sources):
     """Verify that forward() handles fewer candidates than batch_size."""
     mock_algorithm_config = MagicMock()
     mock_algorithm_config.home = mock_home_config
@@ -183,7 +204,7 @@ async def test_feed_forward_handles_insufficient_candidates(mock_home_config):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_home_sources)
 
         candidates = _create_candidates_with_groups(
             "status_id",
@@ -196,7 +217,7 @@ async def test_feed_forward_handles_insufficient_candidates(mock_home_config):
 
 
 @pytest.mark.asyncio
-async def test_feed_forward_handles_single_group(mock_home_config):
+async def test_feed_forward_handles_single_group(mock_home_config, mock_home_sources):
     """Verify that forward() works when only one group has candidates."""
     mock_algorithm_config = MagicMock()
     mock_algorithm_config.home = mock_home_config
@@ -204,7 +225,7 @@ async def test_feed_forward_handles_single_group(mock_home_config):
     with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
         from apps.api.feeds.home import HomeFeed
 
-        feed = HomeFeed(account_id=123)
+        feed = HomeFeed(account_id=123, sources=mock_home_sources)
 
         candidates = _create_candidates_with_groups(
             "status_id",
@@ -217,73 +238,3 @@ async def test_feed_forward_handles_single_group(mock_home_config):
         for i in range(len(results)):
             r = results[i]
             assert any(g == "in-network" for _, g in r.sources)
-
-
-@pytest.mark.asyncio
-async def test_suggestions_feed_sources_creates_real_sources(mock_suggestions_config):
-    """Verify that sources() creates actual source instances with correct config."""
-    mock_algorithm_config = MagicMock()
-    mock_algorithm_config.suggestions = mock_suggestions_config
-
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
-        from apps.api.feeds.suggestions import SuggestionsFeed
-        from modules.fediway.sources.accounts import (
-            MutualFollowsSource,
-            PopularAccountsSource,
-            SimilarInterestsSource,
-        )
-
-        mock_rw = MagicMock()
-        feed = SuggestionsFeed(account_id=123, rw=mock_rw)
-
-        sources = feed.sources()
-
-        assert len(sources["social_proof"]) == 1
-        assert len(sources["similar"]) == 1
-        assert len(sources["popular"]) == 1
-
-        social_source, social_limit = sources["social_proof"][0]
-        assert isinstance(social_source, MutualFollowsSource)
-        assert social_source.min_mutual_follows == 2
-
-        similar_source, similar_limit = sources["similar"][0]
-        assert isinstance(similar_source, SimilarInterestsSource)
-        assert similar_source.min_tag_overlap == 3
-
-        popular_source, popular_limit = sources["popular"][0]
-        assert isinstance(popular_source, PopularAccountsSource)
-        assert popular_source.min_followers == 10
-        assert popular_source.local_only is True
-
-
-@pytest.mark.asyncio
-async def test_suggestions_feed_sources_disabled_returns_empty():
-    """Verify that disabled sources are not included."""
-    mock_config = MagicMock()
-    mock_config.weights = MagicMock()
-    mock_config.weights.social_proof = 50
-    mock_config.weights.similar_interests = 30
-    mock_config.weights.popular = 20
-    mock_config.settings = MagicMock()
-    mock_config.settings.max_results = 40
-    mock_config.settings.exclude_following = True
-    mock_config.sources = MagicMock()
-    mock_config.sources.social_proof.enabled = False
-    mock_config.sources.similar_interests.enabled = True
-    mock_config.sources.similar_interests.min_tag_overlap = 3
-    mock_config.sources.popular.enabled = False
-
-    mock_algorithm_config = MagicMock()
-    mock_algorithm_config.suggestions = mock_config
-
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
-        from apps.api.feeds.suggestions import SuggestionsFeed
-
-        mock_rw = MagicMock()
-        feed = SuggestionsFeed(account_id=123, rw=mock_rw)
-
-        sources = feed.sources()
-
-        assert sources["social_proof"] == []
-        assert len(sources["similar"]) == 1
-        assert sources["popular"] == []

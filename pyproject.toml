@@ -65,8 +65,10 @@ orbit = [
 dev = [
     "pytest>=9.0",
     "pytest-asyncio>=1.3",
+    "pytest-cov>=7.0",
     "ruff>=0.9",
     "pre-commit>=4.0",
+    "fediway[vectors,streaming]",
 ]
 # Convenience groups
 full = [

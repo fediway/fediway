@@ -1060,9 +1060,14 @@ aws = [
     { name = "boto3" },
 ]
 dev = [
+    { name = "confluent-kafka" },
+    { name = "faststream" },
+    { name = "kafka-python" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "qdrant-client" },
     { name = "ruff" },
 ]
 embeddings = [
@@ -1126,6 +1131,7 @@ requires-dist = [
     { name = "faststream", marker = "extra == 'streaming'", specifier = ">=0.5" },
     { name = "feast", extras = ["redis", "postgres"], marker = "extra == 'features'", specifier = ">=0.48" },
     { name = "fediway", extras = ["vectors", "embeddings", "streaming", "ml", "features", "geo", "aws", "orbit"], marker = "extra == 'full'" },
+    { name = "fediway", extras = ["vectors", "streaming"], marker = "extra == 'dev'" },
     { name = "kafka-python", marker = "extra == 'streaming'", specifier = ">=2.0" },
     { name = "lightgbm", marker = "extra == 'ml'", specifier = ">=4.6" },
     { name = "loguru", specifier = ">=0.7" },
@@ -1139,6 +1145,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.8" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.3" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "qdrant-client", marker = "extra == 'vectors'", specifier = ">=1.16" },
     { name = "redis", specifier = ">=4.5" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.9" },

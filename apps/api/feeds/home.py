@@ -1,6 +1,7 @@
 from config.algorithm import algorithm_config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
+from modules.fediway.sources import Source
 
 
 class HomeFeed(Feed):
@@ -9,110 +10,16 @@ class HomeFeed(Feed):
     def __init__(
         self,
         account_id: int,
-        rw=None,
-        redis=None,
+        sources: dict[str, list[tuple[Source, int]]],
         feature_service=None,
-        languages: list[str] | None = None,
     ):
         super().__init__(feature_service=feature_service)
         self.account_id = account_id
-        self.rw = rw
-        self._redis = redis
-        self.languages = languages or ["en"]
+        self._sources = sources
         self._config = algorithm_config.home
 
     def sources(self) -> dict[str, list[tuple]]:
-        from modules.fediway.sources.statuses import (
-            FollowsEngagingNowSource,
-            SecondDegreeSource,
-            SmartFollowsSource,
-            TagAffinitySource,
-            TrendingStatusesSource,
-        )
-
-        cfg = self._config
-        max_per_source = 50
-        fallback_per_source = 25
-
-        sources = {
-            "in-network": [],
-            "discovery": [],
-            "trending": [],
-            "_fallback": [],
-        }
-
-        if cfg.sources.smart_follows.enabled:
-            sources["in-network"].append(
-                (
-                    SmartFollowsSource(
-                        rw=self.rw,
-                        account_id=self.account_id,
-                        max_per_author=cfg.settings.max_per_author,
-                    ),
-                    max_per_source,
-                )
-            )
-
-        if cfg.sources.follows_engaging.enabled:
-            sources["in-network"].append(
-                (
-                    FollowsEngagingNowSource(
-                        rw=self.rw,
-                        account_id=self.account_id,
-                    ),
-                    max_per_source,
-                )
-            )
-
-        if cfg.sources.tag_affinity.enabled:
-            sources["discovery"].append(
-                (
-                    TagAffinitySource(
-                        rw=self.rw,
-                        account_id=self.account_id,
-                    ),
-                    max_per_source,
-                )
-            )
-
-        if cfg.sources.second_degree.enabled:
-            sources["discovery"].append(
-                (
-                    SecondDegreeSource(
-                        rw=self.rw,
-                        account_id=self.account_id,
-                    ),
-                    max_per_source,
-                )
-            )
-
-        if cfg.sources.trending.enabled:
-            for lang in self.languages:
-                sources["trending"].append(
-                    (
-                        TrendingStatusesSource(
-                            r=self._redis,
-                            rw=self.rw,
-                            language=lang,
-                        ),
-                        max_per_source,
-                    )
-                )
-
-        for lang in self.languages:
-            sources["_fallback"].append(
-                (
-                    TrendingStatusesSource(
-                        r=self._redis,
-                        rw=self.rw,
-                        language=lang,
-                        top_n=200,
-                    ),
-                    fallback_per_source,
-                )
-            )
-
-        return sources
+        return self._sources
 
     def get_min_candidates(self) -> int:
         return self._config.settings.batch_size

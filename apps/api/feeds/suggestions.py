@@ -1,76 +1,24 @@
 from config.algorithm import algorithm_config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
+from modules.fediway.sources import Source
 
 
 class SuggestionsFeed(Feed):
     entity = "account_id"
 
-    def __init__(self, account_id: int, rw=None):
+    def __init__(
+        self,
+        account_id: int,
+        sources: dict[str, list[tuple[Source, int]]],
+    ):
         super().__init__()
         self.account_id = account_id
-        self.rw = rw
+        self._sources = sources
         self._config = algorithm_config.suggestions
 
     def sources(self) -> dict[str, list[tuple]]:
-        from modules.fediway.sources.accounts import (
-            MutualFollowsSource,
-            PopularAccountsSource,
-            SimilarInterestsSource,
-        )
-
-        cfg = self._config
-        sources_cfg = cfg.sources
-        max_per_source = 25
-
-        sources = {
-            "social_proof": [],
-            "similar": [],
-            "popular": [],
-        }
-
-        if sources_cfg.social_proof.enabled:
-            sources["social_proof"].append(
-                (
-                    MutualFollowsSource(
-                        rw=self.rw,
-                        account_id=self.account_id,
-                        min_mutual_follows=sources_cfg.social_proof.min_mutual_follows,
-                        exclude_following=cfg.settings.exclude_following,
-                    ),
-                    max_per_source,
-                )
-            )
-
-        if sources_cfg.similar_interests.enabled:
-            sources["similar"].append(
-                (
-                    SimilarInterestsSource(
-                        rw=self.rw,
-                        account_id=self.account_id,
-                        min_tag_overlap=sources_cfg.similar_interests.min_tag_overlap,
-                        exclude_following=cfg.settings.exclude_following,
-                    ),
-                    max_per_source,
-                )
-            )
-
-        if sources_cfg.popular.enabled:
-            sources["popular"].append(
-                (
-                    PopularAccountsSource(
-                        rw=self.rw,
-                        account_id=self.account_id,
-                        min_followers=sources_cfg.popular.min_followers,
-                        local_only=sources_cfg.popular.local_only,
-                        exclude_following=cfg.settings.exclude_following,
-                        min_account_age_days=cfg.settings.min_account_age_days,
-                    ),
-                    max_per_source,
-                )
-            )
-
-        return sources
+        return self._sources
 
     def get_min_candidates(self) -> int:
         return 5

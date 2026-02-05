@@ -1,39 +1,22 @@
 from config.algorithm import algorithm_config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
+from modules.fediway.sources import Source
 
 
 class TrendingStatusesFeed(Feed):
     entity = "status_id"
 
-    def __init__(self, redis=None, rw=None, languages: list[str] | None = None):
+    def __init__(
+        self,
+        sources: dict[str, list[tuple[Source, int]]],
+    ):
         super().__init__()
-        self._redis = redis
-        self.rw = rw
-        self.languages = languages or ["en"]
+        self._sources = sources
         self._config = algorithm_config.trends.statuses
 
     def sources(self) -> dict[str, list[tuple]]:
-        from modules.fediway.sources.statuses import TrendingStatusesSource
-
-        cfg = self._config
-        sources = {"trending": []}
-
-        for lang in self.languages:
-            sources["trending"].append(
-                (
-                    TrendingStatusesSource(
-                        r=self._redis,
-                        rw=self.rw,
-                        language=lang,
-                        top_n=200,
-                        max_per_author=cfg.settings.max_per_author,
-                    ),
-                    50,
-                )
-            )
-
-        return sources
+        return self._sources
 
     def get_min_candidates(self) -> int:
         return 5

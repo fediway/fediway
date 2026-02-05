@@ -156,9 +156,8 @@ def test_sources_config_group_weights():
     assert abs(weights.get("trending", 0) - 0.1) < 0.01
 
 
-def test_mvp_sources_includes_fallback_weight():
-    """Verify MVPSources includes fallback group weight for WeightedGroupSampler."""
-    # Can't fully test without all dependencies, but verify the pattern exists
+def test_home_sources_includes_fallback_group():
+    """Verify get_home_sources includes fallback group for WeightedGroupSampler."""
     with open("apps/api/dependencies/sources/statuses.py") as f:
         content = f.read()
-        assert 'weights["fallback"]' in content, "MVPSources should include fallback weight"
+        assert '"_fallback"' in content, "Home sources should include _fallback group"
