@@ -1,3 +1,5 @@
+from typing import Any
+
 from .api import ApiConfig
 from .app import AppConfig
 from .base import BaseConfig, FilesConfig, TasksConfig
@@ -42,7 +44,7 @@ class config:
     db = postgres  # Old code may use config.db
 
     @classproperty
-    def fastapi_kwargs(cls) -> dict[str, any]:
+    def fastapi_kwargs(cls) -> dict[str, Any]:
         return {
             "docs_url": cls.api.api_docs_url,
             "debug": cls.app.debug,

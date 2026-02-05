@@ -89,7 +89,8 @@ class WeightedGroupSampler(Sampler):
         random.shuffle(groups)
         weights = [self.weights[g] for g in groups]
 
-        assert len(groups) > 0
+        if len(groups) == 0:
+            raise ValueError("No matching groups found in candidates for configured weights")
 
         probs = np.array(weights) / sum(weights)
         target_group = np.random.choice(groups, p=probs)

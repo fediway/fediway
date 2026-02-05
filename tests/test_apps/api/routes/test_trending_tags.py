@@ -41,9 +41,10 @@ def test_trending_tags_offset_zero_flushes(client, mock_feed_engine):
     assert call_kwargs[1]["flush"] is True
 
 
-def test_trending_tags_no_link_header_when_empty(client):
+def test_trending_tags_sets_link_header(client):
     response = client.get("/api/v1/trends/tags")
-    assert "link" not in response.headers
+    assert "link" in response.headers
+    assert "offset=" in response.headers["link"]
 
 
 def test_trending_tags_uses_request_state_key(client, mock_feed_engine):

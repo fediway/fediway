@@ -313,7 +313,7 @@ def test_iadd_raises_on_mismatched_types():
     cl1 = CandidateList("status_id")
     cl1.append(1)
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(TypeError, match="Cannot add str to CandidateList"):
         cl1 += "not_a_candidate_list"
 
 

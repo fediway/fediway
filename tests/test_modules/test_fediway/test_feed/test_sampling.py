@@ -108,3 +108,16 @@ def test_weighted_group_sampler_tracks_weights():
     assert sampler.get_params() == {"weights": {"in-network": 0.5, "trending": 0.5}}
     assert sampler.id == "weighted_group_sampler"
     assert sampler.display_name == "Weighted Group"
+
+
+def test_weighted_group_sampler_raises_on_no_matching_groups():
+    from modules.fediway.feed.candidates import CandidateList
+
+    sampler = WeightedGroupSampler(weights={"in-network": 0.5, "trending": 0.5})
+
+    candidates = CandidateList("status_id")
+    candidates.append(1, source="source1", source_group="other_group")
+    candidates.append(2, source="source2", source_group="unknown")
+
+    with pytest.raises(ValueError, match="No matching groups found"):
+        sampler.sample(candidates)

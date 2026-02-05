@@ -35,10 +35,10 @@ async def tag_trends(
 
     tag_ids = [r.id for r in results]
 
+    set_next_link(request, response, {"offset": offset + len(results)})
+
     if not tag_ids:
         return []
-
-    set_next_link(request, response, {"offset": offset + len(results)})
 
     tags = db.exec(select(Tag).where(Tag.id.in_(tag_ids))).all()
 

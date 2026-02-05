@@ -99,7 +99,8 @@ class CandidateList:
         return set()
 
     def __iadd__(self, other):
-        assert isinstance(other, CandidateList)
+        if not isinstance(other, CandidateList):
+            raise TypeError(f"Cannot add {type(other).__name__} to CandidateList")
 
         self._ids += other._ids
         self._scores += other._scores

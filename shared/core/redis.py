@@ -7,6 +7,8 @@ pool = ConnectionPool(
     port=config.redis.redis_port,
     db=config.redis.redis_name,
     password=config.redis.redis_pass,
+    socket_timeout=config.redis.redis_socket_timeout,
+    socket_connect_timeout=config.redis.redis_socket_connect_timeout,
 )
 
 

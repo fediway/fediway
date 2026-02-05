@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import ARRAY, Column, Integer
 from sqlmodel import Field, Relationship, SQLModel
@@ -52,7 +52,7 @@ class Status(SQLModel, table=True):
     language: str | None = Field()
     account_id: int = Field(nullable=False, foreign_key="accounts.id")
     in_reply_to_account_id: int | None = Field()
-    ordered_media_attachment_ids: List[int] = Field(sa_column=Column(ARRAY(Integer)))
+    ordered_media_attachment_ids: list[int] = Field(sa_column=Column(ARRAY(Integer)))
 
     favourites: list[Favourite] = Relationship(back_populates="status")
     account: Account | None = Relationship(back_populates="statuses")

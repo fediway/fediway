@@ -27,7 +27,11 @@ class CommunityBasedRecommendationsSource(Source):
         return self.r.get("orbit:version")
 
     def collect(self, limit: int):
-        version = self._fetch_embeddings_version().decode("utf8")
+        version_bytes = self._fetch_embeddings_version()
+        if version_bytes is None:
+            return
+
+        version = version_bytes.decode("utf8")
 
         try:
             results = self.client.query_points(
