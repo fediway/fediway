@@ -72,8 +72,7 @@ class HomeSources(BaseModel):
 class HomeTimelineConfig(BaseModel):
     """Configuration for /api/v1/timelines/home."""
 
-    preset: str = "balanced"
-    weights: HomeWeights | None = None
+    weights: HomeWeights = Field(default_factory=HomeWeights)
     settings: HomeSettings = Field(default_factory=HomeSettings)
     ranking: RankingConfig = Field(default_factory=RankingConfig)
     sources: HomeSources = Field(default_factory=HomeSources)
@@ -111,7 +110,6 @@ class TrendingStatusesSettings(BaseModel):
 class TrendingStatusesConfig(BaseModel):
     """Configuration for /api/v1/trends/statuses."""
 
-    preset: str = "viral"
     settings: TrendingStatusesSettings = Field(default_factory=TrendingStatusesSettings)
     scoring: TrendingScoringConfig = Field(default_factory=TrendingScoringConfig)
     filters: TrendingFiltersConfig = Field(default_factory=TrendingFiltersConfig)
@@ -144,7 +142,6 @@ class TrendingTagsSettings(BaseModel):
 class TrendingTagsConfig(BaseModel):
     """Configuration for /api/v1/trends/tags."""
 
-    preset: str = "default"
     settings: TrendingTagsSettings = Field(default_factory=TrendingTagsSettings)
     scoring: TrendingTagsScoringConfig = Field(default_factory=TrendingTagsScoringConfig)
     filters: TrendingTagsFiltersConfig = Field(default_factory=TrendingTagsFiltersConfig)
@@ -215,9 +212,8 @@ class SuggestionsSourcesConfig(BaseModel):
 class SuggestionsConfig(BaseModel):
     """Configuration for /api/v2/suggestions."""
 
-    preset: str = "balanced"
     settings: SuggestionsSettings = Field(default_factory=SuggestionsSettings)
-    weights: SuggestionsWeights | None = None
+    weights: SuggestionsWeights = Field(default_factory=SuggestionsWeights)
     sources: SuggestionsSourcesConfig = Field(default_factory=SuggestionsSourcesConfig)
 
 

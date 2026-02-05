@@ -1,7 +1,7 @@
 """
 TOML configuration loader for fediway algorithms.
 
-Handles loading fediway.toml, merging with presets, and validation.
+Handles loading fediway.toml and validation.
 """
 
 from pathlib import Path
@@ -17,13 +17,6 @@ from .schema import (
     TrendingStatusesConfig,
     TrendingTagsConfig,
 )
-
-PRESETS_DIR = Path(__file__).parent / "presets"
-
-HOME_PRESETS = ["balanced", "discovery", "local", "chronological"]
-TRENDING_STATUSES_PRESETS = ["viral", "local", "curated"]
-TRENDING_TAGS_PRESETS = ["default", "local"]
-SUGGESTIONS_PRESETS = ["balanced", "similar", "popular"]
 
 
 class ConfigError(Exception):
@@ -45,78 +38,6 @@ class ConfigError(Exception):
         return "\n".join(lines)
 
 
-def load_preset(preset_type: str, preset_name: str) -> dict[str, Any]:
-    """Load a preset TOML file."""
-    preset_file = PRESETS_DIR / f"{preset_type}_{preset_name}.toml"
-
-    if not preset_file.exists():
-        valid = _get_valid_presets(preset_type)
-        raise ConfigError(
-            f"Unknown preset '{preset_name}'",
-            path="*.preset",
-            hint=f"Valid presets: {', '.join(valid)}",
-        )
-
-    with open(preset_file, "rb") as f:
-        return tomllib.load(f)
-
-
-def _get_valid_presets(preset_type: str) -> list[str]:
-    """Get valid preset names for a type."""
-    if preset_type == "home":
-        return HOME_PRESETS
-    elif preset_type == "trending":
-        return TRENDING_STATUSES_PRESETS
-    elif preset_type == "tags":
-        return TRENDING_TAGS_PRESETS
-    elif preset_type == "suggestions":
-        return SUGGESTIONS_PRESETS
-    return []
-
-
-def deep_merge(base: dict, override: dict) -> dict:
-    """Deep merge two dicts, with override taking precedence."""
-    result = base.copy()
-
-    for key, value in override.items():
-        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = deep_merge(result[key], value)
-        else:
-            result[key] = value
-
-    return result
-
-
-def _apply_home_preset(config: dict) -> dict:
-    """Apply preset to home timeline config."""
-    preset_name = config.get("preset", "balanced")
-    if preset_name == "none":
-        return config
-
-    preset = load_preset("home", preset_name)
-    return deep_merge(preset, config)
-
-
-def _apply_trending_statuses_preset(config: dict) -> dict:
-    """Apply preset to trending statuses config."""
-    preset_name = config.get("preset", "viral")
-    if preset_name == "none":
-        return config
-
-    preset = load_preset("trending", preset_name)
-    return deep_merge(preset, config)
-
-
-def _apply_suggestions_preset(config: dict) -> dict:
-    """Apply preset to suggestions config."""
-    preset_name = config.get("preset", "balanced")
-    if preset_name == "none":
-        return config
-
-    preset = load_preset("suggestions", preset_name)
-    return deep_merge(preset, config)
-
-
 def load_toml_config(config_path: Path | None = None) -> FediwayTomlConfig:
     """
     Load and validate fediway.toml configuration.
@@ -133,10 +54,8 @@ def load_toml_config(config_path: Path | None = None) -> FediwayTomlConfig:
     if config_path is None:
         config_path = Path("fediway.toml")
 
-    # Start with empty config (will use defaults)
     raw_config: dict[str, Any] = {}
 
-    # Load TOML if exists
     if config_path.exists():
         try:
             with open(config_path, "rb") as f:
@@ -144,19 +63,6 @@ def load_toml_config(config_path: Path | None = None) -> FediwayTomlConfig:
         except tomllib.TOMLDecodeError as e:
             raise ConfigError(f"Invalid TOML syntax: {e}")
 
-    # Apply presets to each section
-    if "timelines" in raw_config and "home" in raw_config["timelines"]:
-        raw_config["timelines"]["home"] = _apply_home_preset(raw_config["timelines"]["home"])
-
-    if "trends" in raw_config and "statuses" in raw_config["trends"]:
-        raw_config["trends"]["statuses"] = _apply_trending_statuses_preset(
-            raw_config["trends"]["statuses"]
-        )
-
-    if "suggestions" in raw_config:
-        raw_config["suggestions"] = _apply_suggestions_preset(raw_config["suggestions"])
-
-    # Validate with Pydantic
     try:
         return FediwayTomlConfig(**raw_config)
     except ValidationError as e:

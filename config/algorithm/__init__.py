@@ -8,7 +8,7 @@ Usage:
 
     # Access home timeline config
     home = algorithm_config.home
-    print(home.preset)  # "balanced"
+    print(home.weights.in_network)  # 50
     print(home.settings.max_per_author)  # 3
 
     # Access trending config
