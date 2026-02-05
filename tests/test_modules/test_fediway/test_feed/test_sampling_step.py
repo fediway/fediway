@@ -4,7 +4,7 @@ import pytest
 from modules.fediway.feed import CandidateList, Features
 from modules.fediway.feed.sampling import TopKSampler
 from modules.fediway.feed.steps import SamplingStep
-from modules.fediway.heuristics import DiversifyHeuristic
+from modules.fediway.heuristics import DiversityHeuristic
 
 
 class MockFeatureService(Features):
@@ -31,7 +31,7 @@ def mock_sampler():
 
 @pytest.fixture
 def mock_heuristic():
-    return DiversifyHeuristic(by="status:author_id", penalty=0.1)
+    return DiversityHeuristic(by="status:author_id", penalty=0.1)
 
 
 @pytest.fixture
@@ -131,7 +131,7 @@ def test_get_params(mock_sampler, mock_feature_service, mock_heuristic):
     assert params["n"] == 5
     assert params["unique"] is False
     assert len(params["heuristics"]) == 1
-    assert params["heuristics"][0]["name"] == "diversify_heuristic"
+    assert params["heuristics"][0]["name"] == "diversity_heuristic"
     assert params["sampler"]["name"] == "top_k_sampler"
 
 

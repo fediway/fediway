@@ -62,7 +62,7 @@ def mock_sources():
 
 
 @pytest.mark.asyncio
-async def test_feed_forward_returns_empty_on_empty_input(mock_home_config, mock_sources):
+async def test_feed_process_returns_empty_on_empty_input(mock_home_config, mock_sources):
     """Verify forward() handles empty candidate list."""
     mock_config = MagicMock()
     mock_config.feeds.timelines.home = mock_home_config
@@ -73,13 +73,13 @@ async def test_feed_forward_returns_empty_on_empty_input(mock_home_config, mock_
         feed = HomeFeed(account_id=123, sources=mock_sources)
         candidates = CandidateList("status_id")
 
-        result = await feed.forward(candidates)
+        result = await feed.process(candidates)
 
         assert len(result) == 0
 
 
 @pytest.mark.asyncio
-async def test_feed_forward_returns_candidates_not_none(mock_home_config, mock_sources):
+async def test_feed_process_returns_candidates_not_none(mock_home_config, mock_sources):
     """Verify forward() always returns a CandidateList, never None."""
     mock_config = MagicMock()
     mock_config.feeds.timelines.home = mock_home_config
@@ -90,7 +90,7 @@ async def test_feed_forward_returns_candidates_not_none(mock_home_config, mock_s
         feed = HomeFeed(account_id=123, sources=mock_sources)
         candidates = CandidateList("status_id")
 
-        result = await feed.forward(candidates)
+        result = await feed.process(candidates)
 
         assert result is not None
         assert isinstance(result, CandidateList)
@@ -113,7 +113,7 @@ async def test_feed_base_handles_source_failure_gracefully():
                 "failing": [(self._failing_source, 10)],
             }
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             return candidates
 
     feed = TestFeed()
@@ -140,7 +140,7 @@ async def test_feed_continues_with_remaining_sources_on_partial_failure():
                 "working": [(WorkingSource(), 10)],
             }
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             return candidates
 
     feed = TestFeed()
@@ -161,7 +161,7 @@ async def test_feed_engine_state_load_handles_invalid_json():
         def sources(self):
             return {"test": [(WorkingSource(), 10)]}
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             return candidates
 
     mock_redis = MagicMock()
@@ -192,7 +192,7 @@ async def test_feed_engine_state_save_handles_redis_failure():
         def sources(self):
             return {"test": [(WorkingSource(), 10)]}
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             return candidates
 
     mock_redis = MagicMock()
@@ -224,7 +224,7 @@ async def test_feed_engine_flush_deletes_redis_state():
         def sources(self):
             return {"test": [(WorkingSource(), 10)]}
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             return candidates
 
     mock_redis = MagicMock()
@@ -259,6 +259,6 @@ async def test_feed_handles_none_weights_gracefully(mock_home_config, mock_sourc
         for i in range(30):
             candidates.append(i, source="test", source_group="in-network")
 
-        result = await feed.forward(candidates)
+        result = await feed.process(candidates)
 
         assert len(result) == 20

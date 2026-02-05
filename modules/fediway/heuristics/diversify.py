@@ -3,7 +3,7 @@ import numpy as np
 from .base import Heuristic
 
 
-class DiversifyHeuristic(Heuristic):
+class DiversityHeuristic(Heuristic):
     """Penalize candidates that share attribute with previously seen items."""
 
     _tracked_params = ["by", "penalty"]

@@ -20,11 +20,9 @@ class Source:
         # Only skip validation if THIS class explicitly sets _skip_params_validation
         if "_skip_params_validation" in cls.__dict__ and cls._skip_params_validation:
             return
+        # Default to empty list if not defined
         if "_tracked_params" not in cls.__dict__:
-            raise TypeError(
-                f"{cls.__name__} must define _tracked_params. "
-                f"Use empty list [] if no params to track."
-            )
+            cls._tracked_params = []
 
     def fallback(self, source: "Source", threshold: float | None = None) -> "Source":
         self._fallback_source = source

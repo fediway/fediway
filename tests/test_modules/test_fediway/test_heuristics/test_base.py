@@ -1,13 +1,13 @@
-import pytest
-
 from modules.fediway.heuristics.base import Heuristic
 
 
-def test_heuristic_without_tracked_params_raises():
-    with pytest.raises(TypeError, match="must define _tracked_params"):
+def test_heuristic_without_tracked_params_defaults_to_empty():
+    class SimpleHeuristic(Heuristic):
+        pass
 
-        class BadHeuristic(Heuristic):
-            pass
+    heuristic = SimpleHeuristic()
+    assert heuristic._tracked_params == []
+    assert heuristic.get_params() == {}
 
 
 def test_heuristic_with_empty_tracked_params_succeeds():

@@ -14,11 +14,9 @@ class Ranker:
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
+        # Default to empty list if not defined
         if "_tracked_params" not in cls.__dict__:
-            raise TypeError(
-                f"{cls.__name__} must define _tracked_params. "
-                f"Use empty list [] if no params to track."
-            )
+            cls._tracked_params = []
 
     @property
     def id(self) -> str:

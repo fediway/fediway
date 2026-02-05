@@ -37,7 +37,7 @@ class HomeFeed(Feed):
             "fallback": 0.1,
         }
 
-    async def forward(self, candidates: CandidateList) -> CandidateList:
+    async def process(self, candidates: CandidateList) -> CandidateList:
         cfg = self._config
 
         candidates = self.unique(candidates)

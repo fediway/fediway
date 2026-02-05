@@ -1,2 +1,2 @@
 from .base import Heuristic
-from .diversify import DiversifyHeuristic
+from .diversify import DiversityHeuristic

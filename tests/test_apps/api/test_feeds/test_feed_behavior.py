@@ -102,7 +102,7 @@ def _get_group_from_candidate(candidate) -> str | None:
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_samples_according_to_weights(mock_home_config, mock_home_sources):
+async def test_home_feed_process_samples_according_to_weights(mock_home_config, mock_home_sources):
     """Verify that forward() samples candidates roughly according to configured weights."""
     mock_config = MagicMock()
     mock_config.feeds.timelines.home = mock_home_config
@@ -117,7 +117,7 @@ async def test_home_feed_forward_samples_according_to_weights(mock_home_config, 
             {"in-network": 100, "discovery": 100, "trending": 100},
         )
 
-        results = await feed.forward(candidates)
+        results = await feed.process(candidates)
         group_counts = Counter()
         for i in range(len(results)):
             group = _get_group_from_candidate(results[i])
@@ -136,7 +136,7 @@ async def test_home_feed_forward_samples_according_to_weights(mock_home_config, 
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_removes_duplicates(mock_home_config, mock_home_sources):
+async def test_home_feed_process_removes_duplicates(mock_home_config, mock_home_sources):
     """Verify that forward() removes duplicate candidate IDs."""
     mock_config = MagicMock()
     mock_config.feeds.timelines.home = mock_home_config
@@ -152,14 +152,14 @@ async def test_home_feed_forward_removes_duplicates(mock_home_config, mock_home_
             candidates.append(i, source="s2", source_group="discovery")
             candidates.append(i, source="s3", source_group="trending")
 
-        results = await feed.forward(candidates)
+        results = await feed.process(candidates)
 
         result_ids = [results[i].id for i in range(len(results))]
         assert len(result_ids) == len(set(result_ids))
 
 
 @pytest.mark.asyncio
-async def test_suggestions_feed_forward_samples_according_to_weights(
+async def test_suggestions_feed_process_samples_according_to_weights(
     mock_suggestions_config, mock_suggestions_sources
 ):
     """Verify that SuggestionsFeed samples according to configured weights."""
@@ -176,7 +176,7 @@ async def test_suggestions_feed_forward_samples_according_to_weights(
             {"social_proof": 100, "similar": 100, "popular": 100},
         )
 
-        results = await feed.forward(candidates)
+        results = await feed.process(candidates)
         group_counts = Counter()
         for i in range(len(results)):
             group = _get_group_from_candidate(results[i])
@@ -195,7 +195,7 @@ async def test_suggestions_feed_forward_samples_according_to_weights(
 
 
 @pytest.mark.asyncio
-async def test_feed_forward_handles_insufficient_candidates(mock_home_config, mock_home_sources):
+async def test_feed_process_handles_insufficient_candidates(mock_home_config, mock_home_sources):
     """Verify that forward() handles fewer candidates than batch_size."""
     mock_config = MagicMock()
     mock_config.feeds.timelines.home = mock_home_config
@@ -211,13 +211,13 @@ async def test_feed_forward_handles_insufficient_candidates(mock_home_config, mo
             {"in-network": 5, "discovery": 3, "trending": 2},
         )
 
-        results = await feed.forward(candidates)
+        results = await feed.process(candidates)
 
         assert len(results) == 10
 
 
 @pytest.mark.asyncio
-async def test_feed_forward_handles_single_group(mock_home_config, mock_home_sources):
+async def test_feed_process_handles_single_group(mock_home_config, mock_home_sources):
     """Verify that forward() works when only one group has candidates."""
     mock_config = MagicMock()
     mock_config.feeds.timelines.home = mock_home_config
@@ -232,7 +232,7 @@ async def test_feed_forward_handles_single_group(mock_home_config, mock_home_sou
             {"in-network": 50, "discovery": 0, "trending": 0},
         )
 
-        results = await feed.forward(candidates)
+        results = await feed.process(candidates)
 
         assert len(results) == 20
         for i in range(len(results)):

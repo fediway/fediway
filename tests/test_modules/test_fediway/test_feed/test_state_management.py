@@ -30,7 +30,7 @@ class SimpleFeed(Feed):
     def sources(self):
         return {"main": [(SimpleSource(self._items), 50)]}
 
-    async def forward(self, candidates):
+    async def process(self, candidates):
         return candidates
 
 

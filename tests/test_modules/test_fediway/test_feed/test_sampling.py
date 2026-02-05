@@ -8,11 +8,13 @@ from modules.fediway.feed.sampling import (
 )
 
 
-def test_sampler_without_tracked_params_raises():
-    with pytest.raises(TypeError, match="must define _tracked_params"):
+def test_sampler_without_tracked_params_defaults_to_empty():
+    class SimpleSampler(Sampler):
+        pass
 
-        class BadSampler(Sampler):
-            pass
+    sampler = SimpleSampler()
+    assert sampler._tracked_params == []
+    assert sampler.get_params() == {}
 
 
 def test_sampler_with_empty_tracked_params_succeeds():

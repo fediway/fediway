@@ -37,7 +37,7 @@ class Feed(ABC):
         pass
 
     @abstractmethod
-    async def forward(self, candidates: CandidateList) -> CandidateList:
+    async def process(self, candidates: CandidateList) -> CandidateList:
         pass
 
     def get_min_candidates(self) -> int:
@@ -176,11 +176,11 @@ class Feed(ABC):
             candidates += fallback_candidates
 
         candidates = self._remove_seen(candidates)
-        candidates = await self.forward(candidates)
+        candidates = await self.process(candidates)
 
         if candidates is None:
             raise RuntimeError(
-                f"{self.__class__.__name__}.forward() returned None. "
+                f"{self.__class__.__name__}.process() returned None. "
                 "Did you forget to return candidates?"
             )
 
@@ -242,17 +242,17 @@ class Feed(ABC):
     async def diversify(
         self, candidates: CandidateList, by: str, penalty: float = 0.1
     ) -> CandidateList:
-        from ..heuristics import DiversifyHeuristic
+        from ..heuristics import DiversityHeuristic
 
         if len(candidates) == 0:
             return candidates
 
         heuristic_key = f"diversify:{by}"
         if heuristic_key in self._heuristic_states:
-            heuristic = DiversifyHeuristic(by, penalty)
+            heuristic = DiversityHeuristic(by, penalty)
             heuristic.set_state(self._heuristic_states[heuristic_key])
         else:
-            heuristic = DiversifyHeuristic(by, penalty)
+            heuristic = DiversityHeuristic(by, penalty)
 
         if self._feature_service is None:
             return candidates

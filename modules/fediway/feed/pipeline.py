@@ -5,7 +5,7 @@ import numpy as np
 
 from shared.utils.logging import log_error
 
-from ..heuristics import DiversifyHeuristic, Heuristic
+from ..heuristics import DiversityHeuristic, Heuristic
 from ..rankers import Ranker
 from ..sources import Source
 from .candidates import CandidateList
@@ -151,7 +151,7 @@ class Pipeline:
         return self
 
     def diversify(self, by, penalty: float = 0.1):
-        self._heuristics.append(DiversifyHeuristic(by, penalty))
+        self._heuristics.append(DiversityHeuristic(by, penalty))
         return self
 
     async def _execute_step(self, idx, candidates: CandidateList) -> CandidateList:

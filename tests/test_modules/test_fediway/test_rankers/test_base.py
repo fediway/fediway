@@ -1,13 +1,13 @@
-import pytest
-
 from modules.fediway.rankers.base import Ranker
 
 
-def test_ranker_without_tracked_params_raises():
-    with pytest.raises(TypeError, match="must define _tracked_params"):
+def test_ranker_without_tracked_params_defaults_to_empty():
+    class SimpleRanker(Ranker):
+        pass
 
-        class BadRanker(Ranker):
-            pass
+    ranker = SimpleRanker()
+    assert ranker._tracked_params == []
+    assert ranker.get_params() == {}
 
 
 def test_ranker_with_empty_tracked_params_succeeds():

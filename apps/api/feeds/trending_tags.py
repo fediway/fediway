@@ -21,7 +21,7 @@ class TrendingTagsFeed(Feed):
     def get_min_candidates(self) -> int:
         return 5
 
-    async def forward(self, candidates: CandidateList) -> CandidateList:
+    async def process(self, candidates: CandidateList) -> CandidateList:
         cfg = self._config
 
         candidates = self.unique(candidates)

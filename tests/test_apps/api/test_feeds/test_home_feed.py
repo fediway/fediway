@@ -90,7 +90,7 @@ def test_home_feed_group_weights_without_config_weights(mock_config, mock_source
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward(mock_config, mock_sources):
+async def test_home_feed_process(mock_config, mock_sources):
     with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed.candidates import CandidateList
@@ -101,14 +101,14 @@ async def test_home_feed_forward(mock_config, mock_sources):
         for i in range(50):
             candidates.append(i, score=1.0, source="test", source_group="in-network")
 
-        result = await feed.forward(candidates)
+        result = await feed.process(candidates)
 
         # Should sample down to batch_size
         assert len(result) <= 20
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_unique(mock_config, mock_sources):
+async def test_home_feed_process_unique(mock_config, mock_sources):
     with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed.candidates import CandidateList
@@ -121,14 +121,14 @@ async def test_home_feed_forward_unique(mock_config, mock_sources):
         candidates.append(1, source="s2", source_group="discovery")
         candidates.append(2, source="s1", source_group="in-network")
 
-        result = await feed.forward(candidates)
+        result = await feed.process(candidates)
 
         # Should have unique IDs only
         assert len(set(result.get_candidates())) == len(result)
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_empty(mock_config, mock_sources):
+async def test_home_feed_process_empty(mock_config, mock_sources):
     with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed.candidates import CandidateList
@@ -137,7 +137,7 @@ async def test_home_feed_forward_empty(mock_config, mock_sources):
 
         candidates = CandidateList("status_id")
 
-        result = await feed.forward(candidates)
+        result = await feed.process(candidates)
 
         assert len(result) == 0
 

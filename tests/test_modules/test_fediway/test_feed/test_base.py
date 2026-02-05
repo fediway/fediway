@@ -26,7 +26,7 @@ class SimpleFeed(Feed):
     def sources(self):
         return self._sources_dict
 
-    async def forward(self, candidates):
+    async def process(self, candidates):
         return candidates
 
 
@@ -41,7 +41,7 @@ class SampleFeed(Feed):
     def sources(self):
         return self._sources_dict
 
-    async def forward(self, candidates):
+    async def process(self, candidates):
         candidates = self.unique(candidates)
         return self.sample(candidates, n=self._sample_n)
 
@@ -53,20 +53,20 @@ def test_feed_is_abstract():
 
 def test_feed_requires_sources_implementation():
     class MissingSources(Feed):
-        async def forward(self, candidates):
+        async def process(self, candidates):
             return candidates
 
     with pytest.raises(TypeError, match="Can't instantiate abstract class"):
         MissingSources()
 
 
-def test_feed_requires_forward_implementation():
-    class MissingForward(Feed):
+def test_feed_requires_process_implementation():
+    class MissingProcess(Feed):
         def sources(self):
             return {}
 
     with pytest.raises(TypeError, match="Can't instantiate abstract class"):
-        MissingForward()
+        MissingProcess()
 
 
 def test_simple_feed_instantiation():
@@ -112,7 +112,7 @@ async def test_execute_with_multiple_groups():
 
 
 @pytest.mark.asyncio
-async def test_forward_receives_collected_candidates():
+async def test_process_receives_collected_candidates():
     source = MockSource("test", [1, 2, 3])
     received_candidates = []
 
@@ -122,7 +122,7 @@ async def test_forward_receives_collected_candidates():
         def sources(self):
             return {"main": [(source, 10)]}
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             received_candidates.append(candidates)
             return candidates
 
@@ -134,14 +134,14 @@ async def test_forward_receives_collected_candidates():
 
 
 @pytest.mark.asyncio
-async def test_forward_return_none_raises_error():
+async def test_process_return_none_raises_error():
     class BadFeed(Feed):
         entity = "status_id"
 
         def sources(self):
             return {}
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             pass
 
     feed = BadFeed()
@@ -156,7 +156,7 @@ def test_validate_sources_wrong_type():
         def sources(self):
             return "not a dict"
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             return candidates
 
     feed = BadSourcesFeed()
@@ -171,7 +171,7 @@ def test_validate_sources_wrong_item_type():
         def sources(self):
             return {"main": "not a list"}
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             return candidates
 
     feed = BadSourcesFeed()
@@ -186,7 +186,7 @@ def test_validate_sources_wrong_tuple():
         def sources(self):
             return {"main": ["not a tuple"]}
 
-        async def forward(self, candidates):
+        async def process(self, candidates):
             return candidates
 
     feed = BadSourcesFeed()

@@ -60,7 +60,7 @@ def test_trending_feed_sources_returns_injected_dict(mock_config, mock_sources):
 
 
 @pytest.mark.asyncio
-async def test_trending_feed_forward(mock_config, mock_sources):
+async def test_trending_feed_process(mock_config, mock_sources):
     with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
         from modules.fediway.feed.candidates import CandidateList
@@ -71,13 +71,13 @@ async def test_trending_feed_forward(mock_config, mock_sources):
         for i in range(50):
             candidates.append(i, score=1.0, source="trending", source_group="trending")
 
-        result = await feed.forward(candidates)
+        result = await feed.process(candidates)
 
         assert len(result) <= 20
 
 
 @pytest.mark.asyncio
-async def test_trending_feed_forward_unique(mock_config, mock_sources):
+async def test_trending_feed_process_unique(mock_config, mock_sources):
     with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
         from modules.fediway.feed.candidates import CandidateList
@@ -89,13 +89,13 @@ async def test_trending_feed_forward_unique(mock_config, mock_sources):
         candidates.append(1, source="viral2", source_group="trending")  # duplicate
         candidates.append(2, source="trending", source_group="trending")
 
-        result = await feed.forward(candidates)
+        result = await feed.process(candidates)
 
         assert len(set(result.get_candidates())) == len(result)
 
 
 @pytest.mark.asyncio
-async def test_trending_feed_forward_empty(mock_config, mock_sources):
+async def test_trending_feed_process_empty(mock_config, mock_sources):
     with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
         from modules.fediway.feed.candidates import CandidateList
@@ -104,7 +104,7 @@ async def test_trending_feed_forward_empty(mock_config, mock_sources):
 
         candidates = CandidateList("status_id")
 
-        result = await feed.forward(candidates)
+        result = await feed.process(candidates)
 
         assert len(result) == 0
 
