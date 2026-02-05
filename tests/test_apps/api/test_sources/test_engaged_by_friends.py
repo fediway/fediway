@@ -1,44 +1,8 @@
 import math
-import sys
 from datetime import datetime, timedelta, timezone
-from types import ModuleType
 from unittest.mock import MagicMock
 
-
-def _import_without_init(module_path: str, module_name: str):
-    """Import a module directly without going through __init__.py."""
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-
-    # We need to mock the parent packages for relative imports
-    parent_name = "modules.fediway.sources"
-    if parent_name not in sys.modules:
-        # Create stub parent modules
-        for i, part in enumerate(parent_name.split(".")):
-            full_name = ".".join(parent_name.split(".")[: i + 1])
-            if full_name not in sys.modules:
-                sys.modules[full_name] = ModuleType(full_name)
-
-    # Import base first
-    base_spec = importlib.util.spec_from_file_location(
-        "modules.fediway.sources.base", "modules/fediway/sources/base.py"
-    )
-    base_module = importlib.util.module_from_spec(base_spec)
-    sys.modules["modules.fediway.sources.base"] = base_module
-    base_spec.loader.exec_module(base_module)
-
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_module = _import_without_init(
-    "modules/fediway/sources/statuses/engaged_by_friends.py",
-    "modules.fediway.sources.statuses.engaged_by_friends",
-)
-EngagedByFriendsSource = _module.EngagedByFriendsSource
+from apps.api.sources.statuses import EngagedByFriendsSource
 
 
 def utcnow():

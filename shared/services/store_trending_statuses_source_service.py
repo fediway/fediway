@@ -1,7 +1,7 @@
 from redis import Redis
 from sqlmodel import Session, text
 
-from modules.fediway.sources.statuses import TrendingStatusesSource
+from apps.api.sources.statuses import TrendingStatusesSource
 from shared.utils.logging import Timer, log_debug
 
 

@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from modules.fediway.sources.accounts import FollowedByFriendsSource
+from apps.api.sources.accounts import FollowedByFriendsSource
 
 
 def test_followed_by_friends_source_has_required_attributes():

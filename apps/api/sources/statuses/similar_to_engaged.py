@@ -5,8 +5,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import FieldCondition, Filter, Range
 
 from modules.fediway.feed.features import Features
-
-from ..base import Source
+from modules.fediway.sources.base import Source
 
 
 class SimilarToEngagedSource(Source):

@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from modules.fediway.sources.accounts import PopularAccountsSource
+from apps.api.sources.accounts import PopularAccountsSource
 
 
 def test_popular_accounts_source_has_required_attributes():

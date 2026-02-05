@@ -38,7 +38,7 @@ def community_based_recommendations(
     username: str,
     limit: int = 10,
 ):
-    from modules.fediway.sources.statuses import CommunityBasedRecommendationsSource
+    from apps.api.sources.statuses import CommunityBasedRecommendationsSource
     from shared.core.qdrant import client
     from shared.core.redis import get_redis
 
@@ -53,7 +53,7 @@ def community_based_recommendations(
 
 @app.command("random-communities")
 def random_communities(limit: int = 10, batch_size: int = 1):
-    from modules.fediway.sources.statuses import TopStatusesFromRandomCommunitiesSource
+    from apps.api.sources.statuses import TopStatusesFromRandomCommunitiesSource
     from shared.core.qdrant import client
     from shared.core.redis import get_redis
 
@@ -69,7 +69,7 @@ def trending(
     limit: int = 10,
     language: str = "en",
 ):
-    from modules.fediway.sources.statuses import TrendingStatusesSource
+    from apps.api.sources.statuses import TrendingStatusesSource
     from shared.core.redis import get_redis
     from shared.core.rw import rw_session
 

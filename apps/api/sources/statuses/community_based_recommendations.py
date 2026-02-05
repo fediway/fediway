@@ -3,9 +3,8 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from qdrant_client.models import LookupLocation
 from redis import Redis
 
+from modules.fediway.sources.base import Source
 from shared.utils.logging import log_warning
-
-from ..base import Source
 
 
 class CommunityBasedRecommendationsSource(Source):

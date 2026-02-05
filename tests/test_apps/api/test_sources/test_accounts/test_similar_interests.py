@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from modules.fediway.sources.accounts import SimilarInterestsSource
+from apps.api.sources.accounts import SimilarInterestsSource
 
 
 def test_similar_interests_source_has_required_attributes():

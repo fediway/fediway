@@ -1,58 +1,12 @@
-import sys
-from types import ModuleType
 from unittest.mock import MagicMock
 
-
-def _import_module_bypass_init(module_path: str, module_name: str):
-    import importlib.util
-
-    parent_name = "modules.fediway.sources"
-    if parent_name not in sys.modules:
-        for i, part in enumerate(parent_name.split(".")):
-            full_name = ".".join(parent_name.split(".")[: i + 1])
-            if full_name not in sys.modules:
-                sys.modules[full_name] = ModuleType(full_name)
-
-    base_spec = importlib.util.spec_from_file_location(
-        "modules.fediway.sources.base", "modules/fediway/sources/base.py"
-    )
-    base_module = importlib.util.module_from_spec(base_spec)
-    sys.modules["modules.fediway.sources.base"] = base_module
-    base_spec.loader.exec_module(base_module)
-
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-_top_follows = _import_module_bypass_init(
-    "modules/fediway/sources/statuses/top_follows.py",
-    "modules.fediway.sources.statuses.top_follows",
+from apps.api.sources.statuses import (
+    EngagedByFriendsSource,
+    EngagedBySimilarUsersSource,
+    PostedByFriendsOfFriendsSource,
+    TagAffinitySource,
+    TopFollowsSource,
 )
-_engaged_by_friends = _import_module_bypass_init(
-    "modules/fediway/sources/statuses/engaged_by_friends.py",
-    "modules.fediway.sources.statuses.engaged_by_friends",
-)
-_tag_affinity = _import_module_bypass_init(
-    "modules/fediway/sources/statuses/tag_affinity.py",
-    "modules.fediway.sources.statuses.tag_affinity",
-)
-_posted_by_friends_of_friends = _import_module_bypass_init(
-    "modules/fediway/sources/statuses/posted_by_friends_of_friends.py",
-    "modules.fediway.sources.statuses.posted_by_friends_of_friends",
-)
-_engaged_by_similar_users = _import_module_bypass_init(
-    "modules/fediway/sources/statuses/engaged_by_similar_users.py",
-    "modules.fediway.sources.statuses.engaged_by_similar_users",
-)
-
-TopFollowsSource = _top_follows.TopFollowsSource
-EngagedByFriendsSource = _engaged_by_friends.EngagedByFriendsSource
-TagAffinitySource = _tag_affinity.TagAffinitySource
-PostedByFriendsOfFriendsSource = _posted_by_friends_of_friends.PostedByFriendsOfFriendsSource
-EngagedBySimilarUsersSource = _engaged_by_similar_users.EngagedBySimilarUsersSource
 
 
 def test_sources_have_unique_ids():

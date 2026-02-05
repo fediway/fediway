@@ -3,7 +3,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import QueryRequest, SparseVector
 from redis import Redis
 
-from ..base import Source
+from modules.fediway.sources.base import Source
 
 
 class TopStatusesFromRandomCommunitiesSource(Source):

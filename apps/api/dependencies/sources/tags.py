@@ -2,9 +2,9 @@ from fastapi import Depends
 from redis import Redis
 from sqlmodel import Session as RWSession
 
+from apps.api.sources.tags import TrendingTagsSource
 from config.algorithm import algorithm_config
 from modules.fediway.sources import Source
-from modules.fediway.sources.tags import TrendingTagsSource
 from shared.core.redis import get_redis
 from shared.core.rw import get_rw_session
 

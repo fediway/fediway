@@ -1,13 +1,13 @@
 from fastapi import Depends
 from sqlmodel import Session as RWSession
 
-from config.algorithm import algorithm_config
-from modules.fediway.sources import Source
-from modules.fediway.sources.accounts import (
+from apps.api.sources.accounts import (
     FollowedByFriendsSource,
     PopularAccountsSource,
     SimilarInterestsSource,
 )
+from config.algorithm import algorithm_config
+from modules.fediway.sources import Source
 from modules.mastodon.models import Account
 from shared.core.rw import get_rw_session
 
