@@ -8,6 +8,7 @@ from config import config
 
 from .errors.http_error import http_error_handler
 from .errors.validation_error import http422_error_handler
+from .middlewares.logging_middleware import RequestLoggingMiddleware
 from .middlewares.oauth_middleware import OAuthMiddleware
 from .routes.api import router as api_router
 
@@ -16,6 +17,8 @@ def get_application() -> FastAPI:
     config.logging.configure_logging()
 
     application = FastAPI(**config.fastapi_kwargs)
+
+    application.add_middleware(RequestLoggingMiddleware)
 
     application.add_middleware(
         CORSMiddleware,

@@ -1,8 +1,7 @@
-from feast import FeatureView, Field
-from feast.types import Float32, Int64
 from datetime import timedelta
 
-from config import config
+from feast import Field
+from feast.types import Float32, Int64
 
 from ...entities import account, tag
 from ...utils import make_feature_view

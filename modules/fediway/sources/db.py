@@ -16,7 +16,7 @@ class DatabaseSource(Source):
         self.query_callbacks.append(callback)
 
     def base_query(self, limit: int):
-        raise NotImplemented
+        raise NotImplementedError
 
     def query(self, limit: int):
         query = self.base_query(limit)
@@ -77,7 +77,7 @@ class HotStatuses(DatabaseSource):
         )
 
     def __str__(self):
-        return f"hot_statuses"
+        return "hot_statuses"
 
 
 class HotStatusesByLanguage(HotStatuses):

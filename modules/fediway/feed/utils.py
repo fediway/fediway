@@ -54,7 +54,7 @@ class TopKPriorityQueue:
         else:
             # Replace the smallest element if the new score is larger
             if score > self.heap[0][0]:
-                removed_entry = heapq.heappushpop(self.heap, entry)
+                heapq.heappushpop(self.heap, entry)
 
     def scores(self):
         return [entry[0] for entry in self.heap]

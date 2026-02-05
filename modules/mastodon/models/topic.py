@@ -1,6 +1,10 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from .status import Status
 
 
 class StatusTopic(SQLModel, table=True):
@@ -22,6 +26,4 @@ class Topic(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     reviewed_at: datetime | None = Field(nullable=False)
 
-    statuses: list["Status"] = Relationship(
-        back_populates="topics", link_model=StatusTopic
-    )
+    statuses: list["Status"] = Relationship(back_populates="topics", link_model=StatusTopic)

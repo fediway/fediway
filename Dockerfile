@@ -1,17 +1,21 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # Install system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libgomp1 && \
+    apt-get install -y --no-install-recommends libgomp1 curl && \
     rm -rf /var/lib/apt/lists/*
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 ENV APP_ENV=production
 
 ENV APP_SECRET=
 ENV APP_HOST=
+ENV API_URL=
 
 ENV DB_HOST=localhost
 ENV DB_PORT=5432
@@ -36,20 +40,17 @@ RUN addgroup --system --gid 1001 fediway && \
 # Set work directory
 WORKDIR /app
 
-# copy requirements.txt
-COPY --chown=fediway:fediway requirements.txt .
+# Copy dependency files
+COPY --chown=fediway:fediway pyproject.toml uv.lock ./
 
-# install requirements
-RUN pip install --no-cache-dir --upgrade torch --index-url https://download.pytorch.org/whl/cpu
-RUN pip install --no-cache-dir --upgrade -r requirements.txt
+# Install PyTorch CPU-only first (smaller image)
+RUN uv pip install --system --no-cache torch --index-url https://download.pytorch.org/whl/cpu
 
-# download jars (for spark)
-# ADD https://repo1.maven.org/maven2/org/apache/spark/spark-sql-kafka-0-10_2.12/3.3.0/spark-sql-kafka-0-10_2.12-3.3.0.jar /opt/spark/jars/
-# ADD https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar /opt/spark/jars/
-# ADD https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.1026/aws-java-sdk-bundle-1.11.1026.jar /opt/spark/jars/
-# ENV SPARK_CLASSPATH="/opt/spark/jars/*"
+# Install dependencies (core + commonly needed extras)
+# Adjust extras based on your deployment needs
+RUN uv pip install --system --no-cache ".[vectors,embeddings,streaming,geo]"
 
-# download whois geolocation databases
+# Download whois geolocation databases
 ADD https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country-ipv4.mmdb data/geo-whois-asn-country-ipv4.mmdb
 ADD https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country-ipv6.mmdb data/geo-whois-asn-country-ipv6.mmdb
 RUN chown -R fediway:fediway data
@@ -60,5 +61,5 @@ COPY --chown=fediway:fediway . .
 # Switch to fediway user
 USER fediway
 
-# run api
-CMD ["fastapi", "run", "api/main.py"]
+# Run API
+CMD ["fastapi", "run", "apps/api/main.py"]

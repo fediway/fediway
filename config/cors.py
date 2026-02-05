@@ -7,7 +7,7 @@ class CorsConfig(BaseConfig):
 
     @property
     def allow_origins(self):
-        if type(self.cors_origins) == list:
+        if isinstance(self.cors_origins, list):
             return self.cors_origins
         return self.cors_origins.split(",")
 

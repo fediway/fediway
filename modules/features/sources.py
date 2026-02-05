@@ -1,11 +1,12 @@
-from typing import Callable, Dict, Iterable, Optional, Tuple
+import json
+from typing import Dict, Iterable, Optional, Tuple
 
 from feast.data_source import DataSource
-from feast.repo_config import RepoConfig
-from feast.protos.feast.core.DataSource_pb2 import DataSource as DataSourceProto
+from feast.errors import ZeroColumnQueryResult
 from feast.infra.utils.postgres.connection_utils import _get_conn
+from feast.protos.feast.core.DataSource_pb2 import DataSource as DataSourceProto
+from feast.repo_config import RepoConfig
 from feast.type_map import pg_type_code_to_pg_type
-import json
 
 
 class RisingWaveOptions:
@@ -113,15 +114,11 @@ class RisingWaveSource(DataSource):
     def validate(self, config: RepoConfig):
         pass
 
-    def get_table_column_names_and_types(
-        self, config: RepoConfig
-    ) -> Iterable[Tuple[str, str]]:
+    def get_table_column_names_and_types(self, config: RepoConfig) -> Iterable[Tuple[str, str]]:
         with _get_conn(config.offline_store) as conn, conn.cursor() as cur:
             query = f"SELECT * FROM {self._options._table} AS sub LIMIT 0"
             cur.execute(query)
             if not cur.description:
                 raise ZeroColumnQueryResult(query)
 
-            return (
-                (c.name, pg_type_code_to_pg_type(c.type_code)) for c in cur.description
-            )
+            return ((c.name, pg_type_code_to_pg_type(c.type_code)) for c in cur.description)

@@ -1,5 +1,6 @@
-from loguru import logger
 from pydantic import BaseModel
+
+from shared.utils.logging import log_debug
 
 
 class DebeziumPayload(BaseModel):
@@ -52,11 +53,13 @@ async def process_debezium_event(event: DebeziumEvent, handler_cls, args):
     method = METHODS.get(event.payload.op)
 
     if method is None:
-        logger.debug(f"Unhandled operation '{op}'.")
+        log_debug("Unhandled debezium operation", module="debezium", operation=event.payload.op)
         return
 
     if not hasattr(handler_cls, method):
-        logger.debug(f"Handler {handler_cls} does not handle '{method}'.")
+        log_debug(
+            "Handler missing method", module="debezium", handler=str(handler_cls), method=method
+        )
         return
 
     if event.payload.op == "u":
@@ -103,12 +106,10 @@ async def process_debezium_batch(events: list[DebeziumEvent], handler_cls, args)
     return results
 
 
-def make_debezium_handler(
-    broker, topic: str, event_handler, args, group_id: str | None = None
-):
+def make_debezium_handler(broker, topic: str, event_handler, args, group_id: str | None = None):
     @broker.subscriber(topic, group_id=group_id)
     async def _handler(event: DebeziumEvent):
-        logger.debug(f"Consuming debezium event {topic}.")
+        log_debug("Consuming debezium event", module="debezium", topic=topic)
         await process_debezium_event(event, event_handler, args=args)
 
     return _handler

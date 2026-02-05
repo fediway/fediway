@@ -1,0 +1,90 @@
+# Fediway Algorithm Configuration
+# ================================
+#
+# This file configures the recommendation algorithms for your Mastodon instance.
+# Copy to fediway.toml and customize as needed.
+#
+# Documentation: https://fediway.com/docs/configuration
+
+# ----------------------------------------
+# GLOBAL SETTINGS
+# ----------------------------------------
+
+[global]
+content_age_hours = 48        # Max age for content (1-168 hours)
+cache_ttl_seconds = 300       # Response cache duration
+
+# ----------------------------------------
+# HOME TIMELINE
+# GET /api/v1/timelines/home
+# ----------------------------------------
+
+[timelines.home]
+# Presets: balanced | discovery | local | chronological
+preset = "balanced"
+
+# Optional: Override weights (must sum to 100)
+# [timelines.home.weights]
+# in_network = 50
+# discovery = 35
+# trending = 15
+
+# Optional: Override settings
+# [timelines.home.settings]
+# max_per_author = 3
+# diversity_penalty = 0.1
+# batch_size = 20
+
+# Optional: Tune specific sources
+# [timelines.home.sources.tag_affinity]
+# boost_tags = ["art", "photography"]
+
+# ----------------------------------------
+# TRENDING STATUSES
+# GET /api/v1/trends/statuses
+# ----------------------------------------
+
+[trends.statuses]
+# Presets: viral | local | curated
+preset = "viral"
+
+# Optional: Override settings
+# [trends.statuses.settings]
+# window_hours = 24
+# max_per_author = 2
+# min_engagement = 5
+# local_only = false
+
+# Optional: Filters
+# [trends.statuses.filters]
+# exclude_sensitive = false
+# exclude_replies = true
+# min_account_age_days = 7
+
+# ----------------------------------------
+# TRENDING TAGS
+# GET /api/v1/trends/tags
+# ----------------------------------------
+
+[trends.tags]
+# Presets: default | local
+preset = "default"
+
+# Optional: Block specific tags
+# [trends.tags.filters]
+# blocked_tags = ["politics", "news"]
+
+# ----------------------------------------
+# FOLLOW SUGGESTIONS
+# GET /api/v2/suggestions
+# ----------------------------------------
+
+[suggestions]
+# Presets: balanced | popular | similar
+preset = "balanced"
+
+# Optional: Override weights (must sum to 100)
+# [suggestions.weights]
+# social_proof = 40
+# similar_interests = 35
+# popular = 25

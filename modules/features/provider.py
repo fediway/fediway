@@ -1,16 +1,20 @@
-from typing import Sequence, Union, Optional, Any, Callable
-from kafka import KafkaProducer
-from feast.feature_store import RepoConfig
-from feast.infra.passthrough_provider import PassthroughProvider
-from feast import OnDemandFeatureView
-from feast.feature_view import FeatureView
-from feast.entity import Entity
-import numpy as np
-from loguru import logger
-import pyarrow
 import json
+from typing import Any, Callable, Optional, Sequence, Union
 
-from modules.utils import JSONEncoder
+import pyarrow
+from feast import OnDemandFeatureView
+from feast.entity import Entity
+from feast.feature_store import RepoConfig
+from feast.feature_view import FeatureView
+from feast.infra.passthrough_provider import PassthroughProvider
+
+from shared.utils import JSONEncoder
+from shared.utils.logging import log_debug, log_error
+
+try:
+    from kafka import KafkaProducer
+except ImportError:
+    KafkaProducer = None
 
 
 class FediwayProvider(PassthroughProvider):
@@ -62,9 +66,7 @@ class FediwayProvider(PassthroughProvider):
         for row in data.to_pylist():
             key = ",".join([str(row[e]) for e in feature_view.entities])
 
-            future = producer.send(
-                feature_view.tags["offline_store"], key=key, value=row
-            )
+            future = producer.send(feature_view.tags["offline_store"], key=key, value=row)
 
             futures.append(future)
 
@@ -74,11 +76,15 @@ class FediwayProvider(PassthroughProvider):
                 future.get(timeout=10)
                 successful_deliveries += 1
             except Exception as e:
-                logger.error(f"Kafka message delivery failed: {str(e)}")
+                log_error("Kafka message delivery failed", module="features", error=str(e))
 
         # Ensure all messages are sent
         producer.flush()
 
-        logger.info(
-            f"Ingested {successful_deliveries}/{len(data)} {feature_view.name} features to offline store"
+        log_debug(
+            "Ingested features to offline store",
+            module="features",
+            feature_view=feature_view.name,
+            successful=successful_deliveries,
+            total=len(data),
         )

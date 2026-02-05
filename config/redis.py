@@ -8,6 +8,8 @@ class RedisConfig(BaseConfig):
     redis_port: int = 6379
     redis_name: str | int = 0
     redis_pass: str | None = None
+    redis_socket_timeout: float = 5.0
+    redis_socket_connect_timeout: float = 5.0
 
     @property
     def url(self) -> str:

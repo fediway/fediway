@@ -3,6 +3,7 @@ from typing import Optional
 
 from ..models import Status
 from .account import AccountItem
+from .application import ApplicationItem
 from .base import Item
 from .emoji import EmojiItem
 from .media_attachment import MediaAttachmentItem
@@ -24,12 +25,14 @@ class StatusItem(Item):
     uri: str | None
     url: str | None
     created_at: datetime
+    in_reply_to_id: str | None
+    in_reply_to_account_id: str | None
     content: str | None
     visibility: str
     language: str | None = None
     edited_at: datetime | None = None
     sensitive: bool
-    spoiler_text: str | None
+    spoiler_text: str
     account: AccountItem
     media_attachments: list[MediaAttachmentItem] = []
     mentions: list[MentionItem] = []
@@ -42,16 +45,14 @@ class StatusItem(Item):
     quotes_count: int
     card: PreviewCardItem | None
     quote: QuoteItem | None = None
-    # TODO: quote_approval
+    application: ApplicationItem | None = None
 
     @classmethod
     def from_model(cls, status: Status, with_reblog: bool = True):
         reblogs_count = 0
         favourites_count = 0
         if status.stats is not None:
-            reblogs_count = (
-                status.stats.untrusted_reblogs_count or status.stats.reblogs_count
-            )
+            reblogs_count = status.stats.untrusted_reblogs_count or status.stats.reblogs_count
             favourites_count = (
                 status.stats.untrusted_favourites_count or status.stats.favourites_count
             )
@@ -61,16 +62,18 @@ class StatusItem(Item):
             uri=status.uri,
             url=status.local_url,
             created_at=status.created_at,
+            in_reply_to_id=str(status.in_reply_to_id) if status.in_reply_to_id else None,
+            in_reply_to_account_id=str(status.in_reply_to_account_id)
+            if status.in_reply_to_account_id
+            else None,
             edited_at=status.edited_at,
             language=status.language,
             account=AccountItem.from_model(account=status.account),
-            media_attachments=[
-                MediaAttachmentItem.from_model(m) for m in status.media_attachments
-            ],
+            media_attachments=[MediaAttachmentItem.from_model(m) for m in status.media_attachments],
             content=status.text,
             visibility=STATUS_VISIBILITY[status.visibility],
             sensitive=status.sensitive,
-            spoiler_text=status.spoiler_text,
+            spoiler_text=status.spoiler_text or "",
             reblog=StatusItem.from_model(status.reblog, with_reblog=False)
             if status.reblog and with_reblog
             else None,
@@ -78,9 +81,7 @@ class StatusItem(Item):
             favourites_count=favourites_count,
             replies_count=status.stats.replies_count if status.stats is not None else 0,
             quotes_count=status.stats.quotes_count if status.stats is not None else 0,
-            card=PreviewCardItem.from_model(status.preview_card)
-            if status.preview_card
-            else None,
+            card=PreviewCardItem.from_model(status.preview_card) if status.preview_card else None,
             quote=QuoteItem.from_model(status.quote) if status.quote else None,
         )
 

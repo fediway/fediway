@@ -1,12 +1,11 @@
 import typer
 
-from config import config
-
-app = typer.Typer(help="Follow sources.")
+app = typer.Typer(help="Status sources.")
 
 
 def _get_account_id_from_username(username: str):
     from sqlmodel import select
+
     from modules.mastodon.models import Account
     from shared.core.db import db_session
 
@@ -23,6 +22,7 @@ def _get_account_id_from_username(username: str):
 
 def _log_candidates(candidates: list[str]):
     from sqlmodel import select
+
     from modules.mastodon.models import Status
     from shared.core.db import db_session
 
@@ -33,36 +33,14 @@ def _log_candidates(candidates: list[str]):
             print(status.language, status.local_url)
 
 
-@app.command("popular-in-social-circle")
-def triangular_loop(account_id: int, limit: int = 10):
-    from modules.fediway.sources.statuses import PopularInSocialCircleSource
-    from shared.core.herde import db
-
-    source = PopularInSocialCircleSource(db, account_id)
-
-    for candidate in source.collect(limit):
-        print(candidate)
-
-
-@app.command("newest-in-network")
-def triangular_loop(account_id: int, limit: int = 10):
-    from modules.fediway.sources.statuses import NewestInNetworkSource
-    from shared.core.herde import db
-
-    source = NewestInNetworkSource(db, account_id)
-
-    for candidate in source.collect(limit):
-        print(candidate)
-
-
 @app.command("community-based-recommendations")
 def community_based_recommendations(
     username: str,
     limit: int = 10,
 ):
-    from modules.fediway.sources.statuses import CommunityBasedRecommendationsSource
-    from shared.core.redis import get_redis
+    from apps.api.sources.statuses import CommunityBasedRecommendationsSource
     from shared.core.qdrant import client
+    from shared.core.redis import get_redis
 
     account_id = _get_account_id_from_username(username)
 
@@ -75,9 +53,9 @@ def community_based_recommendations(
 
 @app.command("random-communities")
 def random_communities(limit: int = 10, batch_size: int = 1):
-    from modules.fediway.sources.statuses import TopStatusesFromRandomCommunitiesSource
-    from shared.core.redis import get_redis
+    from apps.api.sources.statuses import TopStatusesFromRandomCommunitiesSource
     from shared.core.qdrant import client
+    from shared.core.redis import get_redis
 
     source = TopStatusesFromRandomCommunitiesSource(
         r=get_redis(), client=client, batch_size=batch_size
@@ -86,39 +64,22 @@ def random_communities(limit: int = 10, batch_size: int = 1):
     _log_candidates([c for c in source.collect(limit)])
 
 
-@app.command("viral")
-def viral(
+@app.command("trending")
+def trending(
     limit: int = 10,
     language: str = "en",
 ):
-    from modules.fediway.sources.statuses import ViralStatusesSource
-    from shared.core.rw import rw_session
+    from apps.api.sources.statuses import TrendingStatusesSource
     from shared.core.redis import get_redis
-    import time
+    from shared.core.rw import rw_session
 
     with rw_session() as rw:
-        source = ViralStatusesSource(
+        source = TrendingStatusesSource(
             r=get_redis(),
             rw=rw,
             language=language,
         )
 
         source.reset()
-
-        _log_candidates([c for c in source.collect(limit)])
-
-
-@app.command("recent-statuses-by-followed-accounts")
-def recent_statuses_by_followed_accounts(username: str, limit=10):
-    from modules.fediway.sources.statuses import RecentStatusesByFollowedAccounts
-    from shared.core.db import db_session
-
-    account_id = _get_account_id_from_username(username)
-
-    with db_session() as db:
-        source = RecentStatusesByFollowedAccounts(
-            db=db,
-            account_id=account_id,
-        )
 
         _log_candidates([c for c in source.collect(limit)])

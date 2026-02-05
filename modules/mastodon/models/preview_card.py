@@ -1,16 +1,18 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
 
 from config import config
 
+if TYPE_CHECKING:
+    from .status import Status
+
 
 class PreviewCardStatus(SQLModel, table=True):
     __tablename__ = "preview_cards_statuses"
 
-    preview_card_id: int = Field(
-        nullable=False, primary_key=True, foreign_key="preview_cards.id"
-    )
+    preview_card_id: int = Field(nullable=False, primary_key=True, foreign_key="preview_cards.id")
     status_id: str = Field(nullable=False, primary_key=True, foreign_key="statuses.id")
 
 

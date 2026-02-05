@@ -5,11 +5,10 @@ from .base import Ranker
 
 
 class SimpleStatsRanker(Ranker):
-    """
-    A simple linear regression ranking model based on status stats and age.
-    """
+    """Linear regression ranking based on engagement stats and time decay."""
 
-    __name__ = "simple_stats_ranker"
+    _id = "simple_stats_ranker"
+    _tracked_params = ["coef_fav", "coef_reb", "coef_rep", "decay_rate"]
 
     features = [
         "status:favourites_count",
@@ -25,10 +24,13 @@ class SimpleStatsRanker(Ranker):
         coef_rep: float = 2.0,
         decay_rate: float = 0.5,
     ):
-        self.alpha = np.array([coef_fav, coef_reb, coef_rep])
+        self.coef_fav = coef_fav
+        self.coef_reb = coef_reb
+        self.coef_rep = coef_rep
         self.decay_rate = decay_rate
+        self._alpha = np.array([coef_fav, coef_reb, coef_rep])
 
     def predict(self, stats: pd.DataFrame):
-        return (stats.values[:, :3] * self.alpha.T).sum(axis=1) * np.exp(
+        return (stats.values[:, :3] * self._alpha.T).sum(axis=1) * np.exp(
             -self.decay_rate * stats.values[:, 3] / 86400
         )

@@ -15,6 +15,7 @@ COLLECTIONS = [
 @app.command("migrate")
 def migrate():
     from qdrant_client import models
+
     from shared.core.embed import embedder
     from shared.core.qdrant import client
 
@@ -22,12 +23,8 @@ def migrate():
         if client.collection_exists(collection):
             continue
 
-        vectors_config = models.VectorParams(
-            size=embedder.dim(), distance=models.Distance.COSINE
-        )
-        client.create_collection(
-            collection_name=collection, vectors_config=vectors_config
-        )
+        vectors_config = models.VectorParams(size=embedder.dim(), distance=models.Distance.COSINE)
+        client.create_collection(collection_name=collection, vectors_config=vectors_config)
 
         typer.echo(f"✅ Created '{collection}' collection.")
 
@@ -80,8 +77,7 @@ def create_embeddings(batch_size: int = 16):
                         ids=[status["id"] for status in batch],
                         vectors=embeddings,
                         payloads=[
-                            {"created_at": status["created_at"].timestamp()}
-                            for status in batch
+                            {"created_at": status["created_at"].timestamp()} for status in batch
                         ],
                     ),
                 )
@@ -94,10 +90,10 @@ def create_embeddings(batch_size: int = 16):
 def collect(language: str = "en"):
     from datetime import timedelta
 
-    import modules.utils as utils
     from modules.fediway.sources.qdrant import SimilarToFavourited
     from shared.core.qdrant import client
     from shared.services.feature_service import FeatureService
+    from shared.utils.logging import Timer, log_debug
 
     # source = MostInteractedByAccountsSource(
     #     driver=get_driver(),
@@ -120,10 +116,12 @@ def collect(language: str = "en"):
     #     account_id=114398075274349836
     # )
 
-    with utils.duration("Collected in {:3f} seconds"):
+    with Timer() as t:
         for status_id in source.collect(10):
             continue
-    with utils.duration("Collected in {:3f} seconds"):
+    log_debug("Collected candidates", module="qdrant", duration_ms=round(t.elapsed_ms, 2))
+
+    with Timer() as t:
         for status_id in source.collect(10):
             print(status_id)
-    exit(())
+    log_debug("Collected candidates", module="qdrant", duration_ms=round(t.elapsed_ms, 2))

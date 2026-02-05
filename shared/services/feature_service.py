@@ -1,13 +1,19 @@
-import numpy as np
-import pandas as pd
-from feast import FeatureStore, FeatureService as FeastFeatureService
-from loguru import logger
-from fastapi import BackgroundTasks
-from datetime import datetime
 import time
+from datetime import datetime
+
+import pandas as pd
+from fastapi import BackgroundTasks
+
+try:
+    from feast import FeatureService as FeastFeatureService
+    from feast import FeatureStore
+except ImportError:
+    FeastFeatureService = None
+    FeatureStore = None
 
 from modules.fediway.feed.features import Features
 from shared.core.feast import feature_store
+from shared.utils.logging import log_debug, log_error, log_warning
 
 
 class FeatureService(Features):
@@ -29,35 +35,32 @@ class FeatureService(Features):
     def _cache_key(self, entities: list[dict[str, int]]) -> str:
         return ",".join(list(entities[0].keys()))
 
-    def get_cached(
-        self, entities: list[dict[str, int]], features: list[str] | FeastFeatureService
-    ):
+    def get_cached(self, entities: list[dict[str, int]], features: list[str] | FeastFeatureService):
         if isinstance(features, FeastFeatureService):
             return None, entities
 
         cache_key = self._cache_key(entities)
 
-        if not cache_key in self.cache:
+        if cache_key not in self.cache:
             return None, entities
 
-        missing_entities = []
         entity_ids = pd.DataFrame(entities).values[:, 0]
         cached = []
 
         for feature in features:
             feature = feature.replace(":", "__")
-            if not feature in self.cache[cache_key]:
+            if feature not in self.cache[cache_key]:
                 return None, entities
             feat = self.cache[cache_key][feature].reindex(entity_ids)
             cached.append(feat[~feat.index.duplicated(keep="last")])
 
         cached = pd.concat(cached, axis=1, join="inner")
+        # Filter out rows with all NaN values (entities not actually cached)
+        cached = cached.dropna(how="all")
         cached_entities = set(cached.index)
 
         return cached, [
-            {cache_key: entity}
-            for entity in entity_ids
-            if not entity in cached_entities
+            {cache_key: entity} for entity in entity_ids if entity not in cached_entities
         ]
 
     def _remember(self, entities, df, features):
@@ -71,7 +74,7 @@ class FeatureService(Features):
 
         entity_ids = pd.DataFrame(entities).values[:, 0]
 
-        if not cache_key in self.cache:
+        if cache_key not in self.cache:
             self.cache[cache_key] = {}
 
         for feature in features:
@@ -79,15 +82,11 @@ class FeatureService(Features):
             feat = df[feature]
             feat.index = entity_ids
 
-            if not feature in self.cache[cache_key]:
-                self.cache[cache_key][feature] = feat[
-                    ~feat.index.duplicated(keep="last")
-                ]
+            if feature not in self.cache[cache_key]:
+                self.cache[cache_key][feature] = feat[~feat.index.duplicated(keep="last")]
             else:
                 feat = pd.concat([self.cache[cache_key][feature], feat])
-                self.cache[cache_key][feature] = feat[
-                    ~feat.index.duplicated(keep="last")
-                ]
+                self.cache[cache_key][feature] = feat[~feat.index.duplicated(keep="last")]
 
     def ingest_to_offline_store(
         self,
@@ -99,14 +98,17 @@ class FeatureService(Features):
             return
 
         if len(features) != len(entities):
-            logger.warning(
-                f"Features and entities do not match: {len(features)} != {len(entities)}"
+            log_warning(
+                "Features and entities mismatch",
+                module="features",
+                features_count=len(features),
+                entities_count=len(entities),
             )
             return
 
         entities_df = pd.DataFrame(entities)
 
-        if type(event_time) != int:
+        if not isinstance(event_time, int):
             event_time = int((event_time or self.event_time).timestamp())
 
         event_time = event_time - (event_time % self.offline_event_time_precision)
@@ -127,8 +129,11 @@ class FeatureService(Features):
 
             missing_entites = [e for e in feature_view.entities if e not in entities[0]]
             if len(missing_entites) > 0:
-                logger.warning(
-                    f"Skip ingesting {fv_name} features: missing entities {', '.join(missing_entites)}"
+                log_warning(
+                    "Skip ingesting features: missing entities",
+                    module="features",
+                    feature_view=fv_name,
+                    missing=missing_entites,
                 )
                 continue
 
@@ -136,9 +141,7 @@ class FeatureService(Features):
             feature_names = [c.split("__")[-1] for c in feature_columns]
 
             # filter feature and entity values for feature view
-            df = pd.concat(
-                [entities_df[feature_view.entities], features[feature_columns]], axis=1
-            )
+            df = pd.concat([entities_df[feature_view.entities], features[feature_columns]], axis=1)
 
             # filter rows with only nan values
             df = df[~df[feature_columns].isna().all(axis=1)]
@@ -147,7 +150,11 @@ class FeatureService(Features):
             df.rename(columns=dict(zip(feature_columns, feature_names)), inplace=True)
 
             if len(df) == 0:
-                logger.info(f"Skip ingesting {fv_name} features: all entries missing")
+                log_debug(
+                    "Skip ingesting features: all entries missing",
+                    module="features",
+                    feature_view=fv_name,
+                )
                 continue
 
             df["event_time"] = event_time
@@ -158,7 +165,12 @@ class FeatureService(Features):
                     df=df,
                 )
             except Exception as e:
-                logger.error(f"Failed to ingest feature view {fv_name}: {e}")
+                log_error(
+                    "Failed to ingest feature view",
+                    module="features",
+                    feature_view=fv_name,
+                    error=str(e),
+                )
 
     async def get(
         self,
@@ -167,7 +179,7 @@ class FeatureService(Features):
         offline_store: bool | None = None,
         event_time: datetime | None = None,
     ) -> pd.DataFrame | None:
-        if type(features) == list and len(features) == 0:
+        if isinstance(features, list) and len(features) == 0:
             return None
 
         if len(entities) == 0:
@@ -190,8 +202,9 @@ class FeatureService(Features):
         # ingest into offline store
         if (offline_store or self.offline_store) and len(df) > 0:
             if self.background_tasks is None:
-                logger.warning(
-                    "Ingesting features to offline store sequentially: missing background task manager"
+                log_warning(
+                    "Ingesting features to offline store sequentially: missing background task manager",
+                    module="features",
                 )
                 self.ingest_to_offline_store(df, entities, event_time)
             else:
@@ -210,13 +223,11 @@ class FeatureService(Features):
             df = pd.concat([df, cached_df])
             df = df[~df.index.duplicated()].reindex(pd.DataFrame(entities).values[:, 0])
 
-        features_name = (
-            f" {features.name} features"
-            if isinstance(features, FeastFeatureService)
-            else f" {', '.join(features)}"
-        )
-        logger.info(
-            f"Fetched{features_name} for {len(missing_entities)} entities in {int((time.time() - start) * 1000)} milliseconds."
+        log_debug(
+            "Fetched features",
+            module="features",
+            entities=len(missing_entities),
+            duration_ms=int((time.time() - start) * 1000),
         )
 
         return df

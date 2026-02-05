@@ -113,37 +113,103 @@ for r in recommendations:
 
 ## Setup
 
-Fediway requires the following services:
+### Requirements
 
-- [RisingWave](https://risingwave.com/) - Streaming database serving real time features for ML inference
-- [Apache Kafka](https://kafka.apache.org/) - Message broker for ingesting data into memgraph, serving real time features and more
-- [Memgraph](https://memgraph.com/) - In memory graph database for candidate sourcing
-- [Qdrant](https://qdrant.tech/) - Vector database for content based candidate sourcing
+- Python 3.10+
+- [uv](https://github.com/astral-sh/uv) (recommended) or pip
+- PostgreSQL (Mastodon's database)
+- Redis
+- RisingWave (for real-time features)
+
+Optional services:
+- Qdrant (for content-based recommendations)
+- Kafka (for streaming)
+
+### Installation
+
+```bash
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Clone the repository
+git clone https://github.com/fediway/fediway.git
+cd fediway
+
+# Install core dependencies
+uv sync
+
+# Or install with specific extras
+uv sync --extra vectors      # + Qdrant support
+uv sync --extra embeddings   # + embedding models
+uv sync --extra streaming    # + Kafka support
+uv sync --extra ml           # + ML models
+uv sync --all-extras         # everything
+```
+
+### Development Setup
+
+```bash
+# Install with dev dependencies
+uv sync --extra dev
+
+# Run linter
+uv run ruff check .
+
+# Run formatter
+uv run ruff format .
+
+# Run tests
+uv run pytest
+```
+
+### Configuration
+
+Create a `.env` file based on `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Required environment variables:
+- `APP_SECRET` - Application secret key
+- `APP_HOST` - Your instance hostname
+- `API_URL` - Full URL to your API endpoint
+
+### Running Services
+
+```bash
+# Run FastAPI server
+uv run uvicorn apps.api.main:app --reload
+
+# Run Kafka stream consumer (if using streaming)
+uv run faststream run apps.streaming.main:app
+
+# Run Celery worker for background tasks
+uv run celery -A apps.worker.main worker --loglevel=info
+
+# Run Celery beat scheduler
+uv run celery -A apps.worker.main:app beat --loglevel=info
+```
+
+### Docker
+
+```bash
+# Build image
+docker build -t fediway .
+
+# Run container
+docker run -p 8000:8000 --env-file .env fediway
+```
+
+### Infrastructure
 
 <details>
-
 <summary>docker-compose.yaml for local development</summary>
 
-```sh
+```yaml
 version: '3.8'
 
 services:
-  memgraph:
-    image: memgraph/memgraph-mage:3.1.1-memgraph-3.1.1
-    ports:
-      - "7687:7687"
-
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports:
-      - "6333:6333" # HTTP API
-      - "6334:6334" # gRPC API
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:6333/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   postgres:
     image: postgres:16
     shm_size: 256mb
@@ -151,7 +217,7 @@ services:
       - POSTGRES_USER=mastodon
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=mastodon_development
-    command: 
+    command:
       - "postgres"
       - "-c"
       - "wal_level=logical"
@@ -159,21 +225,41 @@ services:
       - ./data/postgres16:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    networks:
-      - app_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mastodon -d mastodon_development"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-    networks:
-      - app_network
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
 
+  risingwave:
+    image: risingwavelabs/risingwave:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4566:4566"
+      - "5691:5691"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5691/metrics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Qdrant for vector search
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    profiles:
+      - vectors
+
+  # Optional: Kafka for streaming
   kafka:
     image: confluentinc/cp-kafka:latest
     depends_on:
@@ -187,38 +273,25 @@ services:
     ports:
       - "9092:9092"
       - "29092:29092"
-    networks:
-      - app_network
+    profiles:
+      - streaming
 
-  risingwave:
-    image: risingwavelabs/risingwave:latest
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "4566:4566"
-      - "5691:5691"
-    networks:
-      - app_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5691/metrics"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-networks:
-  app_network:
-    driver: bridge
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    profiles:
+      - streaming
 ```
 
 </details>
 
-1. Create a new postgres user with CDC privileges.
+### RisingWave CDC Setup
+
+Create a PostgreSQL user for CDC (Change Data Capture):
 
 ```sql
 -- psql -U postgres
-
--- Grand CDC privileges
 CREATE USER risingwave REPLICATION LOGIN CREATEDB;
 ALTER USER risingwave WITH PASSWORD 'password';
 GRANT CONNECT ON DATABASE mastodon_development TO risingwave;
@@ -227,46 +300,3 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO risingwave;
 GRANT CREATE ON DATABASE mastodon_development TO risingwave;
 CREATE PUBLICATION risingwave FOR ALL TABLES;
 ```
-
-2. Setup
-
-```sh
-sh bin/setup
-```
-
-3. Run services
-
-```sh
-# Run fastapi server
-uvicorn apps.api.main:app --reload
-
-# Run Kafka stream consumer
-faststream run apps.streaming.main:app
-
-# Run Celery worker for repeating tasks
-celery -A apps.worker.main worker --loglevel=info --queues=schwarm,sources
-
-# Run Celery beat scheduler
-celery -A apps.worker.main:app beat --loglevel=info
-```
-
-### Configuration
-
-<details>
-
-<summary>Store feast registry on s3</summary>
-
-```sh
-# 1. add variable to .env file
-FEAST_REGISTRY=s3://my-bucket/registry.db
-
-# 2. export the following variables
-export FEAST_S3_ENDPOINT_URL="https://fsn1.your-objectstorage.com"
-export AWS_ACCESS_KEY_ID="YOUR_S3_ACCESS_KEY"
-export AWS_SECRET_ACCESS_KEY="YOUR_S3_SECRET_KEY"
-
-# 3. apply
-python feedctl feast apply
-```
-
-</details>

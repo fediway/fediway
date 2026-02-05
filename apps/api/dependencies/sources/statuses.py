@@ -1,197 +1,212 @@
-from datetime import timedelta
-from sqlmodel import Session as DBSession
 from fastapi import Depends
 from redis import Redis
+from sqlmodel import Session as RWSession
 
-from config import config
-from shared.core.redis import get_redis
-from modules.fediway.sources import Source
-from modules.fediway.sources.statuses import (
-    AccountBasedCollaborativeFilteringSource,
-    CollaborativeFilteringSource,
-    NewestInNetworkSource,
-    CommunityBasedRecommendationsSource,
-    TopStatusesFromRandomCommunitiesSource,
-    PopularInCommunitySource,
-    PouplarByInfluentialAccountsSource,
-    PopularInSocialCircleSource,
-    RecentStatusesByFollowedAccounts,
-    SimilarToEngagedSource,
-    StatusBasedCollaborativeFilteringSource,
-    ViralStatusesSource,
+from apps.api.sources.statuses import (
+    EngagedByFriendsSource,
+    PostedByFriendsOfFriendsSource,
+    TagAffinitySource,
+    TopFollowsSource,
+    TrendingStatusesSource,
 )
+from config import config
+from modules.fediway.sources import Source
 from modules.mastodon.models import Account
-from shared.core.qdrant import client as qdrant_client
-from shared.core.schwarm import driver as schwarm_driver
-
-# from shared.core.herde import db as herde_db
-from shared.services.feature_service import FeatureService
-from shared.core.db import get_db_session
+from shared.core.redis import get_redis
 from shared.core.rw import get_rw_session
 
 from ..auth import get_authenticated_account_or_fail
-from ..features import get_feature_service
 from ..lang import get_languages
 
-MAX_AGE = timedelta(days=config.fediway.feed_max_age_in_days)
+# Home feed source dependencies
 
 
-def get_recent_statuses_by_followed_accounts_source(
-    db: DBSession = Depends(get_db_session),
+def get_home_top_follows_source(
+    rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
-) -> list[Source]:
-    return [RecentStatusesByFollowedAccounts(db=db, account_id=account.id)]
-
-
-def get_popular_by_influential_accounts_sources(
-    r: Redis = Depends(get_redis),
-    languages: list[str] = Depends(get_languages),
-) -> list[Source]:
+) -> list[tuple[Source, int]]:
+    cfg = config.feeds.timelines.home
+    if not cfg.sources.top_follows.enabled:
+        return []
     return [
-        PouplarByInfluentialAccountsSource(
-            r=r,
-            driver=schwarm_driver,
-            language=lang,
-            decay_rate=config.fediway.feed_decay_rate,
-            ttl=timedelta(minutes=10),
+        (
+            TopFollowsSource(
+                rw=rw,
+                account_id=account.id,
+                max_per_author=cfg.settings.max_per_author,
+            ),
+            50,
+        )
+    ]
+
+
+def get_home_engaged_by_friends_source(
+    rw: RWSession = Depends(get_rw_session),
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[tuple[Source, int]]:
+    cfg = config.feeds.timelines.home
+    if not cfg.sources.engaged_by_friends.enabled:
+        return []
+    return [
+        (
+            EngagedByFriendsSource(
+                rw=rw,
+                account_id=account.id,
+            ),
+            50,
+        )
+    ]
+
+
+def get_home_tag_affinity_source(
+    rw: RWSession = Depends(get_rw_session),
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[tuple[Source, int]]:
+    cfg = config.feeds.timelines.home
+    if not cfg.sources.tag_affinity.enabled:
+        return []
+    return [
+        (
+            TagAffinitySource(
+                rw=rw,
+                account_id=account.id,
+            ),
+            50,
+        )
+    ]
+
+
+def get_home_posted_by_friends_of_friends_source(
+    rw: RWSession = Depends(get_rw_session),
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[tuple[Source, int]]:
+    cfg = config.feeds.timelines.home
+    if not cfg.sources.posted_by_friends_of_friends.enabled:
+        return []
+    return [
+        (
+            PostedByFriendsOfFriendsSource(
+                rw=rw,
+                account_id=account.id,
+            ),
+            50,
+        )
+    ]
+
+
+def get_home_trending_source(
+    r: Redis = Depends(get_redis),
+    rw: RWSession = Depends(get_rw_session),
+    languages: list[str] = Depends(get_languages),
+) -> list[tuple[Source, int]]:
+    cfg = config.feeds.timelines.home
+    if not cfg.sources.trending.enabled:
+        return []
+    return [
+        (
+            TrendingStatusesSource(
+                r=r,
+                rw=rw,
+                language=lang,
+            ),
+            50,
         )
         for lang in languages
     ]
 
 
-def get_viral_statuses_source(
+def get_home_fallback_source(
     r: Redis = Depends(get_redis),
+    rw: RWSession = Depends(get_rw_session),
     languages: list[str] = Depends(get_languages),
-) -> list[Source]:
+) -> list[tuple[Source, int]]:
     return [
-        ViralStatusesSource(
-            r=r,
-            language=lang,
-            ttl=timedelta(minutes=10),
+        (
+            TrendingStatusesSource(
+                r=r,
+                rw=rw,
+                language=lang,
+                top_n=200,
+            ),
+            25,
         )
         for lang in languages
     ]
 
 
-def get_community_based_recommendations_source(
+# Group aggregators
+
+
+def get_home_in_network_sources(
+    top_follows: list[tuple[Source, int]] = Depends(get_home_top_follows_source),
+    engaged_by_friends: list[tuple[Source, int]] = Depends(get_home_engaged_by_friends_source),
+) -> list[tuple[Source, int]]:
+    return top_follows + engaged_by_friends
+
+
+def get_home_discovery_sources(
+    tag_affinity: list[tuple[Source, int]] = Depends(get_home_tag_affinity_source),
+    posted_by_friends_of_friends: list[tuple[Source, int]] = Depends(
+        get_home_posted_by_friends_of_friends_source
+    ),
+) -> list[tuple[Source, int]]:
+    return tag_affinity + posted_by_friends_of_friends
+
+
+def get_home_trending_sources(
+    trending: list[tuple[Source, int]] = Depends(get_home_trending_source),
+) -> list[tuple[Source, int]]:
+    return trending
+
+
+def get_home_fallback_sources(
+    fallback: list[tuple[Source, int]] = Depends(get_home_fallback_source),
+) -> list[tuple[Source, int]]:
+    return fallback
+
+
+# Sources container
+
+
+def get_home_sources(
+    in_network: list[tuple[Source, int]] = Depends(get_home_in_network_sources),
+    discovery: list[tuple[Source, int]] = Depends(get_home_discovery_sources),
+    trending: list[tuple[Source, int]] = Depends(get_home_trending_sources),
+    fallback: list[tuple[Source, int]] = Depends(get_home_fallback_sources),
+) -> dict[str, list[tuple[Source, int]]]:
+    return {
+        "in-network": in_network,
+        "discovery": discovery,
+        "trending": trending,
+        "_fallback": fallback,
+    }
+
+
+# Trending statuses feed sources
+
+
+def get_trending_statuses_source(
     r: Redis = Depends(get_redis),
-    account: Account = Depends(get_authenticated_account_or_fail),
-) -> list[Source]:
-    return [
-        CommunityBasedRecommendationsSource(
-            r=r, client=qdrant_client, account_id=account.id
-        )
-    ]
-
-
-def get_top_statuses_from_random_communities_source(
-    r: Redis = Depends(get_redis),
-) -> list[Source]:
-    return [
-        TopStatusesFromRandomCommunitiesSource(r=r, client=qdrant_client, batch_size=5)
-    ]
-
-
-# def get_newest_in_network_sources(
-#     account: Account = Depends(get_authenticated_account_or_fail),
-# ) -> list[Source]:
-#     if herde_db is None:
-#         return []
-
-#     return [
-#         NewestInNetworkSource(
-#             db=herde_db,
-#             account_id=account.id,
-#         )
-#     ]
-
-
-def get_collaborative_filtering_sources(
-    account: Account = Depends(get_authenticated_account_or_fail),
+    rw: RWSession = Depends(get_rw_session),
     languages: list[str] = Depends(get_languages),
-) -> list[Source]:
+) -> list[tuple[Source, int]]:
+    cfg = config.feeds.trends.statuses
     return [
-        CollaborativeFilteringSource(
-            driver=schwarm_driver,
-            account_id=account.id,
-            language=lang,
+        (
+            TrendingStatusesSource(
+                r=r,
+                rw=rw,
+                language=lang,
+                top_n=200,
+                max_per_author=cfg.settings.max_per_author,
+            ),
+            50,
         )
         for lang in languages
     ]
 
 
-def get_popular_in_community_sources(
-    account: Account = Depends(get_authenticated_account_or_fail),
-) -> list[Source]:
-    return [
-        PopularInCommunitySource(
-            driver=schwarm_driver,
-            account_id=account.id,
-            decay_rate=config.fediway.feed_decay_rate,
-        )
-    ]
-
-
-# def get_account_based_collaborative_filtering_source(
-#     r: Redis = Depends(get_redis),
-#     account: Account = Depends(get_authenticated_account_or_fail),
-# ) -> list[Source]:
-#     if herde_db is None:
-#         return []
-
-#     return [
-#         AccountBasedCollaborativeFilteringSource(
-#             r=r,
-#             account_id=account.id,
-#         )
-#     ]
-
-
-# def get_status_based_collaborative_filtering_source(
-#     r: Redis = Depends(get_redis),
-#     account: Account = Depends(get_authenticated_account_or_fail),
-# ) -> list[Source]:
-#     if herde_db is None:
-#         return []
-
-#     return [
-#         StatusBasedCollaborativeFilteringSource(
-#             r=r,
-#             account_id=account.id,
-#         )
-#     ]
-
-
-# def get_popular_in_social_circle_sources(
-#     account: Account = Depends(get_authenticated_account_or_fail),
-#     languages: list[str] = Depends(get_languages),
-# ) -> list[Source]:
-#     if herde_db is None:
-#         return []
-
-#     return [
-#         PopularInSocialCircleSource(
-#             db=herde_db,
-#             account_id=account.id,
-#             language=lang,
-#             max_age=MAX_AGE,
-#         )
-#         for lang in languages
-#     ]
-
-
-def get_similar_to_engaged_sources(
-    account: Account = Depends(get_authenticated_account_or_fail),
-    languages: list[str] = Depends(get_languages),
-    feature_service: FeatureService = Depends(get_feature_service),
-) -> list[Source]:
-    return [
-        SimilarToEngagedSource(
-            client=qdrant_client,
-            account_id=account.id,
-            language=lang,
-            feature_service=feature_service,
-            max_age=MAX_AGE,
-        )
-        for lang in languages
-    ]
+def get_trending_statuses_sources(
+    trending: list[tuple[Source, int]] = Depends(get_trending_statuses_source),
+) -> dict[str, list[tuple[Source, int]]]:
+    return {"trending": trending}

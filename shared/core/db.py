@@ -4,7 +4,7 @@ from sqlmodel import Session, create_engine
 
 from config import config
 
-engine = create_engine(config.db.url)
+engine = create_engine(config.db.url, echo=config.app.debug)
 
 
 def get_db_session():

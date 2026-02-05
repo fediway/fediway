@@ -1,49 +1,41 @@
-from fastapi import APIRouter, Depends, Response, Request
+from fastapi import APIRouter, Depends, Request, Response
 from sqlmodel import Session as DBSession
 
-from apps.api.modules.utils import set_next_link
-from apps.api.dependencies.feeds import get_feed
-from apps.api.dependencies.sources.follows import get_recently_popular_sources
-from apps.api.services.feed_service import FeedService
-from modules.fediway.sources import Source
+from apps.api.dependencies.auth import get_authenticated_account_or_fail
+from apps.api.dependencies.feeds import get_feed_engine, get_suggestions_feed
+from apps.api.feeds import SuggestionsFeed
+from apps.api.services.feed_engine import FeedEngine
+from apps.api.utils import set_next_link
+from config import config
 from modules.mastodon.items import AccountItem
 from modules.mastodon.models import Account
 from shared.core.db import get_db_session
 
-from config import config
-
 router = APIRouter()
-
-
-def get_follow_suggestions_sources(
-    recently_popular: list[Source] = Depends(get_recently_popular_sources),
-):
-    return recently_popular
 
 
 @router.get("/suggestions")
 async def follow_suggestions(
     request: Request,
     response: Response,
-    feed: FeedService = Depends(get_feed),
+    offset: int = 0,
+    engine: FeedEngine = Depends(get_feed_engine),
+    feed: SuggestionsFeed = Depends(get_suggestions_feed),
+    account: Account = Depends(get_authenticated_account_or_fail),
     db: DBSession = Depends(get_db_session),
-    sources: list[Source] = Depends(get_follow_suggestions_sources),
 ):
-    max_candidates_per_source = 20
-
-    pipeline = (
-        feed.name("v2/suggestions")
-        .select("account_id")
-        .sources([(source, max_candidates_per_source) for source in sources])
-        .remember()
-        .sample(config.fediway.feed_batch_size)
-        .paginate(config.fediway.feed_batch_size, offset=0)
+    results = await engine.run(
+        feed,
+        state_key=str(account.id),
+        flush=(offset == 0),
+        offset=offset,
+        limit=config.fediway.feed_batch_size,
     )
 
-    recommendations = await feed.execute()
+    account_ids = [r.id for r in results]
 
-    set_next_link(request, response, {"offset": len(recommendations)})
+    set_next_link(request, response, {"offset": offset + len(results)})
 
-    accounts = db.exec(Account.select_by_ids(recommendations)).all()
+    accounts = db.exec(Account.select_by_ids(account_ids)).all()
 
-    return [AccountItem.from_model(account) for account in accounts]
+    return [AccountItem.from_model(a) for a in accounts]

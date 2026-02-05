@@ -1,3 +1,11 @@
+import functools
+from typing import List, Optional, Union
+
+import dill
+from feast import Entity, FeatureView, FeatureViewProjection, Field, RequestSource
+from feast.on_demand_feature_view import OnDemandFeatureView
+
+
 def on_demand_feature_view(
     *,
     name: Optional[str] = None,
@@ -65,9 +73,7 @@ def on_demand_feature_view(
             udf=user_function,
             udf_string=udf_string,
         )
-        functools.update_wrapper(
-            wrapper=on_demand_feature_view_obj, wrapped=user_function
-        )
+        functools.update_wrapper(wrapper=on_demand_feature_view_obj, wrapped=user_function)
         return on_demand_feature_view_obj
 
     return decorator

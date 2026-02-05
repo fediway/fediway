@@ -1,11 +1,12 @@
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.constants import REF_PREFIX
 from fastapi.openapi.utils import validation_error_response_definition
-from loguru import logger
 from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
+from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
+
+from shared.utils.logging import log_error
 
 
 async def http422_error_handler(
@@ -13,15 +14,14 @@ async def http422_error_handler(
     exc: RequestValidationError | ValidationError,
 ) -> JSONResponse:
     errors = exc.errors()
-    if type(errors) == list:
-        for i in range(len(errors)):
-            if "input" in errors[i]:
-                del errors[i]["input"]
-            logger.error(errors[i])
+    if isinstance(errors, list):
+        for error in errors:
+            error.pop("input", None)
+            log_error("Validation error", module="api", error=error)
 
     return JSONResponse(
         content={"message": "invalid request"},
-        status_code=HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=HTTP_422_UNPROCESSABLE_CONTENT,
     )
 
 

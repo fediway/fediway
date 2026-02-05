@@ -1,31 +1,17 @@
 from celery import Celery
-from celery.schedules import crontab
-from loguru import logger
 
-import modules.utils as utils
 from config import config
-from .config import Config
 
+from .config import Config
 
 config.logging.configure_logging()
 
 BEAT_SCHEDULE = {
     # --- queue: sources ---
-    "viral-statuses-source": {
-        "task": "sources.viral_statuses",
+    "trending-statuses-source": {
+        "task": "sources.trending_statuses",
         "schedule": 60,  # every 60 seconds
         "options": {"queue": "sources"},
-    },
-    # "popular-by-influential-accounts": {
-    #     "task": "sources.popular_by_influential_accounts",
-    #     "schedule": 60,  # every 60 seconds
-    #     "options": {"queue": "sources"},
-    # },
-    # --- queue: schwarm ---
-    "clearn-memgraph": {
-        "task": "schwarm.clean_memgraph",
-        "schedule": 60 * 5,  # every 5 minutes
-        "options": {"queue": "schwarm"},
     },
 }
 
@@ -35,7 +21,6 @@ def create_app():
     app = Celery(
         include=[
             "apps.worker.tasks.sources",
-            "apps.worker.tasks.schwarm",
         ]
     )
 

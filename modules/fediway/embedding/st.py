@@ -5,9 +5,7 @@ class SentenceTransformerEmbedder(Embedder):
     def __init__(self, model_id: str, cache_dir: str = "data"):
         from sentence_transformers import SentenceTransformer
 
-        self.model = SentenceTransformer(
-            model_id, cache_folder=f"{cache_dir}/{model_id}"
-        )
+        self.model = SentenceTransformer(model_id, cache_folder=f"{cache_dir}/{model_id}")
 
     def __call__(self, texts: list[str]) -> list[list[float]]:
         return self.model.encode(texts, convert_to_numpy=False)

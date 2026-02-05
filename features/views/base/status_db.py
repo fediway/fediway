@@ -48,7 +48,7 @@ def status_db_features(status_ids: pd.DataFrame) -> pd.DataFrame:
         ).all()
     rows_map = {row.id: row for row in rows}
 
-    now = datetime.now()
+    datetime.now()
     results = []
     zero = [0, 0, 0, 0, 0]
     for status_id in status_ids.values[:, 0]:

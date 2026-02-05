@@ -1,26 +1,29 @@
-from loguru import logger
-from datetime import datetime
-import numpy as np
 import time
+from datetime import datetime
 
+import numpy as np
+
+from shared.utils.logging import log_error
+
+from ..heuristics import DiversityHeuristic, Heuristic
 from ..rankers import Ranker
 from ..sources import Source
-from ..heuristics import Heuristic, DiversifyHeuristic
-from .candidates import Candidate, CandidateList
-from .sampling import TopKSampler, Sampler
+from .candidates import CandidateList
+from .features import Features
+from .sampling import Sampler, TopKSampler
 from .steps import (
+    FallbackStep,
+    PaginationStep,
     PipelineStep,
     RankingStep,
     RememberStep,
-    PaginationStep,
-    SourcingStep,
     SamplingStep,
+    SourcingStep,
 )
-from .features import Features
 
 
-class Feed:
-    def __init__(self, feature_service: Features):
+class Pipeline:
+    def __init__(self, feature_service: Features | None = None):
         self.feature_service = feature_service
         self.steps = []
         self.entity = None
@@ -40,8 +43,7 @@ class Feed:
         return {
             "counter": self.counter,
             "steps": [
-                step.get_state() if hasattr(step, "get_state") else None
-                for step in self.steps
+                step.get_state() if hasattr(step, "get_state") else None for step in self.steps
             ],
         }
 
@@ -92,9 +94,9 @@ class Feed:
         current_step = self.steps[-1] if len(self.steps) > 0 else None
 
         current_step_is_sourcing_step = self._is_current_step_type(SourcingStep)
-        is_different_group = (
-            lambda: current_step is not None and current_step.group != group
-        )
+
+        def is_different_group():
+            return current_step is not None and current_step.group != group
 
         if not current_step_is_sourcing_step or is_different_group():
             self.step(SourcingStep(group))
@@ -110,13 +112,12 @@ class Feed:
         return self
 
     def rank(self, ranker: Ranker, feature_service: Features | None = None):
-        self.step(
-            RankingStep(ranker, feature_service or self.feature_service, self.entity)
-        )
+        self.step(RankingStep(ranker, feature_service or self.feature_service, self.entity))
 
         return self
 
     def sample(self, n: int, sampler: Sampler = TopKSampler(), unique=True):
+        self._sample_target = n
         self.step(
             SamplingStep(
                 sampler,
@@ -131,6 +132,14 @@ class Feed:
 
         return self
 
+    def fallback(self, source: Source, target: int | None = None, group: str = "fallback"):
+        if target is None:
+            target = getattr(self, "_sample_target", 20)
+
+        self.step(FallbackStep(source, target, group))
+
+        return self
+
     def paginate(self, limit: int, offset: int = 0, max_id: int | None = None):
         self.step(PaginationStep(self.entity, int(limit), offset, max_id))
 
@@ -142,8 +151,7 @@ class Feed:
         return self
 
     def diversify(self, by, penalty: float = 0.1):
-        return self._heuristics.append(DiversifyHeuristic(by, penalty))
-
+        self._heuristics.append(DiversityHeuristic(by, penalty))
         return self
 
     async def _execute_step(self, idx, candidates: CandidateList) -> CandidateList:
@@ -165,7 +173,7 @@ class Feed:
 
     async def execute(self) -> list[int]:
         if self._running:
-            logger.error("Pipeline is already running.")
+            log_error("Pipeline is already running", module="feed")
             return
 
         self._running = True
@@ -183,7 +191,7 @@ class Feed:
         self.counter += 1
         self._running = False
 
-        return self
+        return candidates
 
     def results(self, step_idx=None) -> CandidateList:
         step_idx = step_idx or len(self.steps) - 1
@@ -192,3 +200,7 @@ class Feed:
 
     def __getitem__(self, idx):
         return self.steps[idx]
+
+
+# Deprecated alias - use Pipeline instead
+Feed = Pipeline
