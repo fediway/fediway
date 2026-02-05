@@ -15,28 +15,32 @@ def request_key(request: Request):
 
 
 class Session:
-    data: dict = {}
-
-    def __init__(self, id, key, ipv4_address, user_agent, data={}):
+    def __init__(self, id, key, ipv4_address, user_agent, data=None):
         self.id = id
         self.key = key
         self.ipv4_address = ipv4_address
         self.user_agent = user_agent
-        self.data = {}
+        self.data = data if data is not None else {}
         self._modified = False
 
     @classmethod
-    def from_request(cls, request: Request, id: str = uuid4()):
+    def from_request(cls, request: Request, id: str | None = None):
         return cls(
-            id=str(id),
+            id=str(id) if id else str(uuid4()),
             key=request_key(request),
             ipv4_address=request.client.host,
             user_agent=request.headers.get("User-Agent"),
         )
 
     @classmethod
-    def from_dict(cls, id: str, data):
-        return cls(id, data["ipv4_address"], data[""])
+    def from_dict(cls, id: str, key: str, data: dict):
+        return cls(
+            id=id,
+            key=key,
+            ipv4_address=data.get("ipv4_address"),
+            user_agent=data.get("user_agent"),
+            data=data.get("data", {}),
+        )
 
     def get(self, key, default=None):
         return self.data.get(key, default)

@@ -101,7 +101,12 @@ class RedisSource(Source):
         if not self.r.exists(self.redis_key()):
             candidates = self.store()
         else:
-            candidates = json.loads(self.r.get(self.redis_key()))
+            raw = self.r.get(self.redis_key())
+            try:
+                candidates = json.loads(raw) if raw else []
+            except json.JSONDecodeError:
+                self.r.delete(self.redis_key())
+                candidates = self.store()
         return candidates
 
     def collect(self, limit: int):
