@@ -6,7 +6,7 @@ from apps.api.sources.accounts import (
     PopularAccountsSource,
     SimilarInterestsSource,
 )
-from config.algorithm import algorithm_config
+from config import config
 from modules.fediway.sources import Source
 from modules.mastodon.models import Account
 from shared.core.rw import get_rw_session
@@ -18,15 +18,15 @@ def get_followed_by_friends_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.suggestions
-    if not cfg.sources.followed_by_friends.enabled:
+    cfg = config.feeds.suggestions
+    if not cfg.sources.social_proof.enabled:
         return []
     return [
         (
             FollowedByFriendsSource(
                 rw=rw,
                 account_id=account.id,
-                min_mutual_follows=cfg.sources.followed_by_friends.min_mutual_follows,
+                min_mutual_follows=cfg.sources.social_proof.min_mutual_follows,
                 exclude_following=cfg.settings.exclude_following,
             ),
             25,
@@ -38,7 +38,7 @@ def get_similar_interests_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.suggestions
+    cfg = config.feeds.suggestions
     if not cfg.sources.similar_interests.enabled:
         return []
     return [
@@ -58,7 +58,7 @@ def get_popular_accounts_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.suggestions
+    cfg = config.feeds.suggestions
     if not cfg.sources.popular.enabled:
         return []
     return [

@@ -1,4 +1,4 @@
-from config.algorithm import algorithm_config
+from config import config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
 from modules.fediway.sources import Source
@@ -15,7 +15,7 @@ class SuggestionsFeed(Feed):
         super().__init__()
         self.account_id = account_id
         self._sources = sources
-        self._config = algorithm_config.suggestions
+        self._config = config.feeds.suggestions
 
     def sources(self) -> dict[str, list[tuple]]:
         return self._sources

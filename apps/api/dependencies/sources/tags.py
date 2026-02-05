@@ -3,7 +3,7 @@ from redis import Redis
 from sqlmodel import Session as RWSession
 
 from apps.api.sources.tags import TrendingTagsSource
-from config.algorithm import algorithm_config
+from config import config
 from modules.fediway.sources import Source
 from shared.core.redis import get_redis
 from shared.core.rw import get_rw_session
@@ -13,7 +13,7 @@ def get_trending_tags_source(
     r: Redis = Depends(get_redis),
     rw: RWSession = Depends(get_rw_session),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.trends.tags
+    cfg = config.feeds.trends.tags
     return [
         (
             TrendingTagsSource(

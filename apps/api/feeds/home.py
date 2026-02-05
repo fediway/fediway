@@ -1,4 +1,4 @@
-from config.algorithm import algorithm_config
+from config import config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
 from modules.fediway.sources import Source
@@ -16,7 +16,7 @@ class HomeFeed(Feed):
         super().__init__(feature_service=feature_service)
         self.account_id = account_id
         self._sources = sources
-        self._config = algorithm_config.home
+        self._config = config.feeds.timelines.home
 
     def sources(self) -> dict[str, list[tuple]]:
         return self._sources

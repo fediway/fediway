@@ -5,31 +5,31 @@ import pytest
 
 @pytest.fixture
 def mock_suggestions_config():
-    config = MagicMock()
-    config.settings = MagicMock()
-    config.settings.max_results = 40
-    config.settings.exclude_following = True
-    config.settings.min_account_age_days = 7
-    config.weights = MagicMock()
-    config.weights.social_proof = 40
-    config.weights.similar_interests = 35
-    config.weights.popular = 25
-    config.sources = MagicMock()
-    config.sources.social_proof.enabled = True
-    config.sources.social_proof.min_mutual_follows = 2
-    config.sources.similar_interests.enabled = True
-    config.sources.similar_interests.min_tag_overlap = 3
-    config.sources.popular.enabled = True
-    config.sources.popular.local_only = True
-    config.sources.popular.min_followers = 10
-    return config
+    suggestions_config = MagicMock()
+    suggestions_config.settings = MagicMock()
+    suggestions_config.settings.max_results = 40
+    suggestions_config.settings.exclude_following = True
+    suggestions_config.settings.min_account_age_days = 7
+    suggestions_config.weights = MagicMock()
+    suggestions_config.weights.social_proof = 40
+    suggestions_config.weights.similar_interests = 35
+    suggestions_config.weights.popular = 25
+    suggestions_config.sources = MagicMock()
+    suggestions_config.sources.social_proof.enabled = True
+    suggestions_config.sources.social_proof.min_mutual_follows = 2
+    suggestions_config.sources.similar_interests.enabled = True
+    suggestions_config.sources.similar_interests.min_tag_overlap = 3
+    suggestions_config.sources.popular.enabled = True
+    suggestions_config.sources.popular.local_only = True
+    suggestions_config.sources.popular.min_followers = 10
+    return suggestions_config
 
 
 @pytest.fixture
-def mock_algorithm_config(mock_suggestions_config):
-    config = MagicMock()
-    config.suggestions = mock_suggestions_config
-    return config
+def mock_config(mock_suggestions_config):
+    cfg = MagicMock()
+    cfg.feeds.suggestions = mock_suggestions_config
+    return cfg
 
 
 @pytest.fixture
@@ -41,8 +41,8 @@ def mock_sources():
     }
 
 
-def test_suggestions_feed_instantiation(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
+def test_suggestions_feed_instantiation(mock_config, mock_sources):
+    with patch("apps.api.feeds.suggestions.config", mock_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
 
         feed = SuggestionsFeed(account_id=123, sources=mock_sources)
@@ -51,8 +51,8 @@ def test_suggestions_feed_instantiation(mock_algorithm_config, mock_sources):
         assert feed.entity == "account_id"
 
 
-def test_suggestions_feed_get_min_candidates(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
+def test_suggestions_feed_get_min_candidates(mock_config, mock_sources):
+    with patch("apps.api.feeds.suggestions.config", mock_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
 
         feed = SuggestionsFeed(account_id=123, sources=mock_sources)
@@ -60,8 +60,8 @@ def test_suggestions_feed_get_min_candidates(mock_algorithm_config, mock_sources
         assert feed.get_min_candidates() == 5
 
 
-def test_suggestions_feed_group_weights(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
+def test_suggestions_feed_group_weights(mock_config, mock_sources):
+    with patch("apps.api.feeds.suggestions.config", mock_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
 
         feed = SuggestionsFeed(account_id=123, sources=mock_sources)
@@ -72,10 +72,10 @@ def test_suggestions_feed_group_weights(mock_algorithm_config, mock_sources):
         assert weights["popular"] == 0.25
 
 
-def test_suggestions_feed_group_weights_without_config(mock_algorithm_config, mock_sources):
-    mock_algorithm_config.suggestions.weights = None
+def test_suggestions_feed_group_weights_without_config(mock_config, mock_sources):
+    mock_config.suggestions.weights = None
 
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
+    with patch("apps.api.feeds.suggestions.config", mock_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
 
         feed = SuggestionsFeed(account_id=123, sources=mock_sources)
@@ -87,8 +87,8 @@ def test_suggestions_feed_group_weights_without_config(mock_algorithm_config, mo
         assert weights["popular"] == 0.25
 
 
-def test_suggestions_feed_sources_returns_injected_dict(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
+def test_suggestions_feed_sources_returns_injected_dict(mock_config, mock_sources):
+    with patch("apps.api.feeds.suggestions.config", mock_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
 
         feed = SuggestionsFeed(account_id=123, sources=mock_sources)
@@ -102,8 +102,8 @@ def test_suggestions_feed_sources_returns_injected_dict(mock_algorithm_config, m
 
 
 @pytest.mark.asyncio
-async def test_suggestions_feed_forward(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
+async def test_suggestions_feed_forward(mock_config, mock_sources):
+    with patch("apps.api.feeds.suggestions.config", mock_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
         from modules.fediway.feed.candidates import CandidateList
 
@@ -119,8 +119,8 @@ async def test_suggestions_feed_forward(mock_algorithm_config, mock_sources):
 
 
 @pytest.mark.asyncio
-async def test_suggestions_feed_forward_unique(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
+async def test_suggestions_feed_forward_unique(mock_config, mock_sources):
+    with patch("apps.api.feeds.suggestions.config", mock_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
         from modules.fediway.feed.candidates import CandidateList
 
@@ -137,8 +137,8 @@ async def test_suggestions_feed_forward_unique(mock_algorithm_config, mock_sourc
 
 
 @pytest.mark.asyncio
-async def test_suggestions_feed_forward_empty(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
+async def test_suggestions_feed_forward_empty(mock_config, mock_sources):
+    with patch("apps.api.feeds.suggestions.config", mock_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
         from modules.fediway.feed.candidates import CandidateList
 
@@ -151,8 +151,8 @@ async def test_suggestions_feed_forward_empty(mock_algorithm_config, mock_source
         assert len(result) == 0
 
 
-def test_suggestions_feed_is_feed_subclass(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.suggestions.algorithm_config", mock_algorithm_config):
+def test_suggestions_feed_is_feed_subclass(mock_config, mock_sources):
+    with patch("apps.api.feeds.suggestions.config", mock_config):
         from apps.api.feeds.suggestions import SuggestionsFeed
         from modules.fediway.feed import Feed
 

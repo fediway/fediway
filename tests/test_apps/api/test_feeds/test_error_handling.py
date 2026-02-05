@@ -64,10 +64,10 @@ def mock_sources():
 @pytest.mark.asyncio
 async def test_feed_forward_returns_empty_on_empty_input(mock_home_config, mock_sources):
     """Verify forward() handles empty candidate list."""
-    mock_algorithm_config = MagicMock()
-    mock_algorithm_config.home = mock_home_config
+    mock_config = MagicMock()
+    mock_config.feeds.timelines.home = mock_home_config
 
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
 
         feed = HomeFeed(account_id=123, sources=mock_sources)
@@ -81,10 +81,10 @@ async def test_feed_forward_returns_empty_on_empty_input(mock_home_config, mock_
 @pytest.mark.asyncio
 async def test_feed_forward_returns_candidates_not_none(mock_home_config, mock_sources):
     """Verify forward() always returns a CandidateList, never None."""
-    mock_algorithm_config = MagicMock()
-    mock_algorithm_config.home = mock_home_config
+    mock_config = MagicMock()
+    mock_config.feeds.timelines.home = mock_home_config
 
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
 
         feed = HomeFeed(account_id=123, sources=mock_sources)
@@ -247,10 +247,10 @@ async def test_feed_engine_flush_deletes_redis_state():
 async def test_feed_handles_none_weights_gracefully(mock_home_config, mock_sources):
     """Verify that feed works when weights config is None."""
     mock_home_config.weights = None
-    mock_algorithm_config = MagicMock()
-    mock_algorithm_config.home = mock_home_config
+    mock_config = MagicMock()
+    mock_config.feeds.timelines.home = mock_home_config
 
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
 
         feed = HomeFeed(account_id=123, sources=mock_sources)

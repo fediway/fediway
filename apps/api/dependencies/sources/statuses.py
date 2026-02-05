@@ -9,7 +9,7 @@ from apps.api.sources.statuses import (
     TopFollowsSource,
     TrendingStatusesSource,
 )
-from config.algorithm import algorithm_config
+from config import config
 from modules.fediway.sources import Source
 from modules.mastodon.models import Account
 from shared.core.redis import get_redis
@@ -25,7 +25,7 @@ def get_home_top_follows_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.home
+    cfg = config.feeds.timelines.home
     if not cfg.sources.top_follows.enabled:
         return []
     return [
@@ -44,7 +44,7 @@ def get_home_engaged_by_friends_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.home
+    cfg = config.feeds.timelines.home
     if not cfg.sources.engaged_by_friends.enabled:
         return []
     return [
@@ -62,7 +62,7 @@ def get_home_tag_affinity_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.home
+    cfg = config.feeds.timelines.home
     if not cfg.sources.tag_affinity.enabled:
         return []
     return [
@@ -80,7 +80,7 @@ def get_home_posted_by_friends_of_friends_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.home
+    cfg = config.feeds.timelines.home
     if not cfg.sources.posted_by_friends_of_friends.enabled:
         return []
     return [
@@ -99,7 +99,7 @@ def get_home_trending_source(
     rw: RWSession = Depends(get_rw_session),
     languages: list[str] = Depends(get_languages),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.home
+    cfg = config.feeds.timelines.home
     if not cfg.sources.trending.enabled:
         return []
     return [
@@ -190,7 +190,7 @@ def get_trending_statuses_source(
     rw: RWSession = Depends(get_rw_session),
     languages: list[str] = Depends(get_languages),
 ) -> list[tuple[Source, int]]:
-    cfg = algorithm_config.trends.statuses
+    cfg = config.feeds.trends.statuses
     return [
         (
             TrendingStatusesSource(

@@ -5,29 +5,29 @@ import pytest
 
 @pytest.fixture
 def mock_home_config():
-    config = MagicMock()
-    config.weights = MagicMock()
-    config.weights.in_network = 50
-    config.weights.discovery = 35
-    config.weights.trending = 15
-    config.settings = MagicMock()
-    config.settings.max_per_author = 3
-    config.settings.diversity_penalty = 0.1
-    config.settings.batch_size = 20
-    config.sources = MagicMock()
-    config.sources.top_follows.enabled = True
-    config.sources.engaged_by_friends.enabled = True
-    config.sources.tag_affinity.enabled = True
-    config.sources.posted_by_friends_of_friends.enabled = True
-    config.sources.trending.enabled = True
-    return config
+    home_config = MagicMock()
+    home_config.weights = MagicMock()
+    home_config.weights.in_network = 50
+    home_config.weights.discovery = 35
+    home_config.weights.trending = 15
+    home_config.settings = MagicMock()
+    home_config.settings.max_per_author = 3
+    home_config.settings.diversity_penalty = 0.1
+    home_config.settings.batch_size = 20
+    home_config.sources = MagicMock()
+    home_config.sources.top_follows.enabled = True
+    home_config.sources.engaged_by_friends.enabled = True
+    home_config.sources.tag_affinity.enabled = True
+    home_config.sources.posted_by_friends_of_friends.enabled = True
+    home_config.sources.trending.enabled = True
+    return home_config
 
 
 @pytest.fixture
-def mock_algorithm_config(mock_home_config):
-    config = MagicMock()
-    config.home = mock_home_config
-    return config
+def mock_config(mock_home_config):
+    cfg = MagicMock()
+    cfg.feeds.timelines.home = mock_home_config
+    return cfg
 
 
 @pytest.fixture
@@ -40,8 +40,8 @@ def mock_sources():
     }
 
 
-def test_home_feed_instantiation(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+def test_home_feed_instantiation(mock_config, mock_sources):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
 
         feed = HomeFeed(account_id=123, sources=mock_sources)
@@ -50,10 +50,10 @@ def test_home_feed_instantiation(mock_algorithm_config, mock_sources):
         assert feed.entity == "status_id"
 
 
-def test_home_feed_get_min_candidates(mock_algorithm_config, mock_sources):
-    mock_algorithm_config.home.settings.batch_size = 25
+def test_home_feed_get_min_candidates(mock_config, mock_sources):
+    mock_config.feeds.timelines.home.settings.batch_size = 25
 
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
 
         feed = HomeFeed(account_id=123, sources=mock_sources)
@@ -61,8 +61,8 @@ def test_home_feed_get_min_candidates(mock_algorithm_config, mock_sources):
         assert feed.get_min_candidates() == 25
 
 
-def test_home_feed_group_weights(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+def test_home_feed_group_weights(mock_config, mock_sources):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
 
         feed = HomeFeed(account_id=123, sources=mock_sources)
@@ -74,10 +74,10 @@ def test_home_feed_group_weights(mock_algorithm_config, mock_sources):
         assert weights["fallback"] == 0.1
 
 
-def test_home_feed_group_weights_without_config_weights(mock_algorithm_config, mock_sources):
-    mock_algorithm_config.home.weights = None
+def test_home_feed_group_weights_without_config_weights(mock_config, mock_sources):
+    mock_config.feeds.timelines.home.weights = None
 
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
 
         feed = HomeFeed(account_id=123, sources=mock_sources)
@@ -90,8 +90,8 @@ def test_home_feed_group_weights_without_config_weights(mock_algorithm_config, m
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+async def test_home_feed_forward(mock_config, mock_sources):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed.candidates import CandidateList
 
@@ -108,8 +108,8 @@ async def test_home_feed_forward(mock_algorithm_config, mock_sources):
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_unique(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+async def test_home_feed_forward_unique(mock_config, mock_sources):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed.candidates import CandidateList
 
@@ -128,8 +128,8 @@ async def test_home_feed_forward_unique(mock_algorithm_config, mock_sources):
 
 
 @pytest.mark.asyncio
-async def test_home_feed_forward_empty(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+async def test_home_feed_forward_empty(mock_config, mock_sources):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed.candidates import CandidateList
 
@@ -142,16 +142,16 @@ async def test_home_feed_forward_empty(mock_algorithm_config, mock_sources):
         assert len(result) == 0
 
 
-def test_home_feed_is_feed_subclass(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+def test_home_feed_is_feed_subclass(mock_config, mock_sources):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
         from modules.fediway.feed import Feed
 
         assert issubclass(HomeFeed, Feed)
 
 
-def test_home_feed_sources_returns_injected_dict(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.home.algorithm_config", mock_algorithm_config):
+def test_home_feed_sources_returns_injected_dict(mock_config, mock_sources):
+    with patch("apps.api.feeds.home.config", mock_config):
         from apps.api.feeds.home import HomeFeed
 
         feed = HomeFeed(account_id=123, sources=mock_sources)

@@ -5,6 +5,7 @@ from .cors import CorsConfig
 from .embed import EmbedConfig
 from .feast import FeastConfig
 from .fediway import FediwayConfig
+from .feeds import load as load_feeds
 from .geo import GeoLocationConfig
 from .kafka import KafkaConfig
 from .logging import LoggingConfig
@@ -12,7 +13,6 @@ from .postgres import PostgresConfig
 from .qdrant import QdrantConfig
 from .redis import RedisConfig
 from .risingwave import RisingWaveConfig
-from .sources import SourceConfig, SourcesConfig
 
 
 class classproperty(property):
@@ -27,6 +27,7 @@ class config:
     embed = EmbedConfig()
     feast = FeastConfig()
     fediway = FediwayConfig()
+    feeds = load_feeds()
     files = FilesConfig()
     geo = GeoLocationConfig()
     kafka = KafkaConfig()

@@ -1,4 +1,4 @@
-from config.algorithm import algorithm_config
+from config import config
 from modules.fediway.feed import Feed
 from modules.fediway.feed.candidates import CandidateList
 from modules.fediway.sources import Source
@@ -13,7 +13,7 @@ class TrendingTagsFeed(Feed):
     ):
         super().__init__()
         self._sources = sources
-        self._config = algorithm_config.trends.tags
+        self._config = config.feeds.trends.tags
 
     def sources(self) -> dict[str, list[tuple]]:
         return self._sources

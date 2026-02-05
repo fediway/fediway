@@ -7,6 +7,7 @@ from apps.api.sources.statuses import (
     TagAffinitySource,
     TopFollowsSource,
 )
+from config.feeds import load
 
 
 def test_sources_have_unique_ids():
@@ -38,76 +39,21 @@ def test_all_sources_have_tracked_params():
         assert isinstance(params, dict), f"{source.id} should return dict from get_params()"
 
 
-def _import_sources_config():
-    import importlib.util
+def test_feeds_config_weights_sum_to_100():
+    cfg = load()
+    home = cfg.timelines.home
 
-    spec = importlib.util.spec_from_file_location("config.sources", "config/sources.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.SourcesConfig
-
-
-SourcesConfig = _import_sources_config()
+    total = home.weights.in_network + home.weights.discovery + home.weights.trending
+    assert total == 100, f"Home weights should sum to 100, got {total}"
 
 
-def test_source_weights_sum_to_one():
-    cfg = SourcesConfig()
+def test_feeds_config_default_weights():
+    cfg = load()
+    home = cfg.timelines.home
 
-    total = (
-        cfg.top_follows.weight
-        + cfg.engaged_by_friends.weight
-        + cfg.tag_affinity.weight
-        + cfg.posted_by_friends_of_friends.weight
-        + cfg.engaged_by_similar_users.weight
-        + cfg.trending.weight
-    )
-
-    assert abs(total - 1.0) < 0.01, f"Weights should sum to 1.0, got {total}"
-
-
-def test_source_weights_match_plan():
-    cfg = SourcesConfig()
-
-    assert cfg.top_follows.weight == 0.35
-    assert cfg.engaged_by_friends.weight == 0.15
-    assert cfg.tag_affinity.weight == 0.15
-    assert cfg.posted_by_friends_of_friends.weight == 0.10
-    assert cfg.engaged_by_similar_users.weight == 0.15
-    assert cfg.trending.weight == 0.10
-
-
-def test_all_mvp_sources_enabled_by_default():
-    cfg = SourcesConfig()
-
-    assert cfg.top_follows.enabled
-    assert cfg.engaged_by_friends.enabled
-    assert cfg.tag_affinity.enabled
-    assert cfg.posted_by_friends_of_friends.enabled
-    assert cfg.engaged_by_similar_users.enabled
-    assert cfg.trending.enabled
-
-
-def test_sources_config_get_enabled_returns_dict():
-    cfg = SourcesConfig()
-    enabled = cfg.get_enabled_sources()
-
-    assert isinstance(enabled, dict)
-    assert "top_follows" in enabled
-    assert "trending" in enabled
-
-
-def test_sources_config_group_weights():
-    cfg = SourcesConfig()
-    weights = cfg.get_group_weights()
-
-    # in-network: top_follows (0.35) + engaged_by_friends (0.15) = 0.5
-    assert abs(weights.get("in-network", 0) - 0.5) < 0.01
-
-    # discovery: tag_affinity (0.15) + posted_by_friends_of_friends (0.1) + engaged_by_similar_users (0.15) = 0.4
-    assert abs(weights.get("discovery", 0) - 0.4) < 0.01
-
-    # trending: 0.1
-    assert abs(weights.get("trending", 0) - 0.1) < 0.01
+    assert home.weights.in_network == 50
+    assert home.weights.discovery == 35
+    assert home.weights.trending == 15
 
 
 def test_home_sources_includes_fallback_group():

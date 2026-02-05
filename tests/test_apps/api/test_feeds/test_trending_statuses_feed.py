@@ -5,23 +5,22 @@ import pytest
 
 @pytest.fixture
 def mock_trending_config():
-    config = MagicMock()
-    config.settings = MagicMock()
-    config.settings.window_hours = 24
-    config.settings.max_per_author = 2
-    config.settings.min_engagement = 5
-    config.settings.local_only = False
-    config.settings.batch_size = 20
-    config.settings.diversity_penalty = 0.1
-    return config
+    trending_config = MagicMock()
+    trending_config.settings = MagicMock()
+    trending_config.settings.window_hours = 24
+    trending_config.settings.max_per_author = 2
+    trending_config.settings.min_engagement = 5
+    trending_config.settings.local_only = False
+    trending_config.settings.batch_size = 20
+    trending_config.settings.diversity_penalty = 0.1
+    return trending_config
 
 
 @pytest.fixture
-def mock_algorithm_config(mock_trending_config):
-    config = MagicMock()
-    config.trends = MagicMock()
-    config.trends.statuses = mock_trending_config
-    return config
+def mock_config(mock_trending_config):
+    cfg = MagicMock()
+    cfg.feeds.trends.statuses = mock_trending_config
+    return cfg
 
 
 @pytest.fixture
@@ -29,8 +28,8 @@ def mock_sources():
     return {"trending": []}
 
 
-def test_trending_feed_instantiation(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.trending_statuses.algorithm_config", mock_algorithm_config):
+def test_trending_feed_instantiation(mock_config, mock_sources):
+    with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
 
         feed = TrendingStatusesFeed(sources=mock_sources)
@@ -38,8 +37,8 @@ def test_trending_feed_instantiation(mock_algorithm_config, mock_sources):
         assert feed.entity == "status_id"
 
 
-def test_trending_feed_get_min_candidates(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.trending_statuses.algorithm_config", mock_algorithm_config):
+def test_trending_feed_get_min_candidates(mock_config, mock_sources):
+    with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
 
         feed = TrendingStatusesFeed(sources=mock_sources)
@@ -47,8 +46,8 @@ def test_trending_feed_get_min_candidates(mock_algorithm_config, mock_sources):
         assert feed.get_min_candidates() == 5
 
 
-def test_trending_feed_sources_returns_injected_dict(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.trending_statuses.algorithm_config", mock_algorithm_config):
+def test_trending_feed_sources_returns_injected_dict(mock_config, mock_sources):
+    with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
 
         feed = TrendingStatusesFeed(sources=mock_sources)
@@ -61,8 +60,8 @@ def test_trending_feed_sources_returns_injected_dict(mock_algorithm_config, mock
 
 
 @pytest.mark.asyncio
-async def test_trending_feed_forward(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.trending_statuses.algorithm_config", mock_algorithm_config):
+async def test_trending_feed_forward(mock_config, mock_sources):
+    with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
         from modules.fediway.feed.candidates import CandidateList
 
@@ -78,8 +77,8 @@ async def test_trending_feed_forward(mock_algorithm_config, mock_sources):
 
 
 @pytest.mark.asyncio
-async def test_trending_feed_forward_unique(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.trending_statuses.algorithm_config", mock_algorithm_config):
+async def test_trending_feed_forward_unique(mock_config, mock_sources):
+    with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
         from modules.fediway.feed.candidates import CandidateList
 
@@ -96,8 +95,8 @@ async def test_trending_feed_forward_unique(mock_algorithm_config, mock_sources)
 
 
 @pytest.mark.asyncio
-async def test_trending_feed_forward_empty(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.trending_statuses.algorithm_config", mock_algorithm_config):
+async def test_trending_feed_forward_empty(mock_config, mock_sources):
+    with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
         from modules.fediway.feed.candidates import CandidateList
 
@@ -110,8 +109,8 @@ async def test_trending_feed_forward_empty(mock_algorithm_config, mock_sources):
         assert len(result) == 0
 
 
-def test_trending_feed_is_feed_subclass(mock_algorithm_config, mock_sources):
-    with patch("apps.api.feeds.trending_statuses.algorithm_config", mock_algorithm_config):
+def test_trending_feed_is_feed_subclass(mock_config, mock_sources):
+    with patch("apps.api.feeds.trending_statuses.config", mock_config):
         from apps.api.feeds.trending_statuses import TrendingStatusesFeed
         from modules.fediway.feed import Feed
 

@@ -1,7 +1,7 @@
 """
 TOML configuration schema for fediway algorithms.
 
-This module defines the Pydantic models that validate fediway.toml configuration.
+This module defines the Pydantic models that validate feeds.toml configuration.
 """
 
 from pydantic import BaseModel, Field, model_validator
@@ -223,9 +223,9 @@ class TimelinesConfig(BaseModel):
     home: HomeTimelineConfig = Field(default_factory=HomeTimelineConfig)
 
 
-class FediwayTomlConfig(BaseModel):
+class FeedsTomlConfig(BaseModel):
     """
-    Root configuration model for fediway.toml.
+    Root configuration model for feeds.toml.
 
     Maps directly to Mastodon API endpoints:
     - [timelines.home] -> GET /api/v1/timelines/home
