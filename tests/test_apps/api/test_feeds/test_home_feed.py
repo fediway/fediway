@@ -15,10 +15,10 @@ def mock_home_config():
     config.settings.diversity_penalty = 0.1
     config.settings.batch_size = 20
     config.sources = MagicMock()
-    config.sources.smart_follows.enabled = True
-    config.sources.follows_engaging.enabled = True
+    config.sources.top_follows.enabled = True
+    config.sources.engaged_by_friends.enabled = True
     config.sources.tag_affinity.enabled = True
-    config.sources.second_degree.enabled = True
+    config.sources.posted_by_friends_of_friends.enabled = True
     config.sources.trending.enabled = True
     return config
 

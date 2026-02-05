@@ -29,21 +29,21 @@ def _import_without_init(module_path: str, module_name: str):
 
 
 _module = _import_without_init(
-    "modules/fediway/sources/statuses/smart_follows.py",
-    "modules.fediway.sources.statuses.smart_follows",
+    "modules/fediway/sources/statuses/top_follows.py",
+    "modules.fediway.sources.statuses.top_follows",
 )
-SmartFollowsSource = _module.SmartFollowsSource
+TopFollowsSource = _module.TopFollowsSource
 
 
 def test_source_id():
     mock_rw = MagicMock()
-    source = SmartFollowsSource(rw=mock_rw, account_id=1)
-    assert source.id == "smart_follows"
+    source = TopFollowsSource(rw=mock_rw, account_id=1)
+    assert source.id == "top_follows"
 
 
 def test_source_tracked_params():
     mock_rw = MagicMock()
-    source = SmartFollowsSource(
+    source = TopFollowsSource(
         rw=mock_rw,
         account_id=1,
         recency_half_life_hours=6,
@@ -64,7 +64,7 @@ def test_collect_empty_affinities():
     mock_rw = MagicMock()
     mock_rw.execute.return_value.fetchall.return_value = []
 
-    source = SmartFollowsSource(rw=mock_rw, account_id=1)
+    source = TopFollowsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     assert result == []
@@ -93,7 +93,7 @@ def test_collect_returns_status_ids():
 
     mock_rw.execute.side_effect = mock_execute
 
-    source = SmartFollowsSource(rw=mock_rw, account_id=1)
+    source = TopFollowsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     assert 101 in result
@@ -123,7 +123,7 @@ def test_scoring_favors_high_affinity():
 
     mock_rw.execute.side_effect = mock_execute
 
-    source = SmartFollowsSource(rw=mock_rw, account_id=1)
+    source = TopFollowsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     assert result[0] == 101
@@ -151,7 +151,7 @@ def test_scoring_favors_recent_posts():
 
     mock_rw.execute.side_effect = mock_execute
 
-    source = SmartFollowsSource(rw=mock_rw, account_id=1)
+    source = TopFollowsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     assert result[0] == 102
@@ -180,7 +180,7 @@ def test_volume_penalty_applied():
 
     mock_rw.execute.side_effect = mock_execute
 
-    source = SmartFollowsSource(rw=mock_rw, account_id=1, volume_threshold=5)
+    source = TopFollowsSource(rw=mock_rw, account_id=1, volume_threshold=5)
     result = source.collect(10)
 
     # Low volume should rank higher due to no penalty
@@ -213,7 +213,7 @@ def test_diversity_limits_per_author():
 
     mock_rw.execute.side_effect = mock_execute
 
-    source = SmartFollowsSource(rw=mock_rw, account_id=1, max_per_author=2)
+    source = TopFollowsSource(rw=mock_rw, account_id=1, max_per_author=2)
     result = source.collect(10)
 
     author_201_count = sum(1 for sid in result if sid in [101, 102, 103, 104])
@@ -242,7 +242,7 @@ def test_cold_start_equal_weights():
 
     mock_rw.execute.side_effect = mock_execute
 
-    source = SmartFollowsSource(rw=mock_rw, account_id=1)
+    source = TopFollowsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     # Both should be included with equal weight
@@ -272,7 +272,7 @@ def test_inferred_affinity_used():
 
     mock_rw.execute.side_effect = mock_execute
 
-    source = SmartFollowsSource(rw=mock_rw, account_id=1)
+    source = TopFollowsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     # Author 201 with inferred affinity 7.0 should rank higher than 202 with 5.0
@@ -300,7 +300,7 @@ def test_respects_limit():
 
     mock_rw.execute.side_effect = mock_execute
 
-    source = SmartFollowsSource(rw=mock_rw, account_id=1)
+    source = TopFollowsSource(rw=mock_rw, account_id=1)
     result = source.collect(5)
 
     assert len(result) == 5

@@ -27,44 +27,44 @@ def _import_module_bypass_init(module_path: str, module_name: str):
     return module
 
 
-_smart_follows = _import_module_bypass_init(
-    "modules/fediway/sources/statuses/smart_follows.py",
-    "modules.fediway.sources.statuses.smart_follows",
+_top_follows = _import_module_bypass_init(
+    "modules/fediway/sources/statuses/top_follows.py",
+    "modules.fediway.sources.statuses.top_follows",
 )
-_follows_engaging = _import_module_bypass_init(
-    "modules/fediway/sources/statuses/follows_engaging_now.py",
-    "modules.fediway.sources.statuses.follows_engaging_now",
+_engaged_by_friends = _import_module_bypass_init(
+    "modules/fediway/sources/statuses/engaged_by_friends.py",
+    "modules.fediway.sources.statuses.engaged_by_friends",
 )
 _tag_affinity = _import_module_bypass_init(
     "modules/fediway/sources/statuses/tag_affinity.py",
     "modules.fediway.sources.statuses.tag_affinity",
 )
-_second_degree = _import_module_bypass_init(
-    "modules/fediway/sources/statuses/second_degree.py",
-    "modules.fediway.sources.statuses.second_degree",
+_posted_by_friends_of_friends = _import_module_bypass_init(
+    "modules/fediway/sources/statuses/posted_by_friends_of_friends.py",
+    "modules.fediway.sources.statuses.posted_by_friends_of_friends",
 )
-_collaborative = _import_module_bypass_init(
-    "modules/fediway/sources/statuses/collaborative_filtering.py",
-    "modules.fediway.sources.statuses.collaborative_filtering",
+_engaged_by_similar_users = _import_module_bypass_init(
+    "modules/fediway/sources/statuses/engaged_by_similar_users.py",
+    "modules.fediway.sources.statuses.engaged_by_similar_users",
 )
 
-SmartFollowsSource = _smart_follows.SmartFollowsSource
-FollowsEngagingNowSource = _follows_engaging.FollowsEngagingNowSource
+TopFollowsSource = _top_follows.TopFollowsSource
+EngagedByFriendsSource = _engaged_by_friends.EngagedByFriendsSource
 TagAffinitySource = _tag_affinity.TagAffinitySource
-SecondDegreeSource = _second_degree.SecondDegreeSource
-CollaborativeFilteringSource = _collaborative.CollaborativeFilteringSource
+PostedByFriendsOfFriendsSource = _posted_by_friends_of_friends.PostedByFriendsOfFriendsSource
+EngagedBySimilarUsersSource = _engaged_by_similar_users.EngagedBySimilarUsersSource
 
 
 def test_sources_have_unique_ids():
     mock_rw = MagicMock()
 
-    smart = SmartFollowsSource(rw=mock_rw, account_id=1)
-    follows = FollowsEngagingNowSource(rw=mock_rw, account_id=1)
+    top = TopFollowsSource(rw=mock_rw, account_id=1)
+    engaged = EngagedByFriendsSource(rw=mock_rw, account_id=1)
     tag = TagAffinitySource(rw=mock_rw, account_id=1)
-    second = SecondDegreeSource(rw=mock_rw, account_id=1)
-    collab = CollaborativeFilteringSource(rw=mock_rw, account_id=1)
+    posted = PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=1)
+    similar = EngagedBySimilarUsersSource(rw=mock_rw, account_id=1)
 
-    ids = [smart.id, follows.id, tag.id, second.id, collab.id]
+    ids = [top.id, engaged.id, tag.id, posted.id, similar.id]
     assert len(ids) == len(set(ids)), "Source IDs must be unique"
 
 
@@ -72,11 +72,11 @@ def test_all_sources_have_tracked_params():
     mock_rw = MagicMock()
 
     sources = [
-        SmartFollowsSource(rw=mock_rw, account_id=1),
-        FollowsEngagingNowSource(rw=mock_rw, account_id=1),
+        TopFollowsSource(rw=mock_rw, account_id=1),
+        EngagedByFriendsSource(rw=mock_rw, account_id=1),
         TagAffinitySource(rw=mock_rw, account_id=1),
-        SecondDegreeSource(rw=mock_rw, account_id=1),
-        CollaborativeFilteringSource(rw=mock_rw, account_id=1),
+        PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=1),
+        EngagedBySimilarUsersSource(rw=mock_rw, account_id=1),
     ]
 
     for source in sources:
@@ -100,11 +100,11 @@ def test_source_weights_sum_to_one():
     cfg = SourcesConfig()
 
     total = (
-        cfg.smart_follows.weight
-        + cfg.follows_engaging_now.weight
+        cfg.top_follows.weight
+        + cfg.engaged_by_friends.weight
         + cfg.tag_affinity.weight
-        + cfg.second_degree.weight
-        + cfg.collaborative_filtering.weight
+        + cfg.posted_by_friends_of_friends.weight
+        + cfg.engaged_by_similar_users.weight
         + cfg.trending.weight
     )
 
@@ -114,22 +114,22 @@ def test_source_weights_sum_to_one():
 def test_source_weights_match_plan():
     cfg = SourcesConfig()
 
-    assert cfg.smart_follows.weight == 0.35
-    assert cfg.follows_engaging_now.weight == 0.15
+    assert cfg.top_follows.weight == 0.35
+    assert cfg.engaged_by_friends.weight == 0.15
     assert cfg.tag_affinity.weight == 0.15
-    assert cfg.second_degree.weight == 0.10
-    assert cfg.collaborative_filtering.weight == 0.15
+    assert cfg.posted_by_friends_of_friends.weight == 0.10
+    assert cfg.engaged_by_similar_users.weight == 0.15
     assert cfg.trending.weight == 0.10
 
 
 def test_all_mvp_sources_enabled_by_default():
     cfg = SourcesConfig()
 
-    assert cfg.smart_follows.enabled
-    assert cfg.follows_engaging_now.enabled
+    assert cfg.top_follows.enabled
+    assert cfg.engaged_by_friends.enabled
     assert cfg.tag_affinity.enabled
-    assert cfg.second_degree.enabled
-    assert cfg.collaborative_filtering.enabled
+    assert cfg.posted_by_friends_of_friends.enabled
+    assert cfg.engaged_by_similar_users.enabled
     assert cfg.trending.enabled
 
 
@@ -138,7 +138,7 @@ def test_sources_config_get_enabled_returns_dict():
     enabled = cfg.get_enabled_sources()
 
     assert isinstance(enabled, dict)
-    assert "smart_follows" in enabled
+    assert "top_follows" in enabled
     assert "trending" in enabled
 
 
@@ -146,10 +146,10 @@ def test_sources_config_group_weights():
     cfg = SourcesConfig()
     weights = cfg.get_group_weights()
 
-    # in-network: smart_follows (0.35) + follows_engaging_now (0.15) = 0.5
+    # in-network: top_follows (0.35) + engaged_by_friends (0.15) = 0.5
     assert abs(weights.get("in-network", 0) - 0.5) < 0.01
 
-    # discovery: tag_affinity (0.15) + second_degree (0.1) + cf (0.15) = 0.4
+    # discovery: tag_affinity (0.15) + posted_by_friends_of_friends (0.1) + engaged_by_similar_users (0.15) = 0.4
     assert abs(weights.get("discovery", 0) - 0.4) < 0.01
 
     # trending: 0.1

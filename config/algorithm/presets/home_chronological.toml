@@ -16,23 +16,23 @@ include_boosts = true
 [ranking]
 decay_rate = 0.0
 
-[sources.smart_follows]
+[sources.top_follows]
 enabled = true
 weight = 100
 recency_hours = 72
 max_per_author = 10
 
-[sources.follows_engaging]
+[sources.engaged_by_friends]
 enabled = false
 
 [sources.tag_affinity]
 enabled = false
 
-[sources.second_degree]
+[sources.posted_by_friends_of_friends]
 enabled = false
 
 [sources.trending]
 enabled = false
 
-[sources.collaborative]
+[sources.engaged_by_similar_users]
 enabled = false

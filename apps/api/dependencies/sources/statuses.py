@@ -5,10 +5,10 @@ from sqlmodel import Session as RWSession
 from config.algorithm import algorithm_config
 from modules.fediway.sources import Source
 from modules.fediway.sources.statuses import (
-    FollowsEngagingNowSource,
-    SecondDegreeSource,
-    SmartFollowsSource,
+    EngagedByFriendsSource,
+    PostedByFriendsOfFriendsSource,
     TagAffinitySource,
+    TopFollowsSource,
     TrendingStatusesSource,
 )
 from modules.mastodon.models import Account
@@ -21,16 +21,16 @@ from ..lang import get_languages
 # Home feed source dependencies
 
 
-def get_home_smart_follows_source(
+def get_home_top_follows_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
     cfg = algorithm_config.home
-    if not cfg.sources.smart_follows.enabled:
+    if not cfg.sources.top_follows.enabled:
         return []
     return [
         (
-            SmartFollowsSource(
+            TopFollowsSource(
                 rw=rw,
                 account_id=account.id,
                 max_per_author=cfg.settings.max_per_author,
@@ -40,16 +40,16 @@ def get_home_smart_follows_source(
     ]
 
 
-def get_home_follows_engaging_source(
+def get_home_engaged_by_friends_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
     cfg = algorithm_config.home
-    if not cfg.sources.follows_engaging.enabled:
+    if not cfg.sources.engaged_by_friends.enabled:
         return []
     return [
         (
-            FollowsEngagingNowSource(
+            EngagedByFriendsSource(
                 rw=rw,
                 account_id=account.id,
             ),
@@ -76,16 +76,16 @@ def get_home_tag_affinity_source(
     ]
 
 
-def get_home_second_degree_source(
+def get_home_posted_by_friends_of_friends_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
     cfg = algorithm_config.home
-    if not cfg.sources.second_degree.enabled:
+    if not cfg.sources.posted_by_friends_of_friends.enabled:
         return []
     return [
         (
-            SecondDegreeSource(
+            PostedByFriendsOfFriendsSource(
                 rw=rw,
                 account_id=account.id,
             ),
@@ -138,17 +138,19 @@ def get_home_fallback_source(
 
 
 def get_home_in_network_sources(
-    smart_follows: list[tuple[Source, int]] = Depends(get_home_smart_follows_source),
-    follows_engaging: list[tuple[Source, int]] = Depends(get_home_follows_engaging_source),
+    top_follows: list[tuple[Source, int]] = Depends(get_home_top_follows_source),
+    engaged_by_friends: list[tuple[Source, int]] = Depends(get_home_engaged_by_friends_source),
 ) -> list[tuple[Source, int]]:
-    return smart_follows + follows_engaging
+    return top_follows + engaged_by_friends
 
 
 def get_home_discovery_sources(
     tag_affinity: list[tuple[Source, int]] = Depends(get_home_tag_affinity_source),
-    second_degree: list[tuple[Source, int]] = Depends(get_home_second_degree_source),
+    posted_by_friends_of_friends: list[tuple[Source, int]] = Depends(
+        get_home_posted_by_friends_of_friends_source
+    ),
 ) -> list[tuple[Source, int]]:
-    return tag_affinity + second_degree
+    return tag_affinity + posted_by_friends_of_friends
 
 
 def get_home_trending_sources(

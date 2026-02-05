@@ -37,41 +37,41 @@ def test_source_config_weight_validation():
 def test_sources_config_has_all_mvp_sources():
     cfg = SourcesConfig()
 
-    assert hasattr(cfg, "smart_follows")
-    assert hasattr(cfg, "follows_engaging_now")
+    assert hasattr(cfg, "top_follows")
+    assert hasattr(cfg, "engaged_by_friends")
     assert hasattr(cfg, "tag_affinity")
-    assert hasattr(cfg, "second_degree")
-    assert hasattr(cfg, "collaborative_filtering")
+    assert hasattr(cfg, "posted_by_friends_of_friends")
+    assert hasattr(cfg, "engaged_by_similar_users")
     assert hasattr(cfg, "trending")
 
 
 def test_sources_config_default_enabled_state():
     cfg = SourcesConfig()
 
-    assert cfg.smart_follows.enabled is True
-    assert cfg.follows_engaging_now.enabled is True
+    assert cfg.top_follows.enabled is True
+    assert cfg.engaged_by_friends.enabled is True
     assert cfg.tag_affinity.enabled is True
-    assert cfg.second_degree.enabled is True
+    assert cfg.posted_by_friends_of_friends.enabled is True
     assert cfg.trending.enabled is True
-    assert cfg.collaborative_filtering.enabled is True
+    assert cfg.engaged_by_similar_users.enabled is True
 
 
 def test_sources_config_default_weights():
     cfg = SourcesConfig()
 
-    assert cfg.smart_follows.weight == 0.35
-    assert cfg.follows_engaging_now.weight == 0.15
+    assert cfg.top_follows.weight == 0.35
+    assert cfg.engaged_by_friends.weight == 0.15
     assert cfg.tag_affinity.weight == 0.15
-    assert cfg.second_degree.weight == 0.10
-    assert cfg.collaborative_filtering.weight == 0.15
+    assert cfg.posted_by_friends_of_friends.weight == 0.10
+    assert cfg.engaged_by_similar_users.weight == 0.15
     assert cfg.trending.weight == 0.10
 
 
 def test_sources_config_has_default_params():
     cfg = SourcesConfig()
 
-    assert cfg.smart_follows.params["max_per_author"] == 3
-    assert cfg.smart_follows.params["recency_half_life_hours"] == 12
+    assert cfg.top_follows.params["max_per_author"] == 3
+    assert cfg.top_follows.params["recency_half_life_hours"] == 12
     assert cfg.trending.params["min_engagers"] == 3
     assert cfg.trending.params["gravity"] == 1.5
 
@@ -81,8 +81,8 @@ def test_sources_config_get_enabled_sources():
 
     enabled = cfg.get_enabled_sources()
 
-    assert "collaborative_filtering" in enabled
-    assert "smart_follows" in enabled
+    assert "engaged_by_similar_users" in enabled
+    assert "top_follows" in enabled
     assert "trending" in enabled
 
 
@@ -91,9 +91,9 @@ def test_sources_config_get_group_weights():
 
     weights = cfg.get_group_weights()
 
-    # in-network: smart_follows (0.35) + follows_engaging_now (0.15) = 0.5
+    # in-network: top_follows (0.35) + engaged_by_friends (0.15) = 0.5
     assert weights["in-network"] == pytest.approx(0.5, rel=0.01)
-    # discovery: tag_affinity (0.15) + second_degree (0.10) + collaborative_filtering (0.15) = 0.4
+    # discovery: tag_affinity (0.15) + posted_by_friends_of_friends (0.10) + engaged_by_similar_users (0.15) = 0.4
     assert weights["discovery"] == pytest.approx(0.40, rel=0.01)
     assert weights["trending"] == pytest.approx(0.10, rel=0.01)
 
@@ -101,9 +101,9 @@ def test_sources_config_get_group_weights():
 def test_sources_config_get_source_config():
     cfg = SourcesConfig()
 
-    smart_follows = cfg.get_source_config("smart_follows")
-    assert smart_follows is not None
-    assert smart_follows.weight == 0.35
+    top_follows = cfg.get_source_config("top_follows")
+    assert top_follows is not None
+    assert top_follows.weight == 0.35
 
     unknown = cfg.get_source_config("unknown_source")
     assert unknown is None
@@ -111,7 +111,7 @@ def test_sources_config_get_source_config():
 
 def test_sources_config_from_dict():
     data = {
-        "smart_follows": {
+        "top_follows": {
             "enabled": True,
             "weight": 0.4,
             "params": {"max_per_author": 5},
@@ -123,22 +123,22 @@ def test_sources_config_from_dict():
 
     cfg = SourcesConfig(**data)
 
-    assert cfg.smart_follows.weight == 0.4
-    assert cfg.smart_follows.params["max_per_author"] == 5
+    assert cfg.top_follows.weight == 0.4
+    assert cfg.top_follows.params["max_per_author"] == 5
     assert cfg.trending.enabled is False
 
 
 def test_sources_config_partial_override():
     data = {
-        "smart_follows": {
+        "top_follows": {
             "weight": 0.5,
         },
     }
 
     cfg = SourcesConfig(**data)
 
-    assert cfg.smart_follows.weight == 0.5
-    assert cfg.smart_follows.enabled is True
+    assert cfg.top_follows.weight == 0.5
+    assert cfg.top_follows.enabled is True
 
 
 def test_sources_config_custom_source():
@@ -169,8 +169,8 @@ def test_fediway_config_is_source_enabled():
 
     cfg = FediwayConfig()
 
-    assert cfg.is_source_enabled("smart_follows") is True
-    assert cfg.is_source_enabled("collaborative_filtering") is True
+    assert cfg.is_source_enabled("top_follows") is True
+    assert cfg.is_source_enabled("engaged_by_similar_users") is True
     assert cfg.is_source_enabled("unknown") is False
 
 
@@ -179,6 +179,6 @@ def test_fediway_config_get_source_param():
 
     cfg = FediwayConfig()
 
-    assert cfg.get_source_param("smart_follows", "max_per_author") == 3
-    assert cfg.get_source_param("smart_follows", "unknown_param", "default") == "default"
+    assert cfg.get_source_param("top_follows", "max_per_author") == 3
+    assert cfg.get_source_param("top_follows", "unknown_param", "default") == "default"
     assert cfg.get_source_param("unknown_source", "param", "default") == "default"

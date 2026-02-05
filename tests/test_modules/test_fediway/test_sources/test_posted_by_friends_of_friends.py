@@ -29,21 +29,21 @@ def _import_without_init(module_path: str, module_name: str):
 
 
 _module = _import_without_init(
-    "modules/fediway/sources/statuses/second_degree.py",
-    "modules.fediway.sources.statuses.second_degree",
+    "modules/fediway/sources/statuses/posted_by_friends_of_friends.py",
+    "modules.fediway.sources.statuses.posted_by_friends_of_friends",
 )
-SecondDegreeSource = _module.SecondDegreeSource
+PostedByFriendsOfFriendsSource = _module.PostedByFriendsOfFriendsSource
 
 
 def test_source_id():
     mock_rw = MagicMock()
-    source = SecondDegreeSource(rw=mock_rw, account_id=1)
-    assert source.id == "second_degree"
+    source = PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=1)
+    assert source.id == "posted_by_friends_of_friends"
 
 
 def test_source_tracked_params():
     mock_rw = MagicMock()
-    source = SecondDegreeSource(
+    source = PostedByFriendsOfFriendsSource(
         rw=mock_rw,
         account_id=1,
         min_mutual_follows=5,
@@ -57,7 +57,7 @@ def test_collect_empty():
     mock_rw = MagicMock()
     mock_rw.execute.return_value.fetchall.return_value = []
 
-    source = SecondDegreeSource(rw=mock_rw, account_id=1)
+    source = PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     assert result == []
@@ -72,7 +72,7 @@ def test_collect_returns_status_ids():
         (102, 202, 3, now),
     ]
 
-    source = SecondDegreeSource(rw=mock_rw, account_id=1)
+    source = PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     assert 101 in result
@@ -88,7 +88,7 @@ def test_scoring_favors_more_mutual_follows():
         (102, 202, 3, now),
     ]
 
-    source = SecondDegreeSource(rw=mock_rw, account_id=1)
+    source = PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     assert result[0] == 101
@@ -103,7 +103,7 @@ def test_scoring_favors_recent_posts():
         (102, 202, 5, now),
     ]
 
-    source = SecondDegreeSource(rw=mock_rw, account_id=1)
+    source = PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=1)
     result = source.collect(10)
 
     assert result[0] == 102
@@ -120,7 +120,7 @@ def test_diversity_limits_per_author():
         (104, 202, 7, now - timedelta(minutes=3)),
     ]
 
-    source = SecondDegreeSource(rw=mock_rw, account_id=1, max_per_author=2)
+    source = PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=1, max_per_author=2)
     result = source.collect(10)
 
     author_201_count = sum(1 for sid in result if sid in [101, 102, 103])
@@ -136,7 +136,7 @@ def test_respects_limit():
         (100 + i, 200 + i, 10 - i, now - timedelta(minutes=i)) for i in range(10)
     ]
 
-    source = SecondDegreeSource(rw=mock_rw, account_id=1)
+    source = PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=1)
     result = source.collect(5)
 
     assert len(result) == 5
@@ -146,7 +146,7 @@ def test_query_uses_min_mutual_follows():
     mock_rw = MagicMock()
     mock_rw.execute.return_value.fetchall.return_value = []
 
-    source = SecondDegreeSource(rw=mock_rw, account_id=42, min_mutual_follows=7)
+    source = PostedByFriendsOfFriendsSource(rw=mock_rw, account_id=42, min_mutual_follows=7)
     source.collect(10)
 
     call_args = mock_rw.execute.call_args

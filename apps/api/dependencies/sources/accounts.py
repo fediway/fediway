@@ -4,7 +4,7 @@ from sqlmodel import Session as RWSession
 from config.algorithm import algorithm_config
 from modules.fediway.sources import Source
 from modules.fediway.sources.accounts import (
-    MutualFollowsSource,
+    FollowedByFriendsSource,
     PopularAccountsSource,
     SimilarInterestsSource,
 )
@@ -14,19 +14,19 @@ from shared.core.rw import get_rw_session
 from ..auth import get_authenticated_account_or_fail
 
 
-def get_mutual_follows_source(
+def get_followed_by_friends_source(
     rw: RWSession = Depends(get_rw_session),
     account: Account = Depends(get_authenticated_account_or_fail),
 ) -> list[tuple[Source, int]]:
     cfg = algorithm_config.suggestions
-    if not cfg.sources.social_proof.enabled:
+    if not cfg.sources.followed_by_friends.enabled:
         return []
     return [
         (
-            MutualFollowsSource(
+            FollowedByFriendsSource(
                 rw=rw,
                 account_id=account.id,
-                min_mutual_follows=cfg.sources.social_proof.min_mutual_follows,
+                min_mutual_follows=cfg.sources.followed_by_friends.min_mutual_follows,
                 exclude_following=cfg.settings.exclude_following,
             ),
             25,
@@ -80,9 +80,9 @@ def get_popular_accounts_source(
 
 
 def get_social_proof_sources(
-    mutual_follows: list[tuple[Source, int]] = Depends(get_mutual_follows_source),
+    followed_by_friends: list[tuple[Source, int]] = Depends(get_followed_by_friends_source),
 ) -> list[tuple[Source, int]]:
-    return mutual_follows
+    return followed_by_friends
 
 
 def get_similar_sources(

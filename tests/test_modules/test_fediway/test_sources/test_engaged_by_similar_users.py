@@ -29,22 +29,22 @@ def _import_without_init(module_path: str, module_name: str):
 
 
 _module = _import_without_init(
-    "modules/fediway/sources/statuses/collaborative_filtering.py",
-    "modules.fediway.sources.statuses.collaborative_filtering",
+    "modules/fediway/sources/statuses/engaged_by_similar_users.py",
+    "modules.fediway.sources.statuses.engaged_by_similar_users",
 )
-CollaborativeFilteringSource = _module.CollaborativeFilteringSource
-CollaborativeFilteringFallbackSource = _module.CollaborativeFilteringFallbackSource
+EngagedBySimilarUsersSource = _module.EngagedBySimilarUsersSource
+PopularPostsSource = _module.PopularPostsSource
 
 
-class TestCollaborativeFilteringSource:
+class TestEngagedBySimilarUsersSource:
     def test_source_id(self):
         mock_rw = MagicMock()
-        source = CollaborativeFilteringSource(rw=mock_rw, account_id=1)
-        assert source.id == "collaborative_filtering"
+        source = EngagedBySimilarUsersSource(rw=mock_rw, account_id=1)
+        assert source.id == "engaged_by_similar_users"
 
     def test_source_tracked_params(self):
         mock_rw = MagicMock()
-        source = CollaborativeFilteringSource(
+        source = EngagedBySimilarUsersSource(
             rw=mock_rw,
             account_id=1,
             min_similarity=0.1,
@@ -57,7 +57,7 @@ class TestCollaborativeFilteringSource:
         mock_rw = MagicMock()
         mock_rw.execute.return_value.fetchall.return_value = []
 
-        source = CollaborativeFilteringSource(rw=mock_rw, account_id=1)
+        source = EngagedBySimilarUsersSource(rw=mock_rw, account_id=1)
         result = source.collect(10)
 
         assert result == []
@@ -82,7 +82,7 @@ class TestCollaborativeFilteringSource:
 
         mock_rw.execute.side_effect = mock_execute
 
-        source = CollaborativeFilteringSource(rw=mock_rw, account_id=1)
+        source = EngagedBySimilarUsersSource(rw=mock_rw, account_id=1)
         result = source.collect(10)
 
         assert 101 not in result
@@ -109,7 +109,7 @@ class TestCollaborativeFilteringSource:
 
         mock_rw.execute.side_effect = mock_execute
 
-        source = CollaborativeFilteringSource(rw=mock_rw, account_id=1)
+        source = EngagedBySimilarUsersSource(rw=mock_rw, account_id=1)
         result = source.collect(10)
 
         # Status 101 has aggregated score, should rank higher
@@ -137,7 +137,7 @@ class TestCollaborativeFilteringSource:
 
         mock_rw.execute.side_effect = mock_execute
 
-        source = CollaborativeFilteringSource(rw=mock_rw, account_id=1, max_per_author=2)
+        source = EngagedBySimilarUsersSource(rw=mock_rw, account_id=1, max_per_author=2)
         result = source.collect(10)
 
         author_201_count = sum(1 for sid in result if sid in [101, 102, 103])
@@ -164,24 +164,24 @@ class TestCollaborativeFilteringSource:
 
         mock_rw.execute.side_effect = mock_execute
 
-        source = CollaborativeFilteringSource(rw=mock_rw, account_id=1)
+        source = EngagedBySimilarUsersSource(rw=mock_rw, account_id=1)
         result = source.collect(10)
 
         # More recent should rank higher
         assert result[0] == 102
 
 
-class TestCollaborativeFilteringFallbackSource:
+class TestPopularPostsSource:
     def test_source_id(self):
         mock_rw = MagicMock()
-        source = CollaborativeFilteringFallbackSource(rw=mock_rw, account_id=1)
-        assert source.id == "collaborative_filtering_fallback"
+        source = PopularPostsSource(rw=mock_rw, account_id=1)
+        assert source.id == "popular_posts"
 
     def test_collect_empty(self):
         mock_rw = MagicMock()
         mock_rw.execute.return_value.fetchall.return_value = []
 
-        source = CollaborativeFilteringFallbackSource(rw=mock_rw, account_id=1)
+        source = PopularPostsSource(rw=mock_rw, account_id=1)
         result = source.collect(10)
 
         assert result == []
@@ -205,7 +205,7 @@ class TestCollaborativeFilteringFallbackSource:
 
         mock_rw.execute.side_effect = mock_execute
 
-        source = CollaborativeFilteringFallbackSource(rw=mock_rw, account_id=1)
+        source = PopularPostsSource(rw=mock_rw, account_id=1)
         result = source.collect(10)
 
         assert 101 not in result
@@ -232,7 +232,7 @@ class TestCollaborativeFilteringFallbackSource:
 
         mock_rw.execute.side_effect = mock_execute
 
-        source = CollaborativeFilteringFallbackSource(rw=mock_rw, account_id=1, max_per_author=2)
+        source = PopularPostsSource(rw=mock_rw, account_id=1, max_per_author=2)
         result = source.collect(10)
 
         author_201_count = sum(1 for sid in result if sid in [101, 102, 103])

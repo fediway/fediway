@@ -57,12 +57,14 @@ class HomeSettings(BaseModel):
 class HomeSources(BaseModel):
     """Source configurations for home timeline."""
 
-    smart_follows: SourceConfig = Field(default_factory=SourceConfig)
-    follows_engaging: SourceConfig = Field(default_factory=SourceConfig)
+    top_follows: SourceConfig = Field(default_factory=SourceConfig)
+    engaged_by_friends: SourceConfig = Field(default_factory=SourceConfig)
     tag_affinity: SourceConfig = Field(default_factory=SourceConfig)
-    second_degree: SourceConfig = Field(default_factory=SourceConfig)
+    posted_by_friends_of_friends: SourceConfig = Field(default_factory=SourceConfig)
     trending: SourceConfig = Field(default_factory=SourceConfig)
-    collaborative: SourceConfig = Field(default_factory=lambda: SourceConfig(enabled=False))
+    engaged_by_similar_users: SourceConfig = Field(
+        default_factory=lambda: SourceConfig(enabled=False)
+    )
 
     model_config = {"extra": "forbid"}
 

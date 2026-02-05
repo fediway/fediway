@@ -6,8 +6,8 @@ from sqlmodel import Session, text
 from modules.fediway.sources.base import Source
 
 
-class SmartFollowsSource(Source):
-    _id = "smart_follows"
+class TopFollowsSource(Source):
+    _id = "top_follows"
     _tracked_params = [
         "recency_half_life_hours",
         "max_age_hours",

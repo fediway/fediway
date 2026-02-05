@@ -64,7 +64,7 @@ def mock_pipeline():
     sourcing_step.group = "in-network"
 
     mock_source = MagicMock()
-    mock_source.id = "smart_follows"
+    mock_source.id = "top_follows"
     mock_source.get_params.return_value = {"max_per_author": 3}
     sourcing_step.sources = [(mock_source, 100), (MagicMock(id="tag_affinity"), 50)]
 
@@ -85,7 +85,7 @@ def mock_feed(mock_pipeline):
     feed.pipeline = mock_pipeline
 
     candidates = CandidateList("status_id")
-    candidates.append(101, score=0.95, source="smart_follows", source_group="in-network")
+    candidates.append(101, score=0.95, source="top_follows", source_group="in-network")
     candidates.append(102, score=0.87, source="tag_affinity", source_group="discovery")
     candidates.append(103, score=0.72, source="trending", source_group="trending")
     feed.execute = AsyncMock(return_value=candidates)
@@ -174,14 +174,12 @@ def test_emit_metrics_sends_sourcing_runs(
     assert len(sourcing_calls) == 2
 
     sources = [c[1]["value"]["source"] for c in sourcing_calls]
-    assert "smart_follows" in sources
+    assert "top_follows" in sources
     assert "tag_affinity" in sources
 
-    smart_follows_call = next(
-        c for c in sourcing_calls if c[1]["value"]["source"] == "smart_follows"
-    )
-    assert smart_follows_call[1]["value"]["candidates_limit"] == 100
-    assert smart_follows_call[1]["value"]["candidates_count"] == 50
+    top_follows_call = next(c for c in sourcing_calls if c[1]["value"]["source"] == "top_follows")
+    assert top_follows_call[1]["value"]["candidates_limit"] == 100
+    assert top_follows_call[1]["value"]["candidates_count"] == 50
 
 
 def test_emit_metrics_sends_candidate_sources(
@@ -207,7 +205,7 @@ def test_emit_metrics_sends_recommendations(
 
     engine = FeedEngine(mock_kafka, mock_redis, mock_request, mock_tasks, mock_account)
     results = CandidateList("status_id")
-    results.append(101, score=0.95, source="smart_follows", source_group="in-network")
+    results.append(101, score=0.95, source="top_follows", source_group="in-network")
     results.append(102, score=0.87, source="tag_affinity", source_group="discovery")
 
     engine._emit_metrics(mock_feed, results)
@@ -221,7 +219,7 @@ def test_emit_metrics_sends_recommendations(
     assert rec_data["entity"] == "status_id"
     assert rec_data["entity_id"] == 101
     assert rec_data["score"] == 0.95
-    assert "smart_follows" in rec_data["sources"]
+    assert "top_follows" in rec_data["sources"]
     assert "in-network" in rec_data["groups"]
 
 

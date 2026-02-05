@@ -1,5 +1,5 @@
 from .accounts import (
-    get_mutual_follows_source,
+    get_followed_by_friends_source,
     get_popular_accounts_source,
     get_popular_sources,
     get_similar_interests_source,
@@ -9,14 +9,14 @@ from .accounts import (
 )
 from .statuses import (
     get_home_discovery_sources,
+    get_home_engaged_by_friends_source,
     get_home_fallback_source,
     get_home_fallback_sources,
-    get_home_follows_engaging_source,
     get_home_in_network_sources,
-    get_home_second_degree_source,
-    get_home_smart_follows_source,
+    get_home_posted_by_friends_of_friends_source,
     get_home_sources,
     get_home_tag_affinity_source,
+    get_home_top_follows_source,
     get_home_trending_source,
     get_home_trending_sources,
     get_trending_statuses_source,

@@ -3,8 +3,8 @@ from sqlmodel import Session, text
 from modules.fediway.sources.base import Source
 
 
-class MutualFollowsSource(Source):
-    _id = "mutual_follows"
+class FollowedByFriendsSource(Source):
+    _id = "followed_by_friends"
     _tracked_params = ["min_mutual_follows", "exclude_following"]
 
     def __init__(

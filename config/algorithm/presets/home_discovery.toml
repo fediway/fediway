@@ -16,13 +16,13 @@ include_boosts = true
 [ranking]
 decay_rate = 0.5
 
-[sources.smart_follows]
+[sources.top_follows]
 enabled = true
 weight = 60
 recency_hours = 48
 max_per_author = 2
 
-[sources.follows_engaging]
+[sources.engaged_by_friends]
 enabled = true
 weight = 40
 min_engagers = 2
@@ -32,7 +32,7 @@ enabled = true
 weight = 40
 max_per_tag = 8
 
-[sources.second_degree]
+[sources.posted_by_friends_of_friends]
 enabled = true
 weight = 60
 min_mutual_follows = 2
@@ -42,6 +42,6 @@ enabled = true
 weight = 100
 local_boost = 1.0
 
-[sources.collaborative]
+[sources.engaged_by_similar_users]
 enabled = true
 weight = 30

@@ -6,8 +6,8 @@ from sqlmodel import Session, text
 from modules.fediway.sources.base import Source
 
 
-class FollowsEngagingNowSource(Source):
-    _id = "follows_engaging_now"
+class EngagedByFriendsSource(Source):
+    _id = "engaged_by_friends"
     _tracked_params = ["min_engaged_follows", "max_per_author"]
 
     def __init__(

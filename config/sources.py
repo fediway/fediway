@@ -13,7 +13,7 @@ class SourceConfig(BaseModel):
 
 
 class SourcesConfig(BaseModel):
-    smart_follows: SourceConfig = Field(
+    top_follows: SourceConfig = Field(
         default_factory=lambda: SourceConfig(
             enabled=True,
             weight=0.35,
@@ -26,7 +26,7 @@ class SourcesConfig(BaseModel):
         ),
     )
 
-    follows_engaging_now: SourceConfig = Field(
+    engaged_by_friends: SourceConfig = Field(
         default_factory=lambda: SourceConfig(
             enabled=True,
             weight=0.15,
@@ -49,7 +49,7 @@ class SourcesConfig(BaseModel):
         ),
     )
 
-    second_degree: SourceConfig = Field(
+    posted_by_friends_of_friends: SourceConfig = Field(
         default_factory=lambda: SourceConfig(
             enabled=True,
             weight=0.10,
@@ -60,7 +60,7 @@ class SourcesConfig(BaseModel):
         ),
     )
 
-    collaborative_filtering: SourceConfig = Field(
+    engaged_by_similar_users: SourceConfig = Field(
         default_factory=lambda: SourceConfig(
             enabled=True,
             weight=0.15,
@@ -112,12 +112,12 @@ class SourcesConfig(BaseModel):
 
     def get_group_weights(self) -> dict[str, float]:
         group_mapping = {
-            "smart_follows": "in-network",
-            "follows_engaging_now": "in-network",
+            "top_follows": "in-network",
+            "engaged_by_friends": "in-network",
             "recent_from_follows": "in-network",
             "tag_affinity": "discovery",
-            "second_degree": "discovery",
-            "collaborative_filtering": "discovery",
+            "posted_by_friends_of_friends": "discovery",
+            "engaged_by_similar_users": "discovery",
             "community_recommendations": "discovery",
             "trending": "trending",
         }

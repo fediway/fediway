@@ -5,8 +5,8 @@ from sqlmodel import Session, text
 from modules.fediway.sources.base import Source
 
 
-class CollaborativeFilteringSource(Source):
-    _id = "collaborative_filtering"
+class EngagedBySimilarUsersSource(Source):
+    _id = "engaged_by_similar_users"
     _tracked_params = ["min_similarity", "max_per_author"]
 
     def __init__(
@@ -95,8 +95,8 @@ class CollaborativeFilteringSource(Source):
         return [item["status_id"] for item in diversified]
 
 
-class CollaborativeFilteringFallbackSource(Source):
-    _id = "collaborative_filtering_fallback"
+class PopularPostsSource(Source):
+    _id = "popular_posts"
     _tracked_params = ["max_per_author"]
 
     def __init__(
