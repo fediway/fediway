@@ -14,7 +14,7 @@ The Fediverse has 1M+ monthly active users. Decentralized social media works. Bu
 
 "No algorithms" has been a core promise of decentralized social media. The intent is right: platforms shouldn't control what you see. But chronological feeds are not neutral. They privilege the frequent over the thoughtful, the recent over the relevant, the loud over the good. Algorithms are tools. And like any tool, they can serve or exploit. The question is not whether to use them, but whether you can see, modify, and trust them. So we shouldn't ban them. We should make them a public good, shaped by the communities that depend on them.
 
-Fediway builds this. Not as a way to define which algorithms should be used, but as a framework that gives every instance the tools to design, test, and deploy their own. Server-side, integrated through nginx into existing Mastodon instances. Users get a personalized home feed built from content their network engages with, without installing anything.
+Fediway builds this. Not as a way to define which algorithms should be used, but as a framework that gives every instance the tools to design, test, and deploy their own. Server-side, integrated through nginx into existing Mastodon instances.
 
 > **NOTE:** This project is currently a work in progress and may be in an unstable state. Features may be incomplete or subject to change. Use with caution.
 
