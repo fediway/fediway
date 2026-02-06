@@ -10,33 +10,22 @@
 
 </div>
 
-# About Fediway
+The Fediverse has 1M+ monthly active users. Decentralized social media works. But it can't grow while new users face empty timelines and niche creators remain invisible. Chronological feeds don't scale.
 
-Fediway solves content discovery on Mastodon with the first advanced server-side recommendation pipeline. Fediway is a server-side plugin for Mastodon that can be integrated into an existing Mastodon instance without requiring a custom fork or modifications to the core codebase. You can simply redirect desired endpoints such as `timelines/home` via nginx to the fediway API.
+"No algorithms" has been a core promise of decentralized social media. The intent is right: platforms shouldn't control what you see. But chronological feeds are not neutral. They privilege the frequent over the thoughtful, the recent over the relevant, the loud over the good. Algorithms are tools. And like any tool, they can serve or exploit. The question is not whether to use them, but whether you can see, modify, and trust them. So we shouldn't ban them. We should make them a public good, shaped by the communities that depend on them.
+
+Fediway builds this. Not as a way to define which algorithms should be used, but as a framework that gives every instance the tools to design, test, and deploy their own. Server-side, integrated through nginx into existing Mastodon instances. Users get a personalized home feed built from content their network engages with, without installing anything.
 
 > **NOTE:** This project is currently a work in progress and may be in an unstable state. Features may be incomplete or subject to change. Use with caution.
 
 ## Table Of Contents
 
-- [Why do we need algorithmic feeds?](#why)
 - [Why server-side?](#server-side)
 - [The Algorithm](#how_it_works)
   - [Architecture](#architecture)
   - [Recommendation Engine](#engine)
 - [Alternatives](#alternatives)
 - [Setup](#setup)
-
-<a name="why"></a>
-
-## Why do we need algorithmic feeds?
-
-> "... see it all in chronological order. **No algorithms**, ads, or clickbait in sight."
-
-This is how Mastodon advertises its platform on their frontpage and it sounds great right? Back to the good old times of chronological timelines. And it is great ... but only for a niche audience, many of whom already use the platform. The decision of abandoning recommendations comes at a cost. New users face empty feeds and must actively search for content they like. 
-
-Without efficient content-distribution, the "trending" page becomes dominated by mainstream content, while niche creators struggle to reach their audience. This creates a significant barrier that prevents Mastodon from becoming a true alternative to centralized platforms. 
-
-To become a true alternative, decentralized platforms need a robust solution for content discovery that doesn't compromise their core values. Fediway implements the tool that makes this possible: An open-source framework that let's you to design, test and implement your own recommendation algorithms for your Mastodon instance. Join us to build algorithms that serve people. Let's make the Fediverse attractable to anyone!
 
 <a name="server-side"></a>
 
