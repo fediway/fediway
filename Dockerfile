@@ -61,5 +61,8 @@ COPY --chown=fediway:fediway . .
 # Switch to fediway user
 USER fediway
 
-# Run API
-CMD ["fastapi", "run", "apps/api/main.py"]
+# FEDI on a phone keypad = 3334
+ENV PORT=3334
+EXPOSE $PORT
+
+CMD ["sh", "-c", "uvicorn apps.api.main:app --host 0.0.0.0 --port $PORT"]
