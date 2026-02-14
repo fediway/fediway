@@ -40,8 +40,8 @@ RUN addgroup --system --gid 1001 fediway && \
 # Set work directory
 WORKDIR /app
 
-# Copy dependency files
-COPY --chown=fediway:fediway pyproject.toml uv.lock ./
+# Copy dependency files and README (hatchling requires readme during build)
+COPY --chown=fediway:fediway pyproject.toml uv.lock README.md ./
 
 # Install PyTorch CPU-only first (smaller image)
 RUN uv pip install --system --no-cache torch --index-url https://download.pytorch.org/whl/cpu
