@@ -25,7 +25,7 @@ def get_feed_engine(
     request: Request,
     tasks: BackgroundTasks,
     redis: Redis = Depends(get_redis),
-    kafka: "KafkaProducer" = Depends(get_kafka_producer),
+    kafka: "KafkaProducer | None" = Depends(get_kafka_producer),
     account: Account | None = Depends(get_authenticated_account),
 ) -> FeedEngine:
     return FeedEngine(

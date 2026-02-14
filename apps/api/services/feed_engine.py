@@ -34,7 +34,7 @@ def get_request_state_key(request: Request, length: int = 16) -> str:
 class FeedEngine:
     def __init__(
         self,
-        kafka: "KafkaProducer",
+        kafka: "KafkaProducer | None",
         redis: Redis,
         request: Request,
         tasks: BackgroundTasks,
@@ -155,7 +155,7 @@ class FeedEngine:
 
             self._save_feed_state(feed, state_key)
 
-            if feed.pipeline:
+            if feed.pipeline and self._kafka:
                 self._tasks.add_task(self._emit_metrics, feed, results)
 
             if prefetch and len(results) > 0:

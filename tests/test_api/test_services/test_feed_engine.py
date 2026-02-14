@@ -365,3 +365,38 @@ async def test_prefetch_handles_errors(engine, mock_feed):
 
     # Should not raise
     await engine._prefetch(mock_feed, "user123")
+
+
+@pytest.fixture
+def engine_no_kafka(mock_redis, mock_request, mock_tasks, mock_account):
+    return FeedEngine(None, mock_redis, mock_request, mock_tasks, mock_account)
+
+
+def test_engine_initialization_with_no_kafka(engine_no_kafka):
+    assert engine_no_kafka._kafka is None
+
+
+@pytest.mark.asyncio
+async def test_run_skips_metrics_when_kafka_is_none(engine_no_kafka, mock_feed, mock_tasks):
+    mock_feed.get_state.return_value = {}
+
+    results = await engine_no_kafka.run(mock_feed, state_key="user123")
+
+    assert len(results) == 2
+    # Only prefetch task, no metrics task
+    metrics_calls = [
+        c
+        for c in mock_tasks.add_task.call_args_list
+        if len(c[0]) >= 1 and c[0][0] == engine_no_kafka._emit_metrics
+    ]
+    assert len(metrics_calls) == 0
+
+
+@pytest.mark.asyncio
+async def test_run_still_prefetches_when_kafka_is_none(engine_no_kafka, mock_feed, mock_tasks):
+    mock_feed.get_state.return_value = {}
+
+    await engine_no_kafka.run(mock_feed, state_key="user123", prefetch=True)
+
+    # Prefetch should still be scheduled
+    assert mock_tasks.add_task.call_count == 1
