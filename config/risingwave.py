@@ -38,9 +38,12 @@ class RisingWaveConfig(BaseConfig):
 
         paths = [
             "migrations/risingwave/00_base",
-            "migrations/risingwave/01_feed",
             "migrations/risingwave/02_engagement",
         ]
+
+        if config.fediway.kafka_enabled:
+            paths.append("migrations/risingwave/01_feed")
+            paths.append("migrations/risingwave/07_sinks")
 
         if config.fediway.collaborative_filtering_enabled:
             paths.append("migrations/risingwave/03_collaborative_filtering")
@@ -54,4 +57,4 @@ class RisingWaveConfig(BaseConfig):
         if config.fediway.orbit_enabled:
             paths.append("migrations/risingwave/06_orbit")
 
-        return paths
+        return sorted(paths)

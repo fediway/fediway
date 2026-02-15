@@ -6,6 +6,7 @@ from config.risingwave import RisingWaveConfig
 
 def _mock_fediway_config(**flags):
     mock = MagicMock()
+    mock.kafka_enabled = flags.get("kafka_enabled", False)
     mock.collaborative_filtering_enabled = flags.get("collaborative_filtering_enabled", False)
     mock.orbit_enabled = flags.get("orbit_enabled", False)
     mock.features_online_enabled = flags.get("features_online_enabled", False)
@@ -21,8 +22,23 @@ def test_migrations_paths_base_always_present():
         paths = RisingWaveConfig().rw_migrations_paths
 
     assert "migrations/risingwave/00_base" in paths
-    assert "migrations/risingwave/01_feed" in paths
     assert "migrations/risingwave/02_engagement" in paths
+
+
+def test_migrations_paths_kafka_enabled():
+    with patch.object(config, "fediway", _mock_fediway_config(kafka_enabled=True)):
+        paths = RisingWaveConfig().rw_migrations_paths
+
+    assert "migrations/risingwave/01_feed" in paths
+    assert "migrations/risingwave/07_sinks" in paths
+
+
+def test_migrations_paths_kafka_disabled():
+    with patch.object(config, "fediway", _mock_fediway_config(kafka_enabled=False)):
+        paths = RisingWaveConfig().rw_migrations_paths
+
+    assert "migrations/risingwave/01_feed" not in paths
+    assert "migrations/risingwave/07_sinks" not in paths
 
 
 def test_migrations_paths_collaborative_filtering_enabled():
@@ -76,6 +92,7 @@ def test_migrations_paths_multiple_flags():
         config,
         "fediway",
         _mock_fediway_config(
+            kafka_enabled=True,
             collaborative_filtering_enabled=True,
             orbit_enabled=True,
             features_online_enabled=True,
@@ -84,10 +101,13 @@ def test_migrations_paths_multiple_flags():
     ):
         paths = RisingWaveConfig().rw_migrations_paths
 
+    assert "migrations/risingwave/01_feed" in paths
+    assert "migrations/risingwave/02_engagement" in paths
     assert "migrations/risingwave/03_collaborative_filtering" in paths
     assert "migrations/risingwave/04_features_online" in paths
     assert "migrations/risingwave/05_features_offline" in paths
     assert "migrations/risingwave/06_orbit" in paths
+    assert "migrations/risingwave/07_sinks" in paths
 
 
 def test_migrations_paths_order_preserved():
@@ -95,6 +115,7 @@ def test_migrations_paths_order_preserved():
         config,
         "fediway",
         _mock_fediway_config(
+            kafka_enabled=True,
             collaborative_filtering_enabled=True,
             orbit_enabled=True,
             features_online_enabled=True,
@@ -111,9 +132,8 @@ def test_migrations_paths_all_disabled_returns_base_only():
     with patch.object(config, "fediway", _mock_fediway_config()):
         paths = RisingWaveConfig().rw_migrations_paths
 
-    assert len(paths) == 3
+    assert len(paths) == 2
     assert paths == [
         "migrations/risingwave/00_base",
-        "migrations/risingwave/01_feed",
         "migrations/risingwave/02_engagement",
     ]

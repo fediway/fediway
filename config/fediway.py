@@ -4,6 +4,9 @@ from .base import BaseConfig
 
 
 class FediwayConfig(BaseConfig):
+    # infrastructure flags
+    kafka_enabled: bool = False
+
     # module flags
     collaborative_filtering_enabled: bool = False
     orbit_enabled: bool = False

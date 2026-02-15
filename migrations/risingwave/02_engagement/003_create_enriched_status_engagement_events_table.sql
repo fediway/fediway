@@ -135,19 +135,6 @@ WITH (type = 'append-only', force_append_only='true');
 
 CREATE INDEX IF NOT EXISTS idx_enriched_status_engagement_events_event_time ON enriched_status_engagement_events(event_time DESC); 
 
-CREATE SINK IF NOT EXISTS status_engagements_sink AS
-SELECT *
-FROM enriched_status_engagement_events
-WHERE event_time > NOW() - INTERVAL '3 DAYS'
-WITH (
-  connector='kafka',
-  properties.bootstrap.server='{{ bootstrap_server }}',
-  topic='status_engagements',
-  primary_key='account_id,status_id,type',
-) FORMAT PLAIN ENCODE JSON (
-  force_append_only='true'
-);
-
 -- :down
 
 DROP SINK IF EXISTS enriched_status_engagement_events_sink;
