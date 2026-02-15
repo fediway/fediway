@@ -66,8 +66,8 @@ CREATE TABLE IF NOT EXISTS enriched_statuses (
   tags BIGINT[]
 ) ON CONFLICT DO UPDATE IF NOT NULL;
 
-CREATE INDEX idx_enriched_statuses_preview_card_id ON enriched_statuses(preview_card_id);
-CREATE INDEX idx_enriched_statuses_preview_card_domain ON enriched_statuses(preview_card_domain);
+CREATE INDEX IF NOT EXISTS idx_enriched_statuses_preview_card_id ON enriched_statuses(preview_card_id);
+CREATE INDEX IF NOT EXISTS idx_enriched_statuses_preview_card_domain ON enriched_statuses(preview_card_domain);
 
 CREATE SINK IF NOT EXISTS enriched_statuses_statuses_sink
 INTO enriched_statuses (
