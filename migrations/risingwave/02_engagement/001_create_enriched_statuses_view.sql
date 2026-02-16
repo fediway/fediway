@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS enriched_statuses (
   text_custom_emojis_count INT,
 
   -- author
-  author_domain VARCHAR,
+  author_instance VARCHAR,
   author_locked BOOLEAN,
   author_discoverable BOOLEAN,
   author_trendable BOOLEAN,
@@ -162,7 +162,7 @@ WITH (
 CREATE SINK IF NOT EXISTS enriched_statuses_author_sink
 INTO enriched_statuses (
   status_id,
-  author_domain,
+  author_instance,
   author_locked,
   author_discoverable,
   author_trendable,
@@ -172,7 +172,7 @@ INTO enriched_statuses (
 ) AS
 SELECT 
   s.id as status_id,
-  a.domain AS author_domain,
+  a.domain AS author_instance,
   a.locked AS author_locked,
   a.discoverable AS author_discoverable,
   a.trendable AS author_trendable,
