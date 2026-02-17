@@ -217,11 +217,9 @@ def test_default_values_are_sensible():
         # Suggestions defaults
         assert config.suggestions.settings.max_results == 40
 
-        # Sources enabled by default
-        assert config.timelines.home.sources.top_follows.enabled is True
-        assert config.timelines.home.sources.engaged_by_friends.enabled is True
-
-        # Similar users disabled by default (experimental)
+        # All sources disabled by default
+        assert config.timelines.home.sources.top_follows.enabled is False
+        assert config.timelines.home.sources.engaged_by_friends.enabled is False
         assert config.timelines.home.sources.engaged_by_similar_users.enabled is False
 
 
@@ -278,21 +276,21 @@ def test_empty_toml_file_uses_defaults():
         assert config.timelines.home.weights.in_network == 50
 
 
-def test_source_can_be_disabled():
+def test_source_can_be_enabled():
     with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
         f.write("""
 [timelines.home.sources.top_follows]
-enabled = false
+enabled = true
 
 [timelines.home.sources.tag_affinity]
-enabled = false
+enabled = true
 """)
         f.flush()
         config = load(Path(f.name))
-        assert config.timelines.home.sources.top_follows.enabled is False
-        assert config.timelines.home.sources.tag_affinity.enabled is False
-        # Others remain enabled by default
-        assert config.timelines.home.sources.engaged_by_friends.enabled is True
+        assert config.timelines.home.sources.top_follows.enabled is True
+        assert config.timelines.home.sources.tag_affinity.enabled is True
+        # Others remain disabled by default
+        assert config.timelines.home.sources.engaged_by_friends.enabled is False
 
 
 def test_trending_tags_config():

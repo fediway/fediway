@@ -22,7 +22,7 @@ FROM status_engagements e
 JOIN accounts a ON a.id = e.account_id
 WHERE e.event_time > NOW() - INTERVAL '24 HOURS'
 GROUP BY e.status_id
-HAVING COUNT(DISTINCT e.account_id) >= 3;
+HAVING COUNT(DISTINCT e.account_id) >= 2;
 
 CREATE INDEX IF NOT EXISTS idx_status_engagement_counts_status_id
     ON status_engagement_counts(status_id);

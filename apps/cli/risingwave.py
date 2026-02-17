@@ -356,3 +356,63 @@ def status():
                 total_pending += 1
 
     typer.echo(f"\nTotal: {total_applied} applied, {total_pending} pending")
+
+
+ALTER_KEYWORDS = {
+    "index": "INDEX",
+    "materialized view": "MATERIALIZED VIEW",
+    "table": "TABLE",
+    "source": "SOURCE",
+    "sink": "SINK",
+}
+
+
+@app.command("set-parallelism")
+def set_parallelism(
+    n: Annotated[int, typer.Argument(help="Target parallelism for all streaming objects")],
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Preview changes without applying")
+    ] = False,
+):
+    """Set streaming parallelism for all streaming objects."""
+    conn = get_connection()
+
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT name, relation_type FROM rw_streaming_parallelism WHERE parallelism != %s;",
+            (str(n),),
+        )
+        mismatched = cur.fetchall()
+
+    if not mismatched:
+        typer.echo(f"All streaming objects already at parallelism {n}")
+        return
+
+    if dry_run:
+        typer.secho("Dry run mode - no changes will be made\n", fg=typer.colors.YELLOW)
+
+    updated = 0
+    for name, relation_type in mismatched:
+        keyword = ALTER_KEYWORDS.get(relation_type)
+        if not keyword:
+            typer.secho(f"Skipped: {name} (unknown type: {relation_type})", fg=typer.colors.YELLOW)
+            continue
+
+        if dry_run:
+            typer.echo(f"Would set: {name} ({relation_type}) -> {n}")
+        else:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(f'ALTER {keyword} "{name}" SET PARALLELISM = {n};')
+                    conn.commit()
+                typer.secho(f"Set: {name} ({relation_type}) -> {n}", fg=typer.colors.GREEN)
+            except psycopg2.Error as e:
+                conn.rollback()
+                typer.secho(f"Failed: {name} ({relation_type}): {e}", fg=typer.colors.RED)
+                continue
+        updated += 1
+
+    if dry_run:
+        typer.echo(f"\n{updated} object(s) would be updated")
+    else:
+        typer.secho(f"\n{updated} object(s) updated", fg=typer.colors.GREEN)

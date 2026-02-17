@@ -17,7 +17,7 @@ class GlobalConfig(BaseModel):
 class SourceConfig(BaseModel):
     """Configuration for a single source."""
 
-    enabled: bool = True
+    enabled: bool = False
     weight: int = Field(default=50, ge=0, le=100)
 
     model_config = {"extra": "allow"}
@@ -62,9 +62,7 @@ class HomeSources(BaseModel):
     tag_affinity: SourceConfig = Field(default_factory=SourceConfig)
     posted_by_friends_of_friends: SourceConfig = Field(default_factory=SourceConfig)
     trending: SourceConfig = Field(default_factory=SourceConfig)
-    engaged_by_similar_users: SourceConfig = Field(
-        default_factory=lambda: SourceConfig(enabled=False)
-    )
+    engaged_by_similar_users: SourceConfig = Field(default_factory=SourceConfig)
 
     model_config = {"extra": "forbid"}
 
@@ -180,21 +178,21 @@ class SuggestionsSettings(BaseModel):
 class SuggestionsSocialProofConfig(BaseModel):
     """Social proof source config."""
 
-    enabled: bool = True
+    enabled: bool = False
     min_mutual_follows: int = Field(default=2, ge=1, le=20)
 
 
 class SuggestionsSimilarInterestsConfig(BaseModel):
     """Similar interests source config."""
 
-    enabled: bool = True
+    enabled: bool = False
     min_tag_overlap: int = Field(default=3, ge=1, le=20)
 
 
 class SuggestionsPopularConfig(BaseModel):
     """Popular accounts source config."""
 
-    enabled: bool = True
+    enabled: bool = False
     local_only: bool = True
     min_followers: int = Field(default=10, ge=1, le=1000)
 

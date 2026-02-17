@@ -25,7 +25,7 @@ class EngagedBySimilarUsersSource(Source):
         query = text("""
             SELECT status_id, author_id, similarity, engagement_weight, event_time
             FROM similar_user_recent_engagements
-            WHERE target_user = :user_id
+            WHERE user_id = :user_id
               AND similarity >= :min_similarity
             LIMIT :limit
         """)
@@ -116,26 +116,8 @@ class PopularPostsSource(Source):
 
     def _get_popular_with_active_users(self, limit: int):
         query = text("""
-            SELECT
-                e.status_id,
-                e.author_id,
-                COUNT(DISTINCT e.account_id) AS engager_count,
-                SUM(CASE e.type
-                    WHEN 0 THEN 1.0
-                    WHEN 1 THEN 2.0
-                    WHEN 2 THEN 3.0
-                    WHEN 5 THEN 2.0
-                    ELSE 0
-                END) AS weighted_engagement
-            FROM enriched_status_engagement_events e
-            JOIN active_users au ON au.account_id = e.account_id
-            JOIN statuses s ON s.id = e.status_id
-            WHERE e.event_time > NOW() - INTERVAL '48 HOURS'
-              AND e.type IN (0, 1, 2, 5)
-              AND s.visibility = 0
-              AND s.deleted_at IS NULL
-            GROUP BY e.status_id, e.author_id
-            HAVING COUNT(DISTINCT e.account_id) >= 3
+            SELECT status_id, author_id, engager_count, weighted_engagement
+            FROM popular_posts
             ORDER BY weighted_engagement DESC
             LIMIT :limit
         """)

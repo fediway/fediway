@@ -162,7 +162,7 @@ class TestPopularPostsSource:
             mock_result = MagicMock()
             if "follows" in query_str:
                 mock_result.fetchall.return_value = [(201,)]
-            elif "enriched_status_engagement_events" in query_str:
+            elif "popular_posts" in query_str:
                 mock_result.fetchall.return_value = [
                     (101, 201, 10, 25.0),  # followed
                     (102, 202, 8, 20.0),  # not followed
@@ -187,7 +187,7 @@ class TestPopularPostsSource:
             mock_result = MagicMock()
             if "follows" in query_str:
                 mock_result.fetchall.return_value = []
-            elif "enriched_status_engagement_events" in query_str:
+            elif "popular_posts" in query_str:
                 mock_result.fetchall.return_value = [
                     (101, 201, 10, 30.0),
                     (102, 201, 9, 25.0),

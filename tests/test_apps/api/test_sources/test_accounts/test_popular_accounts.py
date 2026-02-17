@@ -27,36 +27,65 @@ def test_popular_accounts_source_get_params():
     assert params["local_only"] is False
 
 
-def test_popular_accounts_source_collect_executes_query():
+def test_popular_accounts_source_collect_returns_ids():
+    mock_rw = MagicMock()
+
+    def mock_execute(query, params):
+        query_str = str(query)
+        mock_result = MagicMock()
+        if "popular_accounts" in query_str:
+            mock_result.fetchall.return_value = [
+                (100, 500),
+                (200, 300),
+            ]
+        elif "follows" in query_str:
+            mock_result.fetchall.return_value = []
+        else:
+            mock_result.fetchall.return_value = []
+        return mock_result
+
+    mock_rw.execute.side_effect = mock_execute
+
+    source = PopularAccountsSource(rw=mock_rw, account_id=1)
+    results = source.collect(limit=10)
+
+    assert results == [100, 200]
+
+
+def test_popular_accounts_source_excludes_followed():
+    mock_rw = MagicMock()
+
+    def mock_execute(query, params):
+        query_str = str(query)
+        mock_result = MagicMock()
+        if "popular_accounts" in query_str:
+            mock_result.fetchall.return_value = [
+                (100, 500),
+                (200, 300),
+            ]
+        elif "follows" in query_str:
+            mock_result.fetchall.return_value = [(100,)]
+        else:
+            mock_result.fetchall.return_value = []
+        return mock_result
+
+    mock_rw.execute.side_effect = mock_execute
+
+    source = PopularAccountsSource(rw=mock_rw, account_id=1)
+    results = source.collect(limit=10)
+
+    assert 100 not in results
+    assert 200 in results
+
+
+def test_popular_accounts_source_includes_followed_when_disabled():
     mock_rw = MagicMock()
     mock_rw.execute.return_value.fetchall.return_value = [
         (100, 500),
         (200, 300),
     ]
 
-    source = PopularAccountsSource(rw=mock_rw, account_id=1)
+    source = PopularAccountsSource(rw=mock_rw, account_id=1, exclude_following=False)
     results = source.collect(limit=10)
 
     assert results == [100, 200]
-    mock_rw.execute.assert_called_once()
-
-
-def test_popular_accounts_source_passes_config_to_query():
-    mock_rw = MagicMock()
-    mock_rw.execute.return_value.fetchall.return_value = []
-
-    source = PopularAccountsSource(
-        rw=mock_rw,
-        account_id=42,
-        min_followers=50,
-        local_only=True,
-        min_account_age_days=14,
-    )
-    source.collect(limit=25)
-
-    call_args = mock_rw.execute.call_args[0][1]
-    assert call_args["account_id"] == 42
-    assert call_args["min_followers"] == 50
-    assert call_args["local_only"] is True
-    assert call_args["min_age_days"] == 14
-    assert call_args["limit"] == 25

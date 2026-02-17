@@ -1,10 +1,10 @@
 
 -- :up
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS account_primary_tags AS
-SELECT account_id, tag_id, tag_name, usage_count FROM (
+CREATE MATERIALIZED VIEW IF NOT EXISTS author_primary_tags AS
+SELECT author_id, tag_id, tag_name, usage_count FROM (
     SELECT
-        s.account_id,
+        s.account_id AS author_id,
         st.tag_id,
         t.name AS tag_name,
         COUNT(*) AS usage_count,
@@ -19,15 +19,15 @@ SELECT account_id, tag_id, tag_name, usage_count FROM (
 ) ranked
 WHERE rank <= 5;
 
-CREATE INDEX IF NOT EXISTS idx_account_primary_tags_account_id
-    ON account_primary_tags(account_id);
+CREATE INDEX IF NOT EXISTS idx_author_primary_tags_author_id
+    ON author_primary_tags(author_id);
 
-CREATE INDEX IF NOT EXISTS idx_account_primary_tags_tag_id
-    ON account_primary_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_author_primary_tags_tag_id
+    ON author_primary_tags(tag_id);
 
 -- :down
 
-DROP INDEX IF EXISTS idx_account_primary_tags_tag_id;
-DROP INDEX IF EXISTS idx_account_primary_tags_account_id;
+DROP INDEX IF EXISTS idx_author_primary_tags_tag_id;
+DROP INDEX IF EXISTS idx_author_primary_tags_author_id;
 
-DROP MATERIALIZED VIEW IF EXISTS account_primary_tags CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS author_primary_tags CASCADE;

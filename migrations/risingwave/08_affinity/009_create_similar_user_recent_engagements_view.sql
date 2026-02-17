@@ -3,7 +3,7 @@
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS similar_user_recent_engagements AS
 SELECT
-    sim.user_id AS target_user,
+    sim.user_id,
     e.status_id,
     e.author_id,
     e.type,
@@ -24,15 +24,15 @@ WHERE e.event_time > NOW() - INTERVAL '48 HOURS'
   AND s.visibility = 0
   AND s.deleted_at IS NULL;
 
-CREATE INDEX IF NOT EXISTS idx_similar_user_recent_engagements_target
-    ON similar_user_recent_engagements(target_user);
+CREATE INDEX IF NOT EXISTS idx_similar_user_recent_engagements_user_id
+    ON similar_user_recent_engagements(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_similar_user_recent_engagements_status
-    ON similar_user_recent_engagements(target_user, status_id);
+    ON similar_user_recent_engagements(user_id, status_id);
 
 -- :down
 
 DROP INDEX IF EXISTS idx_similar_user_recent_engagements_status;
-DROP INDEX IF EXISTS idx_similar_user_recent_engagements_target;
+DROP INDEX IF EXISTS idx_similar_user_recent_engagements_user_id;
 
 DROP MATERIALIZED VIEW IF EXISTS similar_user_recent_engagements CASCADE;

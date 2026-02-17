@@ -10,7 +10,12 @@ BEAT_SCHEDULE = {
     # --- queue: sources ---
     "trending-statuses-source": {
         "task": "sources.trending_statuses",
-        "schedule": 60,  # every 60 seconds
+        "schedule": 60,
+        "options": {"queue": "sources"},
+    },
+    "trending-tags-source": {
+        "task": "sources.trending_tags",
+        "schedule": 120,
         "options": {"queue": "sources"},
     },
 }

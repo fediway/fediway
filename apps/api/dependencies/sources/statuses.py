@@ -96,7 +96,6 @@ def get_home_posted_by_friends_of_friends_source(
 
 def get_home_trending_source(
     r: Redis = Depends(get_redis),
-    rw: RWSession = Depends(get_rw_session),
     languages: list[str] = Depends(get_languages),
 ) -> list[tuple[Source, int]]:
     cfg = config.feeds.timelines.home
@@ -106,7 +105,6 @@ def get_home_trending_source(
         (
             TrendingStatusesSource(
                 r=r,
-                rw=rw,
                 language=lang,
             ),
             50,
@@ -117,16 +115,13 @@ def get_home_trending_source(
 
 def get_home_fallback_source(
     r: Redis = Depends(get_redis),
-    rw: RWSession = Depends(get_rw_session),
     languages: list[str] = Depends(get_languages),
 ) -> list[tuple[Source, int]]:
     return [
         (
             TrendingStatusesSource(
                 r=r,
-                rw=rw,
                 language=lang,
-                top_n=200,
             ),
             25,
         )
@@ -187,7 +182,6 @@ def get_home_sources(
 
 def get_trending_statuses_source(
     r: Redis = Depends(get_redis),
-    rw: RWSession = Depends(get_rw_session),
     languages: list[str] = Depends(get_languages),
 ) -> list[tuple[Source, int]]:
     cfg = config.feeds.trends.statuses
@@ -195,9 +189,7 @@ def get_trending_statuses_source(
         (
             TrendingStatusesSource(
                 r=r,
-                rw=rw,
                 language=lang,
-                top_n=200,
                 max_per_author=cfg.settings.max_per_author,
             ),
             50,

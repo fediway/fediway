@@ -31,7 +31,21 @@ class TrendingStatusesSource(RedisSource):
 
     def compute(self):
         query = """
-        SELECT status_id, author_id, score
+        SELECT status_id, author_id,
+            (
+                LN(1 + weighted_engagement) /
+                POWER(
+                    GREATEST(EXTRACT(EPOCH FROM
+                        (NOW()::TIMESTAMP - created_at)) / 3600, 0.1) + 2,
+                    1.5
+                )
+            )
+            * (1 + 0.1 * LN(1 + unique_domains))
+            * GREATEST(0, (unique_engagers - 1.0) / (unique_engagers + 2.0))
+            * (1 + 0.2 * LN(1 + weighted_engagement /
+                GREATEST(EXTRACT(EPOCH FROM
+                    (last_engagement_at - first_engagement_at)) / 3600, 0.5)
+            )) AS score
         FROM status_virality_score_languages
         WHERE language = :language
         ORDER BY score DESC

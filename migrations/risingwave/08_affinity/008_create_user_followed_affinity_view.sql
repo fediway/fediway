@@ -4,7 +4,7 @@
 CREATE MATERIALIZED VIEW IF NOT EXISTS user_followed_affinity AS
 SELECT
     f.account_id AS user_id,
-    f.target_account_id AS followed_id,
+    f.target_account_id AS author_id,
     COALESCE(direct.raw_affinity, 0) AS direct_affinity,
     COALESCE(inferred.inferred_affinity, 0) AS inferred_affinity,
     CASE
@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_user_followed_affinity_user_id
     ON user_followed_affinity(user_id);
 
 CREATE INDEX IF NOT EXISTS idx_user_followed_affinity_lookup
-    ON user_followed_affinity(user_id, followed_id);
+    ON user_followed_affinity(user_id, author_id);
 
 -- :down
 

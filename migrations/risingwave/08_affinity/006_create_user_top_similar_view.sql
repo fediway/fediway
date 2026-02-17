@@ -8,14 +8,16 @@ SELECT user_id, similar_user_id, similarity FROM (
         user_b AS similar_user_id,
         jaccard AS similarity,
         ROW_NUMBER() OVER (PARTITION BY user_a ORDER BY jaccard DESC) AS rank
-    FROM active_user_similarity
+    FROM user_similarity
+    JOIN local_accounts la ON la.account_id = user_a
     UNION ALL
     SELECT
         user_b AS user_id,
         user_a AS similar_user_id,
         jaccard AS similarity,
         ROW_NUMBER() OVER (PARTITION BY user_b ORDER BY jaccard DESC) AS rank
-    FROM active_user_similarity
+    FROM user_similarity
+    JOIN local_accounts la ON la.account_id = user_b
 ) ranked
 WHERE rank <= 50;
 

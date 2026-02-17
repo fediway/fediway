@@ -4,12 +4,13 @@
 CREATE MATERIALIZED VIEW IF NOT EXISTS user_top_tags AS
 SELECT user_id, tag_id, tag_name, raw_affinity FROM (
     SELECT
-        user_id,
-        tag_id,
-        tag_name,
-        raw_affinity,
-        ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY raw_affinity DESC) AS rank
-    FROM user_tag_affinity
+        uta.user_id,
+        uta.tag_id,
+        uta.tag_name,
+        uta.raw_affinity,
+        ROW_NUMBER() OVER (PARTITION BY uta.user_id ORDER BY uta.raw_affinity DESC) AS rank
+    FROM user_tag_affinity uta
+    JOIN local_accounts la ON la.account_id = uta.user_id
 ) ranked
 WHERE rank <= 50;
 

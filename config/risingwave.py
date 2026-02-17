@@ -33,28 +33,49 @@ class RisingWaveConfig(BaseConfig):
     @computed_field
     @property
     def rw_migrations_paths(self) -> list[str]:
-        """Compute migration paths based on enabled modules."""
+        """Compute migration paths based on enabled sources."""
         from . import config
 
-        paths = [
+        paths = {
             "migrations/risingwave/00_base",
             "migrations/risingwave/02_engagement",
-        ]
+        }
 
         if config.fediway.kafka_enabled:
-            paths.append("migrations/risingwave/01_feed")
-            paths.append("migrations/risingwave/07_sinks")
+            paths.add("migrations/risingwave/01_feed")
+            paths.add("migrations/risingwave/07_sinks")
+
+        home = config.feeds.timelines.home.sources
+
+        if home.trending.enabled:
+            paths.add("migrations/risingwave/03_trending")
+
+        if home.top_follows.enabled or home.engaged_by_similar_users.enabled:
+            paths.add("migrations/risingwave/08_affinity")
+
+        if home.engaged_by_friends.enabled:
+            paths.add("migrations/risingwave/08_affinity")
+            paths.add("migrations/risingwave/10_social_proof")
+
+        if home.tag_affinity.enabled or home.posted_by_friends_of_friends.enabled:
+            paths.add("migrations/risingwave/08_affinity")
+            paths.add("migrations/risingwave/09_discovery")
+
+        suggestions = config.feeds.suggestions.sources
+
+        if suggestions.similar_interests.enabled or suggestions.popular.enabled:
+            paths.add("migrations/risingwave/09_discovery")
 
         if config.fediway.collaborative_filtering_enabled:
-            paths.append("migrations/risingwave/03_collaborative_filtering")
+            paths.add("migrations/risingwave/03_collaborative_filtering")
 
         if config.fediway.features_online_enabled:
-            paths.append("migrations/risingwave/04_features_online")
+            paths.add("migrations/risingwave/04_features_online")
 
         if config.fediway.features_offline_enabled:
-            paths.append("migrations/risingwave/05_features_offline")
+            paths.add("migrations/risingwave/05_features_offline")
 
         if config.fediway.orbit_enabled:
-            paths.append("migrations/risingwave/06_orbit")
+            paths.add("migrations/risingwave/06_orbit")
 
         return sorted(paths)

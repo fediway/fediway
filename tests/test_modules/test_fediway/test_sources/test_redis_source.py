@@ -14,7 +14,6 @@ class StubRedisSource(RedisSource):
 
 def test_load_fetches_from_redis_when_exists():
     mock_redis = MagicMock()
-    mock_redis.exists.return_value = True
     mock_redis.get.return_value = json.dumps([10, 20, 30])
 
     source = StubRedisSource(r=mock_redis, ttl=timedelta(seconds=60))
@@ -24,36 +23,30 @@ def test_load_fetches_from_redis_when_exists():
     mock_redis.setex.assert_not_called()
 
 
-def test_load_computes_and_stores_when_not_exists():
+def test_load_returns_empty_when_not_exists():
     mock_redis = MagicMock()
-    mock_redis.exists.return_value = False
+    mock_redis.get.return_value = None
 
     source = StubRedisSource(r=mock_redis, ttl=timedelta(seconds=60))
     result = source.load()
 
-    assert result == [1, 2, 3]
-    mock_redis.setex.assert_called_once()
+    assert result == []
+    mock_redis.setex.assert_not_called()
 
 
 def test_load_handles_json_decode_error():
-    """Verify load() recovers from corrupted Redis data."""
     mock_redis = MagicMock()
-    mock_redis.exists.return_value = True
     mock_redis.get.return_value = "invalid json {"
 
     source = StubRedisSource(r=mock_redis, ttl=timedelta(seconds=60))
     result = source.load()
 
-    # Should delete corrupted data and recompute
     mock_redis.delete.assert_called_once()
-    mock_redis.setex.assert_called_once()
-    assert result == [1, 2, 3]
+    assert result == []
 
 
 def test_load_handles_none_from_redis():
-    """Verify load() handles race condition where key disappears."""
     mock_redis = MagicMock()
-    mock_redis.exists.return_value = True
     mock_redis.get.return_value = None
 
     source = StubRedisSource(r=mock_redis, ttl=timedelta(seconds=60))

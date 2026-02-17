@@ -17,6 +17,7 @@ SELECT
         ELSE 0
     END) AS total_engagement_weight
 FROM follows f
+JOIN local_accounts la ON la.account_id = f.account_id
 JOIN enriched_status_engagement_events e
     ON e.account_id = f.target_account_id
 WHERE e.event_time > NOW() - INTERVAL '6 HOURS'

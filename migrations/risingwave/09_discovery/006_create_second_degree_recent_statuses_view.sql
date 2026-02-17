@@ -10,7 +10,7 @@ SELECT
     s.created_at,
     s.language
 FROM second_degree_candidates sd
-JOIN statuses s ON s.account_id = sd.suggested_account_id
+JOIN statuses s ON s.account_id = sd.author_id
 WHERE s.created_at > NOW() - INTERVAL '48 HOURS'
   AND s.visibility = 0
   AND s.reblog_of_id IS NULL
