@@ -4,6 +4,7 @@ from sqlmodel import Session as RWSession
 
 from apps.api.sources.statuses import (
     EngagedByFriendsSource,
+    PopularPostsSource,
     PostedByFriendsOfFriendsSource,
     TagAffinitySource,
     TopFollowsSource,
@@ -113,6 +114,24 @@ def get_home_trending_source(
     ]
 
 
+def get_home_popular_posts_source(
+    rw: RWSession = Depends(get_rw_session),
+    account: Account = Depends(get_authenticated_account_or_fail),
+) -> list[tuple[Source, int]]:
+    cfg = config.feeds.timelines.home
+    if not cfg.sources.popular_posts.enabled:
+        return []
+    return [
+        (
+            PopularPostsSource(
+                rw=rw,
+                account_id=account.id,
+            ),
+            50,
+        )
+    ]
+
+
 def get_home_fallback_source(
     r: Redis = Depends(get_redis),
     languages: list[str] = Depends(get_languages),
@@ -144,8 +163,9 @@ def get_home_discovery_sources(
     posted_by_friends_of_friends: list[tuple[Source, int]] = Depends(
         get_home_posted_by_friends_of_friends_source
     ),
+    popular_posts: list[tuple[Source, int]] = Depends(get_home_popular_posts_source),
 ) -> list[tuple[Source, int]]:
-    return tag_affinity + posted_by_friends_of_friends
+    return tag_affinity + posted_by_friends_of_friends + popular_posts
 
 
 def get_home_trending_sources(

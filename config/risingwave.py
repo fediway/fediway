@@ -50,7 +50,14 @@ class RisingWaveConfig(BaseConfig):
         if home.trending.enabled:
             paths.add("migrations/risingwave/03_trending")
 
-        if home.top_follows.enabled or home.engaged_by_similar_users.enabled:
+        if config.feeds.trends.tags.enabled:
+            paths.add("migrations/risingwave/03_trending")
+
+        if (
+            home.top_follows.enabled
+            or home.engaged_by_similar_users.enabled
+            or home.popular_posts.enabled
+        ):
             paths.add("migrations/risingwave/08_affinity")
 
         if home.engaged_by_friends.enabled:

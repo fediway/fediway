@@ -63,6 +63,7 @@ class HomeSources(BaseModel):
     posted_by_friends_of_friends: SourceConfig = Field(default_factory=SourceConfig)
     trending: SourceConfig = Field(default_factory=SourceConfig)
     engaged_by_similar_users: SourceConfig = Field(default_factory=SourceConfig)
+    popular_posts: SourceConfig = Field(default_factory=SourceConfig)
 
     model_config = {"extra": "forbid"}
 
@@ -140,6 +141,7 @@ class TrendingTagsSettings(BaseModel):
 class TrendingTagsConfig(BaseModel):
     """Configuration for /api/v1/trends/tags."""
 
+    enabled: bool = False
     settings: TrendingTagsSettings = Field(default_factory=TrendingTagsSettings)
     scoring: TrendingTagsScoringConfig = Field(default_factory=TrendingTagsScoringConfig)
     filters: TrendingTagsFiltersConfig = Field(default_factory=TrendingTagsFiltersConfig)
