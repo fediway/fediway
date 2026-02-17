@@ -42,4 +42,8 @@ async def tag_trends(
 
     tags = db.exec(select(Tag).where(Tag.id.in_(tag_ids))).all()
 
+    # Preserve ranked order — database returns arbitrary order
+    tag_map = {t.id: t for t in tags}
+    tags = [tag_map[tid] for tid in tag_ids if tid in tag_map]
+
     return [TagItem.from_model(tag) for tag in tags]

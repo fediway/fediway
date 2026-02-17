@@ -38,4 +38,8 @@ async def follow_suggestions(
 
     accounts = db.exec(Account.select_by_ids(account_ids)).all()
 
+    # Preserve ranked order — database returns arbitrary order
+    account_map = {a.id: a for a in accounts}
+    accounts = [account_map[aid] for aid in account_ids if aid in account_map]
+
     return [AccountItem.from_model(a) for a in accounts]

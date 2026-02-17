@@ -39,4 +39,8 @@ async def home_timeline(
 
     statuses = db.exec(Status.select_by_ids(status_ids)).all()
 
+    # Preserve ranked order — database returns arbitrary order
+    status_map = {s.id: s for s in statuses}
+    statuses = [status_map[sid] for sid in status_ids if sid in status_map]
+
     return [StatusItem.from_model(status) for status in statuses]

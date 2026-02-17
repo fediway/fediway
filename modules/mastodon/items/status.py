@@ -43,6 +43,13 @@ class StatusItem(Item):
     favourites_count: int
     replies_count: int
     quotes_count: int
+    favourited: bool = False
+    reblogged: bool = False
+    muted: bool = False
+    bookmarked: bool = False
+    pinned: bool = False
+    poll: None = None
+    filtered: list = []
     card: PreviewCardItem | None
     quote: QuoteItem | None = None
     application: ApplicationItem | None = None
