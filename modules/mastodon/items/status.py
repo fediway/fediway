@@ -94,3 +94,4 @@ class StatusItem(Item):
 
 
 StatusItem.model_rebuild()
+QuoteItem.model_rebuild()
