@@ -5,6 +5,8 @@ from .base import Item
 
 
 class TagItem(Item):
+    """see: https://docs.joinmastodon.org/entities/Status/#Tag"""
+
     id: str
     name: str
     url: str

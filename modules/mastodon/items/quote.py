@@ -16,6 +16,8 @@ QUOTE_STATUS = {
 
 
 class QuoteItem(Item):
+    """see: https://docs.joinmastodon.org/entities/Quote/"""
+
     state: str
     quoted_status: Optional["StatusItem"] = None
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -127,8 +127,9 @@ def mock_card():
         mock.width = overrides.get("width", 400)
         mock.height = overrides.get("height", 200)
         mock.image_url = overrides.get("image_url", "https://example.com/image.jpg")
-        mock.embed_url = overrides.get("embed_url", None)
+        mock.embed_url = overrides.get("embed_url", "")
         mock.blurhash = overrides.get("blurhash", None)
+        mock.language = overrides.get("language", "en")
         return mock
 
     return _make
@@ -193,10 +194,11 @@ def test_field_basic():
 
 
 def test_field_verified():
-    verified_time = datetime(2024, 1, 15, 12, 0, 0)
-    field = FieldItem(name="Website", value="https://example.com", verified_at=verified_time)
+    field = FieldItem(
+        name="Website", value="https://example.com", verified_at=datetime(2024, 1, 15, 12, 0, 0)
+    )
 
-    assert field.verified_at == verified_time
+    assert field.verified_at == datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
 
 
 def test_field_serializes_to_json():
@@ -248,7 +250,7 @@ def test_account_group_field(mock_account):
 def test_account_created_at_set_to_midnight(mock_account):
     item = AccountItem.from_model(mock_account(created_at=datetime(2023, 6, 15, 14, 30, 45)))
 
-    assert item.created_at == datetime(2023, 6, 15, 0, 0, 0)
+    assert item.created_at == datetime(2023, 6, 15, 0, 0, 0, tzinfo=timezone.utc)
 
 
 def test_account_last_status_at_is_date_string(mock_account):
@@ -290,16 +292,19 @@ def test_account_fields_converted_to_field_items(mock_account):
 
 
 def test_account_fields_with_verified_at(mock_account):
-    verified_time = datetime(2024, 1, 15, 12, 0, 0)
     item = AccountItem.from_model(
         mock_account(
             fields=[
-                {"name": "Website", "value": "https://example.com", "verified_at": verified_time}
+                {
+                    "name": "Website",
+                    "value": "https://example.com",
+                    "verified_at": datetime(2024, 1, 15, 12, 0, 0),
+                }
             ]
         )
     )
 
-    assert item.fields[0].verified_at == verified_time
+    assert item.fields[0].verified_at == datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
 
 
 def test_account_serializes_to_json(mock_account):
@@ -578,10 +583,9 @@ def test_preview_card_type(mock_card, type_int, type_str):
 
 
 def test_preview_card_nullable_fields(mock_card):
-    item = PreviewCardItem.from_model(mock_card(image_url=None, embed_url=None, blurhash=None))
+    item = PreviewCardItem.from_model(mock_card(image_url=None, blurhash=None))
 
     assert item.image is None
-    assert item.embed_url is None
     assert item.blurhash is None
 
 
@@ -675,3 +679,83 @@ def test_emoji_serializes_to_json():
     assert data["shortcode"] == "smile"
     assert data["visible_in_picker"] is True
     assert data["category"] is None
+
+
+# -- UTCDatetime serialization --
+
+
+def test_naive_datetime_serialized_with_z_suffix(mock_status):
+    item = StatusItem.from_model(mock_status(created_at=datetime(2024, 1, 15, 12, 0, 0)))
+
+    assert item.created_at.tzinfo == timezone.utc
+    json_str = item.model_dump_json()
+    assert '"2024-01-15T12:00:00Z"' in json_str
+
+
+def test_aware_datetime_kept_as_is(mock_status):
+    aware_dt = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
+    item = StatusItem.from_model(mock_status(created_at=aware_dt))
+
+    assert item.created_at.tzinfo == timezone.utc
+
+
+def test_edited_at_none_stays_none(mock_status):
+    item = StatusItem.from_model(mock_status(edited_at=None))
+
+    assert item.edited_at is None
+
+
+def test_edited_at_naive_gets_utc(mock_status):
+    item = StatusItem.from_model(mock_status(edited_at=datetime(2024, 6, 1, 10, 30, 0)))
+
+    assert item.edited_at.tzinfo == timezone.utc
+
+
+def test_account_created_at_has_utc(mock_account):
+    item = AccountItem.from_model(mock_account(created_at=datetime(2023, 6, 15, 14, 30, 0)))
+
+    assert item.created_at.tzinfo == timezone.utc
+
+
+def test_field_verified_at_has_utc():
+    field = FieldItem(
+        name="Website", value="https://example.com", verified_at=datetime(2024, 1, 15)
+    )
+
+    assert field.verified_at.tzinfo == timezone.utc
+
+
+# -- PreviewCard new fields --
+
+
+def test_preview_card_language(mock_card):
+    item = PreviewCardItem.from_model(mock_card(language="fr"))
+
+    assert item.language == "fr"
+
+
+def test_preview_card_language_default(mock_card):
+    card = mock_card()
+    card.language = ""
+    item = PreviewCardItem.from_model(card)
+
+    assert item.language == ""
+
+
+def test_preview_card_image_description_default(mock_card):
+    item = PreviewCardItem.from_model(mock_card())
+
+    assert item.image_description == ""
+
+
+def test_preview_card_published_at_default(mock_card):
+    item = PreviewCardItem.from_model(mock_card())
+
+    assert item.published_at is None
+
+
+def test_preview_card_embed_url_is_string(mock_card):
+    item = PreviewCardItem.from_model(mock_card(embed_url=""))
+
+    assert item.embed_url == ""
+    assert isinstance(item.embed_url, str)

@@ -11,6 +11,8 @@ MEDIA_TYPES = {
 
 
 class MediaAttachmentItem(Item):
+    """see: https://docs.joinmastodon.org/entities/MediaAttachment/"""
+
     id: str
     type: str
     url: str | None

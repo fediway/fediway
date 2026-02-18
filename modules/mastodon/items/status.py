@@ -1,10 +1,9 @@
-from datetime import datetime
 from typing import Optional
 
 from ..models import Status
 from .account import AccountItem
 from .application import ApplicationItem
-from .base import Item
+from .base import Item, UTCDatetime
 from .emoji import EmojiItem
 from .media_attachment import MediaAttachmentItem
 from .mention import MentionItem
@@ -21,16 +20,18 @@ STATUS_VISIBILITY = {
 
 
 class StatusItem(Item):
+    """see: https://docs.joinmastodon.org/entities/Status/"""
+
     id: str
     uri: str | None
     url: str | None
-    created_at: datetime
+    created_at: UTCDatetime
     in_reply_to_id: str | None
     in_reply_to_account_id: str | None
     content: str | None
     visibility: str
     language: str | None = None
-    edited_at: datetime | None = None
+    edited_at: UTCDatetime | None = None
     sensitive: bool
     spoiler_text: str
     account: AccountItem

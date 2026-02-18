@@ -1,14 +1,10 @@
-from datetime import datetime
-
 from ..models import Account
-from .base import Item
+from .base import Item, UTCDatetime
 from .field import FieldItem
 
 
 class AccountItem(Item):
-    """
-    see: https://docs.joinmastodon.org/entities/Account/
-    """
+    """see: https://docs.joinmastodon.org/entities/Account/"""
 
     id: str
     username: str
@@ -29,7 +25,7 @@ class AccountItem(Item):
     statuses_count: int
     followers_count: int
     following_count: int
-    created_at: datetime
+    created_at: UTCDatetime
     fields: list[FieldItem] = []
     emojis: list = []
     last_status_at: str | None

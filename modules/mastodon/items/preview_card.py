@@ -1,5 +1,5 @@
 from ..models import PreviewCard
-from .base import Item
+from .base import Item, UTCDatetime
 from .preview_card_author import PreviewCardAuthorItem
 
 PREVIEW_CARD_TYPES = {
@@ -11,6 +11,8 @@ PREVIEW_CARD_TYPES = {
 
 
 class PreviewCardItem(Item):
+    """see: https://docs.joinmastodon.org/entities/PreviewCard/"""
+
     url: str
     title: str
     description: str
@@ -24,8 +26,11 @@ class PreviewCardItem(Item):
     width: int
     height: int
     image: str | None
-    embed_url: str | None
+    image_description: str = ""
+    embed_url: str = ""
     blurhash: str | None
+    language: str = ""
+    published_at: UTCDatetime | None = None
 
     @classmethod
     def from_model(cls, card: PreviewCard):
@@ -44,4 +49,5 @@ class PreviewCardItem(Item):
             image=card.image_url,
             embed_url=card.embed_url,
             blurhash=card.blurhash,
+            language=card.language,
         )

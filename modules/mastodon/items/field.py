@@ -1,9 +1,9 @@
-from datetime import datetime
-
-from .base import Item
+from .base import Item, UTCDatetime
 
 
 class FieldItem(Item):
+    """see: https://docs.joinmastodon.org/entities/Field/"""
+
     name: str
     value: str
-    verified_at: datetime | None = None
+    verified_at: UTCDatetime | None = None
