@@ -1,0 +1,32 @@
+[package]
+name = "server"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "fediway"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+common.workspace = true
+config.workspace = true
+state.workspace = true
+pipeline.workspace = true
+sources.workspace = true
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tower_governor.workspace = true
+sqlx.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+hmac.workspace = true
+sha2.workspace = true
+hex.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal"] }
+tracing.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+dotenvy.workspace = true

@@ -1,56 +1,18 @@
-# Fediway Feeds
+# Fediway
 
-## Api
+Algorithmic feeds for Mastodon instances. Replaces chronological timelines with configurable, ranked feeds that blend local content with external content providers.
 
-Start server
-
-```sh
-uvicorn app.main:app --reload
-```
-
-## Job Scheduling
-
-Start scheduler worker
+## Quick start
 
 ```sh
-celery -A jobs.main worker --queues=local --loglevel=info
+cargo check --workspace       # verify everything compiles
+cargo test --workspace        # run tests
+cargo run --bin fediway        # start the server
+cargo run --bin fediway-worker # start the background worker
 ```
 
-Start worker to process topics
+## Requirements
 
-```sh
-celery -A jobs.main worker --queues=topics --loglevel=info
-```
-
-## DB
-
-Run migrations:
-
-```sh
-alembic upgrade head
-```
-
-Refresh migrations
-
-```sh
-alembic downgrade base
-```
-
-Create migration
-
-```sh
-alembic revision -m "create topics table"
-```
-
-## ip2location
-
-Download ip-database
-
-```sh
-curl -o data/geo-whois-asn-country-ipv4.mmdb https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country-ipv4.mmdb
-curl -o data/geo-whois-asn-country-ipv6.mmdb https://cdn.jsdelivr.net/npm/@ip-location-db/geo-whois-asn-country-mmdb/geo-whois-asn-country-ipv6.mmdb
-```
-
-## ActivityPub
-
-https://w3c.github.io/activitypub
+- Rust stable (latest)
+- Access to Mastodon's PostgreSQL
+- Redis

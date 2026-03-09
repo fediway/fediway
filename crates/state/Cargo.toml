@@ -1,0 +1,14 @@
+[package]
+name = "state"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+common.workspace = true
+config.workspace = true
+sqlx.workspace = true
+redis.workspace = true
+thiserror.workspace = true

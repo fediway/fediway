@@ -1,0 +1,91 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/server",
+    "apps/worker",
+    "apps/cli",
+    "crates/common",
+    "crates/config",
+    "crates/pipeline",
+    "crates/sources",
+    "crates/state",
+]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2024"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+cast_possible_truncation = "allow"
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+[workspace.dependencies]
+# Internal
+common = { path = "crates/common" }
+config = { path = "crates/config" }
+pipeline = { path = "crates/pipeline" }
+sources = { path = "crates/sources" }
+state = { path = "crates/state" }
+# Async
+tokio = { version = "1", default-features = false }
+futures = "0.3"
+
+# Web
+axum = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", default-features = false, features = ["cors"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+# Database
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "derive"] }
+
+# Redis
+redis = { version = "0.28", default-features = false, features = ["tokio-comp", "connection-manager"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+chrono = { version = "0.4", default-features = false, features = ["std", "serde", "clock"] }
+
+# Crypto
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Rate limiting
+tower_governor = "0.6"
+
+# Config
+clap = { version = "4", features = ["derive", "env"] }
+dotenvy = "0.15"
+
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# --- Profiles ---
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1
+opt-level = 3
