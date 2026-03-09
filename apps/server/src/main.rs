@@ -6,7 +6,7 @@ pub mod language;
 mod routes;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let _ = dotenvy::dotenv();
 
     tracing_subscriber::fmt()
@@ -20,8 +20,13 @@ async fn main() {
 
     let app = routes::router(db, &config.instance.instance_domain);
 
-    let addr = "0.0.0.0:3000";
+    let addr = format!(
+        "{}:{}",
+        config.instance.server_host, config.instance.server_port
+    );
     tracing::info!("listening on {addr}");
-    let listener = TcpListener::bind(addr).await.expect("failed to bind");
-    axum::serve(listener, app).await.expect("server error");
+    let listener = TcpListener::bind(&addr).await.expect("failed to bind");
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }

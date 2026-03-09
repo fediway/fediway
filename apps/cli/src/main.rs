@@ -12,6 +12,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Run database migrations
+    Migrate,
     /// Manage content providers
     Provider {
         #[command(subcommand)]
@@ -47,6 +49,13 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
+        Command::Migrate => {
+            let config = config::FediwayConfig::load();
+            let db = state::db::connect(&config.db).await?;
+            state::db::migrate(&db).await?;
+            println!("migrations complete");
+            return Ok(());
+        }
         Command::Provider { command } => match command {
             ProviderCommand::Info { domain } => {
                 provider::info(&domain).await?;

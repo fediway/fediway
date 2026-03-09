@@ -3,19 +3,38 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Post {
-    pub id: String,
-    pub author: Author,
+    pub url: String,
+    pub content: String,
     pub text: String,
-    pub language: Option<String>,
+    pub author: Author,
     pub published_at: DateTime<Utc>,
+    pub language: Option<String>,
+    pub sensitive: bool,
+    pub content_warning: Option<String>,
+    pub media: Vec<Media>,
     pub engagement: Engagement,
+    pub reply_to: Option<String>,
+    pub quote_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Author {
-    pub id: String,
-    pub username: String,
-    pub display_name: Option<String>,
+    pub handle: String,
+    pub display_name: String,
+    pub url: String,
+    pub avatar_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Media {
+    pub media_type: String,
+    pub url: String,
+    pub alt: Option<String>,
+    pub mime_type: Option<String>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub blurhash: Option<String>,
+    pub thumbnail_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -59,4 +78,15 @@ pub enum ProviderStatus {
     Pending,
     Approved,
     Failed,
+}
+
+impl ProviderStatus {
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Approved => "approved",
+            Self::Failed => "failed",
+        }
+    }
 }

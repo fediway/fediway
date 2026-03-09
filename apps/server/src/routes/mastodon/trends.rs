@@ -2,6 +2,7 @@ use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use common::types::Post;
+use mastodon::Status;
 use pipeline::pipeline::Pipeline;
 use pipeline::scorer::Diversity;
 use serde::Deserialize;
@@ -27,7 +28,7 @@ pub async fn statuses(
     State(db): State<PgPool>,
     headers: HeaderMap,
     Query(params): Query<Params>,
-) -> Result<Json<Vec<Post>>, StatusCode> {
+) -> Result<Json<Vec<Status>>, StatusCode> {
     let limit = params.limit.min(40);
 
     let languages = match account {
@@ -46,13 +47,18 @@ pub async fn statuses(
 
     let pipeline = Pipeline::builder()
         .sources(sources, 100)
-        .score(Diversity::new(0.1, |post: &Post| post.author.id.clone()))
+        .score(Diversity::new(0.1, |post: &Post| {
+            post.author.handle.clone()
+        }))
         .build();
 
     let candidates = pipeline.execute(limit, &()).await;
-    let posts: Vec<Post> = candidates.into_iter().map(|c| c.item).collect();
+    let statuses: Vec<Status> = candidates
+        .into_iter()
+        .map(|c| Status::from(c.item))
+        .collect();
 
-    Ok(Json(posts))
+    Ok(Json(statuses))
 }
 
 pub async fn tags() -> StatusCode {

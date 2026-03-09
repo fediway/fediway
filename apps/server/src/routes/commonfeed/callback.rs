@@ -13,12 +13,11 @@ struct CallbackPayload {
 }
 
 pub async fn handle(State(db): State<PgPool>, headers: HeaderMap, body: Bytes) -> StatusCode {
-    let signature = match headers
+    let Some(signature) = headers
         .get("x-commonfeed-signature")
         .and_then(|v| v.to_str().ok())
-    {
-        Some(sig) => sig.to_string(),
-        None => return StatusCode::UNAUTHORIZED,
+    else {
+        return StatusCode::UNAUTHORIZED;
     };
 
     let payload: CallbackPayload = match serde_json::from_slice(&body) {
@@ -36,26 +35,13 @@ pub async fn handle(State(db): State<PgPool>, headers: HeaderMap, body: Bytes) -
         return StatusCode::NOT_FOUND;
     };
 
-    if !verify_signature(&api_key, &body, &signature) {
+    if !verify_signature(&api_key, &body, signature) {
         return StatusCode::UNAUTHORIZED;
     }
 
-    let status_str = serde_json::to_value(payload.status)
-        .ok()
-        .and_then(|v| v.as_str().map(String::from))
-        .unwrap_or_default();
-
-    let result = sqlx::query(
-        "UPDATE commonfeed_providers SET status = $1, updated_at = now() WHERE domain = $2",
-    )
-    .bind(&status_str)
-    .bind(&payload.domain)
-    .execute(&db)
-    .await;
-
-    match result {
-        Ok(_) => {
-            tracing::info!(domain = %payload.domain, status = %status_str, "provider callback received");
+    match state::providers::update_status(&db, &payload.domain, payload.status.as_str()).await {
+        Ok(()) => {
+            tracing::info!(domain = %payload.domain, status = payload.status.as_str(), "provider callback received");
             StatusCode::OK
         }
         Err(e) => {
@@ -66,15 +52,16 @@ pub async fn handle(State(db): State<PgPool>, headers: HeaderMap, body: Bytes) -
 }
 
 fn verify_signature(api_key: &str, body: &[u8], signature: &str) -> bool {
-    try_verify(api_key, body, signature).unwrap_or(false)
-}
-
-fn try_verify(api_key: &str, body: &[u8], signature: &str) -> Option<bool> {
-    let expected_hex = signature.strip_prefix("sha256=")?;
-    let expected_bytes = hex::decode(expected_hex).ok()?;
-    let mut mac = Hmac::<Sha256>::new_from_slice(api_key.as_bytes()).ok()?;
+    let expected_hex = signature.strip_prefix("sha256=");
+    let expected_bytes = expected_hex.and_then(|h| hex::decode(h).ok());
+    let Some(expected_bytes) = expected_bytes else {
+        return false;
+    };
+    let Ok(mut mac) = Hmac::<Sha256>::new_from_slice(api_key.as_bytes()) else {
+        return false;
+    };
     mac.update(body);
-    Some(mac.verify_slice(&expected_bytes).is_ok())
+    mac.verify_slice(&expected_bytes).is_ok()
 }
 
 #[cfg(test)]
@@ -145,5 +132,12 @@ mod tests {
         let result: CallbackPayload =
             serde_json::from_str(r#"{"status": "approved", "domain": "example.com"}"#).unwrap();
         assert_eq!(result.status, ProviderStatus::Approved);
+    }
+
+    #[test]
+    fn status_as_str() {
+        assert_eq!(ProviderStatus::Pending.as_str(), "pending");
+        assert_eq!(ProviderStatus::Approved.as_str(), "approved");
+        assert_eq!(ProviderStatus::Failed.as_str(), "failed");
     }
 }

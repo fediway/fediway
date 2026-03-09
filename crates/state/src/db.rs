@@ -2,6 +2,11 @@ use config::DatabaseConfig;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
+/// Run embedded migrations.
+pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
+    sqlx::migrate!("src/migrations").run(pool).await
+}
+
 pub async fn connect(config: &DatabaseConfig) -> Result<PgPool, sqlx::Error> {
     let url = format!(
         "postgres://{}{}@{}:{}/{}",

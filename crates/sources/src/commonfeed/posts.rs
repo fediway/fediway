@@ -1,7 +1,7 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use common::types::{Author, Engagement, Post, Provider};
+use common::types::{Author, Engagement, Media, Post, Provider};
 use pipeline::candidate::Candidate;
 use pipeline::source::Source;
 use reqwest::Client;
@@ -92,21 +92,44 @@ impl Source<Post> for PostsSource {
 fn into_candidate(result: PostResult) -> Candidate<Post> {
     let engagement = result.engagement.as_ref();
 
+    let media = result
+        .media
+        .unwrap_or_default()
+        .into_iter()
+        .map(|m| Media {
+            media_type: m.media_type,
+            url: m.url,
+            alt: m.alt,
+            mime_type: m.mime_type,
+            width: m.width,
+            height: m.height,
+            blurhash: m.blurhash,
+            thumbnail_url: m.thumbnail_url,
+        })
+        .collect();
+
     let post = Post {
-        id: result.url.clone(),
-        author: Author {
-            id: result.author.handle.clone(),
-            username: result.author.handle,
-            display_name: Some(result.author.name),
-        },
+        url: result.url,
+        content: result.content,
         text: result.text,
-        language: result.language,
+        author: Author {
+            handle: result.author.handle,
+            display_name: result.author.name,
+            url: result.author.url,
+            avatar_url: result.author.avatar_url,
+        },
         published_at: result.timestamp,
+        language: result.language,
+        sensitive: result.sensitive.unwrap_or(false),
+        content_warning: result.content_warning,
+        media,
         engagement: Engagement {
             replies: engagement.and_then(|e| e.replies).unwrap_or(0),
             reposts: engagement.and_then(|e| e.reposts).unwrap_or(0),
             likes: engagement.and_then(|e| e.likes).unwrap_or(0),
         },
+        reply_to: result.reply_to,
+        quote_url: result.quote_url,
     };
 
     let mut candidate = Candidate::new(post, "commonfeed");
@@ -150,7 +173,7 @@ mod tests {
 
         let candidate = into_candidate(result);
         assert_eq!(candidate.item.text, "hello");
-        assert_eq!(candidate.item.author.display_name.as_deref(), Some("Alice"));
+        assert_eq!(candidate.item.author.display_name, "Alice");
         assert_eq!(candidate.item.engagement.likes, 42);
         assert_eq!(candidate.item.engagement.reposts, 10);
         assert_eq!(candidate.item.engagement.replies, 5);

@@ -54,7 +54,12 @@ struct StatusResponse {
 }
 
 async fn fetch_well_known(domain: &str) -> Result<WellKnown> {
-    let url = format!("https://{domain}/.well-known/commonfeed");
+    let base = if domain.contains("://") {
+        domain.to_string()
+    } else {
+        format!("https://{domain}")
+    };
+    let url = format!("{base}/.well-known/commonfeed");
     let wk = reqwest::get(&url)
         .await?
         .error_for_status()?
@@ -94,45 +99,30 @@ pub async fn info(domain: &str) -> Result<()> {
 }
 
 pub async fn add(db: &PgPool, domain: &str) -> Result<()> {
+    let wk = sync_provider(db, domain).await?;
+    print_well_known(&wk);
+    println!("\nProvider added.");
+    Ok(())
+}
+
+async fn sync_provider(db: &PgPool, domain: &str) -> Result<WellKnown> {
     let wk = fetch_well_known(domain).await?;
 
-    sqlx::query(
-        "INSERT INTO commonfeed_providers (domain, name, base_url, max_results)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (domain) DO UPDATE SET
-             name = EXCLUDED.name,
-             base_url = EXCLUDED.base_url,
-             max_results = EXCLUDED.max_results,
-             updated_at = now()",
-    )
-    .bind(&wk.domain)
-    .bind(&wk.name)
-    .bind(&wk.base_url)
-    .bind(wk.max_results)
-    .execute(db)
-    .await?;
+    state::providers::upsert(db, &wk.domain, &wk.name, &wk.base_url, wk.max_results).await?;
 
     for cap in &wk.capabilities {
-        sqlx::query(
-            "INSERT INTO commonfeed_capabilities (provider_domain, resource, algorithm, description, filters)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (provider_domain, resource, algorithm) DO UPDATE SET
-                 description = EXCLUDED.description,
-                 filters = EXCLUDED.filters"
+        state::providers::upsert_capability(
+            db,
+            &wk.domain,
+            &cap.resource,
+            &cap.algorithm,
+            &cap.description,
+            &cap.filters,
         )
-        .bind(&wk.domain)
-        .bind(&cap.resource)
-        .bind(&cap.algorithm)
-        .bind(&cap.description)
-        .bind(&cap.filters)
-        .execute(db)
         .await?;
     }
 
-    print_well_known(&wk);
-    println!("\nProvider added.");
-
-    Ok(())
+    Ok(wk)
 }
 
 pub async fn register(
@@ -141,20 +131,11 @@ pub async fn register(
     instance_domain: &str,
     instance_name: &str,
 ) -> Result<()> {
-    let base_url = sqlx::query_scalar::<_, String>(
-        "SELECT base_url FROM commonfeed_providers WHERE domain = $1",
-    )
-    .bind(domain)
-    .fetch_optional(db)
-    .await?;
-
-    let Some(base_url) = base_url else {
-        anyhow::bail!("Provider not found. Run `provider add {domain}` first.");
-    };
+    let wk = sync_provider(db, domain).await?;
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(format!("{base_url}/register"))
+        .post(format!("{}/register", wk.base_url))
         .json(&RegisterRequest {
             domain: instance_domain.to_string(),
             name: instance_name.to_string(),
@@ -166,17 +147,14 @@ pub async fn register(
         .json::<RegisterResponse>()
         .await?;
 
-    sqlx::query(
-        "UPDATE commonfeed_providers
-         SET api_key = $1, request_id = $2, status = $3, verify_path = $4, updated_at = now()
-         WHERE domain = $5",
+    state::providers::save_registration(
+        db,
+        &wk.domain,
+        &resp.api_key,
+        &resp.request_id,
+        &resp.status,
+        &resp.verify_path,
     )
-    .bind(&resp.api_key)
-    .bind(&resp.request_id)
-    .bind(&resp.status)
-    .bind(&resp.verify_path)
-    .bind(domain)
-    .execute(db)
     .await?;
 
     println!("Registration submitted!");
@@ -189,15 +167,12 @@ pub async fn register(
 }
 
 pub async fn status(db: &PgPool, domain: &str) -> Result<()> {
-    let row = sqlx::query_as::<_, (Option<String>, Option<String>)>(
-        "SELECT api_key, status FROM commonfeed_providers WHERE domain = $1",
-    )
-    .bind(domain)
-    .fetch_optional(db)
-    .await?;
+    let wk = sync_provider(db, domain).await?;
 
-    let Some((api_key, current_status)) = row else {
-        anyhow::bail!("Provider not found. Run `provider add {domain}` first.");
+    let Some((api_key, current_status)) =
+        state::providers::find_registration(db, &wk.domain).await?
+    else {
+        anyhow::bail!("Not registered yet. Run `provider register {domain}` first.");
     };
 
     if current_status.as_deref() == Some("approved") {
@@ -209,16 +184,9 @@ pub async fn status(db: &PgPool, domain: &str) -> Result<()> {
         anyhow::bail!("Not registered yet. Run `provider register {domain}` first.");
     };
 
-    let base_url = sqlx::query_scalar::<_, String>(
-        "SELECT base_url FROM commonfeed_providers WHERE domain = $1",
-    )
-    .bind(domain)
-    .fetch_one(db)
-    .await?;
-
     let client = reqwest::Client::new();
     let resp = client
-        .get(format!("{base_url}/register/status"))
+        .get(format!("{}/register/status", wk.base_url))
         .bearer_auth(&api_key)
         .send()
         .await?
@@ -226,13 +194,7 @@ pub async fn status(db: &PgPool, domain: &str) -> Result<()> {
         .json::<StatusResponse>()
         .await?;
 
-    sqlx::query(
-        "UPDATE commonfeed_providers SET status = $1, updated_at = now() WHERE domain = $2",
-    )
-    .bind(&resp.status)
-    .bind(domain)
-    .execute(db)
-    .await?;
+    state::providers::update_status(db, &wk.domain, &resp.status).await?;
 
     println!("Status: {}", resp.status);
     if let Some(msg) = &resp.message {
@@ -243,46 +205,36 @@ pub async fn status(db: &PgPool, domain: &str) -> Result<()> {
 }
 
 pub async fn enable(db: &PgPool, domain: &str, capability: &str) -> Result<()> {
+    let wk = sync_provider(db, domain).await?;
     let (resource, algorithm) = parse_capability(capability)?;
-
-    let rows = sqlx::query(
-        "UPDATE commonfeed_capabilities SET enabled = true
-         WHERE provider_domain = $1 AND resource = $2 AND algorithm = $3",
-    )
-    .bind(domain)
-    .bind(resource)
-    .bind(algorithm)
-    .execute(db)
-    .await?
-    .rows_affected();
+    let rows =
+        state::providers::set_capability_enabled(db, &wk.domain, resource, algorithm, true).await?;
 
     if rows == 0 {
-        anyhow::bail!("Capability '{capability}' not found for provider '{domain}'.");
+        anyhow::bail!(
+            "Capability '{capability}' not found for provider '{}'.",
+            wk.domain
+        );
     }
 
-    println!("Enabled {capability} for {domain}.");
+    println!("Enabled {capability} for {}.", wk.domain);
     Ok(())
 }
 
 pub async fn disable(db: &PgPool, domain: &str, capability: &str) -> Result<()> {
+    let wk = sync_provider(db, domain).await?;
     let (resource, algorithm) = parse_capability(capability)?;
-
-    let rows = sqlx::query(
-        "UPDATE commonfeed_capabilities SET enabled = false
-         WHERE provider_domain = $1 AND resource = $2 AND algorithm = $3",
-    )
-    .bind(domain)
-    .bind(resource)
-    .bind(algorithm)
-    .execute(db)
-    .await?
-    .rows_affected();
+    let rows = state::providers::set_capability_enabled(db, &wk.domain, resource, algorithm, false)
+        .await?;
 
     if rows == 0 {
-        anyhow::bail!("Capability '{capability}' not found for provider '{domain}'.");
+        anyhow::bail!(
+            "Capability '{capability}' not found for provider '{}'.",
+            wk.domain
+        );
     }
 
-    println!("Disabled {capability} for {domain}.");
+    println!("Disabled {capability} for {}.", wk.domain);
     Ok(())
 }
 

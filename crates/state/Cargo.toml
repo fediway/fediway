@@ -12,3 +12,4 @@ config.workspace = true
 sqlx.workspace = true
 redis.workspace = true
 thiserror.workspace = true
+tracing.workspace = true

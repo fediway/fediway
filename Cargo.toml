@@ -9,6 +9,7 @@ members = [
     "crates/pipeline",
     "crates/sources",
     "crates/state",
+    "crates/mastodon",
 ]
 
 [workspace.package]
@@ -33,6 +34,7 @@ config = { path = "crates/config" }
 pipeline = { path = "crates/pipeline" }
 sources = { path = "crates/sources" }
 state = { path = "crates/state" }
+mastodon = { path = "crates/mastodon" }
 # Async
 tokio = { version = "1", default-features = false }
 futures = "0.3"
@@ -44,7 +46,7 @@ tower-http = { version = "0.6", default-features = false, features = ["cors"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 # Database
-sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "derive"] }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "postgres", "derive", "migrate", "macros"] }
 
 # Redis
 redis = { version = "0.28", default-features = false, features = ["tokio-comp", "connection-manager"] }
