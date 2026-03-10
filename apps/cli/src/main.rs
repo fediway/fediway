@@ -19,6 +19,22 @@ enum Command {
         #[command(subcommand)]
         command: ProviderCommand,
     },
+    /// Enable a provider source for a route (e.g. enable trends/statuses localhost:3000 posts/trending)
+    Enable {
+        /// Fediway route (e.g. trends/statuses, timelines/tag, trends/tags)
+        route: String,
+        /// Provider domain
+        provider: String,
+        /// Capability to use (e.g. posts/trending, posts/hot, tags/trending)
+        capability: String,
+    },
+    /// Disable a provider source for a route
+    Disable {
+        /// Fediway route
+        route: String,
+        /// Provider domain
+        provider: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -37,10 +53,12 @@ enum ProviderCommand {
     },
     /// Check registration status
     Status { domain: String },
-    /// Enable a capability (e.g. trending, search)
-    Enable { domain: String, capability: String },
-    /// Disable a capability
-    Disable { domain: String, capability: String },
+}
+
+fn parse_capability(capability: &str) -> Result<(&str, &str)> {
+    capability.split_once('/').ok_or_else(|| {
+        anyhow::anyhow!("Capability must be in format 'resource/algorithm' (e.g. posts/trending)")
+    })
 }
 
 #[tokio::main]
@@ -54,7 +72,6 @@ async fn main() -> Result<()> {
             let db = state::db::connect(&config.db).await?;
             state::db::migrate(&db).await?;
             println!("migrations complete");
-            return Ok(());
         }
         Command::Provider { command } => match command {
             ProviderCommand::Info { domain } => {
@@ -77,16 +94,32 @@ async fn main() -> Result<()> {
                     ProviderCommand::Status { domain } => {
                         provider::status(&db, &domain).await?;
                     }
-                    ProviderCommand::Enable { domain, capability } => {
-                        provider::enable(&db, &domain, &capability).await?;
-                    }
-                    ProviderCommand::Disable { domain, capability } => {
-                        provider::disable(&db, &domain, &capability).await?;
-                    }
                     ProviderCommand::Info { .. } => unreachable!(),
                 }
             }
         },
+        Command::Enable {
+            route,
+            provider,
+            capability,
+        } => {
+            let (resource, algorithm) = parse_capability(&capability)?;
+            let config = config::FediwayConfig::load();
+            let db = state::db::connect(&config.db).await?;
+            let domain = provider::resolve_domain(&db, &provider).await?;
+            state::providers::enable_source(&db, &route, &domain, resource, algorithm).await?;
+            println!("Enabled {route} ← {domain} ({capability})");
+        }
+        Command::Disable { route, provider } => {
+            let config = config::FediwayConfig::load();
+            let db = state::db::connect(&config.db).await?;
+            let domain = provider::resolve_domain(&db, &provider).await?;
+            let rows = state::providers::disable_source(&db, &route, &domain).await?;
+            if rows == 0 {
+                anyhow::bail!("No source found for {route} from {domain}");
+            }
+            println!("Disabled {route} ← {domain}");
+        }
     }
 
     Ok(())

@@ -1,29 +1,35 @@
 use common::types::Provider;
 use sqlx::PgPool;
 
-pub async fn find_for_capability(db: &PgPool, resource: &str, algorithm: &str) -> Vec<Provider> {
-    let rows = sqlx::query_as::<_, ProviderRow>(
-        "SELECT p.base_url, p.api_key, p.max_results, c.filters
-         FROM commonfeed_providers p
-         JOIN commonfeed_capabilities c ON c.provider_domain = p.domain
-         WHERE p.status = 'approved' AND p.enabled = true
-           AND c.resource = $1 AND c.algorithm = $2 AND c.enabled = true",
+/// Find sources configured for a fediway route.
+pub async fn find_sources(db: &PgPool, route: &str) -> Vec<BoundProvider> {
+    let rows = sqlx::query_as::<_, BoundProviderRow>(
+        "SELECT p.base_url, p.api_key, p.max_results, c.filters,
+                b.resource, b.algorithm
+         FROM commonfeed_sources b
+         JOIN commonfeed_providers p ON p.domain = b.provider_domain
+         JOIN commonfeed_capabilities c ON c.provider_domain = b.provider_domain
+              AND c.resource = b.resource AND c.algorithm = b.algorithm
+         WHERE b.route = $1 AND b.enabled = true
+           AND p.status = 'approved' AND p.enabled = true",
     )
-    .bind(resource)
-    .bind(algorithm)
+    .bind(route)
     .fetch_all(db)
     .await
     .unwrap_or_else(|e| {
-        tracing::warn!(error = %e, "failed to query providers");
+        tracing::warn!(error = %e, "failed to query sources");
         Vec::new()
     });
 
     rows.into_iter()
-        .map(|r| Provider {
-            base_url: r.base_url,
-            api_key: r.api_key,
-            max_results: usize::try_from(r.max_results).unwrap_or(100),
-            supported_filters: r.filters,
+        .map(|r| BoundProvider {
+            provider: Provider {
+                base_url: r.base_url,
+                api_key: r.api_key,
+                max_results: usize::try_from(r.max_results).unwrap_or(100),
+                supported_filters: r.filters,
+            },
+            algorithm: r.algorithm,
         })
         .collect()
 }
@@ -131,30 +137,61 @@ pub async fn update_status(db: &PgPool, domain: &str, status: &str) -> Result<()
     Ok(())
 }
 
-pub async fn set_capability_enabled(
+/// Enable a provider capability as a source for a fediway route.
+pub async fn enable_source(
     db: &PgPool,
-    domain: &str,
+    route: &str,
+    provider_domain: &str,
     resource: &str,
     algorithm: &str,
-    enabled: bool,
-) -> Result<u64, sqlx::Error> {
-    let result = sqlx::query(
-        "UPDATE commonfeed_capabilities SET enabled = $1
-         WHERE provider_domain = $2 AND resource = $3 AND algorithm = $4",
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "INSERT INTO commonfeed_sources (route, provider_domain, resource, algorithm)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (route, provider_domain) DO UPDATE SET
+             resource = EXCLUDED.resource,
+             algorithm = EXCLUDED.algorithm,
+             enabled = true",
     )
-    .bind(enabled)
-    .bind(domain)
+    .bind(route)
+    .bind(provider_domain)
     .bind(resource)
     .bind(algorithm)
+    .execute(db)
+    .await?;
+    Ok(())
+}
+
+/// Disable a source for a fediway route.
+pub async fn disable_source(
+    db: &PgPool,
+    route: &str,
+    provider_domain: &str,
+) -> Result<u64, sqlx::Error> {
+    let result = sqlx::query(
+        "UPDATE commonfeed_sources SET enabled = false
+         WHERE route = $1 AND provider_domain = $2",
+    )
+    .bind(route)
+    .bind(provider_domain)
     .execute(db)
     .await?;
     Ok(result.rows_affected())
 }
 
+/// A provider bound to a route, including which algorithm to call.
+pub struct BoundProvider {
+    pub provider: Provider,
+    pub algorithm: String,
+}
+
 #[derive(sqlx::FromRow)]
-struct ProviderRow {
+struct BoundProviderRow {
     base_url: String,
     api_key: String,
     max_results: i32,
     filters: Vec<String>,
+    #[allow(dead_code)]
+    resource: String,
+    algorithm: String,
 }

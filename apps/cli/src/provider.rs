@@ -92,6 +92,44 @@ fn print_well_known(wk: &WellKnown) {
     }
 }
 
+/// Resolve a provider domain from user input.
+///
+/// Accepts the stored domain, a base URL, or `host:port` shorthand.
+/// Returns the canonical domain as stored in `commonfeed_providers`.
+pub async fn resolve_domain(db: &PgPool, input: &str) -> Result<String> {
+    // Exact match on domain column.
+    if state::providers::find_base_url(db, input).await?.is_some() {
+        return Ok(input.to_string());
+    }
+
+    // Try matching by base_url (user may pass "localhost:3000" or "http://localhost:3000").
+    let candidates: Vec<String> = if input.contains("://") {
+        vec![input.trim_end_matches('/').to_string()]
+    } else {
+        vec![
+            format!("https://{}", input.trim_end_matches('/')),
+            format!("http://{}", input.trim_end_matches('/')),
+        ]
+    };
+
+    for candidate in &candidates {
+        // Exact base_url match (with or without trailing slash).
+        let domain = sqlx::query_scalar::<_, String>(
+            "SELECT domain FROM commonfeed_providers
+             WHERE RTRIM(base_url, '/') = $1 OR base_url LIKE $1 || '/%'",
+        )
+        .bind(candidate)
+        .fetch_optional(db)
+        .await?;
+
+        if let Some(d) = domain {
+            return Ok(d);
+        }
+    }
+
+    anyhow::bail!("Provider '{input}' not found. Run `provider add` or `provider register` first.")
+}
+
 pub async fn info(domain: &str) -> Result<()> {
     let wk = fetch_well_known(domain).await?;
     print_well_known(&wk);
@@ -202,44 +240,4 @@ pub async fn status(db: &PgPool, domain: &str) -> Result<()> {
     }
 
     Ok(())
-}
-
-pub async fn enable(db: &PgPool, domain: &str, capability: &str) -> Result<()> {
-    let wk = sync_provider(db, domain).await?;
-    let (resource, algorithm) = parse_capability(capability)?;
-    let rows =
-        state::providers::set_capability_enabled(db, &wk.domain, resource, algorithm, true).await?;
-
-    if rows == 0 {
-        anyhow::bail!(
-            "Capability '{capability}' not found for provider '{}'.",
-            wk.domain
-        );
-    }
-
-    println!("Enabled {capability} for {}.", wk.domain);
-    Ok(())
-}
-
-pub async fn disable(db: &PgPool, domain: &str, capability: &str) -> Result<()> {
-    let wk = sync_provider(db, domain).await?;
-    let (resource, algorithm) = parse_capability(capability)?;
-    let rows = state::providers::set_capability_enabled(db, &wk.domain, resource, algorithm, false)
-        .await?;
-
-    if rows == 0 {
-        anyhow::bail!(
-            "Capability '{capability}' not found for provider '{}'.",
-            wk.domain
-        );
-    }
-
-    println!("Disabled {capability} for {}.", wk.domain);
-    Ok(())
-}
-
-fn parse_capability(capability: &str) -> Result<(&str, &str)> {
-    capability.split_once('/').ok_or_else(|| {
-        anyhow::anyhow!("Capability must be in format 'resource/algorithm' (e.g. posts/trending)")
-    })
 }

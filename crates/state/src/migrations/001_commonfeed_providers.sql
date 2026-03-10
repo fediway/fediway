@@ -18,6 +18,5 @@ CREATE TABLE commonfeed_capabilities (
     algorithm           TEXT NOT NULL,
     description         TEXT NOT NULL,
     filters             TEXT[] NOT NULL DEFAULT '{}',
-    enabled             BOOLEAN NOT NULL DEFAULT false,
     PRIMARY KEY (provider_domain, resource, algorithm)
 );

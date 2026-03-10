@@ -1,5 +1,5 @@
 use axum::Json;
-use axum::extract::{Query, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use common::types::Post;
 use mastodon::Status;
@@ -23,10 +23,11 @@ const fn default_limit() -> usize {
     20
 }
 
-pub async fn statuses(
+pub async fn tag(
     account: Option<Account>,
     State(db): State<PgPool>,
     headers: HeaderMap,
+    Path(hashtag): Path<String>,
     Query(params): Query<Params>,
 ) -> Result<Json<Vec<Status>>, StatusCode> {
     let limit = params.limit.min(40);
@@ -38,10 +39,10 @@ pub async fn statuses(
 
     let filters = QueryFilters {
         language: languages,
-        tag: None,
+        tag: Some(hashtag),
     };
 
-    let bound = state::providers::find_sources(&db, "trends/statuses").await;
+    let bound = state::providers::find_sources(&db, "timelines/tag").await;
     let sources = bound
         .into_iter()
         .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
@@ -60,8 +61,4 @@ pub async fn statuses(
         .collect();
 
     Ok(Json(statuses))
-}
-
-pub async fn tags() -> StatusCode {
-    StatusCode::OK
 }

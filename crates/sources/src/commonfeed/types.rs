@@ -70,6 +70,8 @@ pub struct EngagementResult {
 pub struct QueryFilters {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub language: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tag: Option<String>,
 }
 
 impl QueryFilters {
@@ -80,6 +82,11 @@ impl QueryFilters {
                 self.language.clone()
             } else {
                 Vec::new()
+            },
+            tag: if supported.iter().any(|s| s == "tag") {
+                self.tag.clone()
+            } else {
+                None
             },
         }
     }

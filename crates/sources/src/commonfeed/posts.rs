@@ -217,6 +217,7 @@ mod tests {
     fn filters_serialize_correctly() {
         let filters = QueryFilters {
             language: vec!["en".to_string(), "de".to_string()],
+            ..Default::default()
         };
         let json = serde_json::to_value(&filters).unwrap();
         assert_eq!(json, serde_json::json!({"language": ["en", "de"]}));
@@ -233,6 +234,7 @@ mod tests {
     fn for_provider_includes_supported_filters() {
         let filters = QueryFilters {
             language: vec!["en".to_string()],
+            ..Default::default()
         };
         let supported = vec!["language".to_string(), "protocol".to_string()];
         let result = filters.for_provider(&supported);
@@ -243,6 +245,7 @@ mod tests {
     fn for_provider_excludes_unsupported_filters() {
         let filters = QueryFilters {
             language: vec!["en".to_string()],
+            ..Default::default()
         };
         let supported: Vec<String> = vec!["protocol".to_string()];
         let result = filters.for_provider(&supported);
