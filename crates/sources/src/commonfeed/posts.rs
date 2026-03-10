@@ -145,7 +145,7 @@ mod tests {
         assert_eq!(candidate.item.engagement.likes, 42);
         assert_eq!(candidate.item.engagement.reposts, 10);
         assert_eq!(candidate.item.engagement.replies, 5);
-        assert_eq!(candidate.score, 0.85);
+        assert!((candidate.score - 0.85).abs() < f64::EPSILON);
         assert_eq!(candidate.source, "commonfeed");
     }
 
@@ -178,7 +178,7 @@ mod tests {
         assert_eq!(candidate.item.engagement.likes, 0);
         assert_eq!(candidate.item.engagement.reposts, 0);
         assert_eq!(candidate.item.engagement.replies, 0);
-        assert_eq!(candidate.score, 0.0);
+        assert!(candidate.score.abs() < f64::EPSILON);
     }
 
     #[test]

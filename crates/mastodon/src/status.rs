@@ -168,12 +168,12 @@ mod tests {
     fn sample_post_minimal() -> Post {
         Post {
             url: "https://example.com/post/1".into(),
-            content: "".into(),
-            text: "".into(),
+            content: String::new(),
+            text: String::new(),
             author: Author {
                 handle: "bob".into(),
-                display_name: "".into(),
-                url: "".into(),
+                display_name: String::new(),
+                url: String::new(),
                 avatar_url: None,
             },
             published_at: Utc::now(),

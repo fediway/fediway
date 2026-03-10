@@ -131,9 +131,9 @@ fn diversity_penalizes_repeated_keys() {
     ];
 
     diversity.score(&mut candidates, &());
-    assert_eq!(candidates[0].score, 100.0);
-    assert_eq!(candidates[1].score, 10.0);
-    assert_eq!(candidates[2].score, 100.0);
+    assert!((candidates[0].score - 100.0).abs() < f64::EPSILON);
+    assert!((candidates[1].score - 10.0).abs() < f64::EPSILON);
+    assert!((candidates[2].score - 100.0).abs() < f64::EPSILON);
 }
 
 #[test]
@@ -147,9 +147,9 @@ fn diversity_stacks_penalties() {
     ];
 
     diversity.score(&mut candidates, &());
-    assert_eq!(candidates[0].score, 100.0);
-    assert_eq!(candidates[1].score, 10.0);
-    assert_eq!(candidates[2].score, 10.0);
+    assert!((candidates[0].score - 100.0).abs() < f64::EPSILON);
+    assert!((candidates[1].score - 10.0).abs() < f64::EPSILON);
+    assert!((candidates[2].score - 10.0).abs() < f64::EPSILON);
 }
 
 // --- Filter tests ---
