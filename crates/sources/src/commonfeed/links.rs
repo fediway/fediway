@@ -57,7 +57,7 @@ impl Source<types::Link> for LinksSource {
     }
 }
 
-fn into_candidate(result: super::types::LinkResult) -> Candidate<types::Link> {
+pub(super) fn into_candidate(result: super::types::LinkResult) -> Candidate<types::Link> {
     let score = result.score.unwrap_or(0.0);
 
     let link = types::Link {
@@ -77,4 +77,86 @@ fn into_candidate(result: super::types::LinkResult) -> Candidate<types::Link> {
     let mut candidate = Candidate::new(link, "commonfeed");
     candidate.score = score;
     candidate
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::types::LinkResult;
+    use super::*;
+
+    fn sample_link_result() -> LinkResult {
+        LinkResult {
+            url: "https://example.com/article".into(),
+            title: "Example".into(),
+            description: "A great article".into(),
+            link_type: "link".into(),
+            image_url: Some("https://cdn.example/og.webp".into()),
+            image_width: Some(1200),
+            image_height: Some(630),
+            blurhash: Some("LEHV6nWB2yk8".into()),
+            provider_name: Some("Example News".into()),
+            author_name: Some("Alice".into()),
+            embed_html: None,
+            embed_url: None,
+            embed_width: None,
+            embed_height: None,
+            language: Some("en".into()),
+            published_at: None,
+            favicon_url: None,
+            favicon_blurhash: None,
+            post_count: Some(42),
+            account_count: Some(15),
+            score: Some(0.8),
+        }
+    }
+
+    #[test]
+    fn converts_link_result_to_candidate() {
+        let candidate = into_candidate(sample_link_result());
+        assert_eq!(candidate.item.url, "https://example.com/article");
+        assert_eq!(candidate.item.title, "Example");
+        assert_eq!(candidate.item.link_type, "link");
+        assert_eq!(candidate.item.author_name.as_deref(), Some("Alice"));
+        assert_eq!(
+            candidate.item.provider_name.as_deref(),
+            Some("Example News")
+        );
+        assert_eq!(candidate.item.image_width, Some(1200));
+        assert_eq!(candidate.source, "commonfeed");
+    }
+
+    #[test]
+    fn uses_score_from_result() {
+        let candidate = into_candidate(sample_link_result());
+        assert!((candidate.score - 0.8).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn defaults_score_to_zero() {
+        let result = LinkResult {
+            score: None,
+            ..sample_link_result()
+        };
+        let candidate = into_candidate(result);
+        assert!((candidate.score).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn handles_minimal_link() {
+        let result = LinkResult {
+            image_url: None,
+            image_width: None,
+            image_height: None,
+            blurhash: None,
+            provider_name: None,
+            author_name: None,
+            embed_url: None,
+            score: None,
+            ..sample_link_result()
+        };
+        let candidate = into_candidate(result);
+        assert!(candidate.item.image_url.is_none());
+        assert!(candidate.item.author_name.is_none());
+        assert!(candidate.item.provider_name.is_none());
+    }
 }

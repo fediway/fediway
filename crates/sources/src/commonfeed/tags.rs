@@ -57,7 +57,7 @@ impl Source<types::Tag> for TagsSource {
     }
 }
 
-fn into_candidate(result: super::types::TagResult) -> Candidate<types::Tag> {
+pub(super) fn into_candidate(result: super::types::TagResult) -> Candidate<types::Tag> {
     let score = result.score.unwrap_or(0.0);
 
     let history = result
@@ -80,4 +80,71 @@ fn into_candidate(result: super::types::TagResult) -> Candidate<types::Tag> {
     let mut candidate = Candidate::new(tag, "commonfeed");
     candidate.score = score;
     candidate
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::types::{TagHistoryItem, TagResult};
+    use super::*;
+
+    #[test]
+    fn converts_tag_result_to_candidate() {
+        let result = TagResult {
+            name: "rust".into(),
+            post_count: 42,
+            account_count: 15,
+            history: Some(vec![TagHistoryItem {
+                day: "1709251200".into(),
+                uses: 30,
+                accounts: 12,
+            }]),
+            score: Some(0.95),
+        };
+        let candidate = into_candidate(result);
+        assert_eq!(candidate.item.name, "rust");
+        assert_eq!(candidate.item.url, "/tags/rust");
+        assert_eq!(candidate.item.history.len(), 1);
+        assert_eq!(candidate.item.history[0].uses, 30);
+        assert_eq!(candidate.item.history[0].accounts, 12);
+        assert_eq!(candidate.source, "commonfeed");
+    }
+
+    #[test]
+    fn uses_score_from_result() {
+        let result = TagResult {
+            name: "test".into(),
+            post_count: 1,
+            account_count: 1,
+            history: None,
+            score: Some(0.75),
+        };
+        let candidate = into_candidate(result);
+        assert!((candidate.score - 0.75).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn defaults_score_to_zero() {
+        let result = TagResult {
+            name: "test".into(),
+            post_count: 1,
+            account_count: 1,
+            history: None,
+            score: None,
+        };
+        let candidate = into_candidate(result);
+        assert!((candidate.score).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn handles_missing_history() {
+        let result = TagResult {
+            name: "fediverse".into(),
+            post_count: 5,
+            account_count: 3,
+            history: None,
+            score: None,
+        };
+        let candidate = into_candidate(result);
+        assert!(candidate.item.history.is_empty());
+    }
 }

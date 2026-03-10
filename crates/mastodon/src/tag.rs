@@ -45,6 +45,53 @@ mod tests {
     use super::*;
 
     #[test]
+    fn from_domain_tag_with_history() {
+        let domain_tag = types::Tag {
+            name: "rust".into(),
+            url: "/tags/rust".into(),
+            history: vec![types::TagHistory {
+                day: "1709251200".into(),
+                uses: 30,
+                accounts: 12,
+            }],
+        };
+        let tag = Tag::from(domain_tag);
+        assert_eq!(tag.name, "rust");
+        assert_eq!(tag.url, "/tags/rust");
+        assert_eq!(tag.history.len(), 1);
+        assert_eq!(tag.history[0].uses, "30");
+        assert_eq!(tag.history[0].accounts, "12");
+    }
+
+    #[test]
+    fn from_domain_tag_without_history() {
+        let domain_tag = types::Tag {
+            name: "fediverse".into(),
+            url: "/tags/fediverse".into(),
+            history: Vec::new(),
+        };
+        let tag = Tag::from(domain_tag);
+        assert_eq!(tag.name, "fediverse");
+        assert!(tag.history.is_empty());
+    }
+
+    #[test]
+    fn from_domain_tag_converts_integers_to_strings() {
+        let domain_tag = types::Tag {
+            name: "test".into(),
+            url: "/tags/test".into(),
+            history: vec![types::TagHistory {
+                day: "1709251200".into(),
+                uses: 0,
+                accounts: 0,
+            }],
+        };
+        let tag = Tag::from(domain_tag);
+        assert_eq!(tag.history[0].uses, "0");
+        assert_eq!(tag.history[0].accounts, "0");
+    }
+
+    #[test]
     fn tag_serializes_with_history() {
         let tag = Tag {
             name: "rust".into(),

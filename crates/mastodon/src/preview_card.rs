@@ -52,6 +52,67 @@ impl From<Link> for PreviewCard {
 mod tests {
     use super::*;
 
+    fn sample_link() -> Link {
+        Link {
+            url: "https://example.com/article".into(),
+            title: "Example Article".into(),
+            description: "A great article".into(),
+            link_type: "link".into(),
+            author_name: Some("Alice".into()),
+            provider_name: Some("Example News".into()),
+            image_url: Some("https://cdn.example/og.webp".into()),
+            image_width: Some(1200),
+            image_height: Some(630),
+            blurhash: Some("LEHV6nWB2yk8".into()),
+            embed_url: None,
+        }
+    }
+
+    #[test]
+    fn from_domain_link_maps_all_fields() {
+        let card = PreviewCard::from(sample_link());
+        assert_eq!(card.url, "https://example.com/article");
+        assert_eq!(card.title, "Example Article");
+        assert_eq!(card.description, "A great article");
+        assert_eq!(card.card_type, "link");
+        assert_eq!(card.author_name, "Alice");
+        assert_eq!(card.provider_name, "Example News");
+        assert_eq!(card.width, 1200);
+        assert_eq!(card.height, 630);
+        assert_eq!(card.image.as_deref(), Some("https://cdn.example/og.webp"));
+        assert_eq!(card.blurhash.as_deref(), Some("LEHV6nWB2yk8"));
+    }
+
+    #[test]
+    fn from_domain_link_defaults_optional_fields() {
+        let link = Link {
+            author_name: None,
+            provider_name: None,
+            image_url: None,
+            image_width: None,
+            image_height: None,
+            blurhash: None,
+            embed_url: None,
+            ..sample_link()
+        };
+        let card = PreviewCard::from(link);
+        assert_eq!(card.author_name, "");
+        assert_eq!(card.provider_name, "");
+        assert_eq!(card.width, 0);
+        assert_eq!(card.height, 0);
+        assert!(card.image.is_none());
+        assert!(card.blurhash.is_none());
+    }
+
+    #[test]
+    fn from_domain_link_sets_empty_strings() {
+        let card = PreviewCard::from(sample_link());
+        assert_eq!(card.author_url, "");
+        assert_eq!(card.provider_url, "");
+        assert_eq!(card.html, "");
+        assert_eq!(card.image_description, "");
+    }
+
     fn sample_card() -> PreviewCard {
         PreviewCard {
             url: "https://example.com/article".into(),
