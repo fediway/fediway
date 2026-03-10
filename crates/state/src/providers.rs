@@ -4,8 +4,7 @@ use sqlx::PgPool;
 /// Find sources configured for a fediway route.
 pub async fn find_sources(db: &PgPool, route: &str) -> Vec<BoundProvider> {
     let rows = sqlx::query_as::<_, BoundProviderRow>(
-        "SELECT p.base_url, p.api_key, p.max_results, c.filters,
-                b.resource, b.algorithm
+        "SELECT p.base_url, p.api_key, p.max_results, c.filters, b.algorithm
          FROM commonfeed_sources b
          JOIN commonfeed_providers p ON p.domain = b.provider_domain
          JOIN commonfeed_capabilities c ON c.provider_domain = b.provider_domain
@@ -191,7 +190,5 @@ struct BoundProviderRow {
     api_key: String,
     max_results: i32,
     filters: Vec<String>,
-    #[allow(dead_code)]
-    resource: String,
     algorithm: String,
 }

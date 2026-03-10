@@ -11,10 +11,17 @@ use sources::commonfeed::types::QueryFilters;
 use sqlx::PgPool;
 
 use crate::auth::Account;
-use crate::language::parse_accept_language;
+use crate::language::resolve_languages;
 
 #[derive(Deserialize)]
 pub struct Params {
+    #[serde(default = "default_limit")]
+    limit: usize,
+}
+
+#[derive(Deserialize)]
+pub struct LinkParams {
+    url: String,
     #[serde(default = "default_limit")]
     limit: usize,
 }
@@ -32,17 +39,48 @@ pub async fn tag(
 ) -> Result<Json<Vec<Status>>, StatusCode> {
     let limit = params.limit.min(40);
 
-    let languages = match account {
-        Some(ref a) if !a.chosen_languages.is_empty() => a.chosen_languages.clone(),
-        _ => parse_accept_language(&headers),
-    };
-
     let filters = QueryFilters {
-        language: languages,
+        language: resolve_languages(&account, &headers),
         tag: Some(hashtag),
+        ..Default::default()
     };
 
     let bound = state::providers::find_sources(&db, "timelines/tag").await;
+    let sources = bound
+        .into_iter()
+        .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
+
+    let pipeline = Pipeline::builder()
+        .sources(sources, 100)
+        .score(Diversity::new(0.1, |post: &Post| {
+            post.author.handle.clone()
+        }))
+        .build();
+
+    let candidates = pipeline.execute(limit, &()).await;
+    let statuses: Vec<Status> = candidates
+        .into_iter()
+        .map(|c| Status::from(c.item))
+        .collect();
+
+    Ok(Json(statuses))
+}
+
+pub async fn link(
+    account: Option<Account>,
+    State(db): State<PgPool>,
+    headers: HeaderMap,
+    Query(params): Query<LinkParams>,
+) -> Result<Json<Vec<Status>>, StatusCode> {
+    let limit = params.limit.min(40);
+
+    let filters = QueryFilters {
+        language: resolve_languages(&account, &headers),
+        link: Some(params.url),
+        ..Default::default()
+    };
+
+    let bound = state::providers::find_sources(&db, "timelines/link").await;
     let sources = bound
         .into_iter()
         .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));

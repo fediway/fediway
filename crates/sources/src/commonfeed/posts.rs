@@ -4,12 +4,10 @@ use std::pin::Pin;
 use common::types::{Author, Engagement, Media, Post, Provider};
 use pipeline::candidate::Candidate;
 use pipeline::source::Source;
-use reqwest::Client;
 
 use super::types::{PostResult, QueryFilters, QueryResponse};
 
 pub struct PostsSource {
-    client: Client,
     algorithm: String,
     provider: Provider,
     filters: QueryFilters,
@@ -19,7 +17,6 @@ impl PostsSource {
     #[must_use]
     pub fn new(provider: Provider, algorithm: impl Into<String>) -> Self {
         Self {
-            client: Client::new(),
             algorithm: algorithm.into(),
             provider,
             filters: QueryFilters::default(),
@@ -43,47 +40,18 @@ impl Source<Post> for PostsSource {
         limit: usize,
     ) -> Pin<Box<dyn Future<Output = Vec<Candidate<Post>>> + Send + '_>> {
         Box::pin(async move {
-            let request_limit = limit.min(self.provider.max_results);
-            let url = format!("{}/posts/{}", self.provider.base_url, self.algorithm);
+            let response = super::fetch_json::<QueryResponse>(
+                &self.provider,
+                "posts",
+                &self.algorithm,
+                &self.filters,
+                limit,
+            )
+            .await;
 
-            let mut body = serde_json::json!({
-                "limit": request_limit,
-                "cursor": null
-            });
-
-            let supported = &self.provider.supported_filters;
-            let filters = self.filters.for_provider(supported);
-            let filters = serde_json::to_value(&filters).unwrap_or_default();
-            if filters.as_object().is_some_and(|m| !m.is_empty()) {
-                body["filters"] = filters;
-            }
-
-            let resp = match self
-                .client
-                .post(&url)
-                .bearer_auth(&self.provider.api_key)
-                .json(&body)
-                .send()
-                .await
-            {
-                Ok(r) => r,
-                Err(e) => {
-                    tracing::warn!(url = %url, error = %e, "failed to reach provider");
-                    return Vec::new();
-                }
-            };
-
-            if !resp.status().is_success() {
-                tracing::warn!(url = %url, status = %resp.status(), "provider returned error");
-                return Vec::new();
-            }
-
-            match resp.json::<QueryResponse>().await {
-                Ok(r) => r.results.into_iter().map(into_candidate).collect(),
-                Err(e) => {
-                    tracing::warn!(url = %url, error = %e, "failed to parse provider response");
-                    Vec::new()
-                }
+            match response {
+                Some(r) => r.results.into_iter().map(into_candidate).collect(),
+                None => Vec::new(),
             }
         })
     }

@@ -65,6 +65,35 @@ pub enum InteractionKind {
     Reply,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Tag {
+    pub name: String,
+    pub url: String,
+    pub history: Vec<TagHistory>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TagHistory {
+    pub day: String,
+    pub uses: i64,
+    pub accounts: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Link {
+    pub url: String,
+    pub title: String,
+    pub description: String,
+    pub link_type: String,
+    pub author_name: Option<String>,
+    pub provider_name: Option<String>,
+    pub image_url: Option<String>,
+    pub image_width: Option<i32>,
+    pub image_height: Option<i32>,
+    pub blurhash: Option<String>,
+    pub embed_url: Option<String>,
+}
+
 pub struct Provider {
     pub base_url: String,
     pub api_key: String,
