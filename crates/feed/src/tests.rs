@@ -2,8 +2,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 use crate::candidate::Candidate;
+use crate::feed::Feed;
 use crate::filter::Filter;
-use crate::pipeline::Pipeline;
 use crate::sampler::TopK;
 use crate::scorer::{Diversity, Scorer};
 use crate::source::Source;
@@ -169,11 +169,11 @@ fn filter_removes_items() {
     assert_eq!(candidates[1].item.id, "c");
 }
 
-// --- Pipeline tests ---
+// --- Feed tests ---
 
 #[tokio::test]
-async fn pipeline_collects_scores_and_samples() {
-    let pipeline = Pipeline::builder()
+async fn feed_collects_scores_and_samples() {
+    let feed = Feed::builder()
         .source(
             MockSource::new(
                 "test",
@@ -188,15 +188,15 @@ async fn pipeline_collects_scores_and_samples() {
         .score(ValueScorer)
         .build();
 
-    let result = pipeline.execute(2, &()).await;
-    assert_eq!(result.len(), 2);
-    assert_eq!(result[0].item.id, "b");
-    assert_eq!(result[1].item.id, "c");
+    let result = feed.execute(2, &()).await;
+    assert_eq!(result.items.len(), 2);
+    assert_eq!(result.items[0].item.id, "b");
+    assert_eq!(result.items[1].item.id, "c");
 }
 
 #[tokio::test]
-async fn pipeline_filters_before_scoring() {
-    let pipeline = Pipeline::builder()
+async fn feed_filters_before_scoring() {
+    let feed = Feed::builder()
         .source(
             MockSource::new(
                 "test",
@@ -212,15 +212,15 @@ async fn pipeline_filters_before_scoring() {
         .score(ValueScorer)
         .build();
 
-    let result = pipeline.execute(10, &()).await;
-    assert_eq!(result.len(), 2);
-    assert_eq!(result[0].item.id, "b");
-    assert_eq!(result[1].item.id, "c");
+    let result = feed.execute(10, &()).await;
+    assert_eq!(result.items.len(), 2);
+    assert_eq!(result.items[0].item.id, "b");
+    assert_eq!(result.items[1].item.id, "c");
 }
 
 #[tokio::test]
-async fn pipeline_merges_multiple_sources() {
-    let pipeline = Pipeline::builder()
+async fn feed_merges_multiple_sources() {
+    let feed = Feed::builder()
         .source(
             MockSource::new("src1", vec![Item::new("a", "alice", 10.0)]),
             10,
@@ -232,28 +232,28 @@ async fn pipeline_merges_multiple_sources() {
         .score(ValueScorer)
         .build();
 
-    let result = pipeline.execute(10, &()).await;
-    assert_eq!(result.len(), 2);
-    assert_eq!(result[0].item.id, "b");
-    assert_eq!(result[1].item.id, "a");
+    let result = feed.execute(10, &()).await;
+    assert_eq!(result.items.len(), 2);
+    assert_eq!(result.items[0].item.id, "b");
+    assert_eq!(result.items[1].item.id, "a");
 }
 
 #[tokio::test]
-async fn pipeline_preserves_source_name() {
-    let pipeline = Pipeline::builder()
+async fn feed_preserves_source_name() {
+    let feed = Feed::builder()
         .source(
             MockSource::new("trending", vec![Item::new("a", "alice", 10.0)]),
             10,
         )
         .build();
 
-    let result = pipeline.execute(10, &()).await;
-    assert_eq!(result[0].source, "trending");
+    let result = feed.execute(10, &()).await;
+    assert_eq!(result.items[0].source, "trending");
 }
 
 #[tokio::test]
-async fn pipeline_respects_source_limit() {
-    let pipeline = Pipeline::builder()
+async fn feed_respects_source_limit() {
+    let feed = Feed::builder()
         .source(
             MockSource::new(
                 "test",
@@ -267,23 +267,23 @@ async fn pipeline_respects_source_limit() {
         )
         .build();
 
-    let result = pipeline.execute(10, &()).await;
-    assert_eq!(result.len(), 1);
+    let result = feed.execute(10, &()).await;
+    assert_eq!(result.items.len(), 1);
 }
 
 #[tokio::test]
-async fn pipeline_empty_source_returns_empty() {
-    let pipeline: Pipeline<Item> = Pipeline::builder()
+async fn feed_empty_source_returns_empty() {
+    let feed: Feed<Item> = Feed::builder()
         .source(MockSource::new("empty", Vec::new()), 10)
         .build();
 
-    let result = pipeline.execute(10, &()).await;
-    assert!(result.is_empty());
+    let result = feed.execute(10, &()).await;
+    assert!(result.items.is_empty());
 }
 
 #[tokio::test]
-async fn pipeline_with_diversity() {
-    let pipeline = Pipeline::builder()
+async fn feed_with_diversity() {
+    let feed = Feed::builder()
         .source(
             MockSource::new(
                 "test",
@@ -299,15 +299,15 @@ async fn pipeline_with_diversity() {
         .score(Diversity::new(0.1, |item: &Item| item.author.clone()))
         .build();
 
-    let result = pipeline.execute(3, &()).await;
-    assert_eq!(result[0].item.id, "a1");
-    assert_eq!(result[1].item.id, "b1");
-    assert_eq!(result[2].item.id, "a2");
+    let result = feed.execute(3, &()).await;
+    assert_eq!(result.items[0].item.id, "a1");
+    assert_eq!(result.items[1].item.id, "b1");
+    assert_eq!(result.items[2].item.id, "a2");
 }
 
 #[tokio::test]
-async fn pipeline_is_reusable() {
-    let pipeline = Pipeline::builder()
+async fn feed_is_reusable() {
+    let feed = Feed::builder()
         .source(
             MockSource::new(
                 "test",
@@ -318,10 +318,10 @@ async fn pipeline_is_reusable() {
         .score(ValueScorer)
         .build();
 
-    let r1 = pipeline.execute(1, &()).await;
-    let r2 = pipeline.execute(1, &()).await;
-    assert_eq!(r1[0].item.id, "b");
-    assert_eq!(r2[0].item.id, "b");
+    let r1 = feed.execute(1, &()).await;
+    let r2 = feed.execute(1, &()).await;
+    assert_eq!(r1.items[0].item.id, "b");
+    assert_eq!(r2.items[0].item.id, "b");
 }
 
 // --- Context tests ---
@@ -349,8 +349,8 @@ impl Scorer<Item, UserCtx> for CtxValueScorer {
 }
 
 #[tokio::test]
-async fn pipeline_with_context() {
-    let pipeline: Pipeline<Item, UserCtx> = Pipeline::builder()
+async fn feed_with_context() {
+    let feed: Feed<Item, UserCtx> = Feed::builder()
         .source(
             MockSource::new(
                 "test",
@@ -369,10 +369,10 @@ async fn pipeline_with_context() {
     let ctx = UserCtx {
         blocked: vec!["alice".to_string()],
     };
-    let result = pipeline.execute(10, &ctx).await;
-    assert_eq!(result.len(), 2);
-    assert_eq!(result[0].item.id, "b");
-    assert_eq!(result[1].item.id, "c");
+    let result = feed.execute(10, &ctx).await;
+    assert_eq!(result.items.len(), 2);
+    assert_eq!(result.items[0].item.id, "b");
+    assert_eq!(result.items[1].item.id, "c");
 }
 
 // --- Helpers ---

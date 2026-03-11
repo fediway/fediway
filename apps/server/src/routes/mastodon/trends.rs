@@ -2,9 +2,9 @@ use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use common::types::{Link, Post, Tag};
+use feed::feed::Feed;
+use feed::scorer::Diversity;
 use mastodon::{PreviewCard, Status, Tag as MastodonTag};
-use pipeline::pipeline::Pipeline;
-use pipeline::scorer::Diversity;
 use serde::Deserialize;
 use sources::commonfeed::links::LinksSource;
 use sources::commonfeed::posts::PostsSource;
@@ -14,6 +14,7 @@ use sqlx::PgPool;
 
 use crate::auth::Account;
 use crate::language::resolve_languages;
+use crate::observe;
 
 #[derive(Deserialize)]
 pub struct Params {
@@ -32,9 +33,11 @@ pub async fn statuses(
     Query(params): Query<Params>,
 ) -> Result<Json<Vec<Status>>, StatusCode> {
     let limit = params.limit.min(40);
+    let languages = resolve_languages(&account, &headers);
+    observe::language_requested(&languages);
 
     let filters = QueryFilters {
-        language: resolve_languages(&account, &headers),
+        language: languages,
         ..Default::default()
     };
 
@@ -43,15 +46,18 @@ pub async fn statuses(
         .into_iter()
         .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
 
-    let pipeline = Pipeline::builder()
+    let feed = Feed::builder()
+        .name("trends/statuses")
         .sources(sources, 100)
         .score(Diversity::new(0.1, |post: &Post| {
             post.author.handle.clone()
         }))
         .build();
 
-    let candidates = pipeline.execute(limit, &()).await;
-    let statuses: Vec<Status> = candidates
+    let result = feed.execute(limit, &()).await;
+
+    let statuses: Vec<Status> = result
+        .items
         .into_iter()
         .map(|c| Status::from(c.item))
         .collect();
@@ -66,9 +72,11 @@ pub async fn tags(
     Query(params): Query<Params>,
 ) -> Result<Json<Vec<MastodonTag>>, StatusCode> {
     let limit = params.limit.min(40);
+    let languages = resolve_languages(&account, &headers);
+    observe::language_requested(&languages);
 
     let filters = QueryFilters {
-        language: resolve_languages(&account, &headers),
+        language: languages,
         ..Default::default()
     };
 
@@ -77,13 +85,16 @@ pub async fn tags(
         .into_iter()
         .map(|b| TagsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
 
-    let pipeline = Pipeline::builder()
+    let feed = Feed::builder()
+        .name("trends/tags")
         .sources(sources, 100)
         .score(Diversity::new(0.1, |tag: &Tag| tag.name.clone()))
         .build();
 
-    let candidates = pipeline.execute(limit, &()).await;
-    let tags: Vec<MastodonTag> = candidates
+    let result = feed.execute(limit, &()).await;
+
+    let tags: Vec<MastodonTag> = result
+        .items
         .into_iter()
         .map(|c| MastodonTag::from(c.item))
         .collect();
@@ -98,9 +109,11 @@ pub async fn links(
     Query(params): Query<Params>,
 ) -> Result<Json<Vec<PreviewCard>>, StatusCode> {
     let limit = params.limit.min(40);
+    let languages = resolve_languages(&account, &headers);
+    observe::language_requested(&languages);
 
     let filters = QueryFilters {
-        language: resolve_languages(&account, &headers),
+        language: languages,
         ..Default::default()
     };
 
@@ -109,15 +122,18 @@ pub async fn links(
         .into_iter()
         .map(|b| LinksSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
 
-    let pipeline = Pipeline::builder()
+    let feed = Feed::builder()
+        .name("trends/links")
         .sources(sources, 100)
         .score(Diversity::new(0.1, |link: &Link| {
             link.provider_name.clone().unwrap_or_default()
         }))
         .build();
 
-    let candidates = pipeline.execute(limit, &()).await;
-    let links: Vec<PreviewCard> = candidates
+    let result = feed.execute(limit, &()).await;
+
+    let links: Vec<PreviewCard> = result
+        .items
         .into_iter()
         .map(|c| PreviewCard::from(c.item))
         .collect();

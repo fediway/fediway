@@ -2,8 +2,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 use common::types::{self, Provider};
-use pipeline::candidate::Candidate;
-use pipeline::source::Source;
+use feed::candidate::Candidate;
+use feed::source::Source;
 
 use super::types::{LinkResponse, QueryFilters};
 
@@ -32,7 +32,7 @@ impl LinksSource {
 
 impl Source<types::Link> for LinksSource {
     fn name(&self) -> &'static str {
-        "commonfeed"
+        "commonfeed/links"
     }
 
     fn collect(
@@ -74,7 +74,7 @@ pub(super) fn into_candidate(result: super::types::LinkResult) -> Candidate<type
         embed_url: result.embed_url,
     };
 
-    let mut candidate = Candidate::new(link, "commonfeed");
+    let mut candidate = Candidate::new(link, "commonfeed/links");
     candidate.score = score;
     candidate
 }
@@ -122,7 +122,7 @@ mod tests {
             Some("Example News")
         );
         assert_eq!(candidate.item.image_width, Some(1200));
-        assert_eq!(candidate.source, "commonfeed");
+        assert_eq!(candidate.source, "commonfeed/links");
     }
 
     #[test]

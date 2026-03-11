@@ -8,6 +8,7 @@ pub struct InstanceConfig {
     pub instance_name: String,
     pub server_host: String,
     pub server_port: u16,
+    pub metrics_port: Option<u16>,
 }
 
 impl InstanceConfig {
@@ -21,6 +22,7 @@ impl InstanceConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(3000),
+            metrics_port: env::var("METRICS_PORT").ok().and_then(|v| v.parse().ok()),
         }
     }
 }

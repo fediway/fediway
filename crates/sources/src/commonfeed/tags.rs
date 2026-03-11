@@ -2,8 +2,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 use common::types::{self, Provider};
-use pipeline::candidate::Candidate;
-use pipeline::source::Source;
+use feed::candidate::Candidate;
+use feed::source::Source;
 
 use super::types::{QueryFilters, TagResponse};
 
@@ -32,7 +32,7 @@ impl TagsSource {
 
 impl Source<types::Tag> for TagsSource {
     fn name(&self) -> &'static str {
-        "commonfeed"
+        "commonfeed/tags"
     }
 
     fn collect(
@@ -77,7 +77,7 @@ pub(super) fn into_candidate(result: super::types::TagResult) -> Candidate<types
         history,
     };
 
-    let mut candidate = Candidate::new(tag, "commonfeed");
+    let mut candidate = Candidate::new(tag, "commonfeed/tags");
     candidate.score = score;
     candidate
 }
@@ -106,7 +106,7 @@ mod tests {
         assert_eq!(candidate.item.history.len(), 1);
         assert_eq!(candidate.item.history[0].uses, 30);
         assert_eq!(candidate.item.history[0].accounts, 12);
-        assert_eq!(candidate.source, "commonfeed");
+        assert_eq!(candidate.source, "commonfeed/tags");
     }
 
     #[test]

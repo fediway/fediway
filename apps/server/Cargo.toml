@@ -14,7 +14,7 @@ workspace = true
 common.workspace = true
 config.workspace = true
 state.workspace = true
-pipeline.workspace = true
+feed.workspace = true
 sources.workspace = true
 mastodon.workspace = true
 axum.workspace = true
@@ -32,3 +32,4 @@ tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 dotenvy.workspace = true
 anyhow.workspace = true
+metrics.workspace = true

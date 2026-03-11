@@ -2,9 +2,9 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use common::types::Post;
+use feed::feed::Feed;
+use feed::scorer::Diversity;
 use mastodon::Status;
-use pipeline::pipeline::Pipeline;
-use pipeline::scorer::Diversity;
 use serde::Deserialize;
 use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::types::QueryFilters;
@@ -12,6 +12,7 @@ use sqlx::PgPool;
 
 use crate::auth::Account;
 use crate::language::resolve_languages;
+use crate::observe;
 
 #[derive(Deserialize)]
 pub struct Params {
@@ -38,9 +39,11 @@ pub async fn tag(
     Query(params): Query<Params>,
 ) -> Result<Json<Vec<Status>>, StatusCode> {
     let limit = params.limit.min(40);
+    let languages = resolve_languages(&account, &headers);
+    observe::language_requested(&languages);
 
     let filters = QueryFilters {
-        language: resolve_languages(&account, &headers),
+        language: languages,
         tag: Some(hashtag),
         ..Default::default()
     };
@@ -50,15 +53,18 @@ pub async fn tag(
         .into_iter()
         .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
 
-    let pipeline = Pipeline::builder()
+    let feed = Feed::builder()
+        .name("timelines/tag")
         .sources(sources, 100)
         .score(Diversity::new(0.1, |post: &Post| {
             post.author.handle.clone()
         }))
         .build();
 
-    let candidates = pipeline.execute(limit, &()).await;
-    let statuses: Vec<Status> = candidates
+    let result = feed.execute(limit, &()).await;
+
+    let statuses: Vec<Status> = result
+        .items
         .into_iter()
         .map(|c| Status::from(c.item))
         .collect();
@@ -73,9 +79,11 @@ pub async fn link(
     Query(params): Query<LinkParams>,
 ) -> Result<Json<Vec<Status>>, StatusCode> {
     let limit = params.limit.min(40);
+    let languages = resolve_languages(&account, &headers);
+    observe::language_requested(&languages);
 
     let filters = QueryFilters {
-        language: resolve_languages(&account, &headers),
+        language: languages,
         link: Some(params.url),
         ..Default::default()
     };
@@ -85,15 +93,18 @@ pub async fn link(
         .into_iter()
         .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
 
-    let pipeline = Pipeline::builder()
+    let feed = Feed::builder()
+        .name("timelines/link")
         .sources(sources, 100)
         .score(Diversity::new(0.1, |post: &Post| {
             post.author.handle.clone()
         }))
         .build();
 
-    let candidates = pipeline.execute(limit, &()).await;
-    let statuses: Vec<Status> = candidates
+    let result = feed.execute(limit, &()).await;
+
+    let statuses: Vec<Status> = result
+        .items
         .into_iter()
         .map(|c| Status::from(c.item))
         .collect();

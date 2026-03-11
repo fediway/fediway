@@ -2,8 +2,12 @@ use std::collections::HashMap;
 
 use crate::candidate::Candidate;
 
-pub trait Scorer<T, Ctx = ()>: Send + Sync {
-    fn score(&self, candidates: &mut [Candidate<T>], ctx: &Ctx);
+pub trait Scorer<Item, Ctx = ()>: Send + Sync {
+    fn name(&self) -> &'static str {
+        "unnamed"
+    }
+
+    fn score(&self, candidates: &mut [Candidate<Item>], ctx: &Ctx);
 }
 
 pub struct Diversity<F> {
@@ -18,12 +22,16 @@ impl<F> Diversity<F> {
     }
 }
 
-impl<T, F, Ctx> Scorer<T, Ctx> for Diversity<F>
+impl<Item, F, Ctx> Scorer<Item, Ctx> for Diversity<F>
 where
-    T: Send + Sync,
-    F: Fn(&T) -> String + Send + Sync,
+    Item: Send + Sync,
+    F: Fn(&Item) -> String + Send + Sync,
 {
-    fn score(&self, candidates: &mut [Candidate<T>], _ctx: &Ctx) {
+    fn name(&self) -> &'static str {
+        "diversity"
+    }
+
+    fn score(&self, candidates: &mut [Candidate<Item>], _ctx: &Ctx) {
         let mut seen: HashMap<String, usize> = HashMap::new();
         for candidate in candidates {
             let key = (self.key_fn)(&candidate.item);

@@ -8,6 +8,10 @@ workspace = true
 
 [dependencies]
 serde.workspace = true
+metrics-exporter-prometheus.workspace = true
+metrics-process.workspace = true
+tokio = { workspace = true, features = ["time"] }
+tracing.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

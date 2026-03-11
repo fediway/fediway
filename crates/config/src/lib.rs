@@ -1,5 +1,6 @@
 mod db;
 mod instance;
+pub mod metrics;
 mod redis;
 
 pub use self::redis::RedisConfig;

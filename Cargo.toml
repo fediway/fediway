@@ -6,7 +6,7 @@ members = [
     "apps/cli",
     "crates/common",
     "crates/config",
-    "crates/pipeline",
+    "crates/feed",
     "crates/sources",
     "crates/state",
     "crates/mastodon",
@@ -31,7 +31,7 @@ missing_panics_doc = "allow"
 # Internal
 common = { path = "crates/common" }
 config = { path = "crates/config" }
-pipeline = { path = "crates/pipeline" }
+feed = { path = "crates/feed" }
 sources = { path = "crates/sources" }
 state = { path = "crates/state" }
 mastodon = { path = "crates/mastodon" }
@@ -76,6 +76,11 @@ dotenvy = "0.15"
 # Observability
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Metrics
+metrics = "0.24"
+metrics-exporter-prometheus = "0.16"
+metrics-process = "2.3"
 
 # --- Profiles ---
 

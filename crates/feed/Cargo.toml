@@ -1,5 +1,5 @@
 [package]
-name = "pipeline"
+name = "feed"
 version.workspace = true
 edition.workspace = true
 
@@ -8,6 +8,7 @@ workspace = true
 
 [dependencies]
 futures.workspace = true
+metrics.workspace = true
 tracing.workspace = true
 
 [dev-dependencies]

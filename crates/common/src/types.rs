@@ -95,6 +95,7 @@ pub struct Link {
 }
 
 pub struct Provider {
+    pub domain: String,
     pub base_url: String,
     pub api_key: String,
     pub max_results: usize,

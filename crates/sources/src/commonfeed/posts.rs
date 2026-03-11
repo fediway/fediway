@@ -2,8 +2,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 use common::types::{Author, Engagement, Media, Post, Provider};
-use pipeline::candidate::Candidate;
-use pipeline::source::Source;
+use feed::candidate::Candidate;
+use feed::source::Source;
 
 use super::types::{PostResult, QueryFilters, QueryResponse};
 
@@ -32,7 +32,7 @@ impl PostsSource {
 
 impl Source<Post> for PostsSource {
     fn name(&self) -> &'static str {
-        "commonfeed"
+        "commonfeed/posts"
     }
 
     fn collect(
@@ -100,7 +100,7 @@ fn into_candidate(result: PostResult) -> Candidate<Post> {
         quote_url: result.quote_url,
     };
 
-    let mut candidate = Candidate::new(post, "commonfeed");
+    let mut candidate = Candidate::new(post, "commonfeed/posts");
     candidate.score = result.score.unwrap_or(0.0);
     candidate
 }
@@ -146,7 +146,7 @@ mod tests {
         assert_eq!(candidate.item.engagement.reposts, 10);
         assert_eq!(candidate.item.engagement.replies, 5);
         assert!((candidate.score - 0.85).abs() < f64::EPSILON);
-        assert_eq!(candidate.source, "commonfeed");
+        assert_eq!(candidate.source, "commonfeed/posts");
     }
 
     #[test]

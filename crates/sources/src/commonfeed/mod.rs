@@ -3,10 +3,13 @@ pub mod posts;
 pub mod tags;
 pub mod types;
 
+use std::time::Instant;
+
 use common::types::Provider;
 use reqwest::Client;
 use serde::de::DeserializeOwned;
 
+use crate::observe;
 use types::QueryFilters;
 
 /// Fetch JSON from a `CommonFeed` provider endpoint.
@@ -36,6 +39,8 @@ pub(crate) async fn fetch_json<T: DeserializeOwned>(
         body["filters"] = filters;
     }
 
+    let start = Instant::now();
+
     let resp = match client
         .post(&url)
         .bearer_auth(&provider.api_key)
@@ -46,19 +51,25 @@ pub(crate) async fn fetch_json<T: DeserializeOwned>(
         Ok(r) => r,
         Err(e) => {
             tracing::warn!(url = %url, error = %e, "provider request failed");
+            observe::source_fetched(&provider.domain, "network_error", start.elapsed());
             return None;
         }
     };
 
     if !resp.status().is_success() {
         tracing::warn!(url = %url, status = %resp.status(), "provider returned error");
+        observe::source_fetched(&provider.domain, "http_error", start.elapsed());
         return None;
     }
 
     match resp.json::<T>().await {
-        Ok(r) => Some(r),
+        Ok(r) => {
+            observe::source_fetched(&provider.domain, "success", start.elapsed());
+            Some(r)
+        }
         Err(e) => {
             tracing::warn!(url = %url, error = %e, "failed to parse provider response");
+            observe::source_fetched(&provider.domain, "parse_error", start.elapsed());
             None
         }
     }
