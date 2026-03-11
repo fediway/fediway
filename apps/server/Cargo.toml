@@ -33,3 +33,4 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 dotenvy.workspace = true
 anyhow.workspace = true
 metrics.workspace = true
+tikv-jemallocator = "0.6"
