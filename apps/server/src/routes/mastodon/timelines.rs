@@ -1,3 +1,4 @@
+use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -8,7 +9,6 @@ use mastodon::Status;
 use serde::Deserialize;
 use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::types::QueryFilters;
-use sqlx::PgPool;
 
 use crate::auth::Account;
 use crate::language::resolve_languages;
@@ -33,7 +33,7 @@ const fn default_limit() -> usize {
 
 pub async fn tag(
     account: Option<Account>,
-    State(db): State<PgPool>,
+    State(state): State<AppState>,
     headers: HeaderMap,
     Path(hashtag): Path<String>,
     Query(params): Query<Params>,
@@ -48,7 +48,7 @@ pub async fn tag(
         ..Default::default()
     };
 
-    let bound = state::providers::find_sources(&db, "timelines/tag").await;
+    let bound = state::providers::find_sources(&state.pool, "timelines/tag").await;
     let sources = bound
         .into_iter()
         .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
@@ -74,7 +74,7 @@ pub async fn tag(
 
 pub async fn link(
     account: Option<Account>,
-    State(db): State<PgPool>,
+    State(state): State<AppState>,
     headers: HeaderMap,
     Query(params): Query<LinkParams>,
 ) -> Result<Json<Vec<Status>>, StatusCode> {
@@ -88,7 +88,7 @@ pub async fn link(
         ..Default::default()
     };
 
-    let bound = state::providers::find_sources(&db, "timelines/link").await;
+    let bound = state::providers::find_sources(&state.pool, "timelines/link").await;
     let sources = bound
         .into_iter()
         .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));

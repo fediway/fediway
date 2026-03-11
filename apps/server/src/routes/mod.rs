@@ -5,10 +5,11 @@ mod mastodon;
 use axum::Router;
 use axum::http::Method;
 use axum::http::header::{ACCEPT, ACCEPT_LANGUAGE, AUTHORIZATION, CONTENT_TYPE};
-use sqlx::PgPool;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
-pub fn router(db: PgPool, instance_domain: &str) -> Router {
+use crate::state::AppState;
+
+pub fn router(state: AppState, instance_domain: &str) -> Router {
     let allow_origin = if instance_domain.is_empty() {
         tracing::warn!("INSTANCE_DOMAIN is empty, allowing all CORS origins");
         AllowOrigin::any()
@@ -33,5 +34,5 @@ pub fn router(db: PgPool, instance_domain: &str) -> Router {
                 .allow_methods([Method::GET, Method::POST])
                 .allow_headers([AUTHORIZATION, ACCEPT, ACCEPT_LANGUAGE, CONTENT_TYPE]),
         )
-        .with_state(db)
+        .with_state(state)
 }

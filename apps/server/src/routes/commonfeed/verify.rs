@@ -1,8 +1,9 @@
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use sqlx::PgPool;
 
-pub async fn handle(State(db): State<PgPool>, Path(token): Path<String>) -> StatusCode {
+use crate::state::AppState;
+
+pub async fn handle(State(state): State<AppState>, Path(token): Path<String>) -> StatusCode {
     let verify_path = format!("/.well-known/commonfeed/{token}");
 
     let exists = sqlx::query_scalar::<_, bool>(
@@ -12,7 +13,7 @@ pub async fn handle(State(db): State<PgPool>, Path(token): Path<String>) -> Stat
         )",
     )
     .bind(&verify_path)
-    .fetch_one(&db)
+    .fetch_one(&state.pool)
     .await
     .unwrap_or(false);
 

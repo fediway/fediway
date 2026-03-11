@@ -1,10 +1,10 @@
+use crate::state::AppState;
 use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use common::types::ProviderStatus;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-use sqlx::PgPool;
 
 #[derive(serde::Deserialize)]
 struct CallbackPayload {
@@ -12,7 +12,7 @@ struct CallbackPayload {
     domain: String,
 }
 
-pub async fn handle(State(db): State<PgPool>, headers: HeaderMap, body: Bytes) -> StatusCode {
+pub async fn handle(State(state): State<AppState>, headers: HeaderMap, body: Bytes) -> StatusCode {
     let Some(signature) = headers
         .get("x-commonfeed-signature")
         .and_then(|v| v.to_str().ok())
@@ -29,7 +29,7 @@ pub async fn handle(State(db): State<PgPool>, headers: HeaderMap, body: Bytes) -
         "SELECT api_key FROM commonfeed_providers WHERE domain = $1 AND api_key IS NOT NULL",
     )
     .bind(&payload.domain)
-    .fetch_optional(&db)
+    .fetch_optional(&state.pool)
     .await
     else {
         return StatusCode::NOT_FOUND;
@@ -39,7 +39,9 @@ pub async fn handle(State(db): State<PgPool>, headers: HeaderMap, body: Bytes) -
         return StatusCode::UNAUTHORIZED;
     }
 
-    match state::providers::update_status(&db, &payload.domain, payload.status.as_str()).await {
+    match state::providers::update_status(&state.pool, &payload.domain, payload.status.as_str())
+        .await
+    {
         Ok(()) => {
             tracing::info!(domain = %payload.domain, status = payload.status.as_str(), "provider callback received");
             StatusCode::OK

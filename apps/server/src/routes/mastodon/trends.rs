@@ -1,3 +1,4 @@
+use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -10,7 +11,6 @@ use sources::commonfeed::links::LinksSource;
 use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::tags::TagsSource;
 use sources::commonfeed::types::QueryFilters;
-use sqlx::PgPool;
 
 use crate::auth::Account;
 use crate::language::resolve_languages;
@@ -28,7 +28,7 @@ const fn default_limit() -> usize {
 
 pub async fn statuses(
     account: Option<Account>,
-    State(db): State<PgPool>,
+    State(state): State<AppState>,
     headers: HeaderMap,
     Query(params): Query<Params>,
 ) -> Result<Json<Vec<Status>>, StatusCode> {
@@ -41,7 +41,7 @@ pub async fn statuses(
         ..Default::default()
     };
 
-    let bound = state::providers::find_sources(&db, "trends/statuses").await;
+    let bound = state::providers::find_sources(&state.pool, "trends/statuses").await;
     let sources = bound
         .into_iter()
         .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
@@ -67,7 +67,7 @@ pub async fn statuses(
 
 pub async fn tags(
     account: Option<Account>,
-    State(db): State<PgPool>,
+    State(state): State<AppState>,
     headers: HeaderMap,
     Query(params): Query<Params>,
 ) -> Result<Json<Vec<MastodonTag>>, StatusCode> {
@@ -80,7 +80,7 @@ pub async fn tags(
         ..Default::default()
     };
 
-    let bound = state::providers::find_sources(&db, "trends/tags").await;
+    let bound = state::providers::find_sources(&state.pool, "trends/tags").await;
     let sources = bound
         .into_iter()
         .map(|b| TagsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
@@ -104,7 +104,7 @@ pub async fn tags(
 
 pub async fn links(
     account: Option<Account>,
-    State(db): State<PgPool>,
+    State(state): State<AppState>,
     headers: HeaderMap,
     Query(params): Query<Params>,
 ) -> Result<Json<Vec<PreviewCard>>, StatusCode> {
@@ -117,7 +117,7 @@ pub async fn links(
         ..Default::default()
     };
 
-    let bound = state::providers::find_sources(&db, "trends/links").await;
+    let bound = state::providers::find_sources(&state.pool, "trends/links").await;
     let sources = bound
         .into_iter()
         .map(|b| LinksSource::new(b.provider, b.algorithm).with_filters(filters.clone()));

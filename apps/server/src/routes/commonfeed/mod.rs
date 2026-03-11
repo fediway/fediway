@@ -3,9 +3,10 @@ mod verify;
 
 use axum::Router;
 use axum::routing::{get, post};
-use sqlx::PgPool;
 
-pub fn router() -> Router<PgPool> {
+use crate::state::AppState;
+
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/.well-known/commonfeed/{token}", get(verify::handle))
         .route("/commonfeed/callback", post(callback::handle))

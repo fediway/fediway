@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use config::DatabaseConfig;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
@@ -22,6 +24,10 @@ pub async fn connect(config: &DatabaseConfig) -> Result<PgPool, sqlx::Error> {
 
     PgPoolOptions::new()
         .max_connections(config.db_pool_size)
+        .min_connections(config.db_pool_min)
+        .acquire_timeout(Duration::from_secs(config.db_acquire_timeout_secs))
+        .idle_timeout(Duration::from_secs(config.db_idle_timeout_secs))
+        .max_lifetime(Duration::from_secs(config.db_max_lifetime_secs))
         .connect(&url)
         .await
 }

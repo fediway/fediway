@@ -5,9 +5,10 @@ mod trends;
 
 use axum::Router;
 use axum::routing::get;
-use sqlx::PgPool;
 
-pub fn router() -> Router<PgPool> {
+use crate::state::AppState;
+
+pub fn router() -> Router<AppState> {
     Router::new()
         .route("/api/v1/timelines/home", get(home::handle))
         .route("/api/v1/timelines/tag/{hashtag}", get(timelines::tag))

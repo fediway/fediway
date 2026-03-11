@@ -3,6 +3,8 @@ use axum::http::StatusCode;
 use axum::http::request::Parts;
 use sqlx::PgPool;
 
+use crate::state::AppState;
+
 #[derive(Debug, Clone)]
 pub struct Account {
     pub id: i64,
@@ -10,26 +12,29 @@ pub struct Account {
     pub chosen_languages: Vec<String>,
 }
 
-impl FromRequestParts<PgPool> for Account {
+impl FromRequestParts<AppState> for Account {
     type Rejection = StatusCode;
 
-    async fn from_request_parts(parts: &mut Parts, db: &PgPool) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         let token = extract_token(parts).ok_or(StatusCode::UNAUTHORIZED)?;
-        resolve_account(db, &token)
+        resolve_account(&state.pool, &token)
             .await
             .ok_or(StatusCode::UNAUTHORIZED)
     }
 }
 
-impl OptionalFromRequestParts<PgPool> for Account {
+impl OptionalFromRequestParts<AppState> for Account {
     type Rejection = StatusCode;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        db: &PgPool,
+        state: &AppState,
     ) -> Result<Option<Self>, Self::Rejection> {
         let account = match extract_token(parts) {
-            Some(token) => resolve_account(db, &token).await,
+            Some(token) => resolve_account(&state.pool, &token).await,
             None => None,
         };
         Ok(account)

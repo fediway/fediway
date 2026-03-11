@@ -5,7 +5,7 @@ fn defaults_for_local_dev() {
     let config = FediwayConfig::load();
     assert_eq!(config.db.db_host, "localhost");
     assert_eq!(config.db.db_port, 5432);
-    assert_eq!(config.db.db_pool_size, 5);
+    assert_eq!(config.db.db_pool_size, 10);
     assert_eq!(config.redis.redis_host, "localhost");
     assert_eq!(config.redis.redis_port, 6379);
 }
@@ -18,7 +18,7 @@ fn db_config_defaults_via_serde() {
     assert_eq!(config.db_name, "mastodon_development");
     assert_eq!(config.db_user, "mastodon");
     assert!(config.db_pass.is_none());
-    assert_eq!(config.db_pool_size, 5);
+    assert_eq!(config.db_pool_size, 10);
 }
 
 #[test]
