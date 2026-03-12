@@ -2,7 +2,7 @@ FROM rust:1.94-slim-bookworm AS chef
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       pkg-config libssl-dev \
+       pkg-config libssl-dev make g++ \
     && rm -rf /var/lib/apt/lists/*
 
 RUN cargo install cargo-chef --locked
@@ -29,8 +29,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --no-log-init app
 
-COPY --from=builder /app/target/release/server /usr/local/bin/
-COPY --from=builder /app/target/release/worker /usr/local/bin/
-COPY --from=builder /app/target/release/cli /usr/local/bin/
+COPY --from=builder /app/target/release/fediway /usr/local/bin/
+COPY --from=builder /app/target/release/fediway-worker /usr/local/bin/
+COPY --from=builder /app/target/release/fediway-cli /usr/local/bin/
 
 USER app
