@@ -6,6 +6,9 @@ mod provider;
 #[derive(Parser)]
 #[command(name = "fediway-cli")]
 struct Cli {
+    #[command(flatten)]
+    db: config::DatabaseConfig,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -68,8 +71,7 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Command::Migrate => {
-            let config = config::FediwayConfig::load();
-            let db = state::db::connect(&config.db).await?;
+            let db = state::db::connect(&cli.db).await?;
             state::db::migrate(&db).await?;
             println!("migrations complete");
         }
@@ -78,8 +80,7 @@ async fn main() -> Result<()> {
                 provider::info(&domain).await?;
             }
             cmd => {
-                let config = config::FediwayConfig::load();
-                let db = state::db::connect(&config.db).await?;
+                let db = state::db::connect(&cli.db).await?;
                 match cmd {
                     ProviderCommand::Add { domain } => {
                         provider::add(&db, &domain).await?;
@@ -104,15 +105,13 @@ async fn main() -> Result<()> {
             capability,
         } => {
             let (resource, algorithm) = parse_capability(&capability)?;
-            let config = config::FediwayConfig::load();
-            let db = state::db::connect(&config.db).await?;
+            let db = state::db::connect(&cli.db).await?;
             let domain = provider::resolve_domain(&db, &provider).await?;
             state::providers::enable_source(&db, &route, &domain, resource, algorithm).await?;
             println!("Enabled {route} ← {domain} ({capability})");
         }
         Command::Disable { route, provider } => {
-            let config = config::FediwayConfig::load();
-            let db = state::db::connect(&config.db).await?;
+            let db = state::db::connect(&cli.db).await?;
             let domain = provider::resolve_domain(&db, &provider).await?;
             let rows = state::providers::disable_source(&db, &route, &domain).await?;
             if rows == 0 {

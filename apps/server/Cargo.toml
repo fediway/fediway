@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 common.workspace = true
+clap.workspace = true
 config.workspace = true
 state.workspace = true
 feed.workspace = true

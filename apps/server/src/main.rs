@@ -2,6 +2,7 @@
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use axum::extract::DefaultBodyLimit;
+use clap::Parser;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tracing_subscriber::EnvFilter;
@@ -13,6 +14,19 @@ mod observe;
 mod routes;
 pub mod state;
 
+#[derive(Parser)]
+#[command(name = "fediway-server")]
+struct Args {
+    #[command(flatten)]
+    db: config::DatabaseConfig,
+
+    #[command(flatten)]
+    redis: config::RedisConfig,
+
+    #[command(flatten)]
+    instance: config::InstanceConfig,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let _ = dotenvy::dotenv();
@@ -21,16 +35,16 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    let config = config::FediwayConfig::load();
-    config::metrics::init(config.instance.metrics_port);
+    let args = Args::parse();
+    config::metrics::init(args.instance.metrics_port);
 
-    let pool = ::state::db::connect(&config.db)
+    let pool = ::state::db::connect(&args.db)
         .await
         .expect("failed to connect to database");
 
     let app_state = crate::state::AppStateInner::new(pool);
 
-    let app = routes::router(app_state, &config.instance.instance_domain).layer(
+    let app = routes::router(app_state, &args.instance.instance_domain).layer(
         ServiceBuilder::new()
             .layer(middleware::MetricsLayer)
             .layer(DefaultBodyLimit::max(1_048_576)),
@@ -38,7 +52,7 @@ async fn main() -> anyhow::Result<()> {
 
     let addr = format!(
         "{}:{}",
-        config.instance.server_host, config.instance.server_port
+        args.instance.server_host, args.instance.server_port
     );
     tracing::info!("listening on {addr}");
     let listener = TcpListener::bind(&addr).await.expect("failed to bind");

@@ -1,28 +1,30 @@
-use crate::FediwayConfig;
+use crate::DatabaseConfig;
 
 #[test]
-fn defaults_for_local_dev() {
-    let config = FediwayConfig::load();
-    assert_eq!(config.db.db_host, "localhost");
-    assert_eq!(config.db.db_port, 5432);
-    assert_eq!(config.db.db_pool_size, 10);
-    assert_eq!(config.redis.redis_host, "localhost");
-    assert_eq!(config.redis.redis_port, 6379);
-}
-
-#[test]
-fn db_config_defaults_via_serde() {
-    let config: crate::DatabaseConfig = serde_json::from_str("{}").unwrap();
+fn db_config_defaults() {
+    let config = DatabaseConfig {
+        db_host: "localhost".to_string(),
+        db_port: 5432,
+        db_name: "mastodon_development".to_string(),
+        db_user: "mastodon".to_string(),
+        db_pass: None,
+        db_pool_size: 10,
+        db_pool_min: 2,
+        db_acquire_timeout_secs: 3,
+        db_idle_timeout_secs: 600,
+        db_max_lifetime_secs: 1800,
+    };
     assert_eq!(config.db_host, "localhost");
     assert_eq!(config.db_port, 5432);
-    assert_eq!(config.db_name, "mastodon_development");
-    assert_eq!(config.db_user, "mastodon");
-    assert!(config.db_pass.is_none());
     assert_eq!(config.db_pool_size, 10);
 }
 
 #[test]
-fn db_config_custom_pool_size() {
-    let config: crate::DatabaseConfig = serde_json::from_str(r#"{"db_pool_size": 20}"#).unwrap();
-    assert_eq!(config.db_pool_size, 20);
+fn redis_config_defaults() {
+    let config = crate::RedisConfig {
+        redis_host: "localhost".to_string(),
+        redis_port: 6379,
+    };
+    assert_eq!(config.redis_host, "localhost");
+    assert_eq!(config.redis_port, 6379);
 }

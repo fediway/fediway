@@ -3,7 +3,7 @@ pub mod providers;
 pub mod redis;
 
 use ::redis::aio::ConnectionManager;
-use config::FediwayConfig;
+use config::{DatabaseConfig, RedisConfig};
 use sqlx::PgPool;
 
 #[derive(Clone)]
@@ -13,11 +13,14 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub async fn from_config(config: &FediwayConfig) -> Result<Self, AppStateError> {
-        let db = db::connect(&config.db)
+    pub async fn from_config(
+        db_config: &DatabaseConfig,
+        redis_config: &RedisConfig,
+    ) -> Result<Self, AppStateError> {
+        let db = db::connect(db_config)
             .await
             .map_err(AppStateError::Database)?;
-        let redis = redis::connect(&config.redis)
+        let redis = redis::connect(redis_config)
             .await
             .map_err(AppStateError::Redis)?;
         Ok(Self { db, redis })
