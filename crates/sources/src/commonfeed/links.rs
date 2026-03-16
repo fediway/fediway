@@ -60,6 +60,18 @@ impl Source<types::Link> for LinksSource {
 pub(super) fn into_candidate(result: super::types::LinkResult) -> Candidate<types::Link> {
     let score = result.score.unwrap_or(0.0);
 
+    let (image_url, image_width, image_height, blurhash) = result
+        .image
+        .map(|img| {
+            (
+                Some(img.sizes.large.url),
+                img.sizes.large.width,
+                img.sizes.large.height,
+                img.blurhash,
+            )
+        })
+        .unwrap_or_default();
+
     let link = types::Link {
         url: result.url,
         title: result.title,
@@ -67,10 +79,10 @@ pub(super) fn into_candidate(result: super::types::LinkResult) -> Candidate<type
         link_type: result.link_type,
         author_name: result.author_name,
         provider_name: result.provider_name,
-        image_url: result.image_url,
-        image_width: result.image_width,
-        image_height: result.image_height,
-        blurhash: result.blurhash,
+        image_url,
+        image_width,
+        image_height,
+        blurhash,
         embed_url: result.embed_url,
     };
 
@@ -81,8 +93,24 @@ pub(super) fn into_candidate(result: super::types::LinkResult) -> Candidate<type
 
 #[cfg(test)]
 mod tests {
-    use super::super::types::LinkResult;
+    use super::super::types::{ImageObject, LinkResult, SizeVariant, Sizes};
     use super::*;
+
+    fn sample_image() -> ImageObject {
+        ImageObject {
+            sizes: Sizes {
+                small: None,
+                medium: None,
+                large: SizeVariant {
+                    url: "https://cdn.example/og.webp".into(),
+                    width: Some(1200),
+                    height: Some(630),
+                    mime_type: Some("image/webp".into()),
+                },
+            },
+            blurhash: Some("LEHV6nWB2yk8".into()),
+        }
+    }
 
     fn sample_link_result() -> LinkResult {
         LinkResult {
@@ -90,22 +118,16 @@ mod tests {
             title: "Example".into(),
             description: "A great article".into(),
             link_type: "link".into(),
-            image_url: Some("https://cdn.example/og.webp".into()),
-            image_width: Some(1200),
-            image_height: Some(630),
-            blurhash: Some("LEHV6nWB2yk8".into()),
+            image: Some(sample_image()),
             provider_name: Some("Example News".into()),
             author_name: Some("Alice".into()),
             embed_html: None,
             embed_url: None,
-            embed_width: None,
-            embed_height: None,
             language: Some("en".into()),
             published_at: None,
-            favicon_url: None,
-            favicon_blurhash: None,
-            post_count: Some(42),
-            account_count: Some(15),
+            favicon: None,
+            post_count: 42,
+            account_count: 15,
             score: Some(0.8),
         }
     }
@@ -121,7 +143,13 @@ mod tests {
             candidate.item.provider_name.as_deref(),
             Some("Example News")
         );
+        assert_eq!(
+            candidate.item.image_url.as_deref(),
+            Some("https://cdn.example/og.webp")
+        );
         assert_eq!(candidate.item.image_width, Some(1200));
+        assert_eq!(candidate.item.image_height, Some(630));
+        assert_eq!(candidate.item.blurhash.as_deref(), Some("LEHV6nWB2yk8"));
         assert_eq!(candidate.source, "commonfeed/links");
     }
 
@@ -144,10 +172,7 @@ mod tests {
     #[test]
     fn handles_minimal_link() {
         let result = LinkResult {
-            image_url: None,
-            image_width: None,
-            image_height: None,
-            blurhash: None,
+            image: None,
             provider_name: None,
             author_name: None,
             embed_url: None,
@@ -156,6 +181,8 @@ mod tests {
         };
         let candidate = into_candidate(result);
         assert!(candidate.item.image_url.is_none());
+        assert!(candidate.item.image_width.is_none());
+        assert!(candidate.item.blurhash.is_none());
         assert!(candidate.item.author_name.is_none());
         assert!(candidate.item.provider_name.is_none());
     }

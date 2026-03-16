@@ -241,3 +241,48 @@ pub async fn status(db: &PgPool, domain: &str) -> Result<()> {
 
     Ok(())
 }
+
+#[derive(sqlx::FromRow)]
+struct ProviderRow {
+    domain: String,
+    name: String,
+    status: Option<String>,
+    enabled: bool,
+    api_key: Option<String>,
+    base_url: String,
+}
+
+pub async fn list(db: &PgPool) -> Result<()> {
+    let rows = sqlx::query_as::<_, ProviderRow>(
+        "SELECT domain, name, status, enabled, api_key, base_url
+         FROM commonfeed_providers
+         ORDER BY domain",
+    )
+    .fetch_all(db)
+    .await?;
+
+    if rows.is_empty() {
+        println!("no providers configured");
+        return Ok(());
+    }
+
+    let header = format!(
+        "{:<35} {:<25} {:<10} {:<8} {}",
+        "DOMAIN", "NAME", "STATUS", "ENABLED", "API KEY"
+    );
+    println!("{header}");
+    println!("{}", "-".repeat(110));
+
+    for r in &rows {
+        let status = r.status.as_deref().unwrap_or("—");
+        let enabled = if r.enabled { "yes" } else { "no" };
+        let key = r.api_key.as_deref().unwrap_or("—");
+        println!(
+            "{:<35} {:<25} {:<10} {:<8} {}",
+            r.domain, r.name, status, enabled, key
+        );
+    }
+
+    println!("\n{} provider(s)", rows.len());
+    Ok(())
+}

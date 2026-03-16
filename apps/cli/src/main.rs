@@ -42,6 +42,8 @@ enum Command {
 
 #[derive(Subcommand)]
 enum ProviderCommand {
+    /// List all providers with status and API key
+    List,
     /// Show provider info (no DB, just fetches well-known)
     Info { domain: String },
     /// Add a provider to the database
@@ -79,6 +81,11 @@ async fn main() -> Result<()> {
         Command::Provider { command } => match command {
             ProviderCommand::Info { domain } => {
                 provider::info(&domain).await?;
+            }
+            ProviderCommand::List => {
+                let db = state::db::connect(&cli.db).await?;
+                state::db::check(&db).await?;
+                provider::list(&db).await?;
             }
             cmd => {
                 let db = state::db::connect(&cli.db).await?;

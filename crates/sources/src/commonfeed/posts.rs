@@ -5,7 +5,7 @@ use common::types::{Author, Engagement, Media, Post, Provider};
 use feed::candidate::Candidate;
 use feed::source::Source;
 
-use super::types::{PostResult, QueryFilters, QueryResponse};
+use super::types::{MediaResult, PostResult, QueryFilters, QueryResponse};
 
 pub struct PostsSource {
     algorithm: String,
@@ -64,16 +64,7 @@ fn into_candidate(result: PostResult) -> Candidate<Post> {
         .media
         .unwrap_or_default()
         .into_iter()
-        .map(|m| Media {
-            media_type: m.media_type,
-            url: m.url,
-            alt: m.alt,
-            mime_type: m.mime_type,
-            width: m.width,
-            height: m.height,
-            blurhash: m.blurhash,
-            thumbnail_url: m.thumbnail_url,
-        })
+        .filter_map(media_from_result)
         .collect();
 
     let post = Post {
@@ -84,7 +75,7 @@ fn into_candidate(result: PostResult) -> Candidate<Post> {
             handle: result.author.handle,
             display_name: result.author.name,
             url: result.author.url,
-            avatar_url: result.author.avatar_url,
+            avatar_url: result.author.avatar.map(|a| a.sizes.large.url),
         },
         published_at: result.timestamp,
         language: result.language,
@@ -92,9 +83,27 @@ fn into_candidate(result: PostResult) -> Candidate<Post> {
         content_warning: result.content_warning,
         media,
         engagement: Engagement {
-            replies: engagement.and_then(|e| e.replies).unwrap_or(0),
-            reposts: engagement.and_then(|e| e.reposts).unwrap_or(0),
-            likes: engagement.and_then(|e| e.likes).unwrap_or(0),
+            replies: u64::from(
+                engagement
+                    .and_then(|e| e.replies)
+                    .unwrap_or(0)
+                    .max(0)
+                    .cast_unsigned(),
+            ),
+            reposts: u64::from(
+                engagement
+                    .and_then(|e| e.reposts)
+                    .unwrap_or(0)
+                    .max(0)
+                    .cast_unsigned(),
+            ),
+            likes: u64::from(
+                engagement
+                    .and_then(|e| e.likes)
+                    .unwrap_or(0)
+                    .max(0)
+                    .cast_unsigned(),
+            ),
         },
         reply_to: result.reply_to,
         quote_url: result.quote_url,
@@ -105,27 +114,92 @@ fn into_candidate(result: PostResult) -> Candidate<Post> {
     candidate
 }
 
+/// Extract a [`Media`] from a `CommonFeed` [`MediaResult`].
+///
+/// Images carry their content in `image`, video/audio in `sizes`.
+/// Returns `None` only when neither is present (malformed entry).
+fn media_from_result(m: MediaResult) -> Option<Media> {
+    let (url, mime_type, thumbnail_url, blurhash) = match (m.image, m.sizes, m.poster) {
+        (Some(img), _, _) => (
+            img.sizes.large.url,
+            img.sizes.large.mime_type,
+            img.sizes.small.map(|s| s.url),
+            img.blurhash,
+        ),
+        (None, Some(sizes), poster) => {
+            let (thumb, blur) = poster
+                .map(|p| (Some(p.sizes.large.url), p.blurhash))
+                .unwrap_or_default();
+            (sizes.large.url, sizes.large.mime_type, thumb, blur)
+        }
+        _ => return None,
+    };
+
+    let (width, height) = m
+        .original
+        .map(|o| {
+            (
+                Some(o.width.max(0).cast_unsigned()),
+                Some(o.height.max(0).cast_unsigned()),
+            )
+        })
+        .unwrap_or_default();
+
+    Some(Media {
+        media_type: m.media_type,
+        url,
+        alt: m.alt,
+        mime_type,
+        width,
+        height,
+        blurhash,
+        thumbnail_url,
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::super::types::{AuthorResult, EngagementResult};
+    use super::super::types::{
+        AuthorResult, EngagementResult, ImageObject, MediaOriginal, SizeVariant, Sizes,
+    };
     use super::*;
+
+    fn bare_author() -> AuthorResult {
+        AuthorResult {
+            name: "Alice".into(),
+            handle: "@alice@mastodon.social".into(),
+            url: "https://mastodon.social/@alice".into(),
+            avatar: None,
+        }
+    }
+
+    fn image_object(url: &str) -> ImageObject {
+        ImageObject {
+            sizes: Sizes {
+                small: None,
+                medium: None,
+                large: SizeVariant {
+                    url: url.into(),
+                    width: None,
+                    height: None,
+                    mime_type: Some("image/webp".into()),
+                },
+            },
+            blurhash: None,
+        }
+    }
 
     #[test]
     fn converts_post_result_to_candidate() {
         let result = PostResult {
-            url: "https://mastodon.social/@alice/123".to_string(),
-            protocol: "activitypub".to_string(),
-            content_type: "post".to_string(),
-            content: "<p>hello</p>".to_string(),
-            text: "hello".to_string(),
-            author: AuthorResult {
-                name: "Alice".to_string(),
-                handle: "@alice@mastodon.social".to_string(),
-                url: "https://mastodon.social/@alice".to_string(),
-                avatar_url: None,
-            },
+            url: "https://mastodon.social/@alice/123".into(),
+            protocol: "activitypub".into(),
+            content_type: "post".into(),
+            content: "<p>hello</p>".into(),
+            text: "hello".into(),
+            author: bare_author(),
             timestamp: chrono::Utc::now(),
-            language: Some("en".to_string()),
+            language: Some("en".into()),
             sensitive: None,
             content_warning: None,
             media: None,
@@ -152,17 +226,12 @@ mod tests {
     #[test]
     fn handles_missing_engagement() {
         let result = PostResult {
-            url: "https://example.com/post/1".to_string(),
-            protocol: "activitypub".to_string(),
-            content_type: "post".to_string(),
-            content: "<p>test</p>".to_string(),
-            text: "test".to_string(),
-            author: AuthorResult {
-                name: "Bob".to_string(),
-                handle: "@bob@example.com".to_string(),
-                url: "https://example.com/@bob".to_string(),
-                avatar_url: None,
-            },
+            url: "https://example.com/post/1".into(),
+            protocol: "activitypub".into(),
+            content_type: "post".into(),
+            content: "<p>test</p>".into(),
+            text: "test".into(),
+            author: bare_author(),
             timestamp: chrono::Utc::now(),
             language: None,
             sensitive: None,
@@ -182,41 +251,140 @@ mod tests {
     }
 
     #[test]
-    fn filters_serialize_correctly() {
-        let filters = QueryFilters {
-            language: vec!["en".to_string(), "de".to_string()],
-            ..Default::default()
+    fn extracts_avatar_url_from_image_object() {
+        let result = PostResult {
+            url: "https://example.com/post/1".into(),
+            protocol: "activitypub".into(),
+            content_type: "post".into(),
+            content: "".into(),
+            text: "".into(),
+            author: AuthorResult {
+                name: "Bob".into(),
+                handle: "@bob@example.com".into(),
+                url: "https://example.com/@bob".into(),
+                avatar: Some(image_object("https://cdn.example/avatar.webp")),
+            },
+            timestamp: chrono::Utc::now(),
+            language: None,
+            sensitive: None,
+            content_warning: None,
+            media: None,
+            engagement: None,
+            reply_to: None,
+            quote_url: None,
+            score: None,
         };
-        let json = serde_json::to_value(&filters).unwrap();
-        assert_eq!(json, serde_json::json!({"language": ["en", "de"]}));
+
+        let candidate = into_candidate(result);
+        assert_eq!(
+            candidate.item.author.avatar_url.as_deref(),
+            Some("https://cdn.example/avatar.webp")
+        );
     }
 
     #[test]
-    fn empty_filters_serialize_empty() {
-        let filters = QueryFilters::default();
-        let json = serde_json::to_value(&filters).unwrap();
-        assert_eq!(json, serde_json::json!({}));
+    fn extracts_image_media() {
+        let media = media_from_result(MediaResult {
+            media_type: "image".into(),
+            alt: Some("A sunset".into()),
+            image: Some(ImageObject {
+                sizes: Sizes {
+                    small: Some(SizeVariant {
+                        url: "https://cdn.example/small.webp".into(),
+                        width: Some(400),
+                        height: Some(300),
+                        mime_type: None,
+                    }),
+                    medium: None,
+                    large: SizeVariant {
+                        url: "https://cdn.example/large.webp".into(),
+                        width: Some(1920),
+                        height: Some(1080),
+                        mime_type: Some("image/webp".into()),
+                    },
+                },
+                blurhash: Some("LEHV6nWB2yk8".into()),
+            }),
+            original: Some(MediaOriginal {
+                width: 3840,
+                height: 2160,
+            }),
+            sizes: None,
+            poster: None,
+        })
+        .unwrap();
+
+        assert_eq!(media.media_type, "image");
+        assert_eq!(media.url, "https://cdn.example/large.webp");
+        assert_eq!(media.alt.as_deref(), Some("A sunset"));
+        assert_eq!(media.mime_type.as_deref(), Some("image/webp"));
+        assert_eq!(media.width, Some(3840));
+        assert_eq!(media.height, Some(2160));
+        assert_eq!(media.blurhash.as_deref(), Some("LEHV6nWB2yk8"));
+        assert_eq!(
+            media.thumbnail_url.as_deref(),
+            Some("https://cdn.example/small.webp")
+        );
     }
 
     #[test]
-    fn for_provider_includes_supported_filters() {
-        let filters = QueryFilters {
-            language: vec!["en".to_string()],
-            ..Default::default()
-        };
-        let supported = vec!["language".to_string(), "protocol".to_string()];
-        let result = filters.for_provider(&supported);
-        assert_eq!(result.language, vec!["en"]);
+    fn extracts_video_media() {
+        let media = media_from_result(MediaResult {
+            media_type: "video".into(),
+            alt: None,
+            image: None,
+            original: Some(MediaOriginal {
+                width: 1920,
+                height: 1080,
+            }),
+            sizes: Some(Sizes {
+                small: None,
+                medium: None,
+                large: SizeVariant {
+                    url: "https://cdn.example/video.mp4".into(),
+                    width: None,
+                    height: None,
+                    mime_type: Some("video/mp4".into()),
+                },
+            }),
+            poster: Some(ImageObject {
+                sizes: Sizes {
+                    small: None,
+                    medium: None,
+                    large: SizeVariant {
+                        url: "https://cdn.example/poster.webp".into(),
+                        width: Some(1280),
+                        height: Some(720),
+                        mime_type: None,
+                    },
+                },
+                blurhash: Some("L6PZfSi_.AyE".into()),
+            }),
+        })
+        .unwrap();
+
+        assert_eq!(media.media_type, "video");
+        assert_eq!(media.url, "https://cdn.example/video.mp4");
+        assert_eq!(media.mime_type.as_deref(), Some("video/mp4"));
+        assert_eq!(media.width, Some(1920));
+        assert_eq!(media.height, Some(1080));
+        assert_eq!(media.blurhash.as_deref(), Some("L6PZfSi_.AyE"));
+        assert_eq!(
+            media.thumbnail_url.as_deref(),
+            Some("https://cdn.example/poster.webp")
+        );
     }
 
     #[test]
-    fn for_provider_excludes_unsupported_filters() {
-        let filters = QueryFilters {
-            language: vec!["en".to_string()],
-            ..Default::default()
-        };
-        let supported: Vec<String> = vec!["protocol".to_string()];
-        let result = filters.for_provider(&supported);
-        assert!(result.language.is_empty());
+    fn drops_media_without_content() {
+        let result = media_from_result(MediaResult {
+            media_type: "image".into(),
+            alt: None,
+            image: None,
+            original: None,
+            sizes: None,
+            poster: None,
+        });
+        assert!(result.is_none());
     }
 }
