@@ -104,7 +104,7 @@ async fn main() -> Result<()> {
                     ProviderCommand::Status { domain } => {
                         provider::status(&db, &domain).await?;
                     }
-                    ProviderCommand::Info { .. } => unreachable!(),
+                    ProviderCommand::Info { .. } | ProviderCommand::List => unreachable!(),
                 }
             }
         },
