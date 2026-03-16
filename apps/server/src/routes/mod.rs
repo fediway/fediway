@@ -11,17 +11,15 @@ use crate::state::AppState;
 
 pub fn router(state: AppState, instance_domain: &str) -> Router {
     let allow_origin = if instance_domain.is_empty() {
-        tracing::warn!("INSTANCE_DOMAIN is empty, allowing all CORS origins");
+        tracing::warn!("INSTANCE_DOMAIN is empty, allowing all CORS origins (dev mode)");
         AllowOrigin::any()
     } else {
         let origin = format!("https://{instance_domain}");
-        match origin.parse() {
-            Ok(value) => AllowOrigin::exact(value),
-            Err(err) => {
-                tracing::warn!(domain = %instance_domain, error = %err, "invalid CORS origin, allowing all origins");
-                AllowOrigin::any()
-            }
-        }
+        AllowOrigin::exact(
+            origin
+                .parse()
+                .unwrap_or_else(|e| panic!("invalid INSTANCE_DOMAIN '{instance_domain}': {e}")),
+        )
     };
 
     Router::new()

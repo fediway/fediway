@@ -3,7 +3,8 @@ pub mod posts;
 pub mod tags;
 pub mod types;
 
-use std::time::Instant;
+use std::sync::LazyLock;
+use std::time::{Duration, Instant};
 
 use common::types::Provider;
 use reqwest::Client;
@@ -11,6 +12,15 @@ use serde::de::DeserializeOwned;
 
 use crate::observe;
 use types::QueryFilters;
+
+static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
+    Client::builder()
+        .timeout(Duration::from_secs(10))
+        .connect_timeout(Duration::from_secs(5))
+        .redirect(reqwest::redirect::Policy::limited(3))
+        .build()
+        .expect("http client")
+});
 
 /// Fetch JSON from a `CommonFeed` provider endpoint.
 ///
@@ -23,7 +33,6 @@ pub(crate) async fn fetch_json<T: DeserializeOwned>(
     filters: &QueryFilters,
     limit: usize,
 ) -> Option<T> {
-    let client = Client::new();
     let url = format!("{}/{resource}/{algorithm}", provider.base_url);
     let request_limit = limit.min(provider.max_results);
 
@@ -41,7 +50,7 @@ pub(crate) async fn fetch_json<T: DeserializeOwned>(
 
     let start = Instant::now();
 
-    let resp = match client
+    let resp = match HTTP_CLIENT
         .post(&url)
         .bearer_auth(&provider.api_key)
         .json(&body)
