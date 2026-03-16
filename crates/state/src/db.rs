@@ -4,6 +4,14 @@ use config::DatabaseConfig;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
+/// Verify the database is reachable by running a trivial query.
+pub async fn check(pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query_scalar::<_, i32>("SELECT 1")
+        .fetch_one(pool)
+        .await?;
+    Ok(())
+}
+
 /// Run embedded migrations.
 pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
     sqlx::migrate!("src/migrations").run(pool).await

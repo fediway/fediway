@@ -41,6 +41,10 @@ async fn main() -> anyhow::Result<()> {
     let pool = ::state::db::connect(&args.db)
         .await
         .expect("failed to connect to database");
+    ::state::db::check(&pool)
+        .await
+        .expect("database check failed");
+    tracing::info!("postgres ready");
 
     let app_state = crate::state::AppStateInner::new(pool);
 

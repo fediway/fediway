@@ -24,7 +24,9 @@ fn redis_config_defaults() {
     let config = crate::RedisConfig {
         redis_host: "localhost".to_string(),
         redis_port: 6379,
+        redis_pass: String::new(),
     };
     assert_eq!(config.redis_host, "localhost");
     assert_eq!(config.redis_port, 6379);
+    assert_eq!(config.url(), "redis://localhost:6379");
 }

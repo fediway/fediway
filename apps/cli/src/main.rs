@@ -72,6 +72,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Command::Migrate => {
             let db = state::db::connect(&cli.db).await?;
+            state::db::check(&db).await?;
             state::db::migrate(&db).await?;
             println!("migrations complete");
         }
@@ -81,6 +82,7 @@ async fn main() -> Result<()> {
             }
             cmd => {
                 let db = state::db::connect(&cli.db).await?;
+                state::db::check(&db).await?;
                 match cmd {
                     ProviderCommand::Add { domain } => {
                         provider::add(&db, &domain).await?;
@@ -106,12 +108,14 @@ async fn main() -> Result<()> {
         } => {
             let (resource, algorithm) = parse_capability(&capability)?;
             let db = state::db::connect(&cli.db).await?;
+            state::db::check(&db).await?;
             let domain = provider::resolve_domain(&db, &provider).await?;
             state::providers::enable_source(&db, &route, &domain, resource, algorithm).await?;
             println!("Enabled {route} ← {domain} ({capability})");
         }
         Command::Disable { route, provider } => {
             let db = state::db::connect(&cli.db).await?;
+            state::db::check(&db).await?;
             let domain = provider::resolve_domain(&db, &provider).await?;
             let rows = state::providers::disable_source(&db, &route, &domain).await?;
             if rows == 0 {
