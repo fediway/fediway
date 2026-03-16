@@ -199,7 +199,7 @@ pub async fn register(
     println!("  Status:      {}", resp.status);
     println!("  Verify path: {}", resp.verify_path);
     println!("\nThe provider will verify your domain. Check status with:");
-    println!("  fediway-cli provider status {domain}");
+    println!("  feedctl provider status {domain}");
 
     Ok(())
 }
@@ -249,12 +249,11 @@ struct ProviderRow {
     status: Option<String>,
     enabled: bool,
     api_key: Option<String>,
-    base_url: String,
 }
 
 pub async fn list(db: &PgPool) -> Result<()> {
     let rows = sqlx::query_as::<_, ProviderRow>(
-        "SELECT domain, name, status, enabled, api_key, base_url
+        "SELECT domain, name, status, enabled, api_key
          FROM commonfeed_providers
          ORDER BY domain",
     )

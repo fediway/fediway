@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 mod provider;
 
 #[derive(Parser)]
-#[command(name = "fediway-cli")]
+#[command(name = "feedctl")]
 struct Cli {
     #[command(flatten)]
     db: config::DatabaseConfig,

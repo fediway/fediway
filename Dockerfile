@@ -31,6 +31,6 @@ RUN apt-get update \
 
 COPY --from=builder /app/target/release/fediway /usr/local/bin/
 COPY --from=builder /app/target/release/fediway-worker /usr/local/bin/
-COPY --from=builder /app/target/release/fediway-cli /usr/local/bin/
+COPY --from=builder /app/target/release/feedctl /usr/local/bin/
 
 USER app
