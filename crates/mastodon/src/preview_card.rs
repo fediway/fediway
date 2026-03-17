@@ -10,6 +10,7 @@ pub struct PreviewCard {
     pub description: String,
     #[serde(rename = "type")]
     pub card_type: String,
+    pub authors: Vec<PreviewCardAuthor>,
     pub author_name: String,
     pub author_url: String,
     pub provider_name: String,
@@ -17,22 +18,50 @@ pub struct PreviewCard {
     pub html: String,
     pub width: i32,
     pub height: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<String>,
     pub image_description: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub embed_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub blurhash: Option<String>,
+    pub history: Vec<PreviewCardHistory>,
+}
+
+/// Author of a preview card (added in Mastodon 4.3).
+#[derive(Debug, Serialize)]
+pub struct PreviewCardAuthor {
+    pub name: String,
+    pub url: String,
+    pub account: Option<()>,
+}
+
+/// Daily usage history for trending links.
+#[derive(Debug, Serialize)]
+pub struct PreviewCardHistory {
+    pub day: String,
+    pub accounts: String,
+    pub uses: String,
 }
 
 impl From<Link> for PreviewCard {
     fn from(link: Link) -> Self {
+        let authors = link
+            .author_name
+            .as_ref()
+            .filter(|n| !n.is_empty())
+            .map(|name| {
+                vec![PreviewCardAuthor {
+                    name: name.clone(),
+                    url: String::new(),
+                    account: None,
+                }]
+            })
+            .unwrap_or_default();
+
         Self {
             url: link.url,
             title: link.title,
             description: link.description,
             card_type: link.link_type,
+            authors,
             author_name: link.author_name.unwrap_or_default(),
             author_url: String::new(),
             provider_name: link.provider_name.unwrap_or_default(),
@@ -44,6 +73,7 @@ impl From<Link> for PreviewCard {
             image_description: String::new(),
             embed_url: link.embed_url,
             blurhash: link.blurhash,
+            history: Vec::new(),
         }
     }
 }
@@ -119,6 +149,11 @@ mod tests {
             title: "Example Article".into(),
             description: "A great article".into(),
             card_type: "link".into(),
+            authors: vec![PreviewCardAuthor {
+                name: "Alice".into(),
+                url: String::new(),
+                account: None,
+            }],
             author_name: "Alice".into(),
             author_url: String::new(),
             provider_name: "Example News".into(),
@@ -130,6 +165,7 @@ mod tests {
             image_description: String::new(),
             embed_url: None,
             blurhash: Some("LEHV6nWB2yk8".into()),
+            history: Vec::new(),
         }
     }
 
@@ -156,13 +192,15 @@ mod tests {
             "width",
             "height",
             "image_description",
+            "authors",
+            "history",
         ] {
             assert!(json.get(field).is_some(), "missing field: {field}");
         }
     }
 
     #[test]
-    fn optional_fields_omitted_when_none() {
+    fn nullable_fields_present_as_null() {
         let card = PreviewCard {
             image: None,
             embed_url: None,
@@ -170,9 +208,41 @@ mod tests {
             ..sample_card()
         };
         let json = serde_json::to_value(&card).unwrap();
-        assert!(json.get("image").is_none());
-        assert!(json.get("embed_url").is_none());
-        assert!(json.get("blurhash").is_none());
+        assert!(json.get("image").is_some(), "image must be present as null");
+        assert!(json["image"].is_null());
+        assert!(
+            json.get("embed_url").is_some(),
+            "embed_url must be present as null"
+        );
+        assert!(json["embed_url"].is_null());
+        assert!(
+            json.get("blurhash").is_some(),
+            "blurhash must be present as null"
+        );
+        assert!(json["blurhash"].is_null());
+    }
+
+    #[test]
+    fn authors_populated_from_author_name() {
+        let card = PreviewCard::from(sample_link());
+        assert_eq!(card.authors.len(), 1);
+        assert_eq!(card.authors[0].name, "Alice");
+    }
+
+    #[test]
+    fn authors_empty_when_no_author() {
+        let link = Link {
+            author_name: None,
+            ..sample_link()
+        };
+        let card = PreviewCard::from(link);
+        assert!(card.authors.is_empty());
+    }
+
+    #[test]
+    fn history_empty_by_default() {
+        let card = PreviewCard::from(sample_link());
+        assert!(card.history.is_empty());
     }
 
     #[test]
