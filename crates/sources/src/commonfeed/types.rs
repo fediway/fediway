@@ -31,8 +31,10 @@ pub struct PostResult {
     pub content_warning: Option<String>,
     pub media: Option<Vec<MediaResult>>,
     pub engagement: Option<EngagementResult>,
+    pub link: Option<LinkPreviewResult>,
     pub reply_to: Option<String>,
-    pub quote_url: Option<String>,
+    pub quote: Option<Box<PostResult>>,
+    pub emojis: Option<Vec<EmojiResult>>,
     pub score: Option<f64>,
 }
 
@@ -43,6 +45,7 @@ pub struct AuthorResult {
     pub handle: String,
     pub url: String,
     pub avatar: Option<ImageObject>,
+    pub emojis: Option<Vec<EmojiResult>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -55,6 +58,14 @@ pub struct MediaResult {
     pub original: Option<MediaOriginal>,
     pub sizes: Option<Sizes>,
     pub poster: Option<ImageObject>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmojiResult {
+    pub shortcode: String,
+    pub url: String,
+    pub static_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -86,6 +97,21 @@ pub struct SizeVariant {
     pub width: Option<i32>,
     pub height: Option<i32>,
     pub mime_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinkPreviewResult {
+    pub url: String,
+    pub title: String,
+    pub description: String,
+    #[serde(rename = "type")]
+    pub link_type: String,
+    pub image: Option<ImageObject>,
+    pub provider_name: Option<String>,
+    pub author_name: Option<String>,
+    pub embed_html: Option<String>,
+    pub embed_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

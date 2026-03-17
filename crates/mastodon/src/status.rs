@@ -3,8 +3,12 @@ use common::types::Post;
 use serde::Serialize;
 
 use crate::account::{Account, CustomEmoji};
-use crate::media_attachment::{MediaAttachment, normalize_media_type};
+use crate::media_attachment::{
+    MediaAttachment, MediaMeta, MediaMetaDimensions, normalize_media_type,
+};
 use crate::mention::Mention;
+use crate::preview_card::PreviewCard;
+use crate::quote::{Quote, QuoteApproval};
 use crate::tag::Tag;
 
 const MISSING_AVATAR: &str = "/avatars/original/missing.png";
@@ -43,36 +47,95 @@ pub struct Status {
     pub muted: bool,
     pub bookmarked: bool,
     pub pinned: bool,
+    pub quote: Option<Quote>,
+    pub quote_approval: QuoteApproval,
     pub poll: Option<()>,
     pub filtered: Vec<()>,
-    pub card: Option<()>,
+    pub card: Option<PreviewCard>,
+}
+
+fn convert_emojis(emojis: &[common::types::CustomEmoji]) -> Vec<CustomEmoji> {
+    emojis
+        .iter()
+        .map(|e| CustomEmoji {
+            shortcode: e.shortcode.clone(),
+            url: e.url.clone(),
+            static_url: e.static_url.clone().unwrap_or_else(|| e.url.clone()),
+            visible_in_picker: false,
+        })
+        .collect()
+}
+
+fn build_account(author: &common::types::Author, published_at: DateTime<Utc>) -> Account {
+    let acct = author.handle.trim_start_matches('@').to_string();
+    let username = acct.split('@').next().unwrap_or(&acct).to_string();
+    let avatar = author
+        .avatar_url
+        .clone()
+        .unwrap_or_else(|| MISSING_AVATAR.to_string());
+
+    Account {
+        id: acct.clone(),
+        username,
+        acct,
+        url: author.url.clone(),
+        uri: author.url.clone(),
+        display_name: author.display_name.clone(),
+        note: String::new(),
+        avatar: avatar.clone(),
+        avatar_static: avatar,
+        header: MISSING_HEADER.to_string(),
+        header_static: MISSING_HEADER.to_string(),
+        locked: false,
+        bot: false,
+        group: false,
+        discoverable: None,
+        indexable: false,
+        statuses_count: 0,
+        followers_count: 0,
+        following_count: 0,
+        created_at: published_at,
+        fields: Vec::new(),
+        emojis: convert_emojis(&author.emojis),
+        last_status_at: None,
+    }
+}
+
+fn build_media_attachment(i: usize, m: &common::types::Media) -> MediaAttachment {
+    let meta = match (m.width, m.height) {
+        (Some(w), Some(h)) if w > 0 && h > 0 => Some(MediaMeta {
+            original: Some(MediaMetaDimensions::new(w, h)),
+            small: None,
+        }),
+        _ => None,
+    };
+
+    MediaAttachment {
+        id: format!("media_{i}"),
+        media_type: normalize_media_type(&m.media_type),
+        url: Some(m.url.clone()),
+        preview_url: m.thumbnail_url.clone(),
+        remote_url: None,
+        meta,
+        description: m.alt.clone(),
+        blurhash: m.blurhash.clone(),
+    }
 }
 
 impl From<Post> for Status {
     fn from(post: Post) -> Self {
-        let acct = post.author.handle.trim_start_matches('@').to_string();
-        let username = acct.split('@').next().unwrap_or(&acct).to_string();
-
-        let avatar = post
-            .author
-            .avatar_url
-            .unwrap_or_else(|| MISSING_AVATAR.to_string());
-
+        let account = build_account(&post.author, post.published_at);
         let media_attachments: Vec<MediaAttachment> = post
             .media
             .iter()
             .enumerate()
-            .map(|(i, m)| MediaAttachment {
-                id: format!("media_{i}"),
-                media_type: normalize_media_type(&m.media_type),
-                url: Some(m.url.clone()),
-                preview_url: m.thumbnail_url.clone(),
-                remote_url: None,
-                meta: None,
-                description: m.alt.clone(),
-                blurhash: m.blurhash.clone(),
-            })
+            .map(|(i, m)| build_media_attachment(i, m))
             .collect();
+        let content_emojis = convert_emojis(&post.emojis);
+        let quote = post.quote.map(|q| Quote {
+            state: "accepted",
+            quoted_status: Box::new(Status::from(*q)),
+        });
 
         Self {
             id: post.url.clone(),
@@ -88,35 +151,11 @@ impl From<Post> for Status {
             spoiler_text: post.content_warning.unwrap_or_default(),
             in_reply_to_id: post.reply_to,
             in_reply_to_account_id: None,
-            account: Account {
-                id: acct.clone(),
-                username,
-                acct,
-                url: post.author.url.clone(),
-                uri: post.author.url,
-                display_name: post.author.display_name,
-                note: String::new(),
-                avatar: avatar.clone(),
-                avatar_static: avatar,
-                header: MISSING_HEADER.to_string(),
-                header_static: MISSING_HEADER.to_string(),
-                locked: false,
-                bot: false,
-                group: false,
-                discoverable: None,
-                indexable: false,
-                statuses_count: 0,
-                followers_count: 0,
-                following_count: 0,
-                created_at: post.published_at,
-                fields: Vec::new(),
-                emojis: Vec::new(),
-                last_status_at: None,
-            },
+            account,
             media_attachments,
             mentions: Vec::new(),
             tags: Vec::new(),
-            emojis: Vec::new(),
+            emojis: content_emojis,
             reblog: None,
             reblogs_count: post.engagement.reposts,
             favourites_count: post.engagement.likes,
@@ -127,9 +166,11 @@ impl From<Post> for Status {
             muted: false,
             bookmarked: false,
             pinned: false,
+            quote,
+            quote_approval: QuoteApproval::public(),
             poll: None,
             filtered: Vec::new(),
-            card: None,
+            card: post.link.map(PreviewCard::from),
         }
     }
 }
@@ -151,19 +192,22 @@ mod tests {
                 display_name: "Alice".into(),
                 url: "https://mastodon.social/@alice".into(),
                 avatar_url: Some("https://mastodon.social/avatars/alice.png".into()),
+                emojis: Vec::new(),
             },
             published_at: Utc::now(),
             language: Some("en".into()),
             sensitive: false,
             content_warning: None,
             media: vec![],
+            link: None,
             engagement: Engagement {
                 replies: 5,
                 reposts: 10,
                 likes: 42,
             },
             reply_to: None,
-            quote_url: None,
+            quote: None,
+            emojis: Vec::new(),
         }
     }
 
@@ -177,15 +221,18 @@ mod tests {
                 display_name: String::new(),
                 url: String::new(),
                 avatar_url: None,
+                emojis: Vec::new(),
             },
             published_at: Utc::now(),
             language: None,
             sensitive: false,
             content_warning: None,
             media: vec![],
+            link: None,
             engagement: Engagement::default(),
             reply_to: None,
-            quote_url: None,
+            quote: None,
+            emojis: Vec::new(),
         }
     }
 

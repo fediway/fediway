@@ -1,4 +1,5 @@
-use common::types::Link;
+use chrono::Utc;
+use common::types::{CardPreview, Link};
 use serde::Serialize;
 
 /// Mastodon-compatible `PreviewCard` entity (used for trends/links).
@@ -56,6 +57,18 @@ impl From<Link> for PreviewCard {
             })
             .unwrap_or_default();
 
+        let history = if link.post_count > 0 || link.account_count > 0 {
+            let today = Utc::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
+            let day_ts = today.and_utc().timestamp();
+            vec![PreviewCardHistory {
+                day: day_ts.to_string(),
+                accounts: link.account_count.to_string(),
+                uses: link.post_count.to_string(),
+            }]
+        } else {
+            Vec::new()
+        };
+
         Self {
             url: link.url,
             title: link.title,
@@ -66,13 +79,50 @@ impl From<Link> for PreviewCard {
             author_url: String::new(),
             provider_name: link.provider_name.unwrap_or_default(),
             provider_url: String::new(),
-            html: String::new(),
+            html: link.embed_html.unwrap_or_default(),
             width: link.image_width.unwrap_or(0),
             height: link.image_height.unwrap_or(0),
             image: link.image_url,
             image_description: String::new(),
             embed_url: link.embed_url,
             blurhash: link.blurhash,
+            history,
+        }
+    }
+}
+
+impl From<CardPreview> for PreviewCard {
+    fn from(card: CardPreview) -> Self {
+        let authors = card
+            .author_name
+            .as_ref()
+            .filter(|n| !n.is_empty())
+            .map(|name| {
+                vec![PreviewCardAuthor {
+                    name: name.clone(),
+                    url: String::new(),
+                    account: None,
+                }]
+            })
+            .unwrap_or_default();
+
+        Self {
+            url: card.url,
+            title: card.title,
+            description: card.description,
+            card_type: card.link_type,
+            authors,
+            author_name: card.author_name.unwrap_or_default(),
+            author_url: String::new(),
+            provider_name: card.provider_name.unwrap_or_default(),
+            provider_url: String::new(),
+            html: card.embed_html.unwrap_or_default(),
+            width: card.image_width.unwrap_or(0),
+            height: card.image_height.unwrap_or(0),
+            image: card.image_url,
+            image_description: String::new(),
+            embed_url: card.embed_url,
+            blurhash: card.blurhash,
             history: Vec::new(),
         }
     }
@@ -95,6 +145,9 @@ mod tests {
             image_height: Some(630),
             blurhash: Some("LEHV6nWB2yk8".into()),
             embed_url: None,
+            embed_html: None,
+            post_count: 42,
+            account_count: 15,
         }
     }
 
@@ -123,6 +176,7 @@ mod tests {
             image_height: None,
             blurhash: None,
             embed_url: None,
+            embed_html: None,
             ..sample_link()
         };
         let card = PreviewCard::from(link);
@@ -139,8 +193,23 @@ mod tests {
         let card = PreviewCard::from(sample_link());
         assert_eq!(card.author_url, "");
         assert_eq!(card.provider_url, "");
-        assert_eq!(card.html, "");
         assert_eq!(card.image_description, "");
+    }
+
+    #[test]
+    fn html_from_embed_html() {
+        let link = Link {
+            embed_html: Some("<iframe src=\"https://example.com\"></iframe>".into()),
+            ..sample_link()
+        };
+        let card = PreviewCard::from(link);
+        assert_eq!(card.html, "<iframe src=\"https://example.com\"></iframe>");
+    }
+
+    #[test]
+    fn html_empty_when_no_embed() {
+        let card = PreviewCard::from(sample_link());
+        assert_eq!(card.html, "");
     }
 
     fn sample_card() -> PreviewCard {
@@ -240,8 +309,22 @@ mod tests {
     }
 
     #[test]
-    fn history_empty_by_default() {
+    fn history_populated_from_counts() {
         let card = PreviewCard::from(sample_link());
+        assert_eq!(card.history.len(), 1);
+        assert_eq!(card.history[0].uses, "42");
+        assert_eq!(card.history[0].accounts, "15");
+        assert!(!card.history[0].day.is_empty());
+    }
+
+    #[test]
+    fn history_empty_when_zero_counts() {
+        let link = Link {
+            post_count: 0,
+            account_count: 0,
+            ..sample_link()
+        };
+        let card = PreviewCard::from(link);
         assert!(card.history.is_empty());
     }
 

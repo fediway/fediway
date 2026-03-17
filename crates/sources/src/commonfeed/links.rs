@@ -77,6 +77,9 @@ pub(super) fn into_candidate(result: super::types::LinkResult) -> Candidate<type
         image_height,
         blurhash,
         embed_url: result.embed_url,
+        embed_html: result.embed_html,
+        post_count: result.post_count,
+        account_count: result.account_count,
     };
 
     let mut candidate = Candidate::new(link, "commonfeed/links");
@@ -143,6 +146,9 @@ mod tests {
         assert_eq!(candidate.item.image_width, Some(1200));
         assert_eq!(candidate.item.image_height, Some(630));
         assert_eq!(candidate.item.blurhash.as_deref(), Some("LEHV6nWB2yk8"));
+        assert_eq!(candidate.item.post_count, 42);
+        assert_eq!(candidate.item.account_count, 15);
+        assert_eq!(candidate.item.embed_html, None);
         assert_eq!(candidate.source, "commonfeed/links");
     }
 

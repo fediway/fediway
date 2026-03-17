@@ -1,8 +1,10 @@
-use common::types::{Author, Engagement, Media, Post, Provider};
+use common::types::{Author, CardPreview, CustomEmoji, Engagement, Media, Post, Provider};
 use feed::candidate::Candidate;
 use feed::source::Source;
 
-use super::types::{MediaResult, PostResult, QueryFilters, QueryResponse};
+use super::types::{
+    EmojiResult, LinkPreviewResult, MediaResult, PostResult, QueryFilters, QueryResponse,
+};
 
 pub struct PostsSource {
     algorithm: String,
@@ -51,6 +53,14 @@ impl Source<Post> for PostsSource {
 }
 
 fn into_candidate(result: PostResult) -> Candidate<Post> {
+    let score = result.score.unwrap_or(0.0);
+    let post = post_from_result(result);
+    let mut candidate = Candidate::new(post, "commonfeed/posts");
+    candidate.score = score;
+    candidate
+}
+
+fn post_from_result(result: PostResult) -> Post {
     let engagement = result.engagement.as_ref();
 
     let media = result
@@ -60,7 +70,10 @@ fn into_candidate(result: PostResult) -> Candidate<Post> {
         .filter_map(media_from_result)
         .collect();
 
-    let post = Post {
+    let quote = result.quote.map(|q| Box::new(post_from_result(*q)));
+    let link = result.link.map(card_from_link_preview);
+
+    Post {
         url: result.url,
         content: result.content,
         text: result.text,
@@ -69,12 +82,20 @@ fn into_candidate(result: PostResult) -> Candidate<Post> {
             display_name: result.author.name,
             url: result.author.url,
             avatar_url: result.author.avatar.map(|a| a.sizes.large.url),
+            emojis: result
+                .author
+                .emojis
+                .unwrap_or_default()
+                .into_iter()
+                .map(emoji_from_result)
+                .collect(),
         },
         published_at: result.timestamp,
         language: result.language,
         sensitive: result.sensitive.unwrap_or(false),
         content_warning: result.content_warning,
         media,
+        link,
         engagement: Engagement {
             replies: u64::from(
                 engagement
@@ -99,12 +120,51 @@ fn into_candidate(result: PostResult) -> Candidate<Post> {
             ),
         },
         reply_to: result.reply_to,
-        quote_url: result.quote_url,
-    };
+        quote,
+        emojis: result
+            .emojis
+            .unwrap_or_default()
+            .into_iter()
+            .map(emoji_from_result)
+            .collect(),
+    }
+}
 
-    let mut candidate = Candidate::new(post, "commonfeed/posts");
-    candidate.score = result.score.unwrap_or(0.0);
-    candidate
+fn emoji_from_result(e: EmojiResult) -> CustomEmoji {
+    CustomEmoji {
+        shortcode: e.shortcode,
+        url: e.url.clone(),
+        static_url: e.static_url.or(Some(e.url)),
+    }
+}
+
+fn card_from_link_preview(link: LinkPreviewResult) -> CardPreview {
+    let (image_url, image_width, image_height, blurhash) = link
+        .image
+        .map(|img| {
+            (
+                Some(img.sizes.large.url),
+                img.sizes.large.width,
+                img.sizes.large.height,
+                img.blurhash,
+            )
+        })
+        .unwrap_or_default();
+
+    CardPreview {
+        url: link.url,
+        title: link.title,
+        description: link.description,
+        link_type: link.link_type,
+        author_name: link.author_name,
+        provider_name: link.provider_name,
+        image_url,
+        image_width,
+        image_height,
+        blurhash,
+        embed_url: link.embed_url,
+        embed_html: link.embed_html,
+    }
 }
 
 /// Extract a [`Media`] from a `CommonFeed` [`MediaResult`].
@@ -163,6 +223,7 @@ mod tests {
             handle: "@alice@mastodon.social".into(),
             url: "https://mastodon.social/@alice".into(),
             avatar: None,
+            emojis: None,
         }
     }
 
@@ -201,8 +262,10 @@ mod tests {
                 reposts: Some(10),
                 replies: Some(5),
             }),
+            link: None,
             reply_to: None,
-            quote_url: None,
+            quote: None,
+            emojis: None,
             score: Some(0.85),
         };
 
@@ -231,8 +294,10 @@ mod tests {
             content_warning: None,
             media: None,
             engagement: None,
+            link: None,
             reply_to: None,
-            quote_url: None,
+            quote: None,
+            emojis: None,
             score: None,
         };
 
@@ -256,6 +321,7 @@ mod tests {
                 handle: "@bob@example.com".into(),
                 url: "https://example.com/@bob".into(),
                 avatar: Some(image_object("https://cdn.example/avatar.webp")),
+                emojis: None,
             },
             timestamp: chrono::Utc::now(),
             language: None,
@@ -263,8 +329,10 @@ mod tests {
             content_warning: None,
             media: None,
             engagement: None,
+            link: None,
             reply_to: None,
-            quote_url: None,
+            quote: None,
+            emojis: None,
             score: None,
         };
 

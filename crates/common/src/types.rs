@@ -13,8 +13,33 @@ pub struct Post {
     pub content_warning: Option<String>,
     pub media: Vec<Media>,
     pub engagement: Engagement,
+    pub link: Option<CardPreview>,
     pub reply_to: Option<String>,
-    pub quote_url: Option<String>,
+    pub quote: Option<Box<Post>>,
+    pub emojis: Vec<CustomEmoji>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomEmoji {
+    pub shortcode: String,
+    pub url: String,
+    pub static_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CardPreview {
+    pub url: String,
+    pub title: String,
+    pub description: String,
+    pub link_type: String,
+    pub author_name: Option<String>,
+    pub provider_name: Option<String>,
+    pub image_url: Option<String>,
+    pub image_width: Option<i32>,
+    pub image_height: Option<i32>,
+    pub blurhash: Option<String>,
+    pub embed_url: Option<String>,
+    pub embed_html: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -23,6 +48,7 @@ pub struct Author {
     pub display_name: String,
     pub url: String,
     pub avatar_url: Option<String>,
+    pub emojis: Vec<CustomEmoji>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,6 +118,9 @@ pub struct Link {
     pub image_height: Option<i32>,
     pub blurhash: Option<String>,
     pub embed_url: Option<String>,
+    pub embed_html: Option<String>,
+    pub post_count: i64,
+    pub account_count: i64,
 }
 
 pub struct Provider {
