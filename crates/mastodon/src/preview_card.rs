@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use common::types::{CardPreview, Link};
 use serde::Serialize;
 
@@ -42,6 +42,36 @@ pub struct PreviewCardHistory {
     pub uses: String,
 }
 
+const HISTORY_DAYS: i64 = 7;
+
+/// Build 7-day history matching Mastodon's format.
+/// Today carries the real counts; previous days are zero.
+fn build_history(post_count: i64, account_count: i64) -> Vec<PreviewCardHistory> {
+    let today = Utc::now()
+        .date_naive()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc();
+    (0..HISTORY_DAYS)
+        .map(|i| {
+            let day_ts = (today - Duration::days(i)).timestamp();
+            if i == 0 {
+                PreviewCardHistory {
+                    day: day_ts.to_string(),
+                    accounts: account_count.to_string(),
+                    uses: post_count.to_string(),
+                }
+            } else {
+                PreviewCardHistory {
+                    day: day_ts.to_string(),
+                    accounts: "0".into(),
+                    uses: "0".into(),
+                }
+            }
+        })
+        .collect()
+}
+
 impl From<Link> for PreviewCard {
     fn from(link: Link) -> Self {
         let authors = link
@@ -58,13 +88,7 @@ impl From<Link> for PreviewCard {
             .unwrap_or_default();
 
         let history = if link.post_count > 0 || link.account_count > 0 {
-            let today = Utc::now().date_naive().and_hms_opt(0, 0, 0).unwrap();
-            let day_ts = today.and_utc().timestamp();
-            vec![PreviewCardHistory {
-                day: day_ts.to_string(),
-                accounts: link.account_count.to_string(),
-                uses: link.post_count.to_string(),
-            }]
+            build_history(link.post_count, link.account_count)
         } else {
             Vec::new()
         };
@@ -311,10 +335,13 @@ mod tests {
     #[test]
     fn history_populated_from_counts() {
         let card = PreviewCard::from(sample_link());
-        assert_eq!(card.history.len(), 1);
+        assert_eq!(card.history.len(), 7);
         assert_eq!(card.history[0].uses, "42");
         assert_eq!(card.history[0].accounts, "15");
         assert!(!card.history[0].day.is_empty());
+        assert_eq!(card.history[1].uses, "0");
+        assert_eq!(card.history[1].accounts, "0");
+        assert_eq!(card.history[6].uses, "0");
     }
 
     #[test]
