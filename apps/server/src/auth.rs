@@ -55,11 +55,12 @@ struct TokenRow {
     account_id: i64,
     username: String,
     chosen_languages: Option<Vec<String>>,
+    locale: Option<String>,
 }
 
 async fn resolve_account(db: &PgPool, token: &str) -> Option<Account> {
     let row = sqlx::query_as::<_, TokenRow>(
-        "SELECT u.account_id, a.username, u.chosen_languages
+        "SELECT u.account_id, a.username, u.chosen_languages, u.locale
          FROM oauth_access_tokens t
          JOIN users u ON u.id = t.resource_owner_id
          JOIN accounts a ON a.id = u.account_id
@@ -73,10 +74,15 @@ async fn resolve_account(db: &PgPool, token: &str) -> Option<Account> {
     .ok()
     .flatten()?;
 
+    let chosen_languages = match row.chosen_languages {
+        Some(ref langs) if !langs.is_empty() => langs.clone(),
+        _ => row.locale.into_iter().collect(),
+    };
+
     Some(Account {
         id: row.account_id,
         username: row.username,
-        chosen_languages: row.chosen_languages.unwrap_or_default(),
+        chosen_languages,
     })
 }
 
