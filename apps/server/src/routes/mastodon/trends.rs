@@ -1,7 +1,7 @@
-use crate::state::AppState;
 use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
+use axum::response::IntoResponse;
 use common::types::{Link, Post, Tag};
 use feed::feed::Feed;
 use feed::scorer::Diversity;
@@ -15,15 +15,28 @@ use sources::commonfeed::types::QueryFilters;
 use crate::auth::Account;
 use crate::language::resolve_languages;
 use crate::observe;
+use crate::state::AppState;
 
 #[derive(Deserialize)]
 pub struct Params {
     #[serde(default = "default_limit")]
     limit: usize,
+    #[serde(default)]
+    offset: Option<String>,
 }
 
 const fn default_limit() -> usize {
     20
+}
+
+const POOL_SIZE: usize = 100;
+
+fn link_header(path: &str, cursor: Option<&String>) -> Option<(header::HeaderName, HeaderValue)> {
+    let cursor = cursor?;
+    let value = format!("<{path}?offset={cursor}>; rel=\"next\"");
+    HeaderValue::from_str(&value)
+        .ok()
+        .map(|v| (header::LINK, v))
 }
 
 pub async fn statuses(
@@ -31,7 +44,7 @@ pub async fn statuses(
     State(state): State<AppState>,
     headers: HeaderMap,
     Query(params): Query<Params>,
-) -> Result<Json<Vec<Status>>, StatusCode> {
+) -> Result<impl IntoResponse, StatusCode> {
     let limit = params.limit.min(40);
     let languages = resolve_languages(&account, &headers);
     observe::language_requested(&languages);
@@ -48,21 +61,30 @@ pub async fn statuses(
 
     let feed = Feed::builder()
         .name("trends/statuses")
-        .sources(sources, 100)
+        .sources(sources, POOL_SIZE)
         .score(Diversity::new(0.1, |post: &Post| {
             post.author.handle.clone()
         }))
         .build();
 
-    let result = feed.execute(limit, &()).await;
+    let result = feed.execute(POOL_SIZE, &()).await;
+    let page = result.paginate(
+        limit,
+        &feed::cursor::Offset::parse(params.offset.as_deref()),
+    );
 
-    let statuses: Vec<Status> = result
+    let statuses: Vec<Status> = page
         .items
         .into_iter()
         .map(|c| Status::from(c.item))
         .collect();
 
-    Ok(Json(statuses))
+    let mut response_headers = HeaderMap::new();
+    if let Some((key, value)) = link_header("/api/v1/trends/statuses", page.cursor.as_ref()) {
+        response_headers.insert(key, value);
+    }
+
+    Ok((response_headers, Json(statuses)))
 }
 
 pub async fn tags(
@@ -70,7 +92,7 @@ pub async fn tags(
     State(state): State<AppState>,
     headers: HeaderMap,
     Query(params): Query<Params>,
-) -> Result<Json<Vec<MastodonTag>>, StatusCode> {
+) -> Result<impl IntoResponse, StatusCode> {
     let limit = params.limit.min(40);
     let languages = resolve_languages(&account, &headers);
     observe::language_requested(&languages);
@@ -87,19 +109,28 @@ pub async fn tags(
 
     let feed = Feed::builder()
         .name("trends/tags")
-        .sources(sources, 100)
+        .sources(sources, POOL_SIZE)
         .score(Diversity::new(0.1, |tag: &Tag| tag.name.clone()))
         .build();
 
-    let result = feed.execute(limit, &()).await;
+    let result = feed.execute(POOL_SIZE, &()).await;
+    let page = result.paginate(
+        limit,
+        &feed::cursor::Offset::parse(params.offset.as_deref()),
+    );
 
-    let tags: Vec<MastodonTag> = result
+    let tags: Vec<MastodonTag> = page
         .items
         .into_iter()
         .map(|c| MastodonTag::from(c.item))
         .collect();
 
-    Ok(Json(tags))
+    let mut response_headers = HeaderMap::new();
+    if let Some((key, value)) = link_header("/api/v1/trends/tags", page.cursor.as_ref()) {
+        response_headers.insert(key, value);
+    }
+
+    Ok((response_headers, Json(tags)))
 }
 
 pub async fn links(
@@ -107,7 +138,7 @@ pub async fn links(
     State(state): State<AppState>,
     headers: HeaderMap,
     Query(params): Query<Params>,
-) -> Result<Json<Vec<PreviewCard>>, StatusCode> {
+) -> Result<impl IntoResponse, StatusCode> {
     let limit = params.limit.min(40);
     let languages = resolve_languages(&account, &headers);
     observe::language_requested(&languages);
@@ -124,19 +155,28 @@ pub async fn links(
 
     let feed = Feed::builder()
         .name("trends/links")
-        .sources(sources, 100)
+        .sources(sources, POOL_SIZE)
         .score(Diversity::new(0.1, |link: &Link| {
             link.provider_name.clone().unwrap_or_default()
         }))
         .build();
 
-    let result = feed.execute(limit, &()).await;
+    let result = feed.execute(POOL_SIZE, &()).await;
+    let page = result.paginate(
+        limit,
+        &feed::cursor::Offset::parse(params.offset.as_deref()),
+    );
 
-    let links: Vec<PreviewCard> = result
+    let links: Vec<PreviewCard> = page
         .items
         .into_iter()
         .map(|c| PreviewCard::from(c.item))
         .collect();
 
-    Ok(Json(links))
+    let mut response_headers = HeaderMap::new();
+    if let Some((key, value)) = link_header("/api/v1/trends/links", page.cursor.as_ref()) {
+        response_headers.insert(key, value);
+    }
+
+    Ok((response_headers, Json(links)))
 }

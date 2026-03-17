@@ -1,4 +1,5 @@
 use crate::candidate::Candidate;
+use crate::cursor::Offset;
 use crate::feed::{Feed, FeedResult};
 use crate::filter::Filter;
 use crate::sampler::TopK;
@@ -382,7 +383,7 @@ fn paginate_first_page() {
         ],
         collected: 5,
     };
-    let page = result.paginate(2, None);
+    let page = result.paginate(2, &Offset::parse(None));
     assert_eq!(page.items.len(), 2);
     assert_eq!(page.items[0].item.id, "a");
     assert_eq!(page.items[1].item.id, "b");
@@ -402,7 +403,7 @@ fn paginate_second_page() {
         ],
         collected: 5,
     };
-    let page = result.paginate(2, Some("2"));
+    let page = result.paginate(2, &Offset::parse(Some("2")));
     assert_eq!(page.items.len(), 2);
     assert_eq!(page.items[0].item.id, "c");
     assert_eq!(page.items[1].item.id, "d");
@@ -420,7 +421,7 @@ fn paginate_last_page() {
         ],
         collected: 3,
     };
-    let page = result.paginate(2, Some("2"));
+    let page = result.paginate(2, &Offset::parse(Some("2")));
     assert_eq!(page.items.len(), 1);
     assert_eq!(page.items[0].item.id, "c");
     assert!(!page.has_more);
@@ -433,7 +434,7 @@ fn paginate_beyond_end() {
         items: vec![scored_candidate("a", 1.0)],
         collected: 1,
     };
-    let page = result.paginate(10, Some("100"));
+    let page = result.paginate(10, &Offset::parse(Some("100")));
     assert!(page.items.is_empty());
     assert!(!page.has_more);
     assert!(page.cursor.is_none());
@@ -445,7 +446,7 @@ fn paginate_invalid_cursor_starts_at_zero() {
         items: vec![scored_candidate("a", 2.0), scored_candidate("b", 1.0)],
         collected: 2,
     };
-    let page = result.paginate(1, Some("garbage"));
+    let page = result.paginate(1, &Offset::parse(Some("garbage")));
     assert_eq!(page.items[0].item.id, "a");
     assert!(page.has_more);
 }
@@ -456,7 +457,7 @@ fn paginate_empty_result() {
         items: vec![],
         collected: 0,
     };
-    let page = result.paginate(20, None);
+    let page = result.paginate(20, &Offset::parse(None));
     assert!(page.items.is_empty());
     assert!(!page.has_more);
     assert!(page.cursor.is_none());

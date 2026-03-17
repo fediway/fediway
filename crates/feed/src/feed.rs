@@ -4,6 +4,7 @@ use futures::future::join_all;
 use tracing::info;
 
 use crate::candidate::Candidate;
+use crate::cursor::Cursor;
 use crate::filter::Filter;
 use crate::observe;
 use crate::sampler::{Sampler, TopK};
@@ -24,30 +25,10 @@ pub struct Page<Item> {
 }
 
 impl<Item> FeedResult<Item> {
-    /// Slice a page from the result using offset-based cursor pagination.
-    ///
-    /// `cursor` is a stringified offset (e.g. `"20"`). Invalid or missing → offset 0.
+    /// Paginate the result using the given cursor strategy.
     #[must_use]
-    pub fn paginate(self, limit: usize, cursor: Option<&str>) -> Page<Item> {
-        let offset = cursor.and_then(|c| c.parse::<usize>().ok()).unwrap_or(0);
-
-        let start = offset.min(self.items.len());
-        let end = (start + limit).min(self.items.len());
-        let has_more = end < self.items.len();
-        let next_cursor = has_more.then(|| end.to_string());
-
-        let items = self
-            .items
-            .into_iter()
-            .skip(start)
-            .take(end - start)
-            .collect();
-
-        Page {
-            items,
-            cursor: next_cursor,
-            has_more,
-        }
+    pub fn paginate(self, limit: usize, cursor: &impl Cursor<Item>) -> Page<Item> {
+        cursor.paginate(self.items, limit)
     }
 }
 

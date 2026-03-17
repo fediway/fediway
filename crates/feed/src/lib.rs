@@ -1,4 +1,5 @@
 pub mod candidate;
+pub mod cursor;
 pub mod feed;
 pub mod filter;
 pub mod observe;
