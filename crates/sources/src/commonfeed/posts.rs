@@ -1,6 +1,3 @@
-use std::future::Future;
-use std::pin::Pin;
-
 use common::types::{Author, Engagement, Media, Post, Provider};
 use feed::candidate::Candidate;
 use feed::source::Source;
@@ -30,30 +27,26 @@ impl PostsSource {
     }
 }
 
+#[async_trait::async_trait]
 impl Source<Post> for PostsSource {
     fn name(&self) -> &'static str {
         "commonfeed/posts"
     }
 
-    fn collect(
-        &self,
-        limit: usize,
-    ) -> Pin<Box<dyn Future<Output = Vec<Candidate<Post>>> + Send + '_>> {
-        Box::pin(async move {
-            let response = super::fetch_json::<QueryResponse>(
-                &self.provider,
-                "posts",
-                &self.algorithm,
-                &self.filters,
-                limit,
-            )
-            .await;
+    async fn collect(&self, limit: usize) -> Vec<Candidate<Post>> {
+        let response = super::fetch_json::<QueryResponse>(
+            &self.provider,
+            "posts",
+            &self.algorithm,
+            &self.filters,
+            limit,
+        )
+        .await;
 
-            match response {
-                Some(r) => r.results.into_iter().map(into_candidate).collect(),
-                None => Vec::new(),
-            }
-        })
+        match response {
+            Some(r) => r.results.into_iter().map(into_candidate).collect(),
+            None => Vec::new(),
+        }
     }
 }
 

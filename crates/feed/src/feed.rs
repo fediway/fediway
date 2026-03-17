@@ -16,6 +16,41 @@ pub struct FeedResult<Item> {
     pub collected: usize,
 }
 
+/// A paginated slice of a feed result.
+pub struct Page<Item> {
+    pub items: Vec<Candidate<Item>>,
+    pub cursor: Option<String>,
+    pub has_more: bool,
+}
+
+impl<Item> FeedResult<Item> {
+    /// Slice a page from the result using offset-based cursor pagination.
+    ///
+    /// `cursor` is a stringified offset (e.g. `"20"`). Invalid or missing → offset 0.
+    #[must_use]
+    pub fn paginate(self, limit: usize, cursor: Option<&str>) -> Page<Item> {
+        let offset = cursor.and_then(|c| c.parse::<usize>().ok()).unwrap_or(0);
+
+        let start = offset.min(self.items.len());
+        let end = (start + limit).min(self.items.len());
+        let has_more = end < self.items.len();
+        let next_cursor = has_more.then(|| end.to_string());
+
+        let items = self
+            .items
+            .into_iter()
+            .skip(start)
+            .take(end - start)
+            .collect();
+
+        Page {
+            items,
+            cursor: next_cursor,
+            has_more,
+        }
+    }
+}
+
 pub struct Feed<Item: Send, Ctx = ()> {
     name: &'static str,
     sources: Vec<(Box<dyn Source<Item>>, usize)>,

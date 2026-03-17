@@ -1,8 +1,5 @@
-use std::future::Future;
-use std::pin::Pin;
-
 use crate::candidate::Candidate;
-use crate::feed::Feed;
+use crate::feed::{Feed, FeedResult};
 use crate::filter::Filter;
 use crate::sampler::TopK;
 use crate::scorer::{Diversity, Scorer};
@@ -40,22 +37,18 @@ impl MockSource {
     }
 }
 
+#[async_trait::async_trait]
 impl Source<Item> for MockSource {
     fn name(&self) -> &'static str {
         self.name
     }
 
-    fn collect(
-        &self,
-        limit: usize,
-    ) -> Pin<Box<dyn Future<Output = Vec<Candidate<Item>>> + Send + '_>> {
-        Box::pin(async move {
-            self.items
-                .iter()
-                .take(limit)
-                .map(|item| Candidate::new(item.clone(), self.name))
-                .collect()
-        })
+    async fn collect(&self, limit: usize) -> Vec<Candidate<Item>> {
+        self.items
+            .iter()
+            .take(limit)
+            .map(|item| Candidate::new(item.clone(), self.name))
+            .collect()
     }
 }
 
@@ -373,6 +366,100 @@ async fn feed_with_context() {
     assert_eq!(result.items.len(), 2);
     assert_eq!(result.items[0].item.id, "b");
     assert_eq!(result.items[1].item.id, "c");
+}
+
+// --- Pagination tests ---
+
+#[test]
+fn paginate_first_page() {
+    let result = FeedResult {
+        items: vec![
+            scored_candidate("a", 5.0),
+            scored_candidate("b", 4.0),
+            scored_candidate("c", 3.0),
+            scored_candidate("d", 2.0),
+            scored_candidate("e", 1.0),
+        ],
+        collected: 5,
+    };
+    let page = result.paginate(2, None);
+    assert_eq!(page.items.len(), 2);
+    assert_eq!(page.items[0].item.id, "a");
+    assert_eq!(page.items[1].item.id, "b");
+    assert!(page.has_more);
+    assert_eq!(page.cursor.as_deref(), Some("2"));
+}
+
+#[test]
+fn paginate_second_page() {
+    let result = FeedResult {
+        items: vec![
+            scored_candidate("a", 5.0),
+            scored_candidate("b", 4.0),
+            scored_candidate("c", 3.0),
+            scored_candidate("d", 2.0),
+            scored_candidate("e", 1.0),
+        ],
+        collected: 5,
+    };
+    let page = result.paginate(2, Some("2"));
+    assert_eq!(page.items.len(), 2);
+    assert_eq!(page.items[0].item.id, "c");
+    assert_eq!(page.items[1].item.id, "d");
+    assert!(page.has_more);
+    assert_eq!(page.cursor.as_deref(), Some("4"));
+}
+
+#[test]
+fn paginate_last_page() {
+    let result = FeedResult {
+        items: vec![
+            scored_candidate("a", 3.0),
+            scored_candidate("b", 2.0),
+            scored_candidate("c", 1.0),
+        ],
+        collected: 3,
+    };
+    let page = result.paginate(2, Some("2"));
+    assert_eq!(page.items.len(), 1);
+    assert_eq!(page.items[0].item.id, "c");
+    assert!(!page.has_more);
+    assert!(page.cursor.is_none());
+}
+
+#[test]
+fn paginate_beyond_end() {
+    let result = FeedResult {
+        items: vec![scored_candidate("a", 1.0)],
+        collected: 1,
+    };
+    let page = result.paginate(10, Some("100"));
+    assert!(page.items.is_empty());
+    assert!(!page.has_more);
+    assert!(page.cursor.is_none());
+}
+
+#[test]
+fn paginate_invalid_cursor_starts_at_zero() {
+    let result = FeedResult {
+        items: vec![scored_candidate("a", 2.0), scored_candidate("b", 1.0)],
+        collected: 2,
+    };
+    let page = result.paginate(1, Some("garbage"));
+    assert_eq!(page.items[0].item.id, "a");
+    assert!(page.has_more);
+}
+
+#[test]
+fn paginate_empty_result() {
+    let result: FeedResult<Item> = FeedResult {
+        items: vec![],
+        collected: 0,
+    };
+    let page = result.paginate(20, None);
+    assert!(page.items.is_empty());
+    assert!(!page.has_more);
+    assert!(page.cursor.is_none());
 }
 
 // --- Helpers ---

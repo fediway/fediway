@@ -1,6 +1,3 @@
-use std::future::Future;
-use std::pin::Pin;
-
 use common::types::{self, Provider};
 use feed::candidate::Candidate;
 use feed::source::Source;
@@ -30,30 +27,26 @@ impl TagsSource {
     }
 }
 
+#[async_trait::async_trait]
 impl Source<types::Tag> for TagsSource {
     fn name(&self) -> &'static str {
         "commonfeed/tags"
     }
 
-    fn collect(
-        &self,
-        limit: usize,
-    ) -> Pin<Box<dyn Future<Output = Vec<Candidate<types::Tag>>> + Send + '_>> {
-        Box::pin(async move {
-            let response = super::fetch_json::<TagResponse>(
-                &self.provider,
-                "tags",
-                &self.algorithm,
-                &self.filters,
-                limit,
-            )
-            .await;
+    async fn collect(&self, limit: usize) -> Vec<Candidate<types::Tag>> {
+        let response = super::fetch_json::<TagResponse>(
+            &self.provider,
+            "tags",
+            &self.algorithm,
+            &self.filters,
+            limit,
+        )
+        .await;
 
-            match response {
-                Some(r) => r.results.into_iter().map(into_candidate).collect(),
-                None => Vec::new(),
-            }
-        })
+        match response {
+            Some(r) => r.results.into_iter().map(into_candidate).collect(),
+            None => Vec::new(),
+        }
     }
 }
 

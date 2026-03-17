@@ -38,6 +38,7 @@ mastodon = { path = "crates/mastodon" }
 # Async
 tokio = { version = "1", default-features = false }
 futures = "0.3"
+async-trait = "0.1"
 
 # Web
 axum = "0.8"
