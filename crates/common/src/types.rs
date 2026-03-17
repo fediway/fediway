@@ -14,8 +14,9 @@ pub struct Post {
     pub media: Vec<Media>,
     pub engagement: Engagement,
     pub link: Option<CardPreview>,
-    pub reply_to: Option<String>,
+    pub reply_to: Option<Box<Post>>,
     pub quote: Option<Box<Post>>,
+    pub tags: Vec<String>,
     pub emojis: Vec<CustomEmoji>,
 }
 

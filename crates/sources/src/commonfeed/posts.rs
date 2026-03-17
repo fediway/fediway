@@ -119,8 +119,14 @@ fn post_from_result(result: PostResult) -> Post {
                     .cast_unsigned(),
             ),
         },
-        reply_to: result.reply_to,
+        reply_to: result.reply_to.map(|r| Box::new(post_from_result(*r))),
         quote,
+        tags: result
+            .tags
+            .unwrap_or_default()
+            .into_iter()
+            .map(|t| t.name)
+            .collect(),
         emojis: result
             .emojis
             .unwrap_or_default()
@@ -265,6 +271,7 @@ mod tests {
             link: None,
             reply_to: None,
             quote: None,
+            tags: None,
             emojis: None,
             score: Some(0.85),
         };
@@ -297,6 +304,7 @@ mod tests {
             link: None,
             reply_to: None,
             quote: None,
+            tags: None,
             emojis: None,
             score: None,
         };
@@ -332,6 +340,7 @@ mod tests {
             link: None,
             reply_to: None,
             quote: None,
+            tags: None,
             emojis: None,
             score: None,
         };

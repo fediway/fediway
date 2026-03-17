@@ -132,6 +132,20 @@ impl From<Post> for Status {
             .map(|(i, m)| build_media_attachment(i, m))
             .collect();
         let content_emojis = convert_emojis(&post.emojis);
+        let tags: Vec<Tag> = post
+            .tags
+            .iter()
+            .map(|name| Tag {
+                name: name.clone(),
+                url: format!("/tags/{name}"),
+                history: Vec::new(),
+            })
+            .collect();
+        let in_reply_to_id = post.reply_to.as_ref().map(|r| r.url.clone());
+        let in_reply_to_account_id = post
+            .reply_to
+            .as_ref()
+            .map(|r| r.author.handle.trim_start_matches('@').to_string());
         let quote = post.quote.map(|q| Quote {
             state: "accepted",
             quoted_status: Box::new(Status::from(*q)),
@@ -149,12 +163,12 @@ impl From<Post> for Status {
             language: post.language,
             sensitive: post.sensitive,
             spoiler_text: post.content_warning.unwrap_or_default(),
-            in_reply_to_id: post.reply_to,
-            in_reply_to_account_id: None,
+            in_reply_to_id,
+            in_reply_to_account_id,
             account,
             media_attachments,
             mentions: Vec::new(),
-            tags: Vec::new(),
+            tags,
             emojis: content_emojis,
             reblog: None,
             reblogs_count: post.engagement.reposts,
@@ -207,6 +221,7 @@ mod tests {
             },
             reply_to: None,
             quote: None,
+            tags: Vec::new(),
             emojis: Vec::new(),
         }
     }
@@ -232,6 +247,7 @@ mod tests {
             engagement: Engagement::default(),
             reply_to: None,
             quote: None,
+            tags: Vec::new(),
             emojis: Vec::new(),
         }
     }
@@ -338,13 +354,38 @@ mod tests {
     #[test]
     fn reply_to_preserved() {
         let mut post = sample_post();
-        post.reply_to = Some("https://mastodon.social/@bob/456".into());
+        post.reply_to = Some(Box::new(Post {
+            url: "https://mastodon.social/@bob/456".into(),
+            content: "<p>parent post</p>".into(),
+            text: "parent post".into(),
+            author: Author {
+                handle: "@bob@mastodon.social".into(),
+                display_name: "Bob".into(),
+                url: "https://mastodon.social/@bob".into(),
+                avatar_url: None,
+                emojis: Vec::new(),
+            },
+            published_at: Utc::now(),
+            language: None,
+            sensitive: false,
+            content_warning: None,
+            media: vec![],
+            link: None,
+            engagement: Engagement::default(),
+            reply_to: None,
+            quote: None,
+            tags: Vec::new(),
+            emojis: Vec::new(),
+        }));
         let status = Status::from(post);
         assert_eq!(
             status.in_reply_to_id.as_deref(),
             Some("https://mastodon.social/@bob/456")
         );
-        assert_eq!(status.in_reply_to_account_id, None);
+        assert_eq!(
+            status.in_reply_to_account_id.as_deref(),
+            Some("bob@mastodon.social")
+        );
     }
 
     #[test]

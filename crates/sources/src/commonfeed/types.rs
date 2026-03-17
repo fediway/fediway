@@ -32,10 +32,16 @@ pub struct PostResult {
     pub media: Option<Vec<MediaResult>>,
     pub engagement: Option<EngagementResult>,
     pub link: Option<LinkPreviewResult>,
-    pub reply_to: Option<String>,
+    pub reply_to: Option<Box<PostResult>>,
     pub quote: Option<Box<PostResult>>,
+    pub tags: Option<Vec<PostTagResult>>,
     pub emojis: Option<Vec<EmojiResult>>,
     pub score: Option<f64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PostTagResult {
+    pub name: String,
 }
 
 #[derive(Debug, Deserialize)]
