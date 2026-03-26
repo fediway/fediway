@@ -1,4 +1,5 @@
 use common::types::Provider;
+use serde_json::Value;
 use sqlx::PgPool;
 
 /// Find sources configured for a fediway route.
@@ -59,26 +60,35 @@ pub async fn upsert(
     Ok(())
 }
 
-pub async fn upsert_capability(
-    db: &PgPool,
-    provider_domain: &str,
-    resource: &str,
-    algorithm: &str,
-    description: &str,
-    filters: &[String],
-) -> Result<(), sqlx::Error> {
+pub struct Capability<'a> {
+    pub provider_domain: &'a str,
+    pub resource: &'a str,
+    pub algorithm: &'a str,
+    pub description: &'a str,
+    pub filters: &'a [String],
+    pub embedding_required: Option<bool>,
+    pub embedding_models: Option<Value>,
+}
+
+pub async fn upsert_capability(db: &PgPool, cap: &Capability<'_>) -> Result<(), sqlx::Error> {
     sqlx::query(
-        "INSERT INTO commonfeed_capabilities (provider_domain, resource, algorithm, description, filters)
-         VALUES ($1, $2, $3, $4, $5)
+        "INSERT INTO commonfeed_capabilities
+         (provider_domain, resource, algorithm, description, filters,
+          embedding_required, embedding_models)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (provider_domain, resource, algorithm) DO UPDATE SET
              description = EXCLUDED.description,
-             filters = EXCLUDED.filters",
+             filters = EXCLUDED.filters,
+             embedding_required = EXCLUDED.embedding_required,
+             embedding_models = EXCLUDED.embedding_models",
     )
-    .bind(provider_domain)
-    .bind(resource)
-    .bind(algorithm)
-    .bind(description)
-    .bind(filters)
+    .bind(cap.provider_domain)
+    .bind(cap.resource)
+    .bind(cap.algorithm)
+    .bind(cap.description)
+    .bind(cap.filters)
+    .bind(cap.embedding_required)
+    .bind(&cap.embedding_models)
     .execute(db)
     .await?;
     Ok(())

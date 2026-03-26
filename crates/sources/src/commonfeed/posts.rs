@@ -41,6 +41,7 @@ impl Source<Post> for PostsSource {
             "posts",
             &self.algorithm,
             &self.filters,
+            None,
             limit,
         )
         .await;
@@ -52,10 +53,17 @@ impl Source<Post> for PostsSource {
     }
 }
 
-fn into_candidate(result: PostResult) -> Candidate<Post> {
+pub(crate) fn into_candidate(result: PostResult) -> Candidate<Post> {
+    into_candidate_with_source(result, "commonfeed/posts")
+}
+
+pub(crate) fn into_candidate_with_source(
+    result: PostResult,
+    source: &'static str,
+) -> Candidate<Post> {
     let score = result.score.unwrap_or(0.0);
     let post = post_from_result(result);
-    let mut candidate = Candidate::new(post, "commonfeed/posts");
+    let mut candidate = Candidate::new(post, source);
     candidate.score = score;
     candidate
 }

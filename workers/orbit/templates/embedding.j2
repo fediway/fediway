@@ -1,0 +1,37 @@
+{%- if author.name and author.handle -%}
+{{ author.name }} (@{{ author.handle }})
+{%- elif author.handle -%}
+@{{ author.handle }}
+{%- elif author.name -%}
+{{ author.name }}
+{%- endif -%}
+
+{%- if post.content_warning %}
+
+[CW: {{ post.content_warning }}]
+{%- endif -%}
+
+{%- if post.title %}
+
+{{ post.title }}
+{%- endif -%}
+
+{%- if post.summary %}
+
+{{ post.summary }}
+{%- endif -%}
+
+{%- if post.text %}
+
+{{ post.text }}
+{%- endif -%}
+
+{%- for alt in media.alt_texts %}
+
+[Image: {{ alt }}]
+{%- endfor -%}
+
+{%- if tags %}
+
+{{ tags }}
+{%- endif -%}

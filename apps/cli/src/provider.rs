@@ -21,6 +21,13 @@ struct CapabilityDef {
     algorithm: String,
     description: String,
     filters: Vec<String>,
+    embedding: Option<EmbeddingDef>,
+}
+
+#[derive(Deserialize)]
+struct EmbeddingDef {
+    required: bool,
+    models: serde_json::Value,
 }
 
 #[derive(Deserialize)]
@@ -149,13 +156,21 @@ async fn sync_provider(db: &PgPool, domain: &str) -> Result<WellKnown> {
     state::providers::upsert(db, &wk.domain, &wk.name, &wk.base_url, wk.max_results).await?;
 
     for cap in &wk.capabilities {
+        let (embedding_required, embedding_models) = match &cap.embedding {
+            Some(e) => (Some(e.required), Some(e.models.clone())),
+            None => (None, None),
+        };
         state::providers::upsert_capability(
             db,
-            &wk.domain,
-            &cap.resource,
-            &cap.algorithm,
-            &cap.description,
-            &cap.filters,
+            &state::providers::Capability {
+                provider_domain: &wk.domain,
+                resource: &cap.resource,
+                algorithm: &cap.algorithm,
+                description: &cap.description,
+                filters: &cap.filters,
+                embedding_required,
+                embedding_models,
+            },
         )
         .await?;
     }

@@ -1,5 +1,6 @@
 pub mod links;
 pub mod posts;
+pub mod recommended;
 pub mod tags;
 pub mod types;
 
@@ -11,7 +12,7 @@ use reqwest::Client;
 use serde::de::DeserializeOwned;
 
 use crate::observe;
-use types::QueryFilters;
+use types::{EmbeddingRequest, QueryFilters};
 
 static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
     Client::builder()
@@ -31,6 +32,7 @@ pub(crate) async fn fetch_json<T: DeserializeOwned>(
     resource: &str,
     algorithm: &str,
     filters: &QueryFilters,
+    embedding: Option<&EmbeddingRequest>,
     limit: usize,
 ) -> Option<T> {
     let url = format!("{}/{resource}/{algorithm}", provider.base_url);
@@ -40,6 +42,10 @@ pub(crate) async fn fetch_json<T: DeserializeOwned>(
         "limit": request_limit,
         "cursor": null
     });
+
+    if let Some(emb) = embedding {
+        body["embedding"] = serde_json::to_value(emb).unwrap_or_default();
+    }
 
     let supported = &provider.supported_filters;
     let filters = filters.for_provider(supported);

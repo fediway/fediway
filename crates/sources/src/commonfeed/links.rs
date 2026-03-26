@@ -39,6 +39,7 @@ impl Source<types::Link> for LinksSource {
             "links",
             &self.algorithm,
             &self.filters,
+            None,
             limit,
         )
         .await;

@@ -25,6 +25,10 @@ struct Args {
 
     #[command(flatten)]
     instance: config::InstanceConfig,
+
+    /// Embedding model name for Orbit recommended requests
+    #[arg(long, env = "ORBIT_MODEL_NAME", default_value = "qwen3_256d")]
+    orbit_model_name: String,
 }
 
 #[tokio::main]
@@ -46,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
         .expect("database check failed");
     tracing::info!("postgres ready");
 
-    let app_state = crate::state::AppStateInner::new(pool);
+    let app_state = crate::state::AppStateInner::new(pool, args.orbit_model_name);
 
     let app = routes::router(app_state, &args.instance.instance_domain).layer(
         ServiceBuilder::new()

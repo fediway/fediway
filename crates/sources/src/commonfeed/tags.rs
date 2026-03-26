@@ -39,6 +39,7 @@ impl Source<types::Tag> for TagsSource {
             "tags",
             &self.algorithm,
             &self.filters,
+            None,
             limit,
         )
         .await;

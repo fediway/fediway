@@ -8,7 +8,7 @@ Algorithmic feeds for Mastodon instances. Replaces chronological timelines with 
 cargo check --workspace       # verify everything compiles
 cargo test --workspace        # run tests
 cargo run --bin fediway        # start the server
-cargo run --bin fediway-worker # start the background worker
+cargo run --bin fediway-orbit  # start the orbit worker
 ```
 
 ## Requirements

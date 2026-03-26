@@ -127,6 +127,12 @@ pub struct MediaOriginal {
     pub height: i32,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct EmbeddingRequest {
+    pub vector: Vec<f32>,
+    pub model: String,
+}
+
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct QueryFilters {
     #[serde(skip_serializing_if = "Vec::is_empty")]

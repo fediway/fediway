@@ -30,7 +30,7 @@ RUN apt-get update \
     && useradd --create-home --no-log-init app
 
 COPY --from=builder /app/target/release/fediway /usr/local/bin/
-COPY --from=builder /app/target/release/fediway-worker /usr/local/bin/
+COPY --from=builder /app/target/release/fediway-orbit /usr/local/bin/
 COPY --from=builder /app/target/release/feedctl /usr/local/bin/
 
 USER app

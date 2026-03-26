@@ -2,8 +2,8 @@
 resolver = "2"
 members = [
     "apps/server",
-    "apps/worker",
     "apps/cli",
+    "workers/orbit",
     "crates/common",
     "crates/config",
     "crates/feed",
