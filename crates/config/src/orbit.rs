@@ -6,8 +6,8 @@ pub struct OrbitConfig {
     #[arg(long, env = "ORBIT_ALPHA", default_value_t = 0.05)]
     pub orbit_alpha: f64,
 
-    /// Embedding dimensionality (Qwen3 MRL truncation: 256)
-    #[arg(long, env = "ORBIT_DIMS", default_value_t = 256)]
+    /// Embedding dimensionality after MRL truncation (must match provider)
+    #[arg(long, env = "ORBIT_DIMS", default_value_t = 64)]
     pub orbit_dims: usize,
 
     /// Seconds between engagement poll cycles
@@ -19,7 +19,7 @@ pub struct OrbitConfig {
     pub orbit_batch_size: i64,
 
     /// Embedding model name sent to provider (must match provider capability)
-    #[arg(long, env = "ORBIT_MODEL_NAME", default_value = "qwen3_256d")]
+    #[arg(long, env = "ORBIT_MODEL_NAME", default_value = "bge_small_64d")]
     pub orbit_model_name: String,
 
     /// On first startup, only process engagements from the last N hours.

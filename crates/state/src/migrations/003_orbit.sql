@@ -1,6 +1,6 @@
 CREATE TABLE orbit_user_vectors (
     account_id          BIGINT PRIMARY KEY,
-    vector              FLOAT4[] NOT NULL CHECK (array_length(vector, 1) = 256),
+    vector              FLOAT4[] NOT NULL,
     engagement_count    BIGINT NOT NULL DEFAULT 0,
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );

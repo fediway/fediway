@@ -27,7 +27,7 @@ struct Args {
     instance: config::InstanceConfig,
 
     /// Embedding model name for Orbit recommended requests
-    #[arg(long, env = "ORBIT_MODEL_NAME", default_value = "qwen3_256d")]
+    #[arg(long, env = "ORBIT_MODEL_NAME", default_value = "bge_small_64d")]
     orbit_model_name: String,
 }
 
