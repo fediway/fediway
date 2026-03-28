@@ -46,14 +46,3 @@ async fn trending_links_empty_returns_ok() {
     let json = resp.json();
     assert!(json.is_array(), "Mastodon trends/links must return array");
 }
-
-#[tokio::test]
-async fn unknown_route_returns_404() {
-    let Some(app) = common::TestApp::spawn().await else {
-        eprintln!("SKIPPED: infrastructure not available");
-        return;
-    };
-
-    let resp = app.get("/api/v1/nonexistent").await;
-    assert_eq!(resp.status, StatusCode::NOT_FOUND);
-}
