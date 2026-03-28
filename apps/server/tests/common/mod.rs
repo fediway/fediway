@@ -26,6 +26,12 @@ impl TestResponse {
 
 impl TestApp {
     pub async fn spawn() -> Option<Self> {
+        tokio::time::timeout(std::time::Duration::from_secs(15), Self::spawn_inner())
+            .await
+            .ok()?
+    }
+
+    async fn spawn_inner() -> Option<Self> {
         let pool = setup_test_db().await?;
         let db_name = pool
             .connect_options()

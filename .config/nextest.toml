@@ -12,3 +12,11 @@ test-threads = "num-cpus"
 retries = { backoff = "fixed", count = 2, delay = "1s" }
 fail-fast = false
 slow-timeout = { period = "60s", terminate-after = 2 }
+
+# Server integration tests share Postgres — run one at a time.
+[[profile.ci.overrides]]
+filter = "binary(health) or binary(trends) or binary(providers)"
+test-group = "server-integration"
+
+[test-groups.server-integration]
+max-threads = 1
