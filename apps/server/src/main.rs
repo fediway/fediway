@@ -7,12 +7,7 @@ use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tracing_subscriber::EnvFilter;
 
-pub mod auth;
-pub mod language;
-mod middleware;
-mod observe;
-mod routes;
-pub mod state;
+use server::state::AppStateInner;
 
 #[derive(Parser)]
 #[command(name = "fediway-server")]
@@ -50,11 +45,11 @@ async fn main() -> anyhow::Result<()> {
         .expect("database check failed");
     tracing::info!("postgres ready");
 
-    let app_state = crate::state::AppStateInner::new(pool, args.orbit_model_name);
+    let app_state = AppStateInner::new(pool, args.orbit_model_name);
 
-    let app = routes::router(app_state, &args.instance.instance_domain).layer(
+    let app = server::routes::router(app_state, &args.instance.instance_domain).layer(
         ServiceBuilder::new()
-            .layer(middleware::MetricsLayer)
+            .layer(server::middleware::MetricsLayer)
             .layer(DefaultBodyLimit::max(1_048_576)),
     );
 

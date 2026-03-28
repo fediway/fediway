@@ -3,9 +3,17 @@ name = "server"
 version.workspace = true
 edition.workspace = true
 
+[lib]
+name = "server"
+path = "src/lib.rs"
+
 [[bin]]
 name = "fediway"
 path = "src/main.rs"
+
+[dev-dependencies]
+uuid = { version = "1", features = ["v4"] }
+http-body-util = "0.1"
 
 [lints]
 workspace = true
