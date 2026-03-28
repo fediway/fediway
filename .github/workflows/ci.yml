@@ -48,6 +48,29 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: fediway
+          POSTGRES_PASSWORD: fediway
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+          --health-start-period 5s
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: fediway
+      DB_PASS: fediway
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -61,10 +84,14 @@ jobs:
           shared-key: test
           save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-on-failure: true
-      - run: cargo nextest run --workspace --locked
+
+      - name: Run all tests (unit + integration)
+        run: cargo nextest run --workspace --locked
         env:
           RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
-      - run: cargo test --doc --workspace --locked
+
+      - name: Run doctests
+        run: cargo test --doc --workspace --locked
 
   deploy:
     name: Build and push image
