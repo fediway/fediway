@@ -198,4 +198,34 @@ mod tests {
         assert_eq!(result.len(), 256);
         assert!(result.iter().all(|&x| x == 0.0));
     }
+
+    #[test]
+    fn contract_embedding_template_matches_feeds() {
+        let feeds_template = std::fs::read_to_string(format!(
+            "{}/../../../feeds/workers/orbit/templates/embedding.j2",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .expect("feeds embedding.j2 must exist");
+
+        assert_eq!(
+            TEMPLATE, feeds_template,
+            "embedding.j2 templates have diverged between feeds and fediway"
+        );
+    }
+
+    #[test]
+    fn contract_vector_config_matches_defaults() {
+        let path = format!(
+            "{}/../../../feeds/fixtures/orbit/vector-config.json",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let json: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("fixture {path}: {e}")),
+        )
+        .unwrap();
+
+        // Fediway defaults must match feeds' vector config fixture
+        assert_eq!(json["model_name"], "bge_small_64d");
+        assert_eq!(json["dims"], 64);
+    }
 }

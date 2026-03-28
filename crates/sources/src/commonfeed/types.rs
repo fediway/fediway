@@ -603,4 +603,102 @@ mod tests {
         assert_eq!(link.provider_name, None);
         assert_eq!(link.post_count, 0);
     }
+
+    // -------------------------------------------------------------------
+    // Contract tests — deserialize feeds API fixtures
+    // -------------------------------------------------------------------
+
+    fn load_feeds_fixture(name: &str) -> String {
+        let path = format!(
+            "{}/../../../feeds/fixtures/api/{name}",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("feeds fixture {path}: {e}"))
+    }
+
+    #[test]
+    fn contract_posts_trending_deserializes() {
+        let json = load_feeds_fixture("posts-trending.json");
+        let resp: QueryResponse = serde_json::from_str(&json)
+            .expect("posts-trending.json must deserialize into fediway QueryResponse");
+
+        assert_eq!(resp.results.len(), 1);
+        let post = &resp.results[0];
+        assert_eq!(post.url, "https://mastodon.social/@alice/123");
+        assert_eq!(post.protocol, "activitypub");
+        assert_eq!(post.content_type, "post");
+        assert_eq!(post.text, "hello world");
+        assert_eq!(post.author.name, "Alice");
+        assert_eq!(post.author.handle, "@alice@mastodon.social");
+        assert_eq!(post.language.as_deref(), Some("en"));
+        assert_eq!(post.score, Some(0.95));
+
+        let avatar = post.author.avatar.as_ref().unwrap();
+        assert_eq!(
+            avatar.sizes.large.url,
+            "https://cdn.mastodon.social/avatars/alice.webp"
+        );
+
+        let media = post.media.as_ref().unwrap();
+        assert_eq!(media[0].media_type, "image");
+        let img = media[0].image.as_ref().unwrap();
+        assert_eq!(img.blurhash.as_deref(), Some("LEHV6nWB2yk8"));
+        assert_eq!(img.sizes.large.width, Some(1920));
+
+        let engagement = post.engagement.as_ref().unwrap();
+        assert_eq!(engagement.likes, Some(42));
+        assert_eq!(engagement.reposts, Some(10));
+        assert_eq!(engagement.replies, Some(5));
+
+        assert_eq!(resp.pagination.cursor.as_deref(), Some("abc123"));
+        assert!(resp.pagination.has_more);
+    }
+
+    #[test]
+    fn contract_posts_trending_minimal_deserializes() {
+        let json = load_feeds_fixture("posts-trending-minimal.json");
+        let resp: QueryResponse = serde_json::from_str(&json)
+            .expect("posts-trending-minimal.json must deserialize into fediway QueryResponse");
+
+        let post = &resp.results[0];
+        assert!(post.media.is_none());
+        assert!(post.engagement.is_none());
+        assert!(post.score.is_none());
+        assert!(post.author.avatar.is_none());
+        assert!(!resp.pagination.has_more);
+    }
+
+    #[test]
+    fn contract_tags_trending_deserializes() {
+        let json = load_feeds_fixture("tags-trending.json");
+        let resp: TagResponse = serde_json::from_str(&json)
+            .expect("tags-trending.json must deserialize into fediway TagResponse");
+
+        assert_eq!(resp.results.len(), 1);
+        let tag = &resp.results[0];
+        assert_eq!(tag.name, "rust");
+        assert_eq!(tag.post_count, 42);
+        assert_eq!(tag.account_count, 15);
+        assert_eq!(tag.score, Some(0.95));
+        let history = tag.history.as_ref().unwrap();
+        assert_eq!(history[0].uses, 30);
+    }
+
+    #[test]
+    fn contract_links_trending_deserializes() {
+        let json = load_feeds_fixture("links-trending.json");
+        let resp: LinkResponse = serde_json::from_str(&json)
+            .expect("links-trending.json must deserialize into fediway LinkResponse");
+
+        assert_eq!(resp.results.len(), 1);
+        let link = &resp.results[0];
+        assert_eq!(link.url, "https://example.com/article");
+        assert_eq!(link.title, "Example");
+        assert_eq!(link.link_type, "link");
+        assert_eq!(link.provider_name.as_deref(), Some("Example News"));
+        assert_eq!(link.post_count, 42);
+        assert_eq!(link.score, Some(0.8));
+        let img = link.image.as_ref().unwrap();
+        assert_eq!(img.sizes.large.url, "https://cdn.example/og.webp");
+    }
 }

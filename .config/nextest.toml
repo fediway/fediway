@@ -1,0 +1,14 @@
+[store]
+dir = "target/nextest"
+
+[profile.default]
+test-threads = "num-cpus"
+slow-timeout = { period = "30s", terminate-after = 2 }
+fail-fast = true
+retries = 0
+
+[profile.ci]
+test-threads = "num-cpus"
+retries = { backoff = "fixed", count = 2, delay = "1s" }
+fail-fast = false
+slow-timeout = { period = "60s", terminate-after = 2 }
