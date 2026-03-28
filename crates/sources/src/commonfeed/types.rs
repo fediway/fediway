@@ -617,6 +617,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires feeds repo (local dev only)"]
     fn contract_posts_trending_deserializes() {
         let json = load_feeds_fixture("posts-trending.json");
         let resp: QueryResponse = serde_json::from_str(&json)
@@ -655,6 +656,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires feeds repo (local dev only)"]
     fn contract_posts_trending_minimal_deserializes() {
         let json = load_feeds_fixture("posts-trending-minimal.json");
         let resp: QueryResponse = serde_json::from_str(&json)
@@ -669,6 +671,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires feeds repo (local dev only)"]
     fn contract_tags_trending_deserializes() {
         let json = load_feeds_fixture("tags-trending.json");
         let resp: TagResponse = serde_json::from_str(&json)
@@ -685,6 +688,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires feeds repo (local dev only)"]
     fn contract_links_trending_deserializes() {
         let json = load_feeds_fixture("links-trending.json");
         let resp: LinkResponse = serde_json::from_str(&json)

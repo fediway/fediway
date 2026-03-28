@@ -200,6 +200,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires feeds repo (local dev only)"]
     fn contract_embedding_template_matches_feeds() {
         let feeds_template = std::fs::read_to_string(format!(
             "{}/../../../feeds/workers/orbit/templates/embedding.j2",
@@ -214,6 +215,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "requires feeds repo (local dev only)"]
     fn contract_vector_config_matches_defaults() {
         let path = format!(
             "{}/../../../feeds/fixtures/orbit/vector-config.json",
