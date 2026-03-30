@@ -45,8 +45,19 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let args = Args::parse();
+    anyhow::ensure!(args.orbit.orbit_dims > 0, "orbit_dims must be > 0");
+    anyhow::ensure!(args.orbit.orbit_alpha > 0.0, "orbit_alpha must be > 0");
+    anyhow::ensure!(
+        args.orbit.orbit_poll_interval_secs > 0,
+        "orbit_poll_interval_secs must be > 0"
+    );
+    anyhow::ensure!(
+        args.orbit.orbit_batch_size > 0,
+        "orbit_batch_size must be > 0"
+    );
 
     config::metrics::init(args.metrics_port);
+    metrics::gauge!("build_info", "service" => "fediway-orbit", "version" => env!("CARGO_PKG_VERSION")).set(1.0);
 
     let pool = state::db::connect(&args.db)
         .await
@@ -110,13 +121,15 @@ async fn init_cursors(pool: &PgPool, replay_hours: u64) {
     }
 }
 
+#[allow(clippy::too_many_lines, clippy::cast_precision_loss)]
 async fn poll_cycle(
     pool: &PgPool,
     args: &Args,
     tei_client: &TeiClient,
     template: &EmbeddingTemplate,
 ) {
-    let start = std::time::Instant::now();
+    let cycle_start = std::time::Instant::now();
+    metrics::counter!("fediway_orbit_cycle_total").increment(1);
 
     let batch_size = args.orbit.orbit_batch_size;
     let domain = &args.instance_domain;
@@ -127,11 +140,14 @@ async fn poll_cycle(
         poll::load_cursor(pool, EngagementKind::Reply.as_str()),
     );
 
+    let poll_start = std::time::Instant::now();
     let (likes, reposts, replies) = tokio::join!(
         poll::poll_favourites(pool, likes_cursor, batch_size, domain),
         poll::poll_reblogs(pool, reposts_cursor, batch_size, domain),
         poll::poll_replies(pool, replies_cursor, batch_size, domain),
     );
+    let poll_elapsed = poll_start.elapsed().as_secs_f64();
+    metrics::histogram!("fediway_orbit_poll_duration_seconds").record(poll_elapsed);
 
     let sources = [
         (EngagementKind::Like, likes),
@@ -142,9 +158,18 @@ async fn poll_cycle(
     let mut engagements: Vec<RawEngagement> = Vec::new();
 
     for (kind, result) in sources {
+        let source = kind.as_str();
         match result {
-            Ok(batch) => engagements.extend(batch),
+            Ok(batch) => {
+                let count = batch.len() as u64;
+                metrics::counter!("fediway_orbit_poll_total", "source" => source).increment(count);
+                metrics::histogram!("fediway_orbit_poll_results", "source" => source)
+                    .record(count as f64);
+                engagements.extend(batch);
+            }
             Err(e) => {
+                metrics::counter!("fediway_orbit_poll_errors_total", "source" => source)
+                    .increment(1);
                 tracing::warn!(source = kind.as_str(), error = %e, "poll failed");
             }
         }
@@ -174,7 +199,7 @@ async fn poll_cycle(
         reposts = reposts_count,
         replies = replies_count,
         total = engagements.len(),
-        elapsed_ms = start.elapsed().as_millis() as u64,
+        elapsed_ms = cycle_start.elapsed().as_millis() as u64,
         "polled engagements"
     );
 
@@ -192,6 +217,7 @@ async fn poll_cycle(
         return;
     }
 
+    metrics::counter!("fediway_orbit_texts_embedded_total").increment(embeddings.len() as u64);
     tracing::info!(unique_texts = embeddings.len(), "computed embeddings");
 
     vector::process_engagements(
@@ -224,8 +250,13 @@ async fn poll_cycle(
 
         if let Some(id) = max_processed {
             poll::save_cursor(pool, kind.as_str(), id).await;
+            metrics::gauge!("fediway_orbit_cursor_position", "source" => kind.as_str())
+                .set(id as f64);
         }
     }
+
+    metrics::histogram!("fediway_orbit_cycle_duration_seconds")
+        .record(cycle_start.elapsed().as_secs_f64());
 }
 
 async fn shutdown_signal() {

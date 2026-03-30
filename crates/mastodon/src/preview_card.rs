@@ -95,15 +95,15 @@ impl From<Link> for PreviewCard {
 
         Self {
             url: link.url,
-            title: link.title,
-            description: link.description,
+            title: crate::sanitize::sanitize_text(&link.title),
+            description: crate::sanitize::sanitize_text(&link.description),
             card_type: link.link_type,
             authors,
-            author_name: link.author_name.unwrap_or_default(),
+            author_name: crate::sanitize::sanitize_text(&link.author_name.unwrap_or_default()),
             author_url: String::new(),
-            provider_name: link.provider_name.unwrap_or_default(),
+            provider_name: crate::sanitize::sanitize_text(&link.provider_name.unwrap_or_default()),
             provider_url: String::new(),
-            html: link.embed_html.unwrap_or_default(),
+            html: crate::sanitize::sanitize_html(&link.embed_html.unwrap_or_default()),
             width: link.image_width.unwrap_or(0),
             height: link.image_height.unwrap_or(0),
             image: link.image_url,
@@ -221,13 +221,14 @@ mod tests {
     }
 
     #[test]
-    fn html_from_embed_html() {
+    fn html_from_embed_html_is_sanitized() {
         let link = Link {
             embed_html: Some("<iframe src=\"https://example.com\"></iframe>".into()),
             ..sample_link()
         };
         let card = PreviewCard::from(link);
-        assert_eq!(card.html, "<iframe src=\"https://example.com\"></iframe>");
+        // Iframes are stripped by the sanitizer — this is correct behavior.
+        assert!(!card.html.contains("iframe"), "iframes must be stripped");
     }
 
     #[test]

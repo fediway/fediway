@@ -16,11 +16,16 @@ pub struct TestApp {
 pub struct TestResponse {
     pub status: StatusCode,
     pub body: String,
+    headers: axum::http::HeaderMap,
 }
 
 impl TestResponse {
     pub fn json(&self) -> serde_json::Value {
         serde_json::from_str(&self.body).expect("response body is not valid JSON")
+    }
+
+    pub fn header(&self, name: &str) -> Option<&str> {
+        self.headers.get(name).and_then(|v| v.to_str().ok())
     }
 }
 
@@ -54,41 +59,32 @@ impl TestApp {
     }
 
     pub async fn get(&self, path: &str) -> TestResponse {
-        let response = self
-            .router
-            .clone()
-            .oneshot(Request::get(path).body(Body::empty()).unwrap())
+        self.raw_request(Request::get(path).body(Body::empty()).unwrap())
             .await
-            .unwrap();
+    }
+
+    pub async fn raw_request(&self, request: Request<Body>) -> TestResponse {
+        let response = self.router.clone().oneshot(request).await.unwrap();
 
         let status = response.status();
+        let headers = response.headers().clone();
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         TestResponse {
             status,
             body: String::from_utf8(bytes.to_vec()).unwrap(),
+            headers,
         }
     }
 
     #[allow(dead_code)]
     pub async fn post_json(&self, path: &str, body: &impl Serialize) -> TestResponse {
-        let response = self
-            .router
-            .clone()
-            .oneshot(
-                Request::post(path)
-                    .header("content-type", "application/json")
-                    .body(Body::from(serde_json::to_string(body).unwrap()))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        let status = response.status();
-        let bytes = response.into_body().collect().await.unwrap().to_bytes();
-        TestResponse {
-            status,
-            body: String::from_utf8(bytes.to_vec()).unwrap(),
-        }
+        self.raw_request(
+            Request::post(path)
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::to_string(body).unwrap()))
+                .unwrap(),
+        )
+        .await
     }
 }
 

@@ -98,13 +98,19 @@ pub async fn embed_engagements(
 
     for chunk in unique_texts.chunks(batch_size) {
         let texts: Vec<String> = chunk.to_vec();
+        let tei_start = std::time::Instant::now();
         match tei.embed_batch(&texts).await {
             Ok(embeddings) => {
+                metrics::histogram!("fediway_orbit_tei_request_duration_seconds")
+                    .record(tei_start.elapsed().as_secs_f64());
+                #[allow(clippy::cast_precision_loss)]
+                metrics::histogram!("fediway_orbit_tei_batch_size").record(chunk.len() as f64);
                 for (text, embedding) in texts.into_iter().zip(embeddings) {
                     results.insert(text, truncate_and_normalize(&embedding, dims));
                 }
             }
             Err(e) => {
+                metrics::counter!("fediway_orbit_tei_errors_total").increment(1);
                 tracing::warn!(
                     batch_size = chunk.len(),
                     error = %e,

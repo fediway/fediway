@@ -36,6 +36,7 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
     config::metrics::init(args.instance.metrics_port);
+    metrics::gauge!("build_info", "service" => "fediway-server", "version" => env!("CARGO_PKG_VERSION")).set(1.0);
 
     let pool = ::state::db::connect(&args.db)
         .await

@@ -9,6 +9,7 @@ use crate::media_attachment::{
 use crate::mention::Mention;
 use crate::preview_card::PreviewCard;
 use crate::quote::{Quote, QuoteApproval};
+use crate::sanitize::{sanitize_html, sanitize_text};
 use crate::tag::Tag;
 
 const MISSING_AVATAR: &str = "/avatars/original/missing.png";
@@ -80,7 +81,7 @@ fn build_account(author: &common::types::Author, published_at: DateTime<Utc>) ->
         acct,
         url: author.url.clone(),
         uri: author.url.clone(),
-        display_name: author.display_name.clone(),
+        display_name: sanitize_text(&author.display_name),
         note: String::new(),
         avatar: avatar.clone(),
         avatar_static: avatar,
@@ -135,10 +136,14 @@ impl From<Post> for Status {
         let tags: Vec<Tag> = post
             .tags
             .iter()
-            .map(|name| Tag {
-                name: name.clone(),
-                url: format!("/tags/{name}"),
-                history: Vec::new(),
+            .map(|name| {
+                let sanitized = sanitize_text(name);
+                let url = format!("/tags/{sanitized}");
+                Tag {
+                    name: sanitized,
+                    url,
+                    history: Vec::new(),
+                }
             })
             .collect();
         let in_reply_to_id = post.reply_to.as_ref().map(|r| r.url.clone());
@@ -157,12 +162,12 @@ impl From<Post> for Status {
             url: Some(post.url),
             created_at: post.published_at,
             edited_at: None,
-            content: post.content,
+            content: sanitize_html(&post.content),
             text: Some(post.text),
             visibility: "public",
             language: post.language,
             sensitive: post.sensitive,
-            spoiler_text: post.content_warning.unwrap_or_default(),
+            spoiler_text: sanitize_text(&post.content_warning.unwrap_or_default()),
             in_reply_to_id,
             in_reply_to_account_id,
             account,

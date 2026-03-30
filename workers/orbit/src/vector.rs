@@ -65,7 +65,7 @@ async fn batch_load_vectors(db: &PgPool, account_ids: &[i64]) -> HashMap<i64, Us
 }
 
 async fn upsert_vector(db: &PgPool, account_id: i64, vector: &[f32], engagement_count: i64) {
-    let _ = sqlx::query(
+    if let Err(e) = sqlx::query(
         "INSERT INTO orbit_user_vectors (account_id, vector, engagement_count, updated_at)
          VALUES ($1, $2, $3, now())
          ON CONFLICT (account_id) DO UPDATE SET
@@ -77,7 +77,11 @@ async fn upsert_vector(db: &PgPool, account_id: i64, vector: &[f32], engagement_
     .bind(vector)
     .bind(engagement_count)
     .execute(db)
-    .await;
+    .await
+    {
+        tracing::warn!(account_id, error = %e, "failed to upsert user vector");
+        metrics::counter!("fediway_orbit_vector_upsert_errors_total").increment(1);
+    }
 }
 
 pub async fn process_engagements(
@@ -93,8 +97,19 @@ pub async fn process_engagements(
         by_account.entry(e.account_id).or_default().push(e);
     }
 
+    for user_engagements in by_account.values() {
+        #[allow(clippy::cast_precision_loss)]
+        metrics::histogram!("fediway_orbit_engagements_per_user")
+            .record(user_engagements.len() as f64);
+    }
+
     let account_ids: Vec<i64> = by_account.keys().copied().collect();
     let mut states = batch_load_vectors(db, &account_ids).await;
+
+    let found = states.len() as u64;
+    let miss = account_ids.len() as u64 - found;
+    metrics::counter!("fediway_orbit_vectors_loaded_total", "result" => "hit").increment(found);
+    metrics::counter!("fediway_orbit_vectors_loaded_total", "result" => "miss").increment(miss);
 
     let mut updated_count = 0u64;
 
@@ -124,6 +139,7 @@ pub async fn process_engagements(
     }
 
     if updated_count > 0 {
+        metrics::counter!("fediway_orbit_vectors_updated_total").increment(updated_count);
         tracing::info!(vectors_updated = updated_count, "EMA update complete");
     }
 }

@@ -34,4 +34,8 @@ pub struct DatabaseConfig {
     /// Maximum lifetime in seconds before a connection is recycled.
     #[arg(long, env = "DB_MAX_LIFETIME", default_value_t = 1800)]
     pub db_max_lifetime_secs: u64,
+
+    /// Maximum time in seconds for a single SQL statement. Enforced by Postgres.
+    #[arg(long, env = "DB_STATEMENT_TIMEOUT", default_value_t = 30)]
+    pub db_statement_timeout_secs: u64,
 }

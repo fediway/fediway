@@ -3,6 +3,7 @@ mod media_attachment;
 mod mention;
 mod preview_card;
 mod quote;
+pub mod sanitize;
 mod status;
 mod tag;
 

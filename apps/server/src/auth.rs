@@ -19,10 +19,25 @@ impl FromRequestParts<AppState> for Account {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Self, Self::Rejection> {
-        let token = extract_token(parts).ok_or(StatusCode::UNAUTHORIZED)?;
-        resolve_account(&state.pool, &token)
-            .await
-            .ok_or(StatusCode::UNAUTHORIZED)
+        let Some(token) = extract_token(parts) else {
+            metrics::counter!("fediway_auth_total", "result" => "no_token").increment(1);
+            return Err(StatusCode::UNAUTHORIZED);
+        };
+        match resolve_account(&state.pool, &token).await {
+            Ok(Some(account)) => {
+                metrics::counter!("fediway_auth_total", "result" => "success").increment(1);
+                Ok(account)
+            }
+            Ok(None) => {
+                metrics::counter!("fediway_auth_total", "result" => "invalid_token").increment(1);
+                Err(StatusCode::UNAUTHORIZED)
+            }
+            Err(e) => {
+                tracing::error!(error = %e, "auth DB query failed");
+                metrics::counter!("fediway_auth_total", "result" => "db_error").increment(1);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
     }
 }
 
@@ -33,11 +48,24 @@ impl OptionalFromRequestParts<AppState> for Account {
         parts: &mut Parts,
         state: &AppState,
     ) -> Result<Option<Self>, Self::Rejection> {
-        let account = match extract_token(parts) {
-            Some(token) => resolve_account(&state.pool, &token).await,
-            None => None,
+        let Some(token) = extract_token(parts) else {
+            return Ok(None); // No token = anonymous request, don't count as auth failure
         };
-        Ok(account)
+        match resolve_account(&state.pool, &token).await {
+            Ok(Some(account)) => {
+                metrics::counter!("fediway_auth_total", "result" => "success").increment(1);
+                Ok(Some(account))
+            }
+            Ok(None) => {
+                metrics::counter!("fediway_auth_total", "result" => "invalid_token").increment(1);
+                Ok(None)
+            }
+            Err(e) => {
+                tracing::error!(error = %e, "auth DB query failed");
+                metrics::counter!("fediway_auth_total", "result" => "db_error").increment(1);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
     }
 }
 
@@ -58,8 +86,8 @@ struct TokenRow {
     locale: Option<String>,
 }
 
-async fn resolve_account(db: &PgPool, token: &str) -> Option<Account> {
-    let row = sqlx::query_as::<_, TokenRow>(
+async fn resolve_account(db: &PgPool, token: &str) -> Result<Option<Account>, sqlx::Error> {
+    let Some(row) = sqlx::query_as::<_, TokenRow>(
         "SELECT u.account_id, a.username, u.chosen_languages, u.locale
          FROM oauth_access_tokens t
          JOIN users u ON u.id = t.resource_owner_id
@@ -70,20 +98,21 @@ async fn resolve_account(db: &PgPool, token: &str) -> Option<Account> {
     )
     .bind(token)
     .fetch_optional(db)
-    .await
-    .ok()
-    .flatten()?;
+    .await?
+    else {
+        return Ok(None);
+    };
 
     let chosen_languages = match row.chosen_languages {
         Some(ref langs) if !langs.is_empty() => langs.clone(),
         _ => row.locale.into_iter().collect(),
     };
 
-    Some(Account {
+    Ok(Some(Account {
         id: row.account_id,
         username: row.username,
         chosen_languages,
-    })
+    }))
 }
 
 #[cfg(test)]

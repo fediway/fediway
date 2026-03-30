@@ -63,6 +63,9 @@ hmac = "0.12"
 sha2 = "0.10"
 hex = "0.4"
 
+# HTML sanitization
+ammonia = "4"
+
 # Error handling
 thiserror = "2"
 anyhow = "1"

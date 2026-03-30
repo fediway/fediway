@@ -86,7 +86,7 @@ jobs:
           cache-on-failure: true
 
       - name: Run all tests (unit + integration)
-        run: cargo nextest run --workspace --locked
+        run: cargo nextest run --workspace --locked --profile ci
         env:
           RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
 

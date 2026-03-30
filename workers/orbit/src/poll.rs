@@ -193,7 +193,7 @@ pub async fn load_cursor(db: &PgPool, source: &str) -> i64 {
 }
 
 pub async fn save_cursor(db: &PgPool, source: &str, last_id: i64) {
-    let _ = sqlx::query(
+    if let Err(e) = sqlx::query(
         "INSERT INTO orbit_cursors (source_name, last_id, updated_at)
          VALUES ($1, $2, now())
          ON CONFLICT (source_name) DO UPDATE SET
@@ -203,7 +203,11 @@ pub async fn save_cursor(db: &PgPool, source: &str, last_id: i64) {
     .bind(source)
     .bind(last_id)
     .execute(db)
-    .await;
+    .await
+    {
+        tracing::warn!(source_name = source, error = %e, "failed to save cursor");
+        metrics::counter!("fediway_orbit_cursor_save_errors_total").increment(1);
+    }
 }
 
 /// Initialize cursor for first startup by finding the start of the replay window.

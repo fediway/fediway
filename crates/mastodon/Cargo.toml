@@ -10,6 +10,7 @@ workspace = true
 common.workspace = true
 serde.workspace = true
 chrono.workspace = true
+ammonia.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true

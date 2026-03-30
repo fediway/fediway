@@ -45,6 +45,9 @@ pub async fn statuses(
     headers: HeaderMap,
     Query(params): Query<Params>,
 ) -> Result<impl IntoResponse, StatusCode> {
+    let handler_start = std::time::Instant::now();
+    metrics::counter!("fediway_trends_requests_total", "resource" => "statuses").increment(1);
+
     let limit = params.limit.min(40);
     let languages = resolve_languages(&account, &headers);
     observe::language_requested(&languages);
@@ -79,10 +82,17 @@ pub async fn statuses(
         .map(|c| Status::from(c.item))
         .collect();
 
+    #[allow(clippy::cast_precision_loss)]
+    metrics::histogram!("fediway_trends_results", "resource" => "statuses")
+        .record(statuses.len() as f64);
+
     let mut response_headers = HeaderMap::new();
     if let Some((key, value)) = link_header("/api/v1/trends/statuses", page.cursor.as_ref()) {
         response_headers.insert(key, value);
     }
+
+    metrics::histogram!("fediway_trends_duration_seconds", "resource" => "statuses")
+        .record(handler_start.elapsed().as_secs_f64());
 
     Ok((response_headers, Json(statuses)))
 }
@@ -93,6 +103,9 @@ pub async fn tags(
     headers: HeaderMap,
     Query(params): Query<Params>,
 ) -> Result<impl IntoResponse, StatusCode> {
+    let handler_start = std::time::Instant::now();
+    metrics::counter!("fediway_trends_requests_total", "resource" => "tags").increment(1);
+
     let limit = params.limit.min(40);
     let languages = resolve_languages(&account, &headers);
     observe::language_requested(&languages);
@@ -125,10 +138,16 @@ pub async fn tags(
         .map(|c| MastodonTag::from(c.item))
         .collect();
 
+    #[allow(clippy::cast_precision_loss)]
+    metrics::histogram!("fediway_trends_results", "resource" => "tags").record(tags.len() as f64);
+
     let mut response_headers = HeaderMap::new();
     if let Some((key, value)) = link_header("/api/v1/trends/tags", page.cursor.as_ref()) {
         response_headers.insert(key, value);
     }
+
+    metrics::histogram!("fediway_trends_duration_seconds", "resource" => "tags")
+        .record(handler_start.elapsed().as_secs_f64());
 
     Ok((response_headers, Json(tags)))
 }
@@ -139,6 +158,9 @@ pub async fn links(
     headers: HeaderMap,
     Query(params): Query<Params>,
 ) -> Result<impl IntoResponse, StatusCode> {
+    let handler_start = std::time::Instant::now();
+    metrics::counter!("fediway_trends_requests_total", "resource" => "links").increment(1);
+
     let limit = params.limit.min(40);
     let languages = resolve_languages(&account, &headers);
     observe::language_requested(&languages);
@@ -173,10 +195,16 @@ pub async fn links(
         .map(|c| PreviewCard::from(c.item))
         .collect();
 
+    #[allow(clippy::cast_precision_loss)]
+    metrics::histogram!("fediway_trends_results", "resource" => "links").record(links.len() as f64);
+
     let mut response_headers = HeaderMap::new();
     if let Some((key, value)) = link_header("/api/v1/trends/links", page.cursor.as_ref()) {
         response_headers.insert(key, value);
     }
+
+    metrics::histogram!("fediway_trends_duration_seconds", "resource" => "links")
+        .record(handler_start.elapsed().as_secs_f64());
 
     Ok((response_headers, Json(links)))
 }

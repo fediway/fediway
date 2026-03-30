@@ -44,6 +44,9 @@ pub async fn handle(
     headers: HeaderMap,
     Query(params): Query<Params>,
 ) -> Result<impl IntoResponse, StatusCode> {
+    let handler_start = std::time::Instant::now();
+    metrics::counter!("fediway_home_requests_total").increment(1);
+
     let limit = params.limit.min(40);
     let languages = resolve_languages(&Some(account.clone()), &headers);
 
@@ -52,17 +55,30 @@ pub async fn handle(
         ..Default::default()
     };
 
+    let vector_start = std::time::Instant::now();
     let user_vector = state::orbit::load_vector(&state.pool, account.id).await;
+    metrics::histogram!("fediway_home_vector_load_duration_seconds")
+        .record(vector_start.elapsed().as_secs_f64());
 
-    let (recommended_pool, trending_pool) = match &user_vector {
-        Some((_vector, count)) => {
-            let confidence = (f64::from(i32::try_from(*count).unwrap_or(i32::MAX)) / 50.0).min(1.0);
-            #[allow(clippy::cast_sign_loss)]
-            let rec = (confidence * 60.0) as usize;
-            (rec, POOL_SIZE - rec)
-        }
-        None => (0, POOL_SIZE),
+    let (recommended_pool, trending_pool) = if let Some((_vector, count)) = &user_vector {
+        metrics::counter!("fediway_home_vector_loaded_total", "result" => "found").increment(1);
+        let confidence = (f64::from(i32::try_from(*count).unwrap_or(i32::MAX)) / 50.0).min(1.0);
+        metrics::histogram!("fediway_home_confidence").record(confidence);
+        #[allow(clippy::cast_sign_loss)]
+        let rec = (confidence * 60.0) as usize;
+        (rec, POOL_SIZE - rec)
+    } else {
+        metrics::counter!("fediway_home_vector_loaded_total", "result" => "cold_start")
+            .increment(1);
+        (0, POOL_SIZE)
     };
+
+    #[allow(clippy::cast_precision_loss)]
+    let recommended_pool_f64 = recommended_pool as f64;
+    #[allow(clippy::cast_precision_loss)]
+    let trending_pool_f64 = trending_pool as f64;
+    metrics::histogram!("fediway_home_recommended_pool").record(recommended_pool_f64);
+    metrics::histogram!("fediway_home_trending_pool").record(trending_pool_f64);
 
     let mut builder = Feed::builder().name("timelines/home");
 
@@ -111,10 +127,16 @@ pub async fn handle(
         .map(|c| Status::from(c.item))
         .collect();
 
+    #[allow(clippy::cast_precision_loss)]
+    metrics::histogram!("fediway_home_results").record(statuses.len() as f64);
+
     let mut response_headers = HeaderMap::new();
     if let Some((key, value)) = link_header(page.cursor.as_ref()) {
         response_headers.insert(key, value);
     }
+
+    metrics::histogram!("fediway_home_duration_seconds")
+        .record(handler_start.elapsed().as_secs_f64());
 
     Ok((response_headers, Json(statuses)))
 }
