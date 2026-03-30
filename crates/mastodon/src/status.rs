@@ -118,7 +118,7 @@ fn build_media_attachment(i: usize, m: &common::types::Media) -> MediaAttachment
         preview_url: m.thumbnail_url.clone(),
         remote_url: None,
         meta,
-        description: m.alt.clone(),
+        description: m.alt.as_deref().map(sanitize_text),
         blurhash: m.blurhash.clone(),
     }
 }

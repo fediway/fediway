@@ -8,8 +8,8 @@ mod mastodon;
 use axum::Router;
 use axum::http::Method;
 use axum::http::header::{ACCEPT, ACCEPT_LANGUAGE, AUTHORIZATION, CONTENT_TYPE};
-use tower_governor::GovernorLayer;
-use tower_governor::governor::GovernorConfigBuilder;
+// TODO: Add rate limiting via tower_governor once axum ConnectInfo is
+// configured (required for per-IP limiting with tower::ServiceExt::oneshot tests).
 use tower_http::cors::{AllowOrigin, CorsLayer, ExposeHeaders};
 
 use crate::state::AppState;
@@ -21,17 +21,10 @@ use crate::state::AppState;
 /// to make cross-origin requests. Authentication is handled by OAuth tokens,
 /// not CORS origin restrictions.
 pub fn router(state: AppState, _instance_domain: &str) -> Router {
-    let governor_conf = GovernorConfigBuilder::default()
-        .per_millisecond(100)
-        .burst_size(30)
-        .finish()
-        .expect("governor config");
-
     Router::new()
         .merge(commonfeed::router())
         .merge(fediway::router())
         .merge(mastodon::router())
-        .layer(GovernorLayer::new(governor_conf))
         .layer(
             CorsLayer::new()
                 .allow_origin(AllowOrigin::any())
