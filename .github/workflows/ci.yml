@@ -70,6 +70,7 @@ jobs:
       DB_PORT: 5432
       DB_USER: fediway
       DB_PASS: fediway
+      DATABASE_URL: postgres://fediway:fediway@localhost:5432/postgres
 
     steps:
       - uses: actions/checkout@v4

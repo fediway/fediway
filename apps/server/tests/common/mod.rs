@@ -9,8 +9,6 @@ use server::state::AppStateInner;
 
 pub struct TestApp {
     router: axum::Router,
-    pool: PgPool,
-    db_name: String,
 }
 
 pub struct TestResponse {
@@ -30,32 +28,14 @@ impl TestResponse {
 }
 
 impl TestApp {
-    pub async fn spawn() -> Option<Self> {
-        tokio::time::timeout(std::time::Duration::from_secs(15), Self::spawn_inner())
-            .await
-            .ok()?
-    }
-
-    async fn spawn_inner() -> Option<Self> {
-        let pool = setup_test_db().await?;
-        let db_name = pool
-            .connect_options()
-            .get_database()
-            .unwrap_or("")
-            .to_string();
-
-        let state = AppStateInner::new(pool.clone(), "bge_small_64d".into());
+    pub async fn from_pool(pool: PgPool) -> Self {
+        let state = AppStateInner::new(pool, "nomic_v1.5_64d".into());
         let router = server::routes::router(state, "");
-
-        Some(Self {
-            router,
-            pool,
-            db_name,
-        })
+        Self { router }
     }
 
     pub fn pool(&self) -> &PgPool {
-        &self.pool
+        unimplemented!("use the pool argument from #[sqlx::test] directly")
     }
 
     pub async fn get(&self, path: &str) -> TestResponse {
@@ -64,7 +44,13 @@ impl TestApp {
     }
 
     pub async fn raw_request(&self, request: Request<Body>) -> TestResponse {
-        let response = self.router.clone().oneshot(request).await.unwrap();
+        let response = tokio::time::timeout(
+            std::time::Duration::from_secs(15),
+            self.router.clone().oneshot(request),
+        )
+        .await
+        .expect("request timed out after 15s")
+        .unwrap();
 
         let status = response.status();
         let headers = response.headers().clone();
@@ -86,54 +72,4 @@ impl TestApp {
         )
         .await
     }
-}
-
-impl Drop for TestApp {
-    fn drop(&mut self) {
-        let db_name = self.db_name.clone();
-        let pool = self.pool.clone();
-        std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap();
-            rt.block_on(async {
-                pool.close().await;
-                if let Ok(admin) = PgPool::connect(&admin_url()).await {
-                    let _ = sqlx::query(&format!("DROP DATABASE IF EXISTS \"{db_name}\""))
-                        .execute(&admin)
-                        .await;
-                }
-            });
-        })
-        .join()
-        .ok();
-    }
-}
-
-fn admin_url() -> String {
-    let host = std::env::var("DB_HOST").unwrap_or_else(|_| "localhost".into());
-    let port = std::env::var("DB_PORT").unwrap_or_else(|_| "5432".into());
-    let user = std::env::var("DB_USER").unwrap_or_else(|_| "fediway".into());
-    let pass = std::env::var("DB_PASS").unwrap_or_else(|_| "fediway".into());
-    format!("postgres://{user}:{pass}@{host}:{port}/postgres")
-}
-
-async fn setup_test_db() -> Option<PgPool> {
-    let admin_pool = PgPool::connect(&admin_url()).await.ok()?;
-    let db_name = format!("fediway_test_{}", uuid::Uuid::new_v4().simple());
-    sqlx::query(&format!("CREATE DATABASE \"{db_name}\""))
-        .execute(&admin_pool)
-        .await
-        .ok()?;
-
-    let host = std::env::var("DB_HOST").unwrap_or_else(|_| "localhost".into());
-    let port = std::env::var("DB_PORT").unwrap_or_else(|_| "5432".into());
-    let user = std::env::var("DB_USER").unwrap_or_else(|_| "fediway".into());
-    let pass = std::env::var("DB_PASS").unwrap_or_else(|_| "fediway".into());
-    let url = format!("postgres://{user}:{pass}@{host}:{port}/{db_name}");
-
-    let pool = PgPool::connect(&url).await.ok()?;
-    state::db::migrate(&pool).await.ok()?;
-    Some(pool)
 }

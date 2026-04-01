@@ -1,15 +1,12 @@
 mod common;
 
 use axum::http::StatusCode;
+use sqlx::PgPool;
 
-#[tokio::test]
-async fn cors_allows_any_origin() {
-    let Some(app) = common::TestApp::spawn().await else {
-        eprintln!("SKIPPED: infrastructure not available");
-        return;
-    };
+#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+async fn cors_allows_any_origin(pool: PgPool) {
+    let app = common::TestApp::from_pool(pool).await;
 
-    // Simulate a request from a third-party web client (e.g., Elk)
     let response = app
         .raw_request(
             axum::http::Request::get("/fediway/health")
@@ -27,12 +24,9 @@ async fn cors_allows_any_origin() {
     );
 }
 
-#[tokio::test]
-async fn cors_preflight_allows_methods() {
-    let Some(app) = common::TestApp::spawn().await else {
-        eprintln!("SKIPPED: infrastructure not available");
-        return;
-    };
+#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+async fn cors_preflight_allows_methods(pool: PgPool) {
+    let app = common::TestApp::from_pool(pool).await;
 
     let response = app
         .raw_request(
@@ -47,7 +41,6 @@ async fn cors_preflight_allows_methods() {
         )
         .await;
 
-    // Preflight should succeed
     assert_eq!(response.status, StatusCode::OK);
     assert_eq!(response.header("access-control-allow-origin"), Some("*"),);
 
@@ -60,12 +53,9 @@ async fn cors_preflight_allows_methods() {
     );
 }
 
-#[tokio::test]
-async fn cors_exposes_rate_limit_headers() {
-    let Some(app) = common::TestApp::spawn().await else {
-        eprintln!("SKIPPED: infrastructure not available");
-        return;
-    };
+#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+async fn cors_exposes_rate_limit_headers(pool: PgPool) {
+    let app = common::TestApp::from_pool(pool).await;
 
     let response = app
         .raw_request(
