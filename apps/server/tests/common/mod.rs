@@ -29,8 +29,8 @@ impl TestResponse {
 
 impl TestApp {
     pub async fn from_pool(pool: PgPool) -> Self {
-        let state = AppStateInner::new(pool, "nomic_v1.5_64d".into());
-        let router = server::routes::router(state, "");
+        let state = AppStateInner::new(pool, "nomic_v1.5_64d".into(), "test.example.com".into());
+        let router = server::routes::router(state);
         Self { router }
     }
 

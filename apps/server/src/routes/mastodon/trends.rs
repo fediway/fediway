@@ -31,9 +31,13 @@ const fn default_limit() -> usize {
 
 const POOL_SIZE: usize = 100;
 
-fn link_header(path: &str, cursor: Option<&String>) -> Option<(header::HeaderName, HeaderValue)> {
+fn link_header(
+    domain: &str,
+    path: &str,
+    cursor: Option<&String>,
+) -> Option<(header::HeaderName, HeaderValue)> {
     let cursor = cursor?;
-    let value = format!("<{path}?offset={cursor}>; rel=\"next\"");
+    let value = format!("<https://{domain}{path}?offset={cursor}>; rel=\"next\"");
     HeaderValue::from_str(&value)
         .ok()
         .map(|v| (header::LINK, v))
@@ -87,7 +91,11 @@ pub async fn statuses(
         .record(statuses.len() as f64);
 
     let mut response_headers = HeaderMap::new();
-    if let Some((key, value)) = link_header("/api/v1/trends/statuses", page.cursor.as_ref()) {
+    if let Some((key, value)) = link_header(
+        &state.instance_domain,
+        "/api/v1/trends/statuses",
+        page.cursor.as_ref(),
+    ) {
         response_headers.insert(key, value);
     }
 
@@ -142,7 +150,11 @@ pub async fn tags(
     metrics::histogram!("fediway_trends_results", "resource" => "tags").record(tags.len() as f64);
 
     let mut response_headers = HeaderMap::new();
-    if let Some((key, value)) = link_header("/api/v1/trends/tags", page.cursor.as_ref()) {
+    if let Some((key, value)) = link_header(
+        &state.instance_domain,
+        "/api/v1/trends/tags",
+        page.cursor.as_ref(),
+    ) {
         response_headers.insert(key, value);
     }
 
@@ -199,7 +211,11 @@ pub async fn links(
     metrics::histogram!("fediway_trends_results", "resource" => "links").record(links.len() as f64);
 
     let mut response_headers = HeaderMap::new();
-    if let Some((key, value)) = link_header("/api/v1/trends/links", page.cursor.as_ref()) {
+    if let Some((key, value)) = link_header(
+        &state.instance_domain,
+        "/api/v1/trends/links",
+        page.cursor.as_ref(),
+    ) {
         response_headers.insert(key, value);
     }
 
@@ -207,4 +223,30 @@ pub async fn links(
         .record(handler_start.elapsed().as_secs_f64());
 
     Ok((response_headers, Json(links)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn link_header_returns_absolute_url() {
+        let cursor = Some("abc123".to_string());
+        let (key, value) = link_header(
+            "mastodon.social",
+            "/api/v1/trends/statuses",
+            cursor.as_ref(),
+        )
+        .unwrap();
+        assert_eq!(key, header::LINK);
+        assert_eq!(
+            value.to_str().unwrap(),
+            r#"<https://mastodon.social/api/v1/trends/statuses?offset=abc123>; rel="next""#,
+        );
+    }
+
+    #[test]
+    fn link_header_returns_none_without_cursor() {
+        assert!(link_header("mastodon.social", "/api/v1/trends/statuses", None).is_none());
+    }
 }

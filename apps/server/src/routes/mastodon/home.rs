@@ -30,9 +30,9 @@ const fn default_limit() -> usize {
 
 const POOL_SIZE: usize = 100;
 
-fn link_header(cursor: Option<&String>) -> Option<(header::HeaderName, HeaderValue)> {
+fn link_header(domain: &str, cursor: Option<&String>) -> Option<(header::HeaderName, HeaderValue)> {
     let cursor = cursor?;
-    let value = format!("</api/v1/timelines/home?offset={cursor}>; rel=\"next\"");
+    let value = format!("<https://{domain}/api/v1/timelines/home?offset={cursor}>; rel=\"next\"");
     HeaderValue::from_str(&value)
         .ok()
         .map(|v| (header::LINK, v))
@@ -131,7 +131,7 @@ pub async fn handle(
     metrics::histogram!("fediway_home_results").record(statuses.len() as f64);
 
     let mut response_headers = HeaderMap::new();
-    if let Some((key, value)) = link_header(page.cursor.as_ref()) {
+    if let Some((key, value)) = link_header(&state.instance_domain, page.cursor.as_ref()) {
         response_headers.insert(key, value);
     }
 

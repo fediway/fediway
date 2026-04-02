@@ -20,7 +20,7 @@ use crate::state::AppState;
 /// API endpoints. Third-party web clients (Elk, Phanpy, etc.) rely on this
 /// to make cross-origin requests. Authentication is handled by OAuth tokens,
 /// not CORS origin restrictions.
-pub fn router(state: AppState, _instance_domain: &str) -> Router {
+pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(commonfeed::router())
         .merge(fediway::router())
