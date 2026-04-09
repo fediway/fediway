@@ -161,15 +161,8 @@ mod tests {
             status_with_id("10"),
         ];
 
-        let (page, _) = paginate_statuses(
-            statuses,
-            3,
-            Some("40"),
-            None,
-            None,
-            "example.com",
-            "/test",
-        );
+        let (page, _) =
+            paginate_statuses(statuses, 3, Some("40"), None, None, "example.com", "/test");
 
         assert_eq!(ids(&page), vec!["30", "20", "10"]);
     }
@@ -184,15 +177,8 @@ mod tests {
             status_with_id("10"),
         ];
 
-        let (page, _) = paginate_statuses(
-            statuses,
-            3,
-            None,
-            Some("20"),
-            None,
-            "example.com",
-            "/test",
-        );
+        let (page, _) =
+            paginate_statuses(statuses, 3, None, Some("20"), None, "example.com", "/test");
 
         assert_eq!(ids(&page), vec!["50", "40", "30"]);
     }
@@ -207,30 +193,16 @@ mod tests {
             status_with_id("10"),
         ];
 
-        let (page, _) = paginate_statuses(
-            statuses,
-            2,
-            None,
-            None,
-            Some("30"),
-            "example.com",
-            "/test",
-        );
+        let (page, _) =
+            paginate_statuses(statuses, 2, None, None, Some("30"), "example.com", "/test");
 
         assert_eq!(ids(&page), vec!["50", "40"]);
     }
 
     #[test]
     fn paginate_empty_result() {
-        let (page, headers) = paginate_statuses(
-            vec![],
-            20,
-            None,
-            None,
-            None,
-            "example.com",
-            "/test",
-        );
+        let (page, headers) =
+            paginate_statuses(vec![], 20, None, None, None, "example.com", "/test");
 
         assert!(page.is_empty());
         assert!(headers.get(header::LINK).is_none());
@@ -238,20 +210,10 @@ mod tests {
 
     #[test]
     fn paginate_max_id_excludes_all() {
-        let statuses = vec![
-            status_with_id("50"),
-            status_with_id("40"),
-        ];
+        let statuses = vec![status_with_id("50"), status_with_id("40")];
 
-        let (page, _) = paginate_statuses(
-            statuses,
-            20,
-            Some("10"),
-            None,
-            None,
-            "example.com",
-            "/test",
-        );
+        let (page, _) =
+            paginate_statuses(statuses, 20, Some("10"), None, None, "example.com", "/test");
 
         assert!(page.is_empty());
     }
@@ -264,15 +226,8 @@ mod tests {
             status_with_id("40"),
         ];
 
-        let (page, _) = paginate_statuses(
-            statuses,
-            3,
-            Some("45"),
-            None,
-            None,
-            "example.com",
-            "/test",
-        );
+        let (page, _) =
+            paginate_statuses(statuses, 3, Some("45"), None, None, "example.com", "/test");
 
         // Non-numeric ID filtered out by parse check, numeric ones filtered by max_id
         assert_eq!(ids(&page), vec!["40"]);
