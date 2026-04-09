@@ -28,6 +28,9 @@ pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next:
 
     let path = req.uri().path_and_query().map(ToString::to_string);
     let auth = req.headers().get(header::AUTHORIZATION).cloned();
+    let host = req.headers().get(header::HOST).cloned();
+    let accept_lang = req.headers().get(header::ACCEPT_LANGUAGE).cloned();
+    let user_agent = req.headers().get(header::USER_AGENT).cloned();
 
     let response = next.run(req).await;
 
@@ -42,6 +45,15 @@ pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next:
     let mut proxy_req = HTTP_CLIENT.get(format!("{base_url}{path}"));
     if let Some(auth) = auth {
         proxy_req = proxy_req.header(header::AUTHORIZATION, auth);
+    }
+    if let Some(host) = host {
+        proxy_req = proxy_req.header(header::HOST, host);
+    }
+    if let Some(al) = accept_lang {
+        proxy_req = proxy_req.header(header::ACCEPT_LANGUAGE, al);
+    }
+    if let Some(ua) = user_agent {
+        proxy_req = proxy_req.header(header::USER_AGENT, ua);
     }
 
     let proxy_resp = match proxy_req.send().await {
