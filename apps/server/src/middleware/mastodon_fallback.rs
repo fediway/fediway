@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::sync::LazyLock;
 use std::time::Duration;
 
@@ -54,10 +55,19 @@ pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next:
         proxy_req = proxy_req.header(header::USER_AGENT, ua);
     }
 
+    let url = format!("{base_url}{path}");
     let proxy_resp = match proxy_req.send().await {
         Ok(r) => r,
         Err(e) => {
-            tracing::warn!(error = %e, path, "mastodon fallback request failed");
+            tracing::warn!(
+                url,
+                error = %e,
+                error_source = e.source().map(|s| s.to_string()),
+                is_connect = e.is_connect(),
+                is_timeout = e.is_timeout(),
+                is_request = e.is_request(),
+                "mastodon fallback failed"
+            );
             return StatusCode::BAD_GATEWAY.into_response();
         }
     };
