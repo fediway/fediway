@@ -46,29 +46,35 @@ impl Source<Post> for PostsSource {
         )
         .await;
 
+        let domain = &self.provider.domain;
         match response {
-            Some(r) => r.results.into_iter().map(into_candidate).collect(),
+            Some(r) => r
+                .results
+                .into_iter()
+                .map(|p| into_candidate(p, domain))
+                .collect(),
             None => Vec::new(),
         }
     }
 }
 
-pub(crate) fn into_candidate(result: PostResult) -> Candidate<Post> {
-    into_candidate_with_source(result, "commonfeed/posts")
+pub(crate) fn into_candidate(result: PostResult, provider_domain: &str) -> Candidate<Post> {
+    into_candidate_with_source(result, provider_domain, "commonfeed/posts")
 }
 
 pub(crate) fn into_candidate_with_source(
     result: PostResult,
+    provider_domain: &str,
     source: &'static str,
 ) -> Candidate<Post> {
     let score = result.score.unwrap_or(0.0);
-    let post = post_from_result(result);
+    let post = post_from_result(result, provider_domain);
     let mut candidate = Candidate::new(post, source);
     candidate.score = score;
     candidate
 }
 
-fn post_from_result(result: PostResult) -> Post {
+pub fn post_from_result(result: PostResult, provider_domain: &str) -> Post {
     let engagement = result.engagement.as_ref();
 
     let media = result
@@ -78,11 +84,18 @@ fn post_from_result(result: PostResult) -> Post {
         .filter_map(media_from_result)
         .collect();
 
-    let quote = result.quote.map(|q| Box::new(post_from_result(*q)));
+    let quote = result
+        .quote
+        .map(|q| Box::new(post_from_result(*q, provider_domain)));
     let link = result.link.map(card_from_link_preview);
 
+    let uri = result.identifiers.get(&result.protocol).cloned();
+
     Post {
+        provider_id: result.id,
+        provider_domain: Some(provider_domain.to_string()),
         url: result.url,
+        uri,
         content: result.content,
         text: result.text,
         author: Author {
@@ -127,7 +140,9 @@ fn post_from_result(result: PostResult) -> Post {
                     .cast_unsigned(),
             ),
         },
-        reply_to: result.reply_to.map(|r| Box::new(post_from_result(*r))),
+        reply_to: result
+            .reply_to
+            .map(|r| Box::new(post_from_result(*r, provider_domain))),
         quote,
         tags: result
             .tags
@@ -260,6 +275,8 @@ mod tests {
     #[test]
     fn converts_post_result_to_candidate() {
         let result = PostResult {
+            id: None,
+            identifiers: Default::default(),
             url: "https://mastodon.social/@alice/123".into(),
             protocol: "activitypub".into(),
             content_type: "post".into(),
@@ -284,7 +301,7 @@ mod tests {
             score: Some(0.85),
         };
 
-        let candidate = into_candidate(result);
+        let candidate = into_candidate(result, "test.example");
         assert_eq!(candidate.item.text, "hello");
         assert_eq!(candidate.item.author.display_name, "Alice");
         assert_eq!(candidate.item.engagement.likes, 42);
@@ -297,6 +314,8 @@ mod tests {
     #[test]
     fn handles_missing_engagement() {
         let result = PostResult {
+            id: None,
+            identifiers: Default::default(),
             url: "https://example.com/post/1".into(),
             protocol: "activitypub".into(),
             content_type: "post".into(),
@@ -317,7 +336,7 @@ mod tests {
             score: None,
         };
 
-        let candidate = into_candidate(result);
+        let candidate = into_candidate(result, "test.example");
         assert_eq!(candidate.item.engagement.likes, 0);
         assert_eq!(candidate.item.engagement.reposts, 0);
         assert_eq!(candidate.item.engagement.replies, 0);
@@ -327,6 +346,8 @@ mod tests {
     #[test]
     fn extracts_avatar_url_from_image_object() {
         let result = PostResult {
+            id: None,
+            identifiers: Default::default(),
             url: "https://example.com/post/1".into(),
             protocol: "activitypub".into(),
             content_type: "post".into(),
@@ -353,7 +374,7 @@ mod tests {
             score: None,
         };
 
-        let candidate = into_candidate(result);
+        let candidate = into_candidate(result, "test.example");
         assert_eq!(
             candidate.item.author.avatar_url.as_deref(),
             Some("https://cdn.example/avatar.webp")
@@ -464,5 +485,103 @@ mod tests {
             poster: None,
         });
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn threads_provider_id_and_domain() {
+        let result = PostResult {
+            id: Some(48291037),
+            identifiers: Default::default(),
+            url: "https://example.com/post/1".into(),
+            protocol: "activitypub".into(),
+            content_type: "post".into(),
+            content: "".into(),
+            text: "".into(),
+            author: bare_author(),
+            timestamp: chrono::Utc::now(),
+            language: None,
+            sensitive: None,
+            content_warning: None,
+            media: None,
+            engagement: None,
+            link: None,
+            reply_to: None,
+            quote: None,
+            tags: None,
+            emojis: None,
+            score: None,
+        };
+
+        let post = post_from_result(result, "feeds.fediway.com");
+        assert_eq!(post.provider_id, Some(48291037));
+        assert_eq!(post.provider_domain.as_deref(), Some("feeds.fediway.com"));
+    }
+
+    #[test]
+    fn threads_ap_uri_from_identifiers() {
+        let mut identifiers = std::collections::HashMap::new();
+        identifiers.insert(
+            "activitypub".into(),
+            "https://mastodon.social/users/alice/statuses/123".into(),
+        );
+
+        let result = PostResult {
+            id: Some(1),
+            identifiers,
+            url: "https://mastodon.social/@alice/123".into(),
+            protocol: "activitypub".into(),
+            content_type: "post".into(),
+            content: "".into(),
+            text: "".into(),
+            author: bare_author(),
+            timestamp: chrono::Utc::now(),
+            language: None,
+            sensitive: None,
+            content_warning: None,
+            media: None,
+            engagement: None,
+            link: None,
+            reply_to: None,
+            quote: None,
+            tags: None,
+            emojis: None,
+            score: None,
+        };
+
+        let post = post_from_result(result, "provider.example");
+        assert_eq!(
+            post.uri.as_deref(),
+            Some("https://mastodon.social/users/alice/statuses/123")
+        );
+    }
+
+    #[test]
+    fn missing_id_results_in_none() {
+        let result = PostResult {
+            id: None,
+            identifiers: Default::default(),
+            url: "https://example.com/post/1".into(),
+            protocol: "activitypub".into(),
+            content_type: "post".into(),
+            content: "".into(),
+            text: "".into(),
+            author: bare_author(),
+            timestamp: chrono::Utc::now(),
+            language: None,
+            sensitive: None,
+            content_warning: None,
+            media: None,
+            engagement: None,
+            link: None,
+            reply_to: None,
+            quote: None,
+            tags: None,
+            emojis: None,
+            score: None,
+        };
+
+        let post = post_from_result(result, "provider.example");
+        assert_eq!(post.provider_id, None);
+        assert_eq!(post.uri, None);
     }
 }

@@ -15,6 +15,14 @@ use crate::tag::Tag;
 const MISSING_AVATAR: &str = "/avatars/original/missing.png";
 const MISSING_HEADER: &str = "/headers/original/missing.png";
 
+/// Mastodon-compatible Context entity.
+/// See: <https://docs.joinmastodon.org/entities/Context/>
+#[derive(Debug, Serialize)]
+pub struct Context {
+    pub ancestors: Vec<Status>,
+    pub descendants: Vec<Status>,
+}
+
 /// Mastodon-compatible Status entity.
 /// See: <https://docs.joinmastodon.org/entities/Status/>
 #[derive(Debug, Serialize)]
@@ -123,6 +131,18 @@ fn build_media_attachment(i: usize, m: &common::types::Media) -> MediaAttachment
     }
 }
 
+impl Status {
+    /// Sets the snowflake ID and uses the AP URI (from `post.uri`) instead of the web URL.
+    #[must_use]
+    pub fn from_post(post: Post, status_id: String) -> Self {
+        let uri = post.uri.clone().unwrap_or_else(|| post.url.clone());
+        let mut status = Self::from(post);
+        status.id = status_id;
+        status.uri = uri;
+        status
+    }
+}
+
 impl From<Post> for Status {
     fn from(post: Post) -> Self {
         let account = build_account(&post.author, post.published_at);
@@ -203,6 +223,9 @@ mod tests {
 
     fn sample_post() -> Post {
         Post {
+            provider_id: None,
+            provider_domain: None,
+            uri: None,
             url: "https://mastodon.social/@alice/123".into(),
             content: "<p>Hello world</p>".into(),
             text: "Hello world".into(),
@@ -233,6 +256,9 @@ mod tests {
 
     fn sample_post_minimal() -> Post {
         Post {
+            provider_id: None,
+            provider_domain: None,
+            uri: None,
             url: "https://example.com/post/1".into(),
             content: String::new(),
             text: String::new(),
@@ -360,6 +386,9 @@ mod tests {
     fn reply_to_preserved() {
         let mut post = sample_post();
         post.reply_to = Some(Box::new(Post {
+            provider_id: None,
+            provider_domain: None,
+            uri: None,
             url: "https://mastodon.social/@bob/456".into(),
             content: "<p>parent post</p>".into(),
             text: "parent post".into(),
@@ -700,5 +729,50 @@ mod tests {
         let status = Status::from(sample_post());
         let json = serde_json::to_value(&status).unwrap();
         assert_eq!(json["account"]["note"], "");
+    }
+
+    #[test]
+    fn from_post_sets_snowflake_id() {
+        let post = sample_post();
+        let status = Status::from_post(post, "113472839102948372".into());
+        assert_eq!(status.id, "113472839102948372");
+    }
+
+    #[test]
+    fn from_post_uses_ap_uri_when_present() {
+        let mut post = sample_post();
+        post.uri = Some("https://mastodon.social/users/alice/statuses/123".into());
+
+        let status = Status::from_post(post, "1".into());
+        assert_eq!(
+            status.uri,
+            "https://mastodon.social/users/alice/statuses/123"
+        );
+        assert_eq!(
+            status.url.as_deref(),
+            Some("https://mastodon.social/@alice/123")
+        );
+    }
+
+    #[test]
+    fn from_post_falls_back_to_url_when_no_uri() {
+        let mut post = sample_post();
+        post.uri = None;
+
+        let status = Status::from_post(post, "1".into());
+        assert_eq!(status.uri, "https://mastodon.social/@alice/123");
+        assert_eq!(
+            status.url.as_deref(),
+            Some("https://mastodon.social/@alice/123")
+        );
+    }
+
+    #[test]
+    fn from_post_preserves_content_and_engagement() {
+        let post = sample_post();
+        let status = Status::from_post(post, "42".into());
+        assert!(status.content.contains("Hello world"));
+        assert_eq!(status.favourites_count, 42);
+        assert_eq!(status.reblogs_count, 10);
     }
 }

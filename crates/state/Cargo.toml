@@ -9,7 +9,8 @@ workspace = true
 [dependencies]
 common.workspace = true
 config.workspace = true
-sqlx = { workspace = true, features = ["json"] }
+chrono.workspace = true
+sqlx = { workspace = true, features = ["json", "chrono"] }
 serde_json.workspace = true
 redis.workspace = true
 thiserror.workspace = true

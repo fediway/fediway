@@ -3,7 +3,13 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Post {
+    #[serde(default)]
+    pub provider_id: Option<i64>,
+    #[serde(default)]
+    pub provider_domain: Option<String>,
     pub url: String,
+    #[serde(default)]
+    pub uri: Option<String>,
     pub content: String,
     pub text: String,
     pub author: Author,

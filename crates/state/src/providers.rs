@@ -94,6 +94,34 @@ pub async fn upsert_capability(db: &PgPool, cap: &Capability<'_>) -> Result<(), 
     Ok(())
 }
 
+/// Find a provider by domain, returning it as a `Provider` for API calls.
+pub async fn find_by_domain(db: &PgPool, domain: &str) -> Result<Option<Provider>, sqlx::Error> {
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        domain: String,
+        base_url: String,
+        api_key: String,
+        max_results: i32,
+    }
+
+    let row = sqlx::query_as::<_, Row>(
+        "SELECT domain, base_url, api_key, max_results
+         FROM commonfeed_providers
+         WHERE domain = $1 AND status = 'approved' AND enabled = true",
+    )
+    .bind(domain)
+    .fetch_optional(db)
+    .await?;
+
+    Ok(row.map(|r| Provider {
+        domain: r.domain,
+        base_url: r.base_url,
+        api_key: r.api_key,
+        max_results: usize::try_from(r.max_results).unwrap_or(100),
+        supported_filters: Vec::new(),
+    }))
+}
+
 pub async fn find_base_url(db: &PgPool, domain: &str) -> Result<Option<String>, sqlx::Error> {
     sqlx::query_scalar::<_, String>("SELECT base_url FROM commonfeed_providers WHERE domain = $1")
         .bind(domain)

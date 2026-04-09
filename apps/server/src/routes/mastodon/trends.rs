@@ -5,7 +5,7 @@ use axum::response::IntoResponse;
 use common::types::{Link, Post, Tag};
 use feed::feed::Feed;
 use feed::scorer::Diversity;
-use mastodon::{PreviewCard, Status, Tag as MastodonTag};
+use mastodon::{PreviewCard, Tag as MastodonTag};
 use serde::Deserialize;
 use sources::commonfeed::links::LinksSource;
 use sources::commonfeed::posts::PostsSource;
@@ -80,11 +80,8 @@ pub async fn statuses(
         &feed::cursor::Offset::parse(params.offset.as_deref()),
     );
 
-    let statuses: Vec<Status> = page
-        .items
-        .into_iter()
-        .map(|c| Status::from(c.item))
-        .collect();
+    let posts: Vec<Post> = page.items.into_iter().map(|c| c.item).collect();
+    let statuses = crate::commonfeed::posts_to_statuses(&state.pool, posts).await;
 
     #[allow(clippy::cast_precision_loss)]
     metrics::histogram!("fediway_trends_results", "resource" => "statuses")

@@ -32,6 +32,7 @@ tower_governor.workspace = true
 sqlx.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+reqwest.workspace = true
 hmac.workspace = true
 sha2.workspace = true
 hex.workspace = true

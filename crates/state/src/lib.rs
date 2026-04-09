@@ -2,6 +2,7 @@ pub mod db;
 pub mod orbit;
 pub mod providers;
 pub mod redis;
+pub mod statuses;
 
 use ::redis::aio::ConnectionManager;
 use config::{DatabaseConfig, RedisConfig};

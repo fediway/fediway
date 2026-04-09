@@ -55,11 +55,12 @@ impl Source<Post> for RecommendedSource {
         )
         .await;
 
+        let domain = &self.provider.domain;
         match response {
             Some(r) => r
                 .results
                 .into_iter()
-                .map(|r| into_candidate_with_source(r, "commonfeed/recommended"))
+                .map(|r| into_candidate_with_source(r, domain, "commonfeed/recommended"))
                 .collect(),
             None => Vec::new(),
         }

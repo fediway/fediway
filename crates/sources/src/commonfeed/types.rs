@@ -18,8 +18,12 @@ pub struct QueryResponse {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostResult {
+    #[serde(default)]
+    pub id: Option<i64>,
     pub url: String,
     pub protocol: String,
+    #[serde(default)]
+    pub identifiers: std::collections::HashMap<String, String>,
     #[serde(rename = "type")]
     pub content_type: String,
     pub content: String,
@@ -164,6 +168,21 @@ impl QueryFilters {
             },
         }
     }
+}
+
+/// Response from `GET /api/v1/posts/{id}/replies` and `/quotes` (relationship navigation).
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NavigationResponse {
+    pub results: Vec<PostResult>,
+    pub pagination: Pagination,
+}
+
+/// Response from `GET /api/v1/posts/{id}` (single post lookup).
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PostLookupResponse {
+    pub post: PostResult,
 }
 
 #[derive(Debug, Deserialize)]
