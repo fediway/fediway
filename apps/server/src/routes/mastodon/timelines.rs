@@ -17,18 +17,24 @@ use crate::language::resolve_languages;
 use crate::observe;
 use crate::state::AppState;
 
+/// Mastodon-compatible keyset pagination for timeline endpoints.
 #[derive(Deserialize)]
-pub struct Params {
+pub struct TimelineParams {
     #[serde(default = "default_limit")]
     limit: usize,
-    #[serde(default)]
-    offset: Option<String>,
+    max_id: Option<String>,
+    min_id: Option<String>,
+    since_id: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct TagParams {
     #[serde(default = "default_limit")]
     limit: usize,
+    max_id: Option<String>,
+    min_id: Option<String>,
+    since_id: Option<String>,
+    // hashtag comes from path, not query
 }
 
 #[derive(Deserialize)]
@@ -36,6 +42,9 @@ pub struct LinkParams {
     url: String,
     #[serde(default = "default_limit")]
     limit: usize,
+    max_id: Option<String>,
+    min_id: Option<String>,
+    since_id: Option<String>,
 }
 
 const fn default_limit() -> usize {
@@ -44,23 +53,237 @@ const fn default_limit() -> usize {
 
 const POOL_SIZE: usize = 100;
 
-fn link_header(
+/// Filter statuses by Mastodon keyset pagination bounds, return Link header.
+fn paginate_statuses(
+    mut statuses: Vec<Status>,
+    limit: usize,
+    max_id: Option<&str>,
+    min_id: Option<&str>,
+    since_id: Option<&str>,
     domain: &str,
     path: &str,
-    cursor: Option<&String>,
-) -> Option<(header::HeaderName, HeaderValue)> {
-    let cursor = cursor?;
-    let value = format!("<https://{domain}{path}?offset={cursor}>; rel=\"next\"");
-    HeaderValue::from_str(&value)
-        .ok()
-        .map(|v| (header::LINK, v))
+) -> (Vec<Status>, HeaderMap) {
+    // Filter by ID bounds (IDs are numeric snowflakes, compared as strings
+    // which works because snowflakes are fixed-width and zero-padded... actually
+    // they're not zero-padded. Compare as i64.)
+    if let Some(max) = max_id.and_then(|s| s.parse::<i64>().ok()) {
+        statuses.retain(|s| s.id.parse::<i64>().is_ok_and(|id| id < max));
+    }
+    if let Some(min) = min_id.and_then(|s| s.parse::<i64>().ok()) {
+        statuses.retain(|s| s.id.parse::<i64>().is_ok_and(|id| id > min));
+    }
+    if let Some(since) = since_id.and_then(|s| s.parse::<i64>().ok()) {
+        statuses.retain(|s| s.id.parse::<i64>().is_ok_and(|id| id > since));
+    }
+
+    statuses.truncate(limit);
+
+    let mut headers = HeaderMap::new();
+    if let (Some(last), Some(first)) = (statuses.last(), statuses.first()) {
+        let next = format!("<https://{domain}{path}?max_id={}>; rel=\"next\"", last.id);
+        let prev = format!("<https://{domain}{path}?min_id={}>; rel=\"prev\"", first.id);
+        if let Ok(value) = HeaderValue::from_str(&format!("{next}, {prev}")) {
+            headers.insert(header::LINK, value);
+        }
+    }
+
+    (statuses, headers)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn status_with_id(id: &str) -> Status {
+        let post = common::types::Post {
+            provider_id: None,
+            provider_domain: None,
+            url: format!("https://example.com/{id}"),
+            uri: None,
+            content: String::new(),
+            text: String::new(),
+            author: common::types::Author {
+                handle: "test".into(),
+                display_name: "Test".into(),
+                url: "https://example.com/@test".into(),
+                avatar_url: None,
+                emojis: vec![],
+            },
+            published_at: chrono::Utc::now(),
+            language: None,
+            sensitive: false,
+            content_warning: None,
+            media: vec![],
+            engagement: common::types::Engagement {
+                replies: 0,
+                reposts: 0,
+                likes: 0,
+            },
+            link: None,
+            reply_to: None,
+            quote: None,
+            tags: vec![],
+            emojis: vec![],
+        };
+        Status::from_post(post, id.to_string())
+    }
+
+    fn ids(statuses: &[Status]) -> Vec<&str> {
+        statuses.iter().map(|s| s.id.as_str()).collect()
+    }
+
+    #[test]
+    fn paginate_first_page() {
+        let statuses = vec![
+            status_with_id("50"),
+            status_with_id("40"),
+            status_with_id("30"),
+            status_with_id("20"),
+            status_with_id("10"),
+        ];
+
+        let (page, headers) =
+            paginate_statuses(statuses, 3, None, None, None, "example.com", "/api/v1/test");
+
+        assert_eq!(ids(&page), vec!["50", "40", "30"]);
+        let link = headers.get(header::LINK).unwrap().to_str().unwrap();
+        assert!(link.contains("max_id=30"));
+        assert!(link.contains("min_id=50"));
+    }
+
+    #[test]
+    fn paginate_with_max_id() {
+        let statuses = vec![
+            status_with_id("50"),
+            status_with_id("40"),
+            status_with_id("30"),
+            status_with_id("20"),
+            status_with_id("10"),
+        ];
+
+        let (page, _) = paginate_statuses(
+            statuses,
+            3,
+            Some("40"),
+            None,
+            None,
+            "example.com",
+            "/test",
+        );
+
+        assert_eq!(ids(&page), vec!["30", "20", "10"]);
+    }
+
+    #[test]
+    fn paginate_with_min_id() {
+        let statuses = vec![
+            status_with_id("50"),
+            status_with_id("40"),
+            status_with_id("30"),
+            status_with_id("20"),
+            status_with_id("10"),
+        ];
+
+        let (page, _) = paginate_statuses(
+            statuses,
+            3,
+            None,
+            Some("20"),
+            None,
+            "example.com",
+            "/test",
+        );
+
+        assert_eq!(ids(&page), vec!["50", "40", "30"]);
+    }
+
+    #[test]
+    fn paginate_with_since_id() {
+        let statuses = vec![
+            status_with_id("50"),
+            status_with_id("40"),
+            status_with_id("30"),
+            status_with_id("20"),
+            status_with_id("10"),
+        ];
+
+        let (page, _) = paginate_statuses(
+            statuses,
+            2,
+            None,
+            None,
+            Some("30"),
+            "example.com",
+            "/test",
+        );
+
+        assert_eq!(ids(&page), vec!["50", "40"]);
+    }
+
+    #[test]
+    fn paginate_empty_result() {
+        let (page, headers) = paginate_statuses(
+            vec![],
+            20,
+            None,
+            None,
+            None,
+            "example.com",
+            "/test",
+        );
+
+        assert!(page.is_empty());
+        assert!(headers.get(header::LINK).is_none());
+    }
+
+    #[test]
+    fn paginate_max_id_excludes_all() {
+        let statuses = vec![
+            status_with_id("50"),
+            status_with_id("40"),
+        ];
+
+        let (page, _) = paginate_statuses(
+            statuses,
+            20,
+            Some("10"),
+            None,
+            None,
+            "example.com",
+            "/test",
+        );
+
+        assert!(page.is_empty());
+    }
+
+    #[test]
+    fn paginate_non_numeric_ids_ignored() {
+        let statuses = vec![
+            status_with_id("https://example.com/1"),
+            status_with_id("50"),
+            status_with_id("40"),
+        ];
+
+        let (page, _) = paginate_statuses(
+            statuses,
+            3,
+            Some("45"),
+            None,
+            None,
+            "example.com",
+            "/test",
+        );
+
+        // Non-numeric ID filtered out by parse check, numeric ones filtered by max_id
+        assert_eq!(ids(&page), vec!["40"]);
+    }
 }
 
 pub async fn home(
     account: Account,
     State(state): State<AppState>,
     headers: HeaderMap,
-    Query(params): Query<Params>,
+    Query(params): Query<TimelineParams>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let handler_start = std::time::Instant::now();
     metrics::counter!("fediway_home_requests_total").increment(1);
@@ -134,25 +357,21 @@ pub async fn home(
         .build();
 
     let result = feed.execute(POOL_SIZE, &()).await;
-    let page = result.paginate(
-        limit,
-        &feed::cursor::Offset::parse(params.offset.as_deref()),
-    );
-
-    let posts: Vec<Post> = page.items.into_iter().map(|c| c.item).collect();
+    let posts: Vec<Post> = result.items.into_iter().map(|c| c.item).collect();
     let statuses = crate::commonfeed::posts_to_statuses(&state.pool, posts).await;
+
+    let (statuses, response_headers) = paginate_statuses(
+        statuses,
+        limit,
+        params.max_id.as_deref(),
+        params.min_id.as_deref(),
+        params.since_id.as_deref(),
+        &state.instance_domain,
+        "/api/v1/timelines/home",
+    );
 
     #[allow(clippy::cast_precision_loss)]
     metrics::histogram!("fediway_home_results").record(statuses.len() as f64);
-
-    let mut response_headers = HeaderMap::new();
-    if let Some((key, value)) = link_header(
-        &state.instance_domain,
-        "/api/v1/timelines/home",
-        page.cursor.as_ref(),
-    ) {
-        response_headers.insert(key, value);
-    }
 
     metrics::histogram!("fediway_home_duration_seconds")
         .record(handler_start.elapsed().as_secs_f64());
@@ -166,14 +385,14 @@ pub async fn tag(
     headers: HeaderMap,
     Path(hashtag): Path<String>,
     Query(params): Query<TagParams>,
-) -> Result<Json<Vec<Status>>, StatusCode> {
+) -> Result<impl IntoResponse, StatusCode> {
     let limit = params.limit.min(40);
     let languages = resolve_languages(&account, &headers);
     observe::language_requested(&languages);
 
     let filters = QueryFilters {
         language: languages,
-        tag: Some(hashtag),
+        tag: Some(hashtag.clone()),
         ..Default::default()
     };
 
@@ -190,12 +409,21 @@ pub async fn tag(
         }))
         .build();
 
-    let result = feed.execute(limit, &()).await;
-
+    let result = feed.execute(POOL_SIZE, &()).await;
     let posts: Vec<Post> = result.items.into_iter().map(|c| c.item).collect();
     let statuses = crate::commonfeed::posts_to_statuses(&state.pool, posts).await;
 
-    Ok(Json(statuses))
+    let (statuses, response_headers) = paginate_statuses(
+        statuses,
+        limit,
+        params.max_id.as_deref(),
+        params.min_id.as_deref(),
+        params.since_id.as_deref(),
+        &state.instance_domain,
+        &format!("/api/v1/timelines/tag/{hashtag}"),
+    );
+
+    Ok((response_headers, Json(statuses)))
 }
 
 pub async fn link(
@@ -203,7 +431,7 @@ pub async fn link(
     State(state): State<AppState>,
     headers: HeaderMap,
     Query(params): Query<LinkParams>,
-) -> Result<Json<Vec<Status>>, StatusCode> {
+) -> Result<impl IntoResponse, StatusCode> {
     let limit = params.limit.min(40);
     let languages = resolve_languages(&account, &headers);
     observe::language_requested(&languages);
@@ -227,10 +455,19 @@ pub async fn link(
         }))
         .build();
 
-    let result = feed.execute(limit, &()).await;
-
+    let result = feed.execute(POOL_SIZE, &()).await;
     let posts: Vec<Post> = result.items.into_iter().map(|c| c.item).collect();
     let statuses = crate::commonfeed::posts_to_statuses(&state.pool, posts).await;
 
-    Ok(Json(statuses))
+    let (statuses, response_headers) = paginate_statuses(
+        statuses,
+        limit,
+        params.max_id.as_deref(),
+        params.min_id.as_deref(),
+        params.since_id.as_deref(),
+        &state.instance_domain,
+        "/api/v1/timelines/link",
+    );
+
+    Ok((response_headers, Json(statuses)))
 }

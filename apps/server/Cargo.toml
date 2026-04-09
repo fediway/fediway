@@ -12,6 +12,7 @@ name = "fediway"
 path = "src/main.rs"
 
 [dev-dependencies]
+chrono.workspace = true
 http-body-util = "0.1"
 
 [lints]
