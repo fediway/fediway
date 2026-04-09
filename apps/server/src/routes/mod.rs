@@ -24,7 +24,7 @@ pub fn router(state: AppState) -> Router {
     Router::new()
         .merge(commonfeed::router())
         .merge(fediway::router())
-        .merge(mastodon::router())
+        .merge(mastodon::router(state.clone()))
         .layer(
             CorsLayer::new()
                 .allow_origin(AllowOrigin::any())

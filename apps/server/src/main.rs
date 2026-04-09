@@ -46,7 +46,12 @@ async fn main() -> anyhow::Result<()> {
         .expect("database check failed");
     tracing::info!("postgres ready");
 
-    let app_state = AppStateInner::new(pool, args.orbit_model_name, args.instance.instance_domain);
+    let app_state = AppStateInner::new(
+        pool,
+        args.orbit_model_name,
+        args.instance.instance_domain,
+        args.instance.mastodon_api_url,
+    );
 
     let app = server::routes::router(app_state).layer(
         ServiceBuilder::new()

@@ -9,15 +9,22 @@ pub struct AppStateInner {
     pub pool: PgPool,
     pub orbit_model_name: String,
     pub instance_domain: String,
+    pub mastodon_api_url: Option<String>,
 }
 
 impl AppStateInner {
     #[must_use]
-    pub fn new(pool: PgPool, orbit_model_name: String, instance_domain: String) -> AppState {
+    pub fn new(
+        pool: PgPool,
+        orbit_model_name: String,
+        instance_domain: String,
+        mastodon_api_url: Option<String>,
+    ) -> AppState {
         Arc::new(Self {
             pool,
             orbit_model_name,
             instance_domain,
+            mastodon_api_url,
         })
     }
 }

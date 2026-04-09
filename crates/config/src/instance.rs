@@ -16,4 +16,9 @@ pub struct InstanceConfig {
 
     #[arg(long, env = "METRICS_PORT")]
     pub metrics_port: Option<u16>,
+
+    /// Mastodon API base URL for proxying requests fediway can't handle.
+    /// e.g. `http://mastodon-web.mastodon.svc:3000`
+    #[arg(long, env = "MASTODON_API_URL")]
+    pub mastodon_api_url: Option<String>,
 }

@@ -46,7 +46,6 @@ pub async fn detail(
     })?;
 
     let status = Status::from_post(post, snowflake.to_string());
-
     Ok(Json(status))
 }
 

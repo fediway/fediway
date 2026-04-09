@@ -57,9 +57,18 @@ pub async fn setup_db(pool: &PgPool) {
 
 impl TestApp {
     pub async fn from_pool(pool: PgPool) -> Self {
+        Self::from_pool_with_mastodon(pool, None).await
+    }
+
+    pub async fn from_pool_with_mastodon(pool: PgPool, mastodon_api_url: Option<String>) -> Self {
         setup_db(&pool).await;
 
-        let state = AppStateInner::new(pool, "nomic_v1.5_64d".into(), "test.example.com".into());
+        let state = AppStateInner::new(
+            pool,
+            "nomic_v1.5_64d".into(),
+            "test.example.com".into(),
+            mastodon_api_url,
+        );
         let router = server::routes::router(state);
         Self { router }
     }
