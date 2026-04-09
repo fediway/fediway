@@ -100,6 +100,9 @@ async fn build_ancestors(state: &AppState, post_data: &serde_json::Value) -> Vec
     ancestors
 }
 
+const DESCENDANTS_PAGE_LIMIT: u32 = 60;
+const DESCENDANTS_MAX_PAGES: u32 = 5;
+
 async fn fetch_descendants(state: &AppState, row: &state::statuses::CachedStatus) -> Vec<Status> {
     let provider = match state::providers::find_by_domain(&state.pool, &row.provider_domain).await {
         Ok(Some(p)) => p,
@@ -110,41 +113,57 @@ async fn fetch_descendants(state: &AppState, row: &state::statuses::CachedStatus
         }
     };
 
-    let url = format!("{}/posts/{}/replies", provider.base_url, row.remote_id);
+    let base_url = format!("{}/posts/{}/replies", provider.base_url, row.remote_id);
+    let mut all_posts: Vec<Post> = Vec::new();
+    let mut cursor: Option<String> = None;
 
-    let resp = match HTTP_CLIENT
-        .get(&url)
-        .bearer_auth(&provider.api_key)
-        .query(&[("limit", "60")])
-        .send()
-        .await
-    {
-        Ok(r) if r.status().is_success() => r,
-        Ok(r) => {
-            tracing::warn!(status = %r.status(), url = %url, "provider replies request failed");
-            return Vec::new();
+    for _ in 0..DESCENDANTS_MAX_PAGES {
+        let mut req = HTTP_CLIENT
+            .get(&base_url)
+            .bearer_auth(&provider.api_key)
+            .query(&[("limit", &DESCENDANTS_PAGE_LIMIT.to_string())]);
+
+        if let Some(c) = &cursor {
+            req = req.query(&[("cursor", c)]);
         }
-        Err(e) => {
-            tracing::warn!(error = %e, url = %url, "provider replies request error");
-            return Vec::new();
+
+        let resp = match req.send().await {
+            Ok(r) if r.status().is_success() => r,
+            Ok(r) => {
+                tracing::warn!(status = %r.status(), url = %base_url, "provider replies request failed");
+                break;
+            }
+            Err(e) => {
+                tracing::warn!(error = %e, url = %base_url, "provider replies request error");
+                break;
+            }
+        };
+
+        let body: sources::commonfeed::types::NavigationResponse = match resp.json().await {
+            Ok(b) => b,
+            Err(e) => {
+                tracing::warn!(error = %e, "failed to parse provider replies response");
+                break;
+            }
+        };
+
+        let has_more = body.pagination.has_more;
+        let next_cursor = body.pagination.cursor;
+
+        all_posts.extend(
+            body.results
+                .into_iter()
+                .map(|r| sources::commonfeed::posts::post_from_result(r, &provider.domain)),
+        );
+
+        if !has_more {
+            break;
         }
-    };
 
-    let body: sources::commonfeed::types::NavigationResponse = match resp.json().await {
-        Ok(b) => b,
-        Err(e) => {
-            tracing::warn!(error = %e, "failed to parse provider replies response");
-            return Vec::new();
-        }
-    };
+        cursor = next_cursor;
+    }
 
-    let posts: Vec<Post> = body
-        .results
-        .into_iter()
-        .map(|r| sources::commonfeed::posts::post_from_result(r, &provider.domain))
-        .collect();
-
-    crate::commonfeed::posts_to_statuses(&state.pool, posts).await
+    crate::commonfeed::posts_to_statuses(&state.pool, all_posts).await
 }
 
 async fn refresh_from_provider(

@@ -1,6 +1,7 @@
 mod common;
 
 use axum::http::StatusCode;
+use axum::routing::get;
 use sqlx::PgPool;
 
 fn test_post(url: &str, handle: &str, content: &str) -> serde_json::Value {
@@ -261,4 +262,118 @@ async fn batch_map_posts_returns_consistent_ids(pool: PgPool) {
     let result2 = map_posts(&pool, &mappings).await.unwrap();
     assert_eq!(result2[&("test.provider".into(), 1)], id1);
     assert_eq!(result2[&("test.provider".into(), 2)], id2);
+}
+
+// --- Descendants pagination ---
+
+async fn insert_provider(pool: &PgPool, domain: &str, base_url: &str) {
+    sqlx::query(
+        "INSERT INTO commonfeed_providers (domain, name, base_url, max_results, status, enabled, api_key)
+         VALUES ($1, 'Test', $2, 100, 'approved', true, 'test-key')",
+    )
+    .bind(domain)
+    .bind(base_url)
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+fn mock_post(id: i64, content: &str) -> serde_json::Value {
+    serde_json::json!({
+        "id": id,
+        "url": format!("https://example.com/post/{id}"),
+        "protocol": "activitypub",
+        "identifiers": {},
+        "type": "post",
+        "content": format!("<p>{content}</p>"),
+        "text": content,
+        "author": {
+            "handle": "@test@example.com",
+            "name": "Test",
+            "url": "https://example.com/@test",
+            "avatar": null,
+            "emojis": []
+        },
+        "timestamp": "2026-03-01T12:00:00Z",
+        "engagement": { "likes": 0, "reposts": 0, "replies": 0 }
+    })
+}
+
+#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+async fn context_fetches_paginated_descendants(pool: PgPool) {
+    use axum::extract::Query;
+    use serde::Deserialize;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    #[derive(Deserialize)]
+    struct Params {
+        cursor: Option<String>,
+    }
+
+    let call_count = Arc::new(Mutex::new(0u32));
+    let call_count_clone = call_count.clone();
+
+    let mock_router = axum::Router::new().route(
+        "/posts/{id}/replies",
+        get(move |Query(params): Query<Params>| {
+            let call_count = call_count_clone.clone();
+            async move {
+                let mut count = call_count.lock().await;
+                *count += 1;
+
+                let (results, has_more, cursor) = match params.cursor.as_deref() {
+                    None => (
+                        vec![mock_post(1, "reply 1"), mock_post(2, "reply 2")],
+                        true,
+                        Some("page2"),
+                    ),
+                    Some("page2") => (
+                        vec![mock_post(3, "reply 3")],
+                        false,
+                        None,
+                    ),
+                    _ => (vec![], false, None),
+                };
+
+                axum::Json(serde_json::json!({
+                    "requestId": "test",
+                    "results": results,
+                    "pagination": {
+                        "hasMore": has_more,
+                        "cursor": cursor,
+                    }
+                }))
+            }
+        }),
+    );
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+        axum::serve(listener, mock_router).await.unwrap();
+    });
+
+    let mock_domain = "mock.provider";
+    let base_url = format!("http://127.0.0.1:{port}");
+    insert_provider(&pool, mock_domain, &base_url).await;
+
+    let parent = test_post("https://example.com/post/0", "@alice@example.com", "parent");
+    let parent_id = map(&pool, mock_domain, 0, &parent).await;
+
+    let app = common::TestApp::from_pool(pool).await;
+    let resp = app
+        .get(&format!("/api/v1/statuses/{parent_id}/context"))
+        .await;
+    assert_eq!(resp.status, StatusCode::OK);
+
+    let json = resp.json();
+    let descendants = json["descendants"].as_array().unwrap();
+    assert_eq!(descendants.len(), 3, "should have fetched both pages");
+    assert!(descendants[0]["content"].as_str().unwrap().contains("reply 1"));
+    assert!(descendants[1]["content"].as_str().unwrap().contains("reply 2"));
+    assert!(descendants[2]["content"].as_str().unwrap().contains("reply 3"));
+
+    let total_calls = *call_count.lock().await;
+    assert_eq!(total_calls, 2, "should have made exactly 2 requests (2 pages)");
 }
