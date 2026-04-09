@@ -516,6 +516,52 @@ async fn proxy_forwards_authorization_header(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn proxy_forwards_instance_domain_as_host(pool: PgPool) {
+    use axum::http::HeaderMap as AxumHeaderMap;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    let received_host = Arc::new(Mutex::new(None::<String>));
+    let received_host_clone = received_host.clone();
+
+    let mock_router = axum::Router::new().route(
+        "/api/v1/statuses/{id}",
+        get(move |headers: AxumHeaderMap| {
+            let received = received_host_clone.clone();
+            async move {
+                let host = headers
+                    .get("host")
+                    .and_then(|v| v.to_str().ok())
+                    .map(String::from);
+                *received.lock().await = host;
+                axum::Json(serde_json::json!({"id": "1"}))
+            }
+        }),
+    );
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+        axum::serve(listener, mock_router).await.unwrap();
+    });
+
+    common::setup_db(&pool).await;
+    let app =
+        common::TestApp::from_pool_with_mastodon(pool, Some(format!("http://127.0.0.1:{port}")))
+            .await;
+
+    let resp = app.get("/api/v1/statuses/999999999999999999").await;
+    assert_eq!(resp.status, StatusCode::OK);
+
+    let forwarded = received_host.lock().await;
+    assert_eq!(
+        forwarded.as_deref(),
+        Some("test.example.com"),
+        "host header must be the instance domain, not the internal service URL"
+    );
+}
+
+#[sqlx::test]
 async fn proxy_returns_mastodon_404_as_404(pool: PgPool) {
     let mock_router = axum::Router::new().route(
         "/api/v1/statuses/{id}",
