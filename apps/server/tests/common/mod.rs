@@ -27,38 +27,41 @@ impl TestResponse {
     }
 }
 
+/// Mock Mastodon's `timestamp_id()` function and run migrations.
+/// Call this at the start of any test that touches the database.
+pub async fn setup_db(pool: &PgPool) {
+    sqlx::query(
+        r"DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'timestamp_id') THEN
+                CREATE FUNCTION timestamp_id(table_name text) RETURNS bigint AS $fn$
+                DECLARE
+                    time_part bigint;
+                    tail bigint;
+                BEGIN
+                    time_part := (date_part('epoch', now()) * 1000)::bigint << 16;
+                    tail := nextval(table_name || '_id_seq') & 65535;
+                    RETURN time_part | tail;
+                END;
+                $fn$ LANGUAGE plpgsql VOLATILE;
+            END IF;
+        END
+        $$",
+    )
+    .execute(pool)
+    .await
+    .expect("failed to create timestamp_id stub");
+
+    state::db::migrate(pool).await.expect("migrations failed");
+}
+
 impl TestApp {
     pub async fn from_pool(pool: PgPool) -> Self {
-        // timestamp_id() is defined by Mastodon's schema, not ours
-        sqlx::query(
-            r"DO $$
-            BEGIN
-                IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'timestamp_id') THEN
-                    CREATE FUNCTION timestamp_id(table_name text) RETURNS bigint AS $fn$
-                    DECLARE
-                        time_part bigint;
-                        tail bigint;
-                    BEGIN
-                        time_part := (date_part('epoch', now()) * 1000)::bigint << 16;
-                        tail := nextval(table_name || '_id_seq') & 65535;
-                        RETURN time_part | tail;
-                    END;
-                    $fn$ LANGUAGE plpgsql VOLATILE;
-                END IF;
-            END
-            $$",
-        )
-        .execute(&pool)
-        .await
-        .expect("failed to ensure timestamp_id function exists");
+        setup_db(&pool).await;
 
         let state = AppStateInner::new(pool, "nomic_v1.5_64d".into(), "test.example.com".into());
         let router = server::routes::router(state);
         Self { router }
-    }
-
-    pub fn pool(&self) -> &PgPool {
-        unimplemented!("use the pool argument from #[sqlx::test] directly")
     }
 
     pub async fn get(&self, path: &str) -> TestResponse {

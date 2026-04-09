@@ -36,6 +36,7 @@ fn test_post_with_reply(
 }
 
 async fn map(pool: &PgPool, domain: &str, remote_id: i64, post: &serde_json::Value) -> i64 {
+    common::setup_db(pool).await;
     let url = post["url"].as_str().unwrap();
     state::statuses::map_post(pool, domain, remote_id, url, url, post)
         .await
@@ -44,7 +45,7 @@ async fn map(pool: &PgPool, domain: &str, remote_id: i64, post: &serde_json::Val
 
 // --- Error cases ---
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn detail_unknown_id_returns_404(pool: PgPool) {
     let app = common::TestApp::from_pool(pool).await;
 
@@ -52,7 +53,7 @@ async fn detail_unknown_id_returns_404(pool: PgPool) {
     assert_eq!(resp.status, StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn detail_non_numeric_id_returns_404(pool: PgPool) {
     let app = common::TestApp::from_pool(pool).await;
 
@@ -60,7 +61,7 @@ async fn detail_non_numeric_id_returns_404(pool: PgPool) {
     assert_eq!(resp.status, StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn context_unknown_id_returns_404(pool: PgPool) {
     let app = common::TestApp::from_pool(pool).await;
 
@@ -70,7 +71,7 @@ async fn context_unknown_id_returns_404(pool: PgPool) {
 
 // --- Detail happy path ---
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn detail_returns_cached_post(pool: PgPool) {
     let post = test_post(
         "https://mastodon.social/@alice/123",
@@ -90,7 +91,7 @@ async fn detail_returns_cached_post(pool: PgPool) {
     assert_eq!(json["url"], "https://mastodon.social/@alice/123");
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn detail_same_post_returns_same_id(pool: PgPool) {
     let post = test_post("https://example.com/post/1", "@test@example.com", "test");
 
@@ -103,7 +104,7 @@ async fn detail_same_post_returns_same_id(pool: PgPool) {
     );
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn detail_updates_cache_on_remap(pool: PgPool) {
     let post_v1 = test_post(
         "https://example.com/post/1",
@@ -133,7 +134,7 @@ async fn detail_updates_cache_on_remap(pool: PgPool) {
 
 // --- Context: ancestors ---
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn context_returns_empty_arrays_for_post_without_thread(pool: PgPool) {
     let post = test_post(
         "https://example.com/post/1",
@@ -151,7 +152,7 @@ async fn context_returns_empty_arrays_for_post_without_thread(pool: PgPool) {
     assert!(json["descendants"].as_array().unwrap().is_empty());
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn context_builds_ancestors_from_reply_chain(pool: PgPool) {
     let grandparent = test_post(
         "https://example.com/post/gp",
@@ -193,7 +194,7 @@ async fn context_builds_ancestors_from_reply_chain(pool: PgPool) {
     );
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn context_ancestors_get_snowflake_ids(pool: PgPool) {
     let parent = test_post("https://example.com/post/p", "@alice@example.com", "parent");
     let mut parent_with_ids = parent.clone();
@@ -227,8 +228,9 @@ async fn context_ancestors_get_snowflake_ids(pool: PgPool) {
 
 // --- Batch mapping ---
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn batch_map_posts_returns_consistent_ids(pool: PgPool) {
+    common::setup_db(&pool).await;
     use state::statuses::{PostMapping, map_posts};
 
     let data1 = test_post("https://example.com/1", "@a@example.com", "one");
@@ -299,7 +301,7 @@ fn mock_post(id: i64, content: &str) -> serde_json::Value {
     })
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn context_fetches_paginated_descendants(pool: PgPool) {
     use axum::extract::Query;
     use serde::Deserialize;
@@ -328,11 +330,7 @@ async fn context_fetches_paginated_descendants(pool: PgPool) {
                         true,
                         Some("page2"),
                     ),
-                    Some("page2") => (
-                        vec![mock_post(3, "reply 3")],
-                        false,
-                        None,
-                    ),
+                    Some("page2") => (vec![mock_post(3, "reply 3")], false, None),
                     _ => (vec![], false, None),
                 };
 
@@ -356,6 +354,7 @@ async fn context_fetches_paginated_descendants(pool: PgPool) {
 
     let mock_domain = "mock.provider";
     let base_url = format!("http://127.0.0.1:{port}");
+    common::setup_db(&pool).await;
     insert_provider(&pool, mock_domain, &base_url).await;
 
     let parent = test_post("https://example.com/post/0", "@alice@example.com", "parent");
@@ -370,10 +369,28 @@ async fn context_fetches_paginated_descendants(pool: PgPool) {
     let json = resp.json();
     let descendants = json["descendants"].as_array().unwrap();
     assert_eq!(descendants.len(), 3, "should have fetched both pages");
-    assert!(descendants[0]["content"].as_str().unwrap().contains("reply 1"));
-    assert!(descendants[1]["content"].as_str().unwrap().contains("reply 2"));
-    assert!(descendants[2]["content"].as_str().unwrap().contains("reply 3"));
+    assert!(
+        descendants[0]["content"]
+            .as_str()
+            .unwrap()
+            .contains("reply 1")
+    );
+    assert!(
+        descendants[1]["content"]
+            .as_str()
+            .unwrap()
+            .contains("reply 2")
+    );
+    assert!(
+        descendants[2]["content"]
+            .as_str()
+            .unwrap()
+            .contains("reply 3")
+    );
 
     let total_calls = *call_count.lock().await;
-    assert_eq!(total_calls, 2, "should have made exactly 2 requests (2 pages)");
+    assert_eq!(
+        total_calls, 2,
+        "should have made exactly 2 requests (2 pages)"
+    );
 }

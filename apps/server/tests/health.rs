@@ -3,7 +3,7 @@ mod common;
 use axum::http::StatusCode;
 use sqlx::PgPool;
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn health_check(pool: PgPool) {
     let app = common::TestApp::from_pool(pool).await;
     let resp = app.get("/fediway/health").await;

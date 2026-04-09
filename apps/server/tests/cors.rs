@@ -3,7 +3,7 @@ mod common;
 use axum::http::StatusCode;
 use sqlx::PgPool;
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn cors_allows_any_origin(pool: PgPool) {
     let app = common::TestApp::from_pool(pool).await;
 
@@ -24,7 +24,7 @@ async fn cors_allows_any_origin(pool: PgPool) {
     );
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn cors_preflight_allows_methods(pool: PgPool) {
     let app = common::TestApp::from_pool(pool).await;
 
@@ -53,7 +53,7 @@ async fn cors_preflight_allows_methods(pool: PgPool) {
     );
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn cors_exposes_rate_limit_headers(pool: PgPool) {
     let app = common::TestApp::from_pool(pool).await;
 

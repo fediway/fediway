@@ -2,8 +2,9 @@ mod common;
 
 use sqlx::PgPool;
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn upsert_provider_and_find(pool: PgPool) {
+    common::setup_db(&pool).await;
     state::providers::upsert(
         &pool,
         "feeds.example.com",
@@ -24,8 +25,9 @@ async fn upsert_provider_and_find(pool: PgPool) {
     );
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn upsert_provider_is_idempotent(pool: PgPool) {
+    common::setup_db(&pool).await;
     state::providers::upsert(
         &pool,
         "feeds.example.com",
@@ -56,14 +58,16 @@ async fn upsert_provider_is_idempotent(pool: PgPool) {
     );
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn find_sources_returns_empty_when_no_providers(pool: PgPool) {
+    common::setup_db(&pool).await;
     let sources = state::providers::find_sources(&pool, "trends/statuses").await;
     assert!(sources.is_empty());
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn enable_source_and_find(pool: PgPool) {
+    common::setup_db(&pool).await;
     state::providers::upsert(
         &pool,
         "feeds.example.com",
@@ -120,8 +124,9 @@ async fn enable_source_and_find(pool: PgPool) {
     assert_eq!(sources[0].algorithm, "trending");
 }
 
-#[sqlx::test(migrations = "../../crates/state/src/migrations")]
+#[sqlx::test]
 async fn disable_source(pool: PgPool) {
+    common::setup_db(&pool).await;
     state::providers::upsert(
         &pool,
         "feeds.example.com",
