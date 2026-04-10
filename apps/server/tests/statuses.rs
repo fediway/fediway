@@ -593,3 +593,138 @@ async fn proxy_returns_mastodon_404_as_404(pool: PgPool) {
     let resp = app.get("/api/v1/statuses/999999999999999999").await;
     assert_eq!(resp.status, StatusCode::NOT_FOUND);
 }
+
+// --- Non-GET proxy ---
+
+#[sqlx::test]
+async fn delete_proxies_immediately_to_mastodon(pool: PgPool) {
+    use axum::extract::Path;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    let received = Arc::new(Mutex::new(None::<(String, String)>));
+    let received_clone = received.clone();
+
+    let mock_router = axum::Router::new().route(
+        "/api/v1/statuses/{id}",
+        axum::routing::delete(move |Path(id): Path<String>| {
+            let received = received_clone.clone();
+            async move {
+                *received.lock().await = Some(("DELETE".into(), id));
+                axum::Json(serde_json::json!({}))
+            }
+        }),
+    );
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+        axum::serve(listener, mock_router).await.unwrap();
+    });
+
+    common::setup_db(&pool).await;
+    let app =
+        common::TestApp::from_pool_with_mastodon(pool, Some(format!("http://127.0.0.1:{port}")))
+            .await;
+
+    let req = axum::http::Request::delete("/api/v1/statuses/12345")
+        .header("authorization", "Bearer user_token")
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.raw_request(req).await;
+    assert_eq!(resp.status, StatusCode::OK);
+
+    let received = received.lock().await;
+    assert_eq!(received.as_ref().unwrap().0, "DELETE");
+    assert_eq!(received.as_ref().unwrap().1, "12345");
+}
+
+#[sqlx::test]
+async fn post_proxies_with_body(pool: PgPool) {
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    let received_body = Arc::new(Mutex::new(None::<String>));
+    let received_clone = received_body.clone();
+
+    let mock_router = axum::Router::new().route(
+        "/api/v1/statuses",
+        axum::routing::post(move |body: String| {
+            let received = received_clone.clone();
+            async move {
+                *received.lock().await = Some(body);
+                axum::Json(serde_json::json!({"id": "new_status"}))
+            }
+        }),
+    );
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+        axum::serve(listener, mock_router).await.unwrap();
+    });
+
+    common::setup_db(&pool).await;
+    let app =
+        common::TestApp::from_pool_with_mastodon(pool, Some(format!("http://127.0.0.1:{port}")))
+            .await;
+
+    let req = axum::http::Request::post("/api/v1/statuses")
+        .header("content-type", "application/json")
+        .header("authorization", "Bearer user_token")
+        .body(axum::body::Body::from(
+            serde_json::to_string(&serde_json::json!({"status": "Hello world"})).unwrap(),
+        ))
+        .unwrap();
+    let resp = app.raw_request(req).await;
+    assert_eq!(resp.status, StatusCode::OK);
+
+    let body = received_body.lock().await;
+    let parsed: serde_json::Value = serde_json::from_str(body.as_ref().unwrap()).unwrap();
+    assert_eq!(parsed["status"], "Hello world");
+}
+
+#[sqlx::test]
+async fn post_favourite_proxies_to_mastodon(pool: PgPool) {
+    use axum::extract::Path;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    let received_id = Arc::new(Mutex::new(None::<String>));
+    let received_clone = received_id.clone();
+
+    let mock_router = axum::Router::new().route(
+        "/api/v1/statuses/{id}/favourite",
+        axum::routing::post(move |Path(id): Path<String>| {
+            let received = received_clone.clone();
+            async move {
+                *received.lock().await = Some(id);
+                axum::Json(serde_json::json!({"id": "1", "favourited": true}))
+            }
+        }),
+    );
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+        axum::serve(listener, mock_router).await.unwrap();
+    });
+
+    common::setup_db(&pool).await;
+    let app =
+        common::TestApp::from_pool_with_mastodon(pool, Some(format!("http://127.0.0.1:{port}")))
+            .await;
+
+    let req = axum::http::Request::post("/api/v1/statuses/12345/favourite")
+        .header("authorization", "Bearer user_token")
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.raw_request(req).await;
+    assert_eq!(resp.status, StatusCode::OK);
+
+    let id = received_id.lock().await;
+    assert_eq!(id.as_deref(), Some("12345"));
+
+    let json = resp.json();
+    assert_eq!(json["favourited"], true);
+}

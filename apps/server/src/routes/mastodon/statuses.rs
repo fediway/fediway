@@ -11,6 +11,12 @@ use crate::state::AppState;
 
 const CACHE_TTL: Duration = Duration::from_secs(3600);
 
+/// Catch-all handler that returns 404. The `mastodon_fallback` middleware
+/// intercepts this and proxies non-GET requests to Mastodon.
+pub async fn not_found() -> StatusCode {
+    StatusCode::NOT_FOUND
+}
+
 static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
