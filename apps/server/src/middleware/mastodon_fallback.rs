@@ -62,7 +62,7 @@ pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next:
             tracing::warn!(
                 url,
                 error = %e,
-                error_source = e.source().map(|s| s.to_string()),
+                error_source = e.source().map(ToString::to_string),
                 is_connect = e.is_connect(),
                 is_timeout = e.is_timeout(),
                 is_request = e.is_request(),
