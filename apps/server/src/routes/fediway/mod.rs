@@ -6,5 +6,7 @@ use axum::routing::get;
 use crate::state::AppState;
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/fediway/health", get(health::handle))
+    Router::new()
+        .route("/fediway/health", get(health::handle))
+        .route("/fediway/health/mastodon", get(health::mastodon))
 }

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use sqlx::PgPool;
 
 use crate::engagement::{EngagementKind, RawEngagement, TargetPost};
@@ -7,7 +7,7 @@ use crate::engagement::{EngagementKind, RawEngagement, TargetPost};
 struct EngagementRow {
     id: i64,
     account_id: i64,
-    created_at: DateTime<Utc>,
+    created_at: NaiveDateTime,
     target_text: String,
     spoiler_text: String,
     author_name: String,

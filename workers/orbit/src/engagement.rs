@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EngagementKind {
@@ -31,7 +31,7 @@ impl EngagementKind {
 pub struct RawEngagement {
     pub id: i64,
     pub account_id: i64,
-    pub created_at: DateTime<Utc>,
+    pub created_at: NaiveDateTime,
     pub kind: EngagementKind,
     pub target: TargetPost,
 }
