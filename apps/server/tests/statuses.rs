@@ -516,24 +516,20 @@ async fn proxy_forwards_authorization_header(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn proxy_forwards_instance_domain_as_host(pool: PgPool) {
+async fn proxy_forwards_all_original_headers(pool: PgPool) {
     use axum::http::HeaderMap as AxumHeaderMap;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
-    let received_host = Arc::new(Mutex::new(None::<String>));
-    let received_host_clone = received_host.clone();
+    let received_headers = Arc::new(Mutex::new(AxumHeaderMap::new()));
+    let received_clone = received_headers.clone();
 
     let mock_router = axum::Router::new().route(
         "/api/v1/statuses/{id}",
         get(move |headers: AxumHeaderMap| {
-            let received = received_host_clone.clone();
+            let received = received_clone.clone();
             async move {
-                let host = headers
-                    .get("host")
-                    .and_then(|v| v.to_str().ok())
-                    .map(String::from);
-                *received.lock().await = host;
+                *received.lock().await = headers;
                 axum::Json(serde_json::json!({"id": "1"}))
             }
         }),
@@ -550,14 +546,29 @@ async fn proxy_forwards_instance_domain_as_host(pool: PgPool) {
         common::TestApp::from_pool_with_mastodon(pool, Some(format!("http://127.0.0.1:{port}")))
             .await;
 
-    let resp = app.get("/api/v1/statuses/999999999999999999").await;
+    let req = axum::http::Request::get("/api/v1/statuses/999999999999999999")
+        .header("authorization", "Bearer test_token")
+        .header("x-forwarded-proto", "https")
+        .header("accept-language", "de")
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.raw_request(req).await;
     assert_eq!(resp.status, StatusCode::OK);
 
-    let forwarded = received_host.lock().await;
+    let headers = received_headers.lock().await;
     assert_eq!(
-        forwarded.as_deref(),
-        Some("test.example.com"),
-        "host header must be the instance domain, not the internal service URL"
+        headers.get("authorization").and_then(|v| v.to_str().ok()),
+        Some("Bearer test_token"),
+    );
+    assert_eq!(
+        headers
+            .get("x-forwarded-proto")
+            .and_then(|v| v.to_str().ok()),
+        Some("https"),
+    );
+    assert_eq!(
+        headers.get("accept-language").and_then(|v| v.to_str().ok()),
+        Some("de"),
     );
 }
 
