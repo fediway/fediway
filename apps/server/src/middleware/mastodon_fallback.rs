@@ -14,12 +14,13 @@ static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .connect_timeout(Duration::from_secs(5))
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .expect("http client")
 });
 
 /// Middleware that proxies to Mastodon when the inner handler returns 404.
-/// Forwards the original path and Authorization header.
+/// Forwards all original request headers to mimic the ingress request.
 /// No-op if `MASTODON_API_URL` is not configured.
 pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next: Next) -> Response {
     let base_url = match state.mastodon_api_url.as_deref() {
@@ -28,10 +29,7 @@ pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next:
     };
 
     let path = req.uri().path_and_query().map(ToString::to_string);
-    let auth = req.headers().get(header::AUTHORIZATION).cloned();
-    let accept_lang = req.headers().get(header::ACCEPT_LANGUAGE).cloned();
-    let user_agent = req.headers().get(header::USER_AGENT).cloned();
-    let host = state.instance_domain.clone();
+    let headers = req.headers().clone();
 
     let response = next.run(req).await;
 
@@ -43,19 +41,14 @@ pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next:
         return response;
     };
 
-    let mut proxy_req = HTTP_CLIENT.get(format!("{base_url}{path}"));
-    if let Some(auth) = auth {
-        proxy_req = proxy_req.header(header::AUTHORIZATION, auth);
-    }
-    proxy_req = proxy_req.header(header::HOST, &host);
-    if let Some(al) = accept_lang {
-        proxy_req = proxy_req.header(header::ACCEPT_LANGUAGE, al);
-    }
-    if let Some(ua) = user_agent {
-        proxy_req = proxy_req.header(header::USER_AGENT, ua);
+    let url = format!("{base_url}{path}");
+    let mut proxy_req = HTTP_CLIENT.get(&url);
+
+    // Forward all original headers — mimics the request as received from ingress.
+    for (name, value) in &headers {
+        proxy_req = proxy_req.header(name, value);
     }
 
-    let url = format!("{base_url}{path}");
     let proxy_resp = match proxy_req.send().await {
         Ok(r) => r,
         Err(e) => {
