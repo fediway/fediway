@@ -11,9 +11,9 @@ use crate::state::AppState;
 
 const CACHE_TTL: Duration = Duration::from_secs(3600);
 
-/// Catch-all handler that returns 404. The `mastodon_fallback` middleware
-/// intercepts this and proxies non-GET requests to Mastodon.
-pub async fn not_found() -> StatusCode {
+/// Catch-all for unhandled statuses routes. Returns 404 which the
+/// `mastodon_fallback` middleware intercepts and proxies to Mastodon.
+pub async fn proxy_fallback() -> StatusCode {
     StatusCode::NOT_FOUND
 }
 

@@ -4,18 +4,25 @@ mod timelines;
 mod trends;
 
 use axum::Router;
-use axum::routing::{any, get};
+use axum::routing::{get, post};
 
 use crate::middleware::mastodon_fallback;
 use crate::state::AppState;
 
 pub fn router(state: AppState) -> Router<AppState> {
+    // All /api/v1/statuses/* routes go through the mastodon fallback middleware.
+    // Fediway handles GET /{id} and GET /{id}/context for CommonFeed statuses.
+    // Everything else (create, delete, favourite, reblog, etc.) proxies to Mastodon
+    // via the fallback handler → middleware intercepts 404 → proxies.
+    let pf = statuses::proxy_fallback;
     let with_fallback = Router::new()
-        .route("/api/v1/statuses", any(statuses::not_found))
-        .route("/api/v1/statuses/{id}", get(statuses::detail))
-        .route("/api/v1/statuses/{id}", any(statuses::not_found))
+        .route("/api/v1/statuses", post(pf))
+        .route(
+            "/api/v1/statuses/{id}",
+            get(statuses::detail).delete(pf).put(pf),
+        )
         .route("/api/v1/statuses/{id}/context", get(statuses::context))
-        .route("/api/v1/statuses/{id}/{action}", any(statuses::not_found))
+        .route("/api/v1/statuses/{id}/{action}", post(pf).get(pf))
         .route_layer(axum::middleware::from_fn_with_state(
             state,
             mastodon_fallback::fallback,
