@@ -260,13 +260,11 @@ pub async fn home(
         metrics::counter!("fediway_home_vector_loaded_total", "result" => "found").increment(1);
         let confidence = (f64::from(i32::try_from(*count).unwrap_or(i32::MAX)) / 50.0).min(1.0);
         metrics::histogram!("fediway_home_confidence").record(confidence);
-        #[allow(clippy::cast_sign_loss)]
-        let rec = (confidence * 60.0) as usize;
-        (rec, POOL_SIZE - rec)
+        (POOL_SIZE, 0)
     } else {
         metrics::counter!("fediway_home_vector_loaded_total", "result" => "cold_start")
             .increment(1);
-        (0, POOL_SIZE)
+        (0, 0)
     };
 
     #[allow(clippy::cast_precision_loss)]
