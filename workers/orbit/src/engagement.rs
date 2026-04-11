@@ -5,6 +5,7 @@ pub enum EngagementKind {
     Like,
     Repost,
     Reply,
+    Bookmark,
 }
 
 impl EngagementKind {
@@ -14,6 +15,7 @@ impl EngagementKind {
             Self::Like => 1.0,
             Self::Repost => 1.5,
             Self::Reply => 3.0,
+            Self::Bookmark => 2.0,
         }
     }
 
@@ -23,6 +25,7 @@ impl EngagementKind {
             Self::Like => "favourites",
             Self::Repost => "reblogs",
             Self::Reply => "replies",
+            Self::Bookmark => "bookmarks",
         }
     }
 }

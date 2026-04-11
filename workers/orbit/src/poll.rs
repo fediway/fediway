@@ -182,6 +182,54 @@ pub async fn poll_replies(
         .collect())
 }
 
+pub async fn poll_bookmarks(
+    db: &PgPool,
+    cursor: i64,
+    batch_size: i64,
+    instance_domain: &str,
+) -> anyhow::Result<Vec<RawEngagement>> {
+    let rows = sqlx::query_as::<_, EngagementRow>(
+        "SELECT
+            b.id,
+            b.account_id,
+            b.created_at,
+            s.text AS target_text,
+            s.spoiler_text,
+            author.display_name AS author_name,
+            author.username || '@' || COALESCE(author.domain, $3) AS author_handle,
+            COALESCE(
+                array_agg(DISTINCT ma.description) FILTER (WHERE ma.description IS NOT NULL AND ma.description != ''),
+                '{}'
+            ) AS alt_texts,
+            COALESCE(
+                array_agg(DISTINCT t.name) FILTER (WHERE t.name IS NOT NULL),
+                '{}'
+            ) AS tags
+        FROM bookmarks b
+        JOIN accounts actor ON actor.id = b.account_id AND actor.domain IS NULL
+        JOIN statuses s ON s.id = b.status_id
+        JOIN accounts author ON author.id = s.account_id
+        LEFT JOIN media_attachments ma ON ma.status_id = s.id
+        LEFT JOIN statuses_tags st ON st.status_id = s.id
+        LEFT JOIN tags t ON t.id = st.tag_id
+        WHERE b.id > $1
+        GROUP BY b.id, b.account_id, b.created_at, s.text, s.spoiler_text,
+                 author.display_name, author.username, author.domain
+        ORDER BY b.id ASC
+        LIMIT $2",
+    )
+    .bind(cursor)
+    .bind(batch_size)
+    .bind(instance_domain)
+    .fetch_all(db)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|r| r.into_engagement(EngagementKind::Bookmark))
+        .collect())
+}
+
 pub async fn load_cursor(db: &PgPool, source: &str) -> i64 {
     sqlx::query_scalar::<_, i64>("SELECT last_id FROM orbit_cursors WHERE source_name = $1")
         .bind(source)
@@ -226,6 +274,9 @@ pub async fn init_cursor(db: &PgPool, kind: EngagementKind, replay_hours: u64) -
         }
         EngagementKind::Repost | EngagementKind::Reply => {
             "SELECT COALESCE(MIN(id) - 1, 0) FROM statuses WHERE created_at >= now() - make_interval(hours => $1)"
+        }
+        EngagementKind::Bookmark => {
+            "SELECT COALESCE(MIN(id) - 1, 0) FROM bookmarks WHERE created_at >= now() - make_interval(hours => $1)"
         }
     };
 

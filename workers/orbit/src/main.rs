@@ -107,6 +107,7 @@ async fn init_cursors(pool: &PgPool, replay_hours: u64) {
         EngagementKind::Like,
         EngagementKind::Repost,
         EngagementKind::Reply,
+        EngagementKind::Bookmark,
     ];
 
     for kind in kinds {
@@ -134,17 +135,19 @@ async fn poll_cycle(
     let batch_size = args.orbit.orbit_batch_size;
     let domain = &args.instance_domain;
 
-    let (likes_cursor, reposts_cursor, replies_cursor) = tokio::join!(
+    let (likes_cursor, reposts_cursor, replies_cursor, bookmarks_cursor) = tokio::join!(
         poll::load_cursor(pool, EngagementKind::Like.as_str()),
         poll::load_cursor(pool, EngagementKind::Repost.as_str()),
         poll::load_cursor(pool, EngagementKind::Reply.as_str()),
+        poll::load_cursor(pool, EngagementKind::Bookmark.as_str()),
     );
 
     let poll_start = std::time::Instant::now();
-    let (likes, reposts, replies) = tokio::join!(
+    let (likes, reposts, replies, bookmarks) = tokio::join!(
         poll::poll_favourites(pool, likes_cursor, batch_size, domain),
         poll::poll_reblogs(pool, reposts_cursor, batch_size, domain),
         poll::poll_replies(pool, replies_cursor, batch_size, domain),
+        poll::poll_bookmarks(pool, bookmarks_cursor, batch_size, domain),
     );
     let poll_elapsed = poll_start.elapsed().as_secs_f64();
     metrics::histogram!("fediway_orbit_poll_duration_seconds").record(poll_elapsed);
@@ -153,6 +156,7 @@ async fn poll_cycle(
         (EngagementKind::Like, likes),
         (EngagementKind::Repost, reposts),
         (EngagementKind::Reply, replies),
+        (EngagementKind::Bookmark, bookmarks),
     ];
 
     let mut engagements: Vec<RawEngagement> = Vec::new();
@@ -237,6 +241,7 @@ async fn poll_cycle(
         EngagementKind::Like,
         EngagementKind::Repost,
         EngagementKind::Reply,
+        EngagementKind::Bookmark,
     ] {
         let max_processed = engagements
             .iter()

@@ -88,7 +88,29 @@ async fn detail_returns_cached_post(pool: PgPool) {
     assert_eq!(json["id"], id.to_string());
     assert!(json["content"].as_str().unwrap().contains("Hello world"));
     assert_eq!(json["account"]["username"], "alice");
+    assert_eq!(
+        json["account"]["acct"], "alice@mastodon.social",
+        "acct must include the instance domain for remote users"
+    );
     assert_eq!(json["url"], "https://mastodon.social/@alice/123");
+}
+
+#[sqlx::test]
+async fn detail_account_handle_without_domain(pool: PgPool) {
+    // Simulates a feeds provider that sends handle without @instance
+    let post = test_post("https://kind.social/@azteclady/123", "azteclady", "Hello");
+    let id = map(&pool, "test.provider", 43, &post).await;
+
+    let app = common::TestApp::from_pool(pool).await;
+    let resp = app.get(&format!("/api/v1/statuses/{id}")).await;
+    assert_eq!(resp.status, StatusCode::OK);
+
+    let json = resp.json();
+    // When handle has no @domain, acct should still be just the username
+    // This is the CURRENT behavior — but it causes issues for Mastodon clients
+    // who treat it as a local user. The fix should be upstream in feeds.
+    assert_eq!(json["account"]["username"], "azteclady");
+    assert_eq!(json["account"]["acct"], "azteclady");
 }
 
 #[sqlx::test]
