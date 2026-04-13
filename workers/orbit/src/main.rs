@@ -34,6 +34,12 @@ struct Args {
     /// Prometheus metrics port (optional)
     #[arg(long, env = "METRICS_PORT")]
     metrics_port: Option<u16>,
+
+    /// Wipe `orbit_cursors` and `orbit_user_vectors` before starting. Use
+    /// after fixing data issues or changing the embedding model — pair
+    /// with `ORBIT_REPLAY_HOURS=0` to replay full history from scratch.
+    #[arg(long, env = "ORBIT_FRESH", default_value_t = false)]
+    fresh: bool,
 }
 
 #[tokio::main]
@@ -66,6 +72,21 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("database check failed");
     tracing::info!("postgres ready");
+
+    if args.fresh {
+        tracing::warn!("--fresh set: wiping orbit_cursors and orbit_user_vectors before startup");
+        let cursors = state::orbit::wipe_cursors(&pool)
+            .await
+            .expect("failed to wipe orbit_cursors");
+        let vectors = state::orbit::wipe_vectors(&pool)
+            .await
+            .expect("failed to wipe orbit_user_vectors");
+        tracing::info!(
+            cursors_deleted = cursors,
+            vectors_deleted = vectors,
+            "orbit state wiped"
+        );
+    }
 
     init_cursors(&pool, args.orbit.orbit_replay_hours).await;
 
