@@ -5,7 +5,7 @@ use crate::auth::Account;
 
 /// Resolve preferred languages from the authenticated account or Accept-Language header.
 #[must_use]
-pub fn resolve_languages(account: &Option<Account>, headers: &HeaderMap) -> Vec<String> {
+pub fn resolve_languages(account: Option<&Account>, headers: &HeaderMap) -> Vec<String> {
     match account {
         Some(a) if !a.chosen_languages.is_empty() => a.chosen_languages.clone(),
         _ => parse_accept_language(headers),

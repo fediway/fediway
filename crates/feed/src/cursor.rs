@@ -1,11 +1,11 @@
 use crate::candidate::Candidate;
-use crate::feed::Page;
+use crate::pipeline::Page;
 
-/// Cursor-based pagination for feed results.
+/// Cursor-based pagination for pipeline results.
 ///
 /// Each implementation owns its decoded state and controls how items
 /// are sliced into a page. Construct the cursor from the raw input,
-/// then pass it to `FeedResult::paginate`.
+/// then pass it to `PipelineResult::paginate`.
 pub trait Cursor<Item> {
     /// Extract a page of at most `limit` items from the candidate list.
     fn paginate(&self, items: Vec<Candidate<Item>>, limit: usize) -> Page<Item>;

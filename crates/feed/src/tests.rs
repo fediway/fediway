@@ -1,7 +1,7 @@
 use crate::candidate::Candidate;
 use crate::cursor::Offset;
-use crate::feed::{Feed, FeedResult};
 use crate::filter::Filter;
+use crate::pipeline::{Pipeline, PipelineResult};
 use crate::sampler::TopK;
 use crate::scorer::{Diversity, Scorer};
 use crate::source::Source;
@@ -167,7 +167,7 @@ fn filter_removes_items() {
 
 #[tokio::test]
 async fn feed_collects_scores_and_samples() {
-    let feed = Feed::builder()
+    let feed = Pipeline::builder()
         .source(
             MockSource::new(
                 "test",
@@ -190,7 +190,7 @@ async fn feed_collects_scores_and_samples() {
 
 #[tokio::test]
 async fn feed_filters_before_scoring() {
-    let feed = Feed::builder()
+    let feed = Pipeline::builder()
         .source(
             MockSource::new(
                 "test",
@@ -214,7 +214,7 @@ async fn feed_filters_before_scoring() {
 
 #[tokio::test]
 async fn feed_merges_multiple_sources() {
-    let feed = Feed::builder()
+    let feed = Pipeline::builder()
         .source(
             MockSource::new("src1", vec![Item::new("a", "alice", 10.0)]),
             10,
@@ -234,7 +234,7 @@ async fn feed_merges_multiple_sources() {
 
 #[tokio::test]
 async fn feed_preserves_source_name() {
-    let feed = Feed::builder()
+    let feed = Pipeline::builder()
         .source(
             MockSource::new("trending", vec![Item::new("a", "alice", 10.0)]),
             10,
@@ -247,7 +247,7 @@ async fn feed_preserves_source_name() {
 
 #[tokio::test]
 async fn feed_respects_source_limit() {
-    let feed = Feed::builder()
+    let feed = Pipeline::builder()
         .source(
             MockSource::new(
                 "test",
@@ -267,7 +267,7 @@ async fn feed_respects_source_limit() {
 
 #[tokio::test]
 async fn feed_empty_source_returns_empty() {
-    let feed: Feed<Item> = Feed::builder()
+    let feed: Pipeline<Item> = Pipeline::builder()
         .source(MockSource::new("empty", Vec::new()), 10)
         .build();
 
@@ -277,7 +277,7 @@ async fn feed_empty_source_returns_empty() {
 
 #[tokio::test]
 async fn feed_with_diversity() {
-    let feed = Feed::builder()
+    let feed = Pipeline::builder()
         .source(
             MockSource::new(
                 "test",
@@ -301,7 +301,7 @@ async fn feed_with_diversity() {
 
 #[tokio::test]
 async fn feed_is_reusable() {
-    let feed = Feed::builder()
+    let feed = Pipeline::builder()
         .source(
             MockSource::new(
                 "test",
@@ -344,7 +344,7 @@ impl Scorer<Item, UserCtx> for CtxValueScorer {
 
 #[tokio::test]
 async fn feed_with_context() {
-    let feed: Feed<Item, UserCtx> = Feed::builder()
+    let feed: Pipeline<Item, UserCtx> = Pipeline::builder()
         .source(
             MockSource::new(
                 "test",
@@ -373,7 +373,7 @@ async fn feed_with_context() {
 
 #[test]
 fn paginate_first_page() {
-    let result = FeedResult {
+    let result = PipelineResult {
         items: vec![
             scored_candidate("a", 5.0),
             scored_candidate("b", 4.0),
@@ -393,7 +393,7 @@ fn paginate_first_page() {
 
 #[test]
 fn paginate_second_page() {
-    let result = FeedResult {
+    let result = PipelineResult {
         items: vec![
             scored_candidate("a", 5.0),
             scored_candidate("b", 4.0),
@@ -413,7 +413,7 @@ fn paginate_second_page() {
 
 #[test]
 fn paginate_last_page() {
-    let result = FeedResult {
+    let result = PipelineResult {
         items: vec![
             scored_candidate("a", 3.0),
             scored_candidate("b", 2.0),
@@ -430,7 +430,7 @@ fn paginate_last_page() {
 
 #[test]
 fn paginate_beyond_end() {
-    let result = FeedResult {
+    let result = PipelineResult {
         items: vec![scored_candidate("a", 1.0)],
         collected: 1,
     };
@@ -442,7 +442,7 @@ fn paginate_beyond_end() {
 
 #[test]
 fn paginate_invalid_cursor_starts_at_zero() {
-    let result = FeedResult {
+    let result = PipelineResult {
         items: vec![scored_candidate("a", 2.0), scored_candidate("b", 1.0)],
         collected: 2,
     };
@@ -453,7 +453,7 @@ fn paginate_invalid_cursor_starts_at_zero() {
 
 #[test]
 fn paginate_empty_result() {
-    let result: FeedResult<Item> = FeedResult {
+    let result: PipelineResult<Item> = PipelineResult {
         items: vec![],
         collected: 0,
     };

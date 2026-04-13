@@ -1,9 +1,9 @@
 # feed
 
-Composable feed engine: **collect → filter → score → sample**.
+Composable pipeline engine: **collect → filter → score → sample**.
 
 ```
-Feed<Item, Ctx = ()>
+Pipeline<Item, Ctx = ()>
   ├── Source<Item>      — fetches candidates (runs concurrently)
   ├── Filter<Item, Ctx> — removes candidates based on context
   ├── Scorer<Item, Ctx> — adjusts candidate scores
@@ -13,7 +13,7 @@ Feed<Item, Ctx = ()>
 ## Usage
 
 ```rust
-let feed = Feed::builder()
+let pipeline = Pipeline::builder()
     .name("trends/statuses")
     .source(MySource::new(db.clone()), 100)
     .source(AnotherSource::new(api), 50)
@@ -22,7 +22,7 @@ let feed = Feed::builder()
     .score(Diversity::new(0.1, |post: &Post| post.author.id.clone()))
     .build();
 
-let result = feed.execute(20, &user_ctx).await;
+let result = pipeline.execute(20, &user_ctx).await;
 // result.items — final candidates
 // result.collected — total before filtering
 ```
@@ -62,7 +62,7 @@ struct UserCtx {
     seen: HashSet<String>,
 }
 
-let feed: Feed<Post, UserCtx> = Feed::builder()
+let pipeline: Pipeline<Post, UserCtx> = Pipeline::builder()
     .name("home")
     .source(trending, 100)
     .filter(SeenFilter)       // must impl Filter<Post, UserCtx>
@@ -72,7 +72,7 @@ let feed: Feed<Post, UserCtx> = Feed::builder()
 
 ## Observability
 
-Every execution emits metrics via the `metrics` crate (zero-cost no-ops when no recorder is installed). All metrics carry a `feed` label from `Feed::builder().name("...")`:
+Every execution emits metrics via the `metrics` crate (zero-cost no-ops when no recorder is installed). All metrics carry a `feed` label from `Pipeline::builder().name("...")` (the label name is preserved for dashboard compatibility):
 
 - `fediway_feed_source_candidates{feed, source}` — candidates per source
 - `fediway_feed_source_duration_seconds{feed, source}` — fetch time per source
