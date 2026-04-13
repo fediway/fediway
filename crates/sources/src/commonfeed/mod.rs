@@ -72,8 +72,28 @@ pub(crate) async fn fetch_json<T: DeserializeOwned>(
     };
 
     if !resp.status().is_success() {
-        tracing::warn!(url = %url, status = %resp.status(), "provider returned error");
-        observe::source_fetched(&provider.domain, "http_error", start.elapsed());
+        let status = resp.status();
+        let response_text = resp.text().await.unwrap_or_default();
+        let response_text: String = response_text.chars().take(512).collect();
+
+        if status.is_client_error() {
+            tracing::error!(
+                url = %url,
+                status = %status,
+                response = %response_text,
+                request = %body,
+                "provider rejected request — config error, will keep failing until fixed"
+            );
+            observe::source_fetched(&provider.domain, "client_error", start.elapsed());
+        } else {
+            tracing::warn!(
+                url = %url,
+                status = %status,
+                response = %response_text,
+                "provider returned server error"
+            );
+            observe::source_fetched(&provider.domain, "server_error", start.elapsed());
+        }
         return None;
     }
 
