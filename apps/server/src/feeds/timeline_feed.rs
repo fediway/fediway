@@ -33,7 +33,7 @@ pub trait TimelineFeed: Feed<Item = Post> {
 
             let candidates = self.collect().await;
             let posts: Vec<Post> = candidates.into_iter().map(|c| c.item).collect();
-            let built = statuses::from_posts(&state.pool, posts).await;
+            let built = statuses::from_posts(&state.pool, &state.instance_domain, posts).await;
             let (page, headers) = statuses::paginate(
                 built,
                 params.limit.min(40),

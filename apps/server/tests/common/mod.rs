@@ -27,6 +27,51 @@ impl TestResponse {
     }
 }
 
+/// Minimal Mastodon schema for tests that query native tables
+/// (`statuses`, `accounts`, `tags`, `statuses_tags`). Only the columns
+/// touched by fediway's local sources are defined — this is a fixture,
+/// not a full Mastodon mirror, and is intentionally permissive
+/// (nullable defaults, no FK constraints) to keep seeding simple.
+pub async fn setup_mastodon_schema(pool: &PgPool) {
+    for stmt in [
+        r"CREATE TABLE IF NOT EXISTS accounts (
+            id              BIGSERIAL PRIMARY KEY,
+            username        TEXT NOT NULL,
+            domain          TEXT,
+            display_name    TEXT,
+            url             TEXT
+        )",
+        r"CREATE TABLE IF NOT EXISTS statuses (
+            id              BIGSERIAL PRIMARY KEY,
+            account_id      BIGINT NOT NULL,
+            uri             TEXT NOT NULL,
+            url             TEXT,
+            text            TEXT NOT NULL DEFAULT '',
+            spoiler_text    TEXT,
+            sensitive       BOOLEAN NOT NULL DEFAULT FALSE,
+            language        TEXT,
+            visibility      INTEGER NOT NULL DEFAULT 0,
+            reblog_of_id    BIGINT,
+            in_reply_to_id  BIGINT,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS tags (
+            id              BIGSERIAL PRIMARY KEY,
+            name            TEXT NOT NULL UNIQUE
+        )",
+        r"CREATE TABLE IF NOT EXISTS statuses_tags (
+            status_id       BIGINT NOT NULL,
+            tag_id          BIGINT NOT NULL,
+            PRIMARY KEY (status_id, tag_id)
+        )",
+    ] {
+        sqlx::query(stmt)
+            .execute(pool)
+            .await
+            .expect("failed to create mastodon schema");
+    }
+}
+
 /// Mock Mastodon's `timestamp_id()` function and run migrations.
 /// Call this at the start of any test that touches the database.
 pub async fn setup_db(pool: &PgPool) {

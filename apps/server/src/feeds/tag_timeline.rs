@@ -3,15 +3,20 @@ use std::borrow::Cow;
 use common::types::Post;
 use feed::Feed;
 use feed::candidate::Candidate;
+use feed::filter::Dedup;
 use feed::pipeline::Pipeline;
+use feed::quota_sampler::{GroupQuota, QuotaSampler};
 use feed::scorer::Diversity;
 use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::types::QueryFilters;
+use sources::mastodon::{FederatedTagSource, NativeTagSource};
 
 use crate::feeds::timeline_feed::TimelineFeed;
 use crate::state::AppState;
 
 const POOL_SIZE: usize = 100;
+const LOCAL_PER_SOURCE_LIMIT: usize = 50;
+const EXTERNAL_PER_SOURCE_LIMIT: usize = 100;
 
 pub struct TagTimelineFeed {
     pipeline: Pipeline<Post>,
@@ -22,17 +27,45 @@ impl TagTimelineFeed {
     pub async fn new(state: &AppState, mut filters: QueryFilters, hashtag: String) -> Self {
         filters.tag = Some(hashtag.clone());
 
-        let bound = state::providers::find_sources(&state.pool, "timelines/tag").await;
-        let sources = bound
+        let native = NativeTagSource::new(
+            state.pool.clone(),
+            hashtag.clone(),
+            state.instance_domain.clone(),
+        );
+        let federated = FederatedTagSource::new(
+            state.pool.clone(),
+            hashtag.clone(),
+            state.instance_domain.clone(),
+        );
+
+        let external_bindings = state::providers::find_sources(&state.pool, "timelines/tag").await;
+        let external_sources = external_bindings
             .into_iter()
             .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
 
         let pipeline = Pipeline::builder()
             .name("timelines/tag")
-            .sources(sources, POOL_SIZE)
+            .group("native", [native], LOCAL_PER_SOURCE_LIMIT)
+            .group("federated", [federated], LOCAL_PER_SOURCE_LIMIT)
+            .group("external", external_sources, EXTERNAL_PER_SOURCE_LIMIT)
+            .filter(
+                Dedup::new(|c: &Candidate<Post>| {
+                    c.item.uri.clone().unwrap_or_else(|| c.item.url.clone())
+                })
+                .prefer(|c| match c.group {
+                    "native" => 0,
+                    "federated" => 1,
+                    _ => 2,
+                }),
+            )
             .score(Diversity::new(0.1, |post: &Post| {
                 post.author.handle.clone()
             }))
+            .sampler(QuotaSampler::new([
+                GroupQuota::new("native").min(3).cap(0.5),
+                GroupQuota::new("federated").cap(0.4),
+                GroupQuota::new("external").cap(0.7),
+            ]))
             .build();
 
         Self { pipeline, hashtag }

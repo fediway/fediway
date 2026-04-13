@@ -8,16 +8,27 @@ use mastodon::Status;
 use sqlx::PgPool;
 use state::statuses::PostMapping;
 
-/// Posts without a `provider_id` fall back to the post URL as the
-/// status ID — keeps timelines resilient for posts that predate
-/// snowflake assignment. A batch-lookup failure degrades the entire
-/// batch to URL identity rather than failing the request.
-pub async fn from_posts(db: &PgPool, posts: Vec<Post>) -> Vec<Status> {
+/// Posts are resolved to Mastodon status IDs by provenance:
+///
+/// - Local (`provider_domain == instance_domain`) → `provider_id` used
+///   directly as the status ID. Native Mastodon content already has a
+///   stable snowflake; no mapping table insert.
+/// - Remote `CommonFeed` (`provider_domain` set and not local) → mapped
+///   through `commonfeed_statuses` to get a local snowflake. The
+///   mapping inserts the post on first sighting so `/api/v1/statuses/{id}`
+///   can resolve it on detail requests.
+/// - No provenance → URL fallback (resilient for malformed input).
+///
+/// A batch snowflake lookup failure degrades remote posts to URL
+/// identity rather than failing the request.
+pub async fn from_posts(db: &PgPool, instance_domain: &str, posts: Vec<Post>) -> Vec<Status> {
     let mut mappings = Vec::new();
     let mut serialized = Vec::new();
 
     for post in &posts {
-        if let (Some(domain), Some(remote_id)) = (&post.provider_domain, post.provider_id) {
+        if let (Some(domain), Some(remote_id)) = (&post.provider_domain, post.provider_id)
+            && domain != instance_domain
+        {
             serialized.push(serde_json::to_value(post).unwrap_or_default());
             mappings.push((
                 domain.as_str(),
@@ -50,12 +61,13 @@ pub async fn from_posts(db: &PgPool, posts: Vec<Post>) -> Vec<Status> {
     posts
         .into_iter()
         .map(|post| {
-            let status_id = post
-                .provider_domain
-                .as_ref()
-                .zip(post.provider_id)
-                .and_then(|(domain, remote_id)| id_map.get(&(domain.clone(), remote_id)))
-                .map_or_else(|| post.url.clone(), ToString::to_string);
+            let status_id = match (&post.provider_domain, post.provider_id) {
+                (Some(domain), Some(id)) if domain == instance_domain => id.to_string(),
+                (Some(domain), Some(remote_id)) => id_map
+                    .get(&(domain.clone(), remote_id))
+                    .map_or_else(|| post.url.clone(), ToString::to_string),
+                _ => post.url.clone(),
+            };
 
             Status::from_post(post, status_id)
         })

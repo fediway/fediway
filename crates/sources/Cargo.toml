@@ -13,6 +13,7 @@ feed.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sqlx = { workspace = true, features = ["chrono"] }
 chrono.workspace = true
 tracing.workspace = true
 thiserror.workspace = true

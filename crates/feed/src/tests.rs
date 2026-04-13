@@ -570,6 +570,69 @@ async fn fallback_skipped_without_fallback_sources() {
     assert_eq!(result.items.len(), 1);
 }
 
+#[tokio::test]
+async fn mixed_pipeline_with_groups_dedup_and_quota() {
+    use crate::filter::Dedup;
+    use crate::quota_sampler::{GroupQuota, QuotaSampler};
+
+    let local = MockSource::new(
+        "local",
+        vec![
+            Item::new("shared", "alice", 1.0),
+            Item::new("local-only", "alice", 1.0),
+            Item::new("local-extra", "bob", 1.0),
+        ],
+    );
+
+    let remote = MockSource::new(
+        "remote",
+        vec![
+            Item::new("shared", "alice", 1.0),
+            Item::new("remote-1", "carol", 1.0),
+            Item::new("remote-2", "dave", 1.0),
+            Item::new("remote-3", "eve", 1.0),
+            Item::new("remote-4", "frank", 1.0),
+        ],
+    );
+
+    let pipeline = Pipeline::builder()
+        .name("test/mixed")
+        .group("local", [local], 10)
+        .group("remote", [remote], 10)
+        .filter(
+            Dedup::new(|c: &Candidate<Item>| c.item.id.clone())
+                .prefer(|c| if c.group == "local" { 0 } else { 1 }),
+        )
+        .score(ValueScorer)
+        .sampler(QuotaSampler::new([
+            GroupQuota::new("local").min(2),
+            GroupQuota::new("remote").cap(0.75),
+        ]))
+        .build();
+
+    let result = pipeline.execute(4, &()).await;
+
+    assert_eq!(result.items.len(), 4);
+
+    let shared = result.items.iter().find(|c| c.item.id == "shared").unwrap();
+    assert_eq!(
+        shared.group, "local",
+        "shared candidate should survive dedup with local group (priority 0)"
+    );
+
+    let local_count = result.items.iter().filter(|c| c.group == "local").count();
+    assert!(
+        local_count >= 2,
+        "local minimum of 2 must be honored, got {local_count}"
+    );
+
+    let remote_count = result.items.iter().filter(|c| c.group == "remote").count();
+    assert!(
+        remote_count <= 3,
+        "remote cap of 0.75 (= 3 of 4) must be honored, got {remote_count}"
+    );
+}
+
 fn scored_candidate(id: &str, score: f64) -> Candidate<Item> {
     let mut c = Candidate::new(Item::new(id, "author", 0.0), "test");
     c.score = score;

@@ -100,7 +100,8 @@ async fn build_ancestors(state: &AppState, post_data: &serde_json::Value) -> Vec
         current = parent_data;
     }
 
-    let mut ancestors = crate::mastodon::statuses::from_posts(&state.pool, posts).await;
+    let mut ancestors =
+        crate::mastodon::statuses::from_posts(&state.pool, &state.instance_domain, posts).await;
     ancestors.reverse();
     ancestors
 }
@@ -168,7 +169,7 @@ async fn fetch_descendants(state: &AppState, row: &state::statuses::CachedStatus
         cursor = next_cursor;
     }
 
-    crate::mastodon::statuses::from_posts(&state.pool, all_posts).await
+    crate::mastodon::statuses::from_posts(&state.pool, &state.instance_domain, all_posts).await
 }
 
 async fn refresh_from_provider(

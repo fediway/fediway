@@ -49,6 +49,6 @@ impl TrendFeed for TrendingStatusesFeed {
     const PATH: &'static str = "/api/v1/trends/statuses";
 
     async fn map(&self, state: &AppState, items: Vec<Post>) -> Vec<Status> {
-        crate::mastodon::statuses::from_posts(&state.pool, items).await
+        crate::mastodon::statuses::from_posts(&state.pool, &state.instance_domain, items).await
     }
 }
