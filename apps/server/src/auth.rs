@@ -87,6 +87,9 @@ struct TokenRow {
 }
 
 async fn resolve_account(db: &PgPool, token: &str) -> Result<Option<Account>, sqlx::Error> {
+    // The five user/account checks mirror Mastodon's Api::BaseController#require_user!:
+    // a token alone is not enough — its owner must be a confirmed, approved,
+    // non-disabled user whose account isn't suspended, memorial, or moved.
     let Some(row) = sqlx::query_as::<_, TokenRow>(
         "SELECT u.account_id, a.username, u.chosen_languages, u.locale
          FROM oauth_access_tokens t
@@ -94,7 +97,13 @@ async fn resolve_account(db: &PgPool, token: &str) -> Result<Option<Account>, sq
          JOIN accounts a ON a.id = u.account_id
          WHERE t.token = $1
            AND t.revoked_at IS NULL
-           AND (t.expires_in IS NULL OR t.created_at + t.expires_in * INTERVAL '1 second' > NOW())",
+           AND (t.expires_in IS NULL OR t.created_at + t.expires_in * INTERVAL '1 second' > NOW())
+           AND u.confirmed_at IS NOT NULL
+           AND u.approved
+           AND NOT u.disabled
+           AND a.suspended_at IS NULL
+           AND NOT a.memorial
+           AND a.moved_to_account_id IS NULL",
     )
     .bind(token)
     .fetch_optional(db)

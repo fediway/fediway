@@ -3,6 +3,7 @@ pub struct Candidate<Item> {
     pub item: Item,
     pub score: f64,
     pub source: &'static str,
+    pub group: &'static str,
 }
 
 impl<Item> Candidate<Item> {
@@ -11,6 +12,7 @@ impl<Item> Candidate<Item> {
             item,
             score: 0.0,
             source,
+            group: source,
         }
     }
 }

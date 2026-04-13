@@ -463,7 +463,112 @@ fn paginate_empty_result() {
     assert!(page.cursor.is_none());
 }
 
-// --- Helpers ---
+#[tokio::test]
+async fn group_override_tags_candidates() {
+    let pipeline = Pipeline::builder()
+        .name("test/group")
+        .group(
+            "in-network",
+            [MockSource::new(
+                "follows",
+                vec![Item::new("a", "alice", 1.0)],
+            )],
+            10,
+        )
+        .group(
+            "trending",
+            [MockSource::new("global", vec![Item::new("b", "bob", 2.0)])],
+            10,
+        )
+        .score(ValueScorer)
+        .build();
+
+    let result = pipeline.execute(10, &()).await;
+    let groups: std::collections::HashSet<&'static str> =
+        result.items.iter().map(|c| c.group).collect();
+    assert!(groups.contains(&"in-network"));
+    assert!(groups.contains(&"trending"));
+}
+
+#[tokio::test]
+async fn group_override_beats_source_default_group() {
+    let pipeline = Pipeline::builder()
+        .name("test/override")
+        .group(
+            "custom",
+            [MockSource::new(
+                "my-source",
+                vec![Item::new("x", "author", 1.0)],
+            )],
+            10,
+        )
+        .build();
+
+    let result = pipeline.execute(10, &()).await;
+    assert_eq!(result.items[0].group, "custom");
+    assert_eq!(result.items[0].source, "my-source");
+}
+
+#[tokio::test]
+async fn fallback_stays_dormant_when_main_pool_is_full() {
+    let main_items: Vec<Item> = (0..20)
+        .map(|i| Item::new(&format!("m{i}"), "a", 1.0))
+        .collect();
+    let pipeline = Pipeline::builder()
+        .name("test/fallback_dormant")
+        .source(MockSource::new("main", main_items), 20)
+        .fallback(
+            [MockSource::new(
+                "fb",
+                vec![Item::new("should_not_appear", "a", 100.0)],
+            )],
+            10,
+        )
+        .build();
+
+    let result = pipeline.execute(10, &()).await;
+    assert!(result.items.iter().all(|c| c.source == "main"));
+}
+
+#[tokio::test]
+async fn fallback_activates_when_main_pool_is_short() {
+    let pipeline = Pipeline::builder()
+        .name("test/fallback_active")
+        .source(
+            MockSource::new("main", vec![Item::new("only_one", "a", 1.0)]),
+            10,
+        )
+        .fallback(
+            [MockSource::new(
+                "fb",
+                vec![
+                    Item::new("fb1", "b", 5.0),
+                    Item::new("fb2", "b", 4.0),
+                    Item::new("fb3", "b", 3.0),
+                ],
+            )],
+            10,
+        )
+        .build();
+
+    let result = pipeline.execute(10, &()).await;
+    let sources: std::collections::HashSet<&'static str> =
+        result.items.iter().map(|c| c.source).collect();
+    assert!(sources.contains(&"main"));
+    assert!(sources.contains(&"fb"));
+    assert!(result.items.iter().any(|c| c.group == "_fallback"));
+}
+
+#[tokio::test]
+async fn fallback_skipped_without_fallback_sources() {
+    let pipeline = Pipeline::builder()
+        .name("test/no_fallback")
+        .source(MockSource::new("main", vec![Item::new("m1", "a", 1.0)]), 10)
+        .build();
+
+    let result = pipeline.execute(10, &()).await;
+    assert_eq!(result.items.len(), 1);
+}
 
 fn scored_candidate(id: &str, score: f64) -> Candidate<Item> {
     let mut c = Candidate::new(Item::new(id, "author", 0.0), "test");
