@@ -7,7 +7,10 @@ use feed::pipeline::Pipeline;
 use feed::scorer::Diversity;
 use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::types::QueryFilters;
+use sources::mastodon::PolicyFilter;
+use state::policy::UserPolicy;
 
+use crate::auth::Account;
 use crate::feeds::timeline_feed::TimelineFeed;
 use crate::state::AppState;
 
@@ -18,8 +21,18 @@ pub struct LinkTimelineFeed {
 }
 
 impl LinkTimelineFeed {
-    pub async fn new(state: &AppState, mut filters: QueryFilters, url: String) -> Self {
+    pub async fn new(
+        state: &AppState,
+        account: Option<&Account>,
+        mut filters: QueryFilters,
+        url: String,
+    ) -> Self {
         filters.link = Some(url);
+
+        let policy = match account {
+            Some(a) => state::policy::load(&state.pool, a.id, &state.instance_domain).await,
+            None => UserPolicy::default(),
+        };
 
         let bound = state::providers::find_sources(&state.pool, "timelines/link").await;
         let sources = bound
@@ -29,6 +42,7 @@ impl LinkTimelineFeed {
         let pipeline = Pipeline::builder()
             .name("timelines/link")
             .sources(sources, POOL_SIZE)
+            .filter(PolicyFilter::new(policy).without_mutes())
             .score(Diversity::new(0.1, |post: &Post| {
                 post.author.handle.clone()
             }))

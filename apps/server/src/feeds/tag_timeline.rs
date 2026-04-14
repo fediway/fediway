@@ -9,8 +9,10 @@ use feed::quota_sampler::{GroupQuota, QuotaSampler};
 use feed::scorer::Diversity;
 use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::types::QueryFilters;
-use sources::mastodon::{FederatedTagSource, NativeTagSource};
+use sources::mastodon::{FederatedTagSource, NativeTagSource, PolicyFilter};
+use state::policy::UserPolicy;
 
+use crate::auth::Account;
 use crate::feeds::timeline_feed::TimelineFeed;
 use crate::state::AppState;
 
@@ -24,8 +26,18 @@ pub struct TagTimelineFeed {
 }
 
 impl TagTimelineFeed {
-    pub async fn new(state: &AppState, mut filters: QueryFilters, hashtag: String) -> Self {
+    pub async fn new(
+        state: &AppState,
+        account: Option<&Account>,
+        mut filters: QueryFilters,
+        hashtag: String,
+    ) -> Self {
         filters.tag = Some(hashtag.clone());
+
+        let policy = match account {
+            Some(a) => state::policy::load(&state.pool, a.id, &state.instance_domain).await,
+            None => UserPolicy::default(),
+        };
 
         let native = NativeTagSource::new(
             state.pool.clone(),
@@ -58,6 +70,7 @@ impl TagTimelineFeed {
                     _ => 2,
                 }),
             )
+            .filter(PolicyFilter::new(policy).without_mutes())
             .score(Diversity::new(0.1, |post: &Post| {
                 post.author.handle.clone()
             }))

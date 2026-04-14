@@ -14,4 +14,5 @@ sqlx = { workspace = true, features = ["json", "chrono"] }
 serde_json.workspace = true
 redis.workspace = true
 thiserror.workspace = true
+tokio = { workspace = true, features = ["macros"] }
 tracing.workspace = true

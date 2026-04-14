@@ -10,6 +10,7 @@ workspace = true
 async-trait.workspace = true
 common.workspace = true
 feed.workspace = true
+state.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

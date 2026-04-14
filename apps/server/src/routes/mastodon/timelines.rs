@@ -34,7 +34,7 @@ pub async fn tag(
     Query(params): Query<TimelineParams>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let filters = request_filters(account.as_ref(), &headers);
-    let feed = TagTimelineFeed::new(&state, filters, hashtag).await;
+    let feed = TagTimelineFeed::new(&state, account.as_ref(), filters, hashtag).await;
     Ok(feed.serve(&state, &params).await)
 }
 
@@ -45,6 +45,6 @@ pub async fn link(
     Query(params): Query<LinkParams>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let filters = request_filters(account.as_ref(), &headers);
-    let feed = LinkTimelineFeed::new(&state, filters, params.url).await;
+    let feed = LinkTimelineFeed::new(&state, account.as_ref(), filters, params.url).await;
     Ok(feed.serve(&state, &params.timeline).await)
 }

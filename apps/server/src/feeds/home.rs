@@ -13,7 +13,7 @@ use mastodon::Status;
 use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::recommended::RecommendedSource;
 use sources::commonfeed::types::QueryFilters;
-use sources::mastodon::NetworkSource;
+use sources::mastodon::{NetworkSource, PolicyFilter};
 
 use crate::auth::Account;
 use crate::feeds::timeline_feed::TimelineParams;
@@ -31,7 +31,10 @@ pub struct HomeFeed {
 impl HomeFeed {
     pub async fn new(state: &AppState, account: &Account, filters: QueryFilters) -> Self {
         let vector_start = Instant::now();
-        let user_vector = state::orbit::load_vector(&state.pool, account.id).await;
+        let (user_vector, policy) = tokio::join!(
+            state::orbit::load_vector(&state.pool, account.id),
+            state::policy::load(&state.pool, account.id, &state.instance_domain),
+        );
         metrics::histogram!("fediway_home_vector_load_duration_seconds")
             .record(vector_start.elapsed().as_secs_f64());
 
@@ -89,6 +92,7 @@ impl HomeFeed {
 
         let pipeline = builder
             .filter(Dedup::new(|c: &Candidate<Post>| c.item.url.clone()))
+            .filter(PolicyFilter::new(policy))
             .score(Diversity::new(0.15, |post: &Post| {
                 post.author.handle.clone()
             }))
