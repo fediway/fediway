@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use axum::Json;
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, HeaderValue, header};
 use common::types::Post;
 use feed::Feed;
 use feed::candidate::Candidate;
@@ -26,6 +26,7 @@ const TRENDING_POOL: usize = 100;
 
 pub struct HomeFeed {
     pipeline: Pipeline<Post>,
+    user_id: i64,
 }
 
 impl HomeFeed {
@@ -103,7 +104,10 @@ impl HomeFeed {
             ]))
             .build();
 
-        Self { pipeline }
+        Self {
+            pipeline,
+            user_id: account.id,
+        }
     }
 
     pub async fn serve(
@@ -114,20 +118,39 @@ impl HomeFeed {
         let start = Instant::now();
         metrics::counter!("fediway_home_requests_total").increment(1);
 
-        let candidates = self.collect().await;
-        let posts: Vec<Post> = candidates.into_iter().map(|c| c.item).collect();
-        let statuses =
-            crate::mastodon::statuses::from_posts(&state.pool, &state.instance_domain, posts).await;
+        let cache_key = format!("home:{}", self.user_id);
+        let limit = params.limit.clamp(1, 40);
 
-        let (statuses, headers) = crate::mastodon::statuses::paginate(
-            statuses,
-            params.limit.min(40),
-            params.max_id.as_deref(),
-            params.min_id.as_deref(),
-            params.since_id.as_deref(),
-            &state.instance_domain,
-            "/api/v1/timelines/home",
-        );
+        // The home feed is ranked, not chronological, so `min_id` and
+        // `since_id` have no meaning here — the entire ordering is rebuilt
+        // each pipeline run. We commandeer `max_id` as an opaque offset
+        // into the cached scored list because Mastodon's API exposes no
+        // other cursor field.
+        let page = state
+            .feed_store
+            .page(&cache_key, params.max_id.as_deref(), limit, || async {
+                self.collect()
+                    .await
+                    .into_iter()
+                    .map(|c| c.item)
+                    .collect::<Vec<Post>>()
+            })
+            .await;
+
+        let statuses =
+            crate::mastodon::statuses::from_posts(&state.pool, &state.instance_domain, page.items)
+                .await;
+
+        let mut headers = HeaderMap::new();
+        if let Some(next) = &page.cursor {
+            let link = format!(
+                "<https://{}/api/v1/timelines/home?max_id={next}>; rel=\"next\"",
+                state.instance_domain
+            );
+            if let Ok(value) = HeaderValue::from_str(&link) {
+                headers.insert(header::LINK, value);
+            }
+        }
 
         #[allow(clippy::cast_precision_loss)]
         metrics::histogram!("fediway_home_results").record(statuses.len() as f64);

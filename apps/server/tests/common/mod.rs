@@ -1,8 +1,12 @@
+use std::time::Duration;
+
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use serde::Serialize;
 use sqlx::PgPool;
+use state::cache::Cache;
+use state::feed_store::FeedStore;
 use tower::ServiceExt;
 
 use server::state::AppStateInner;
@@ -204,8 +208,10 @@ impl TestApp {
     pub async fn from_pool_with_mastodon(pool: PgPool, mastodon_api_url: Option<String>) -> Self {
         setup_db(&pool).await;
 
+        let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
         let state = AppStateInner::new(
             pool,
+            feed_store,
             "nomic_v1.5_64d".into(),
             "test.example.com".into(),
             mastodon_api_url,

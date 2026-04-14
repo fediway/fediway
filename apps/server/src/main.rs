@@ -1,6 +1,8 @@
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
+use std::time::Duration;
+
 use axum::extract::DefaultBodyLimit;
 use clap::Parser;
 use tokio::net::TcpListener;
@@ -8,6 +10,10 @@ use tower::ServiceBuilder;
 use tracing_subscriber::EnvFilter;
 
 use server::state::AppStateInner;
+use state::cache::Cache;
+use state::feed_store::FeedStore;
+
+const FEED_STORE_TTL: Duration = Duration::from_secs(15 * 60);
 
 #[derive(Parser)]
 #[command(name = "fediway-server")]
@@ -46,8 +52,19 @@ async fn main() -> anyhow::Result<()> {
         .expect("database check failed");
     tracing::info!("postgres ready");
 
+    let redis_conn = ::state::redis::connect(&args.redis)
+        .await
+        .expect("failed to connect to redis");
+    ::state::redis::check(&redis_conn)
+        .await
+        .expect("redis check failed");
+    tracing::info!("redis ready");
+
+    let feed_store = FeedStore::new(Cache::new(redis_conn, "fediway"), FEED_STORE_TTL);
+
     let app_state = AppStateInner::new(
         pool,
+        feed_store,
         args.orbit_model_name,
         args.instance.instance_domain,
         args.instance.mastodon_api_url,
