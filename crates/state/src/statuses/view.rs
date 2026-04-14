@@ -17,87 +17,98 @@ pub async fn fetch_by_ids(
     media: &MediaConfig,
     ids: &[i64],
 ) -> Vec<Status> {
-    fetch_inner(db, instance_domain, media, ids, true).await
+    let mut statuses = fetch_enriched(db, instance_domain, media, ids).await;
+    if statuses.is_empty() {
+        return statuses;
+    }
+
+    let resolved_ids: Vec<i64> = statuses
+        .iter()
+        .filter_map(|s| s.id.parse::<i64>().ok())
+        .collect();
+    let quote_targets = fetch_quote_targets(db, &resolved_ids).await;
+    if quote_targets.is_empty() {
+        return statuses;
+    }
+
+    let target_ids: Vec<i64> = quote_targets.values().copied().collect();
+    let parents = fetch_enriched(db, instance_domain, media, &target_ids).await;
+    let parent_by_id: HashMap<i64, Status> = parents
+        .into_iter()
+        .filter_map(|s| s.id.parse::<i64>().ok().map(|id| (id, s)))
+        .collect();
+
+    for status in &mut statuses {
+        let Ok(sid) = status.id.parse::<i64>() else {
+            continue;
+        };
+        let Some(quoted_id) = quote_targets.get(&sid) else {
+            continue;
+        };
+        if let Some(parent) = parent_by_id.get(quoted_id).cloned() {
+            status.quote = Some(Quote {
+                state: "accepted",
+                quoted_status: Box::new(parent),
+            });
+        }
+    }
+
+    statuses
 }
 
-async fn fetch_shallow(
+async fn fetch_enriched(
     db: &PgPool,
     instance_domain: &str,
     media: &MediaConfig,
     ids: &[i64],
-) -> HashMap<i64, Status> {
-    fetch_inner(db, instance_domain, media, ids, false)
-        .await
-        .into_iter()
-        .filter_map(|s| s.id.parse::<i64>().ok().map(|id| (id, s)))
+) -> Vec<Status> {
+    if ids.is_empty() {
+        return Vec::new();
+    }
+
+    let base = fetch_base(db, ids).await;
+    if base.is_empty() {
+        return Vec::new();
+    }
+
+    let resolved_ids: Vec<i64> = base.iter().map(|r| r.id).collect();
+
+    let (stats, media_map, tags, cards, mentions_map) = tokio::join!(
+        fetch_stats(db, &resolved_ids),
+        fetch_media(db, &resolved_ids),
+        fetch_tags(db, &resolved_ids),
+        fetch_cards(db, &resolved_ids),
+        fetch_mentions(db, &resolved_ids),
+    );
+
+    let shortcodes = scan_shortcodes(&base);
+    let emojis = if shortcodes.is_empty() {
+        HashMap::new()
+    } else {
+        fetch_emojis(db, &shortcodes).await
+    };
+
+    let enrichment = Enrichment {
+        stats: &stats,
+        media: &media_map,
+        tags: &tags,
+        cards: &cards,
+        mentions: &mentions_map,
+        emojis: &emojis,
+    };
+
+    base.into_iter()
+        .map(|row| build_status(row, instance_domain, media, &enrichment))
         .collect()
 }
 
-fn fetch_inner<'a>(
-    db: &'a PgPool,
-    instance_domain: &'a str,
-    media: &'a MediaConfig,
-    ids: &'a [i64],
-    include_quotes: bool,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = Vec<Status>> + Send + 'a>> {
-    Box::pin(async move {
-        if ids.is_empty() {
-            return Vec::new();
-        }
-
-        let base = fetch_base(db, ids).await;
-        if base.is_empty() {
-            return Vec::new();
-        }
-
-        let resolved_ids: Vec<i64> = base.iter().map(|r| r.id).collect();
-
-        let (stats, media_map, tags, cards, mentions_map) = tokio::join!(
-            fetch_stats(db, &resolved_ids),
-            fetch_media(db, &resolved_ids),
-            fetch_tags(db, &resolved_ids),
-            fetch_cards(db, &resolved_ids),
-            fetch_mentions(db, &resolved_ids),
-        );
-
-        let shortcodes = scan_shortcodes(&base);
-        let emojis = if shortcodes.is_empty() {
-            HashMap::new()
-        } else {
-            fetch_emojis(db, &shortcodes).await
-        };
-
-        let quotes = if include_quotes {
-            let targets = fetch_quote_targets(db, &resolved_ids).await;
-            let target_ids: Vec<i64> = targets.values().copied().collect();
-            let parents = fetch_shallow(db, instance_domain, media, &target_ids).await;
-            targets
-                .into_iter()
-                .filter_map(|(status_id, quoted_id)| {
-                    parents.get(&quoted_id).cloned().map(|s| (status_id, s))
-                })
-                .collect::<HashMap<i64, Status>>()
-        } else {
-            HashMap::new()
-        };
-
-        base.into_iter()
-            .map(|row| {
-                build_status(
-                    row,
-                    instance_domain,
-                    media,
-                    &stats,
-                    &media_map,
-                    &tags,
-                    &cards,
-                    &mentions_map,
-                    &emojis,
-                    &quotes,
-                )
-            })
-            .collect()
-    })
+struct Enrichment<'a> {
+    stats: &'a HashMap<i64, StatsRow>,
+    media: &'a HashMap<i64, Vec<MediaRow>>,
+    tags: &'a HashMap<i64, Vec<String>>,
+    cards: &'a HashMap<i64, CardRow>,
+    mentions: &'a HashMap<i64, Vec<MentionRow>>,
+    emojis: &'a HashMap<String, EmojiRow>,
 }
 
 #[derive(FromRow)]
@@ -474,25 +485,19 @@ async fn fetch_quote_targets(db: &PgPool, ids: &[i64]) -> HashMap<i64, i64> {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 fn build_status(
     row: BaseRow,
     instance_domain: &str,
     media: &MediaConfig,
-    stats: &HashMap<i64, StatsRow>,
-    media_map: &HashMap<i64, Vec<MediaRow>>,
-    tags: &HashMap<i64, Vec<String>>,
-    cards: &HashMap<i64, CardRow>,
-    mentions_map: &HashMap<i64, Vec<MentionRow>>,
-    emojis: &HashMap<String, EmojiRow>,
-    quotes: &HashMap<i64, Status>,
+    enrich: &Enrichment<'_>,
 ) -> Status {
     let status_id = row.id;
-    let stat = stats.get(&status_id).cloned().unwrap_or_default();
+    let stat = enrich.stats.get(&status_id).cloned().unwrap_or_default();
 
-    let account = build_account(&row, instance_domain, media, emojis);
+    let account = build_account(&row, instance_domain, media, enrich.emojis);
 
-    let media_attachments = media_map
+    let media_attachments = enrich
+        .media
         .get(&status_id)
         .map(|rows| {
             rows.iter()
@@ -501,7 +506,8 @@ fn build_status(
         })
         .unwrap_or_default();
 
-    let tag_list = tags
+    let tag_list = enrich
+        .tags
         .get(&status_id)
         .map(|names| {
             names
@@ -515,7 +521,8 @@ fn build_status(
         })
         .unwrap_or_default();
 
-    let mention_list = mentions_map
+    let mention_list = enrich
+        .mentions
         .get(&status_id)
         .map(|rows| {
             rows.iter()
@@ -526,15 +533,11 @@ fn build_status(
 
     let content_emojis = build_emojis(
         &[row.text.as_str(), row.spoiler_text.as_str()],
-        emojis,
+        enrich.emojis,
         media,
     );
 
-    let card = cards.get(&status_id).map(|c| build_card(c, media));
-    let quote = quotes.get(&status_id).cloned().map(|quoted| Quote {
-        state: "accepted",
-        quoted_status: Box::new(quoted),
-    });
+    let card = enrich.cards.get(&status_id).map(|c| build_card(c, media));
 
     let published_at = row.created_at.and_utc();
     let spoiler = sanitize_text(&row.spoiler_text);
@@ -550,13 +553,15 @@ fn build_status(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| url.clone());
 
+    let content = format_content(&row.text, &mention_list, &tag_list, instance_domain);
+
     Status {
         id: status_id.to_string(),
         uri,
         url: Some(url),
         created_at: published_at,
         edited_at: row.edited_at.map(|dt| dt.and_utc()),
-        content: format_content(&row.text),
+        content,
         text: Some(row.text),
         visibility: "public",
         language: row.language,
@@ -579,7 +584,7 @@ fn build_status(
         muted: false,
         bookmarked: false,
         pinned: false,
-        quote,
+        quote: None,
         quote_approval: QuoteApproval::public(),
         poll: None,
         filtered: Vec::new(),
@@ -875,11 +880,140 @@ fn file_meta_dimensions(meta: Option<&serde_json::Value>) -> (Option<u32>, Optio
     (width, height)
 }
 
-fn format_content(text: &str) -> String {
-    let escaped = text
-        .replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;");
-    let with_brs = escaped.replace('\n', "<br />");
-    format!("<p>{with_brs}</p>")
+fn format_content(text: &str, mentions: &[Mention], tags: &[Tag], instance_domain: &str) -> String {
+    let mut spans: Vec<(usize, usize, String)> = Vec::new();
+
+    for m in url_regex().find_iter(text) {
+        let url = m.as_str();
+        spans.push((
+            m.start(),
+            m.end(),
+            format!(
+                "<a href=\"{url}\" rel=\"nofollow noopener\">{url}</a>",
+                url = escape_attr(url)
+            ),
+        ));
+    }
+
+    for mention in mentions {
+        if let Some(domain) = mention.acct.split('@').nth(1) {
+            let needle = format!("@{}@{domain}", mention.username);
+            push_word_matches(text, &needle, &mut spans, |_| mention_anchor(mention));
+        }
+        let needle = format!("@{}", mention.username);
+        push_word_matches(text, &needle, &mut spans, |_| mention_anchor(mention));
+    }
+
+    for tag in tags {
+        let needle = format!("#{}", tag.name);
+        push_word_matches(text, &needle, &mut spans, |_| {
+            tag_anchor(tag, instance_domain)
+        });
+    }
+
+    spans.sort_by_key(|(start, end, _)| (*start, std::cmp::Reverse(*end)));
+    let mut non_overlapping: Vec<(usize, usize, String)> = Vec::with_capacity(spans.len());
+    for span in spans {
+        if non_overlapping.last().is_none_or(|last| span.0 >= last.1) {
+            non_overlapping.push(span);
+        }
+    }
+
+    let mut out = String::with_capacity(text.len() + 32);
+    let mut cursor = 0;
+    for (start, end, anchor) in non_overlapping {
+        out.push_str(&escape_text(&text[cursor..start]));
+        out.push_str(&anchor);
+        cursor = end;
+    }
+    out.push_str(&escape_text(&text[cursor..]));
+
+    let paragraphs: Vec<String> = out
+        .split("\n\n")
+        .filter(|p| !p.is_empty())
+        .map(|p| format!("<p>{}</p>", p.replace('\n', "<br />")))
+        .collect();
+    if paragraphs.is_empty() {
+        "<p></p>".to_owned()
+    } else {
+        paragraphs.join("")
+    }
+}
+
+fn push_word_matches<F: Fn(&str) -> String>(
+    text: &str,
+    needle: &str,
+    spans: &mut Vec<(usize, usize, String)>,
+    anchor: F,
+) {
+    if needle.len() < 2 {
+        return;
+    }
+    let mut search_from = 0;
+    while let Some(rel) = text[search_from..].find(needle) {
+        let start = search_from + rel;
+        let end = start + needle.len();
+        let preceded_by_word = start > 0
+            && text[..start]
+                .chars()
+                .next_back()
+                .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '@' || c == '#');
+        let followed_by_word = text[end..]
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_alphanumeric() || c == '_');
+        if !preceded_by_word && !followed_by_word {
+            spans.push((start, end, anchor(needle)));
+        }
+        search_from = end;
+    }
+}
+
+fn mention_anchor(m: &Mention) -> String {
+    format!(
+        "<a href=\"{url}\" class=\"u-url mention\">@<span>{user}</span></a>",
+        url = escape_attr(&m.url),
+        user = escape_text(&m.username),
+    )
+}
+
+fn tag_anchor(t: &Tag, instance_domain: &str) -> String {
+    format!(
+        "<a href=\"https://{instance_domain}/tags/{name}\" class=\"mention hashtag\" rel=\"tag\">#<span>{display}</span></a>",
+        name = escape_attr(&t.name),
+        display = escape_text(&t.name),
+    )
+}
+
+fn url_regex() -> &'static Regex {
+    use std::sync::OnceLock;
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"https?://[^\s<>\x22\]]+").expect("valid regex"))
+}
+
+fn escape_text(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
+fn escape_attr(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            '"' => out.push_str("&quot;"),
+            _ => out.push(c),
+        }
+    }
+    out
 }

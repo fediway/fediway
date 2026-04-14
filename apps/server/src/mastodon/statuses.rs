@@ -10,18 +10,30 @@ use sources::mastodon::CachedPost;
 use sqlx::PgPool;
 use state::statuses::{PostMapping, fetch_by_ids};
 
+enum Slot {
+    Local(i64),
+    Remote(usize),
+}
+
 pub async fn hydrate(
     db: &PgPool,
     instance_domain: &str,
     media: &MediaConfig,
     cached: Vec<CachedPost>,
 ) -> Vec<Status> {
+    let mut slots: Vec<Slot> = Vec::with_capacity(cached.len());
     let mut local_ids: Vec<i64> = Vec::new();
     let mut remote_posts: Vec<Post> = Vec::new();
-    for item in &cached {
+    for item in cached {
         match item {
-            CachedPost::Local { id } => local_ids.push(*id),
-            CachedPost::Remote { post } => remote_posts.push((**post).clone()),
+            CachedPost::Local { id } => {
+                slots.push(Slot::Local(id));
+                local_ids.push(id);
+            }
+            CachedPost::Remote { post } => {
+                slots.push(Slot::Remote(remote_posts.len()));
+                remote_posts.push(*post);
+            }
         }
     }
 
@@ -34,13 +46,14 @@ pub async fn hydrate(
         .into_iter()
         .filter_map(|s| s.id.parse::<i64>().ok().map(|id| (id, s)))
         .collect();
+    let mut remote_by_idx: HashMap<usize, Status> =
+        remote_statuses.into_iter().enumerate().collect();
 
-    let mut remote_iter = remote_statuses.into_iter();
-    cached
+    slots
         .into_iter()
-        .filter_map(|item| match item {
-            CachedPost::Local { id } => local_by_id.get(&id).cloned(),
-            CachedPost::Remote { .. } => remote_iter.next(),
+        .filter_map(|slot| match slot {
+            Slot::Local(id) => local_by_id.get(&id).cloned(),
+            Slot::Remote(idx) => remote_by_idx.remove(&idx),
         })
         .collect()
 }

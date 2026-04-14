@@ -257,7 +257,7 @@ async fn fetch_by_ids_populates_every_enrichment_dimension(pool: PgPool) {
     let status_id = insert_status(
         &pool,
         alice,
-        "hello world :rust: @bob",
+        "hello world :rust: @bob #rust https://example.com",
         "cw note",
         Some("en"),
         0,
@@ -304,8 +304,18 @@ async fn fetch_by_ids_populates_every_enrichment_dimension(pool: PgPool) {
     assert_eq!(s.id, status_id.to_string());
     assert_eq!(s.visibility, "public");
     assert_eq!(s.language.as_deref(), Some("en"));
+    assert!(s.content.starts_with("<p>"));
     assert!(s.content.contains("hello world"));
-    assert_eq!(s.text.as_deref(), Some("hello world :rust: @bob"));
+    assert!(s.content.contains("class=\"u-url mention\""));
+    assert!(s.content.contains("@<span>bob</span>"));
+    assert_eq!(
+        s.text.as_deref(),
+        Some("hello world :rust: @bob #rust https://example.com")
+    );
+    assert!(s.content.contains("class=\"mention hashtag\""));
+    assert!(s.content.contains("#<span>rust</span>"));
+    assert!(s.content.contains("https://example.com"));
+    assert!(s.content.contains("rel=\"nofollow noopener\""));
     assert_eq!(s.spoiler_text, "cw note");
 
     assert_eq!(s.favourites_count, 42);
