@@ -13,7 +13,7 @@ use mastodon::Status;
 use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::recommended::RecommendedSource;
 use sources::commonfeed::types::QueryFilters;
-use sources::mastodon::{NetworkSource, PolicyFilter};
+use sources::mastodon::{CachedPost, NetworkSource, PolicyFilter};
 
 use crate::auth::Account;
 use crate::feeds::timeline_feed::TimelineParams;
@@ -133,14 +133,18 @@ impl HomeFeed {
                 self.collect()
                     .await
                     .into_iter()
-                    .map(|c| c.item)
-                    .collect::<Vec<Post>>()
+                    .map(|c| CachedPost::from_post(c.item, &state.instance_domain))
+                    .collect::<Vec<CachedPost>>()
             })
             .await;
 
-        let statuses =
-            crate::mastodon::statuses::from_posts(&state.pool, &state.instance_domain, page.items)
-                .await;
+        let statuses = crate::mastodon::statuses::hydrate(
+            &state.pool,
+            &state.instance_domain,
+            &state.media,
+            page.items,
+        )
+        .await;
 
         let mut headers = HeaderMap::new();
         if let Some(next) = &page.cursor {

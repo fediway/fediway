@@ -42,32 +42,118 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
     for stmt in [
         r"CREATE TABLE IF NOT EXISTS accounts (
             id                  BIGSERIAL PRIMARY KEY,
-            username            TEXT NOT NULL,
+            username            TEXT NOT NULL DEFAULT '',
             domain              TEXT,
             display_name        TEXT NOT NULL DEFAULT '',
+            note                TEXT NOT NULL DEFAULT '',
             url                 TEXT,
+            uri                 TEXT NOT NULL DEFAULT '',
             suspended_at        TIMESTAMP,
             silenced_at         TIMESTAMP,
             avatar_file_name    TEXT,
             avatar_remote_url   TEXT,
             header_file_name    TEXT,
-            header_remote_url   TEXT
+            header_remote_url   TEXT NOT NULL DEFAULT '',
+            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            discoverable        BOOLEAN,
+            indexable           BOOLEAN NOT NULL DEFAULT FALSE,
+            locked              BOOLEAN NOT NULL DEFAULT FALSE,
+            actor_type          TEXT,
+            fields              JSONB
+        )",
+        r"CREATE TABLE IF NOT EXISTS account_stats (
+            id                  BIGSERIAL PRIMARY KEY,
+            account_id          BIGINT NOT NULL,
+            statuses_count      BIGINT NOT NULL DEFAULT 0,
+            following_count     BIGINT NOT NULL DEFAULT 0,
+            followers_count     BIGINT NOT NULL DEFAULT 0,
+            last_status_at      TIMESTAMP,
+            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS statuses (
-            id                          BIGSERIAL PRIMARY KEY,
-            account_id                  BIGINT NOT NULL,
-            uri                         TEXT NOT NULL,
-            url                         TEXT,
-            text                        TEXT NOT NULL DEFAULT '',
-            spoiler_text                TEXT NOT NULL DEFAULT '',
-            sensitive                   BOOLEAN NOT NULL DEFAULT FALSE,
-            language                    TEXT,
-            visibility                  INTEGER NOT NULL DEFAULT 0,
-            reblog_of_id                BIGINT,
-            in_reply_to_id              BIGINT,
-            in_reply_to_account_id      BIGINT,
-            created_at                  TIMESTAMP NOT NULL DEFAULT NOW(),
-            deleted_at                  TIMESTAMP
+            id                              BIGSERIAL PRIMARY KEY,
+            account_id                      BIGINT NOT NULL,
+            uri                             TEXT,
+            url                             TEXT,
+            text                            TEXT NOT NULL DEFAULT '',
+            spoiler_text                    TEXT NOT NULL DEFAULT '',
+            sensitive                       BOOLEAN NOT NULL DEFAULT FALSE,
+            language                        TEXT,
+            visibility                      INTEGER NOT NULL DEFAULT 0,
+            reblog_of_id                    BIGINT,
+            in_reply_to_id                  BIGINT,
+            in_reply_to_account_id          BIGINT,
+            ordered_media_attachment_ids    BIGINT[],
+            created_at                      TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at                      TIMESTAMP NOT NULL DEFAULT NOW(),
+            edited_at                       TIMESTAMP,
+            deleted_at                      TIMESTAMP
+        )",
+        r"CREATE TABLE IF NOT EXISTS media_attachments (
+            id                      BIGSERIAL PRIMARY KEY,
+            status_id               BIGINT,
+            account_id              BIGINT,
+            type                    INTEGER NOT NULL DEFAULT 0,
+            description             TEXT,
+            remote_url              TEXT NOT NULL DEFAULT '',
+            blurhash                TEXT,
+            file_file_name          TEXT,
+            file_meta               JSON,
+            thumbnail_file_name     TEXT,
+            created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at              TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS preview_cards (
+            id                  BIGSERIAL PRIMARY KEY,
+            url                 TEXT NOT NULL DEFAULT '',
+            title               TEXT NOT NULL DEFAULT '',
+            description         TEXT NOT NULL DEFAULT '',
+            type                INTEGER NOT NULL DEFAULT 0,
+            html                TEXT NOT NULL DEFAULT '',
+            author_name         TEXT NOT NULL DEFAULT '',
+            author_url          TEXT NOT NULL DEFAULT '',
+            provider_name       TEXT NOT NULL DEFAULT '',
+            provider_url        TEXT NOT NULL DEFAULT '',
+            image_file_name     TEXT,
+            image_description   TEXT NOT NULL DEFAULT '',
+            width               INTEGER NOT NULL DEFAULT 0,
+            height              INTEGER NOT NULL DEFAULT 0,
+            embed_url           TEXT NOT NULL DEFAULT '',
+            blurhash            TEXT,
+            language            TEXT,
+            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS preview_cards_statuses (
+            preview_card_id     BIGINT NOT NULL,
+            status_id           BIGINT NOT NULL,
+            PRIMARY KEY (preview_card_id, status_id)
+        )",
+        r"CREATE TABLE IF NOT EXISTS custom_emojis (
+            id                      BIGSERIAL PRIMARY KEY,
+            shortcode               TEXT NOT NULL,
+            domain                  TEXT,
+            image_file_name         TEXT,
+            image_remote_url        TEXT,
+            disabled                BOOLEAN NOT NULL DEFAULT FALSE,
+            visible_in_picker       BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at              TIMESTAMP NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS quotes (
+            id                  BIGSERIAL PRIMARY KEY,
+            account_id          BIGINT NOT NULL,
+            status_id           BIGINT NOT NULL,
+            quoted_account_id   BIGINT,
+            quoted_status_id    BIGINT,
+            state               INTEGER NOT NULL DEFAULT 0,
+            legacy              BOOLEAN NOT NULL DEFAULT FALSE,
+            activity_uri        TEXT,
+            approval_uri        TEXT,
+            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS tags (
             id              BIGSERIAL PRIMARY KEY,
@@ -76,7 +162,7 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
         r"CREATE TABLE IF NOT EXISTS statuses_tags (
             status_id       BIGINT NOT NULL,
             tag_id          BIGINT NOT NULL,
-            PRIMARY KEY (status_id, tag_id)
+            PRIMARY KEY (tag_id, status_id)
         )",
         r"CREATE TABLE IF NOT EXISTS status_stats (
             id                  BIGSERIAL PRIMARY KEY,
@@ -173,6 +259,12 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             ON mutes (account_id, target_account_id)",
         r"CREATE UNIQUE INDEX IF NOT EXISTS index_account_domain_blocks_on_account_id_and_domain
             ON account_domain_blocks (account_id, domain)",
+        r"CREATE INDEX IF NOT EXISTS index_media_attachments_on_status_id
+            ON media_attachments (status_id) WHERE status_id IS NOT NULL",
+        r"CREATE INDEX IF NOT EXISTS index_preview_cards_statuses_on_status_id
+            ON preview_cards_statuses (status_id)",
+        r"CREATE INDEX IF NOT EXISTS index_custom_emojis_on_shortcode_and_domain
+            ON custom_emojis (shortcode, domain)",
     ] {
         sqlx::query(stmt)
             .execute(pool)

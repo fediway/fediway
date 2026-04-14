@@ -3,7 +3,7 @@ use serde::Serialize;
 
 /// Mastodon-compatible Tag entity.
 /// See: <https://docs.joinmastodon.org/entities/Tag/>
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Tag {
     pub name: String,
     pub url: String,
@@ -13,7 +13,7 @@ pub struct Tag {
 
 /// Daily usage history for a tag.
 /// Mastodon returns `uses` and `accounts` as strings.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TagHistory {
     pub day: String,
     pub uses: String,

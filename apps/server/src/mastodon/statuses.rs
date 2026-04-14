@@ -3,10 +3,47 @@
 use std::collections::HashMap;
 
 use axum::http::{HeaderMap, HeaderValue, header};
+use common::paperclip::MediaConfig;
 use common::types::Post;
 use mastodon::Status;
+use sources::mastodon::CachedPost;
 use sqlx::PgPool;
-use state::statuses::PostMapping;
+use state::statuses::{PostMapping, fetch_by_ids};
+
+pub async fn hydrate(
+    db: &PgPool,
+    instance_domain: &str,
+    media: &MediaConfig,
+    cached: Vec<CachedPost>,
+) -> Vec<Status> {
+    let mut local_ids: Vec<i64> = Vec::new();
+    let mut remote_posts: Vec<Post> = Vec::new();
+    for item in &cached {
+        match item {
+            CachedPost::Local { id } => local_ids.push(*id),
+            CachedPost::Remote { post } => remote_posts.push((**post).clone()),
+        }
+    }
+
+    let (local_statuses, remote_statuses) = tokio::join!(
+        fetch_by_ids(db, instance_domain, media, &local_ids),
+        from_posts(db, instance_domain, remote_posts),
+    );
+
+    let local_by_id: HashMap<i64, Status> = local_statuses
+        .into_iter()
+        .filter_map(|s| s.id.parse::<i64>().ok().map(|id| (id, s)))
+        .collect();
+
+    let mut remote_iter = remote_statuses.into_iter();
+    cached
+        .into_iter()
+        .filter_map(|item| match item {
+            CachedPost::Local { id } => local_by_id.get(&id).cloned(),
+            CachedPost::Remote { .. } => remote_iter.next(),
+        })
+        .collect()
+}
 
 /// Posts are resolved to Mastodon status IDs by provenance:
 ///

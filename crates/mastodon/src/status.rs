@@ -14,7 +14,7 @@ use crate::tag::Tag;
 
 /// Mastodon-compatible Context entity.
 /// See: <https://docs.joinmastodon.org/entities/Context/>
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Context {
     pub ancestors: Vec<Status>,
     pub descendants: Vec<Status>,
@@ -22,7 +22,7 @@ pub struct Context {
 
 /// Mastodon-compatible Status entity.
 /// See: <https://docs.joinmastodon.org/entities/Status/>
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Status {
     pub id: String,

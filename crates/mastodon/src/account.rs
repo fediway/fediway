@@ -3,7 +3,7 @@ use serde::Serialize;
 
 /// Mastodon-compatible Account entity.
 /// See: <https://docs.joinmastodon.org/entities/Account/>
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Account {
     pub id: String,
@@ -32,7 +32,7 @@ pub struct Account {
 }
 
 /// Mastodon-compatible `CustomEmoji` entity.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct CustomEmoji {
     pub shortcode: String,
     pub url: String,
@@ -41,7 +41,7 @@ pub struct CustomEmoji {
 }
 
 /// Mastodon-compatible Field entity (profile metadata).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Field {
     pub name: String,
     pub value: String,

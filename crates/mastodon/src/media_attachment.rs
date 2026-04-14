@@ -2,7 +2,7 @@ use serde::Serialize;
 
 /// Mastodon-compatible `MediaAttachment` entity.
 /// See: <https://docs.joinmastodon.org/entities/MediaAttachment/>
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MediaAttachment {
     pub id: String,
     #[serde(rename = "type")]
@@ -16,7 +16,7 @@ pub struct MediaAttachment {
 }
 
 /// Mastodon-compatible media metadata.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MediaMeta {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub original: Option<MediaMetaDimensions>,
@@ -25,7 +25,7 @@ pub struct MediaMeta {
 }
 
 /// Width/height/aspect for a media variant.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MediaMetaDimensions {
     pub width: u32,
     pub height: u32,
@@ -33,6 +33,7 @@ pub struct MediaMetaDimensions {
 }
 
 impl MediaMetaDimensions {
+    #[must_use]
     pub fn new(width: u32, height: u32) -> Self {
         let aspect = if height > 0 {
             f64::from(width) / f64::from(height)

@@ -4,7 +4,7 @@ use serde::Serialize;
 
 /// Mastodon-compatible `PreviewCard` entity (used for trends/links).
 /// See: <https://docs.joinmastodon.org/entities/PreviewCard/>
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PreviewCard {
     pub url: String,
     pub title: String,
@@ -27,7 +27,7 @@ pub struct PreviewCard {
 }
 
 /// Author of a preview card (added in Mastodon 4.3).
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PreviewCardAuthor {
     pub name: String,
     pub url: String,
@@ -35,7 +35,7 @@ pub struct PreviewCardAuthor {
 }
 
 /// Daily usage history for trending links.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PreviewCardHistory {
     pub day: String,
     pub accounts: String,

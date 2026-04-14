@@ -9,11 +9,13 @@ workspace = true
 [dependencies]
 common.workspace = true
 config.workspace = true
+mastodon.workspace = true
 chrono.workspace = true
 sqlx = { workspace = true, features = ["json", "chrono"] }
 serde.workspace = true
 serde_json.workspace = true
 redis.workspace = true
+regex = "1"
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros"] }
 tracing.workspace = true

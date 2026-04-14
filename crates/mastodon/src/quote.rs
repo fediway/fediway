@@ -4,7 +4,7 @@ use crate::status::Status;
 
 /// Mastodon-compatible Quote entity.
 /// See: <https://docs.joinmastodon.org/entities/Quote/>
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Quote {
     pub state: &'static str,
     pub quoted_status: Box<Status>,
@@ -12,7 +12,7 @@ pub struct Quote {
 
 /// Mastodon-compatible `QuoteApproval` entity.
 /// See: <https://docs.joinmastodon.org/entities/QuoteApproval/>
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct QuoteApproval {
     pub automatic: Vec<&'static str>,
     pub manual: Vec<&'static str>,

@@ -4,7 +4,8 @@ use feed::candidate::Candidate;
 use feed::source::Source;
 use sqlx::PgPool;
 
-use crate::mastodon::paperclip::MediaConfig;
+use common::paperclip::MediaConfig;
+
 use crate::mastodon::row::{StatusRow, row_to_post};
 
 const NATIVE_TAG_QUERY: &str = r"

@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 /// Mastodon-compatible Mention entity.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Mention {
     pub id: String,
     pub username: String,

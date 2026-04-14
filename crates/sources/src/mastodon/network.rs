@@ -7,8 +7,8 @@ use feed::candidate::Candidate;
 use feed::source::Source;
 use sqlx::PgPool;
 
-use crate::mastodon::paperclip::MediaConfig;
 use crate::mastodon::row::{StatusRow, row_to_post};
+use common::paperclip::MediaConfig;
 
 const TOP_AUTHORS: i64 = 200;
 const POSTS_PER_AUTHOR: i64 = 3;

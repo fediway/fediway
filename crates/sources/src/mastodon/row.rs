@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use common::types::{Author, Engagement, Post};
 use sqlx::FromRow;
 
-use crate::mastodon::paperclip::MediaConfig;
+use common::paperclip::MediaConfig;
 
 #[derive(FromRow)]
 pub(crate) struct StatusRow {
