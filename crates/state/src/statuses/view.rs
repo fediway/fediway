@@ -896,19 +896,19 @@ fn format_content(text: &str, mentions: &[Mention], tags: &[Tag], instance_domai
     }
 
     for mention in mentions {
+        let anchor = mention_anchor(mention);
         if let Some(domain) = mention.acct.split('@').nth(1) {
             let needle = format!("@{}@{domain}", mention.username);
-            push_word_matches(text, &needle, &mut spans, |_| mention_anchor(mention));
+            push_word_matches(text, &needle, &anchor, &mut spans);
         }
         let needle = format!("@{}", mention.username);
-        push_word_matches(text, &needle, &mut spans, |_| mention_anchor(mention));
+        push_word_matches(text, &needle, &anchor, &mut spans);
     }
 
     for tag in tags {
         let needle = format!("#{}", tag.name);
-        push_word_matches(text, &needle, &mut spans, |_| {
-            tag_anchor(tag, instance_domain)
-        });
+        let anchor = tag_anchor(tag, instance_domain);
+        push_word_matches(text, &needle, &anchor, &mut spans);
     }
 
     spans.sort_by_key(|(start, end, _)| (*start, std::cmp::Reverse(*end)));
@@ -940,11 +940,11 @@ fn format_content(text: &str, mentions: &[Mention], tags: &[Tag], instance_domai
     }
 }
 
-fn push_word_matches<F: Fn(&str) -> String>(
+fn push_word_matches(
     text: &str,
     needle: &str,
+    anchor: &str,
     spans: &mut Vec<(usize, usize, String)>,
-    anchor: F,
 ) {
     if needle.len() < 2 {
         return;
@@ -961,9 +961,9 @@ fn push_word_matches<F: Fn(&str) -> String>(
         let followed_by_word = text[end..]
             .chars()
             .next()
-            .is_some_and(|c| c.is_alphanumeric() || c == '_');
+            .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '@');
         if !preceded_by_word && !followed_by_word {
-            spans.push((start, end, anchor(needle)));
+            spans.push((start, end, anchor.to_owned()));
         }
         search_from = end;
     }
