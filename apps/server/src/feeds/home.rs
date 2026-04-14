@@ -19,10 +19,10 @@ use crate::auth::Account;
 use crate::feeds::timeline_feed::TimelineParams;
 use crate::state::AppState;
 
-const POOL_SIZE: usize = 100;
-const NETWORK_POOL: usize = 60;
-const RECOMMENDED_POOL: usize = 60;
-const TRENDING_POOL: usize = 100;
+const POOL_SIZE: usize = 300;
+const NETWORK_POOL: usize = 180;
+const RECOMMENDED_POOL: usize = 180;
+const TRENDING_POOL: usize = 300;
 
 pub struct HomeFeed {
     pipeline: Pipeline<Post>,
