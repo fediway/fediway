@@ -280,7 +280,7 @@ impl Source<Post> for NetworkSource {
                 let affinity_norm = affinity.get(&row.account_id).copied().unwrap_or(0.0);
                 let net_eng_norm = net_eng.get(&row.id).copied().unwrap_or(0.0);
                 #[allow(clippy::cast_precision_loss)]
-                let age_hours = (now - row.created_at).num_seconds() as f64 / 3600.0;
+                let age_hours = (now - row.created_at.and_utc()).num_seconds() as f64 / 3600.0;
                 let recency = (-age_hours / RECENCY_HALF_LIFE_HOURS).exp();
                 let score =
                     W_AFFINITY * affinity_norm + W_NETWORK * net_eng_norm + W_RECENCY * recency;

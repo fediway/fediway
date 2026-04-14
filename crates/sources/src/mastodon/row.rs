@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use common::types::{Author, Engagement, Post};
 use sqlx::FromRow;
 
@@ -12,7 +12,7 @@ pub(crate) struct StatusRow {
     pub spoiler_text: Option<String>,
     pub sensitive: bool,
     pub language: Option<String>,
-    pub created_at: DateTime<Utc>,
+    pub created_at: NaiveDateTime,
     pub username: String,
     pub domain: Option<String>,
     pub display_name: Option<String>,
@@ -44,7 +44,7 @@ pub(crate) fn row_to_post(row: StatusRow, instance_domain: &str) -> Post {
             avatar_url: None,
             emojis: Vec::new(),
         },
-        published_at: row.created_at,
+        published_at: row.created_at.and_utc(),
         language: row.language,
         sensitive: row.sensitive,
         content_warning,
@@ -72,9 +72,11 @@ mod tests {
             spoiler_text: None,
             sensitive: false,
             language: Some("en".into()),
-            created_at: chrono::DateTime::parse_from_rfc3339("2026-04-13T12:00:00Z")
-                .unwrap()
-                .with_timezone(&chrono::Utc),
+            created_at: chrono::NaiveDateTime::parse_from_str(
+                "2026-04-13T12:00:00",
+                "%Y-%m-%dT%H:%M:%S",
+            )
+            .unwrap(),
             username: "alice".into(),
             domain: None,
             display_name: Some("Alice".into()),
@@ -92,9 +94,11 @@ mod tests {
             spoiler_text: Some("cw text".into()),
             sensitive: true,
             language: None,
-            created_at: chrono::DateTime::parse_from_rfc3339("2026-04-13T12:00:00Z")
-                .unwrap()
-                .with_timezone(&chrono::Utc),
+            created_at: chrono::NaiveDateTime::parse_from_str(
+                "2026-04-13T12:00:00",
+                "%Y-%m-%dT%H:%M:%S",
+            )
+            .unwrap(),
             username: "bob".into(),
             domain: Some("remote.example".into()),
             display_name: None,

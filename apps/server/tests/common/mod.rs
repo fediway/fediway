@@ -37,8 +37,8 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             domain          TEXT,
             display_name    TEXT NOT NULL DEFAULT '',
             url             TEXT,
-            suspended_at    TIMESTAMPTZ,
-            silenced_at     TIMESTAMPTZ
+            suspended_at    TIMESTAMP,
+            silenced_at     TIMESTAMP
         )",
         r"CREATE TABLE IF NOT EXISTS statuses (
             id                          BIGSERIAL PRIMARY KEY,
@@ -53,8 +53,8 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             reblog_of_id                BIGINT,
             in_reply_to_id              BIGINT,
             in_reply_to_account_id      BIGINT,
-            created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            deleted_at                  TIMESTAMPTZ
+            created_at                  TIMESTAMP NOT NULL DEFAULT NOW(),
+            deleted_at                  TIMESTAMP
         )",
         r"CREATE TABLE IF NOT EXISTS tags (
             id              BIGSERIAL PRIMARY KEY,
@@ -72,30 +72,30 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             reblogs_count       BIGINT NOT NULL DEFAULT 0,
             favourites_count    BIGINT NOT NULL DEFAULT 0,
             quotes_count        BIGINT NOT NULL DEFAULT 0,
-            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS favourites (
             id              BIGSERIAL PRIMARY KEY,
             account_id      BIGINT NOT NULL,
             status_id       BIGINT NOT NULL,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS bookmarks (
             id              BIGSERIAL PRIMARY KEY,
             account_id      BIGINT NOT NULL,
             status_id       BIGINT NOT NULL,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS mentions (
             id              BIGSERIAL PRIMARY KEY,
             status_id       BIGINT NOT NULL,
             account_id      BIGINT NOT NULL,
             silent          BOOLEAN NOT NULL DEFAULT FALSE,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS follows (
             id                  BIGSERIAL PRIMARY KEY,
@@ -104,31 +104,31 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             show_reblogs        BOOLEAN NOT NULL DEFAULT TRUE,
             notify              BOOLEAN NOT NULL DEFAULT FALSE,
             uri                 TEXT,
-            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS blocks (
             id                  BIGSERIAL PRIMARY KEY,
             account_id          BIGINT NOT NULL,
             target_account_id   BIGINT NOT NULL,
             uri                 TEXT,
-            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS mutes (
             id                  BIGSERIAL PRIMARY KEY,
             account_id          BIGINT NOT NULL,
             target_account_id   BIGINT NOT NULL,
             hide_notifications  BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS account_domain_blocks (
             id                  BIGSERIAL PRIMARY KEY,
             account_id          BIGINT NOT NULL,
             domain              TEXT NOT NULL,
-            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE UNIQUE INDEX IF NOT EXISTS index_status_stats_on_status_id
             ON status_stats (status_id)",
