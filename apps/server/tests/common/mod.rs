@@ -27,33 +27,34 @@ impl TestResponse {
     }
 }
 
-/// Minimal Mastodon schema for tests that query native tables
-/// (`statuses`, `accounts`, `tags`, `statuses_tags`). Only the columns
-/// touched by fediway's local sources are defined — this is a fixture,
-/// not a full Mastodon mirror, and is intentionally permissive
-/// (nullable defaults, no FK constraints) to keep seeding simple.
+/// Subset of the Mastodon schema covering only the columns and indexes
+/// fediway's local sources query. Mirror real Mastodon when adding more.
 pub async fn setup_mastodon_schema(pool: &PgPool) {
     for stmt in [
         r"CREATE TABLE IF NOT EXISTS accounts (
             id              BIGSERIAL PRIMARY KEY,
             username        TEXT NOT NULL,
             domain          TEXT,
-            display_name    TEXT,
-            url             TEXT
+            display_name    TEXT NOT NULL DEFAULT '',
+            url             TEXT,
+            suspended_at    TIMESTAMPTZ,
+            silenced_at     TIMESTAMPTZ
         )",
         r"CREATE TABLE IF NOT EXISTS statuses (
-            id              BIGSERIAL PRIMARY KEY,
-            account_id      BIGINT NOT NULL,
-            uri             TEXT NOT NULL,
-            url             TEXT,
-            text            TEXT NOT NULL DEFAULT '',
-            spoiler_text    TEXT,
-            sensitive       BOOLEAN NOT NULL DEFAULT FALSE,
-            language        TEXT,
-            visibility      INTEGER NOT NULL DEFAULT 0,
-            reblog_of_id    BIGINT,
-            in_reply_to_id  BIGINT,
-            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            id                          BIGSERIAL PRIMARY KEY,
+            account_id                  BIGINT NOT NULL,
+            uri                         TEXT NOT NULL,
+            url                         TEXT,
+            text                        TEXT NOT NULL DEFAULT '',
+            spoiler_text                TEXT NOT NULL DEFAULT '',
+            sensitive                   BOOLEAN NOT NULL DEFAULT FALSE,
+            language                    TEXT,
+            visibility                  INTEGER NOT NULL DEFAULT 0,
+            reblog_of_id                BIGINT,
+            in_reply_to_id              BIGINT,
+            in_reply_to_account_id      BIGINT,
+            created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            deleted_at                  TIMESTAMPTZ
         )",
         r"CREATE TABLE IF NOT EXISTS tags (
             id              BIGSERIAL PRIMARY KEY,
@@ -64,6 +65,101 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             tag_id          BIGINT NOT NULL,
             PRIMARY KEY (status_id, tag_id)
         )",
+        r"CREATE TABLE IF NOT EXISTS status_stats (
+            id                  BIGSERIAL PRIMARY KEY,
+            status_id           BIGINT NOT NULL,
+            replies_count       BIGINT NOT NULL DEFAULT 0,
+            reblogs_count       BIGINT NOT NULL DEFAULT 0,
+            favourites_count    BIGINT NOT NULL DEFAULT 0,
+            quotes_count        BIGINT NOT NULL DEFAULT 0,
+            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS favourites (
+            id              BIGSERIAL PRIMARY KEY,
+            account_id      BIGINT NOT NULL,
+            status_id       BIGINT NOT NULL,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS bookmarks (
+            id              BIGSERIAL PRIMARY KEY,
+            account_id      BIGINT NOT NULL,
+            status_id       BIGINT NOT NULL,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS mentions (
+            id              BIGSERIAL PRIMARY KEY,
+            status_id       BIGINT NOT NULL,
+            account_id      BIGINT NOT NULL,
+            silent          BOOLEAN NOT NULL DEFAULT FALSE,
+            created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS follows (
+            id                  BIGSERIAL PRIMARY KEY,
+            account_id          BIGINT NOT NULL,
+            target_account_id   BIGINT NOT NULL,
+            show_reblogs        BOOLEAN NOT NULL DEFAULT TRUE,
+            notify              BOOLEAN NOT NULL DEFAULT FALSE,
+            uri                 TEXT,
+            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS blocks (
+            id                  BIGSERIAL PRIMARY KEY,
+            account_id          BIGINT NOT NULL,
+            target_account_id   BIGINT NOT NULL,
+            uri                 TEXT,
+            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS mutes (
+            id                  BIGSERIAL PRIMARY KEY,
+            account_id          BIGINT NOT NULL,
+            target_account_id   BIGINT NOT NULL,
+            hide_notifications  BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE TABLE IF NOT EXISTS account_domain_blocks (
+            id                  BIGSERIAL PRIMARY KEY,
+            account_id          BIGINT NOT NULL,
+            domain              TEXT NOT NULL,
+            created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )",
+        r"CREATE UNIQUE INDEX IF NOT EXISTS index_status_stats_on_status_id
+            ON status_stats (status_id)",
+        r"CREATE UNIQUE INDEX IF NOT EXISTS index_favourites_on_account_id_and_status_id
+            ON favourites (account_id, status_id)",
+        r"CREATE INDEX IF NOT EXISTS index_favourites_on_status_id
+            ON favourites (status_id)",
+        r"CREATE UNIQUE INDEX IF NOT EXISTS index_bookmarks_on_account_id_and_status_id
+            ON bookmarks (account_id, status_id)",
+        r"CREATE INDEX IF NOT EXISTS index_bookmarks_on_status_id
+            ON bookmarks (status_id)",
+        r"CREATE UNIQUE INDEX IF NOT EXISTS index_mentions_on_account_id_and_status_id
+            ON mentions (account_id, status_id)",
+        r"CREATE INDEX IF NOT EXISTS index_mentions_on_status_id
+            ON mentions (status_id)",
+        r"CREATE UNIQUE INDEX IF NOT EXISTS index_follows_on_account_id_and_target_account_id
+            ON follows (account_id, target_account_id)",
+        r"CREATE INDEX IF NOT EXISTS index_follows_on_target_account_id_and_account_id
+            ON follows (target_account_id, account_id)",
+        r"CREATE INDEX IF NOT EXISTS index_statuses_on_account_id
+            ON statuses (account_id)",
+        r"CREATE INDEX IF NOT EXISTS index_statuses_on_reblog_of_id_and_account_id
+            ON statuses (reblog_of_id, account_id)",
+        r"CREATE INDEX IF NOT EXISTS index_statuses_on_in_reply_to_account_id
+            ON statuses (in_reply_to_account_id) WHERE in_reply_to_account_id IS NOT NULL",
+        r"CREATE UNIQUE INDEX IF NOT EXISTS index_blocks_on_account_id_and_target_account_id
+            ON blocks (account_id, target_account_id)",
+        r"CREATE UNIQUE INDEX IF NOT EXISTS index_mutes_on_account_id_and_target_account_id
+            ON mutes (account_id, target_account_id)",
+        r"CREATE UNIQUE INDEX IF NOT EXISTS index_account_domain_blocks_on_account_id_and_domain
+            ON account_domain_blocks (account_id, domain)",
     ] {
         sqlx::query(stmt)
             .execute(pool)
