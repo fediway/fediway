@@ -12,9 +12,6 @@ use crate::quote::{Quote, QuoteApproval};
 use crate::sanitize::{sanitize_html, sanitize_text};
 use crate::tag::Tag;
 
-const MISSING_AVATAR: &str = "/avatars/original/missing.png";
-const MISSING_HEADER: &str = "/headers/original/missing.png";
-
 /// Mastodon-compatible Context entity.
 /// See: <https://docs.joinmastodon.org/entities/Context/>
 #[derive(Debug, Serialize)]
@@ -78,10 +75,8 @@ fn convert_emojis(emojis: &[common::types::CustomEmoji]) -> Vec<CustomEmoji> {
 fn build_account(author: &common::types::Author, published_at: DateTime<Utc>) -> Account {
     let acct = author.handle.trim_start_matches('@').to_string();
     let username = acct.split('@').next().unwrap_or(&acct).to_string();
-    let avatar = author
-        .avatar_url
-        .clone()
-        .unwrap_or_else(|| MISSING_AVATAR.to_string());
+    let avatar = author.avatar_url.clone().unwrap_or_default();
+    let header = author.header_url.clone().unwrap_or_default();
 
     Account {
         id: acct.clone(),
@@ -93,8 +88,8 @@ fn build_account(author: &common::types::Author, published_at: DateTime<Utc>) ->
         note: String::new(),
         avatar: avatar.clone(),
         avatar_static: avatar,
-        header: MISSING_HEADER.to_string(),
-        header_static: MISSING_HEADER.to_string(),
+        header: header.clone(),
+        header_static: header,
         locked: false,
         bot: false,
         group: false,
@@ -234,6 +229,7 @@ mod tests {
                 display_name: "Alice".into(),
                 url: "https://mastodon.social/@alice".into(),
                 avatar_url: Some("https://mastodon.social/avatars/alice.png".into()),
+                header_url: None,
                 emojis: Vec::new(),
             },
             published_at: Utc::now(),
@@ -267,6 +263,7 @@ mod tests {
                 display_name: String::new(),
                 url: String::new(),
                 avatar_url: None,
+                header_url: None,
                 emojis: Vec::new(),
             },
             published_at: Utc::now(),
@@ -397,6 +394,7 @@ mod tests {
                 display_name: "Bob".into(),
                 url: "https://mastodon.social/@bob".into(),
                 avatar_url: None,
+                header_url: None,
                 emojis: Vec::new(),
             },
             published_at: Utc::now(),

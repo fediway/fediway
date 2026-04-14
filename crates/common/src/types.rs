@@ -55,6 +55,7 @@ pub struct Author {
     pub display_name: String,
     pub url: String,
     pub avatar_url: Option<String>,
+    pub header_url: Option<String>,
     pub emojis: Vec<CustomEmoji>,
 }
 

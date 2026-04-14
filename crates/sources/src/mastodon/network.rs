@@ -7,6 +7,7 @@ use feed::candidate::Candidate;
 use feed::source::Source;
 use sqlx::PgPool;
 
+use crate::mastodon::paperclip::MediaConfig;
 use crate::mastodon::row::{StatusRow, row_to_post};
 
 const TOP_AUTHORS: i64 = 200;
@@ -116,6 +117,10 @@ const CANDIDATE_QUERY: &str = r"
         a.domain,
         a.display_name,
         a.url AS account_url,
+        a.avatar_file_name,
+        a.avatar_remote_url,
+        a.header_file_name,
+        a.header_remote_url,
         ROW_NUMBER() OVER (
           PARTITION BY s.account_id
           ORDER BY
@@ -145,7 +150,8 @@ const CANDIDATE_QUERY: &str = r"
     )
     SELECT
       id, account_id, uri, url, text, spoiler_text, sensitive, language,
-      created_at, username, domain, display_name, account_url
+      created_at, username, domain, display_name, account_url,
+      avatar_file_name, avatar_remote_url, header_file_name, header_remote_url
     FROM ranked
     WHERE rn <= $2
     ORDER BY created_at DESC
@@ -171,15 +177,17 @@ pub struct NetworkSource {
     db: PgPool,
     user_id: i64,
     instance_domain: String,
+    media: MediaConfig,
 }
 
 impl NetworkSource {
     #[must_use]
-    pub fn new(db: PgPool, user_id: i64, instance_domain: String) -> Self {
+    pub fn new(db: PgPool, user_id: i64, instance_domain: String, media: MediaConfig) -> Self {
         Self {
             db,
             user_id,
             instance_domain,
+            media,
         }
     }
 }
@@ -285,7 +293,7 @@ impl Source<Post> for NetworkSource {
                 let score =
                     W_AFFINITY * affinity_norm + W_NETWORK * net_eng_norm + W_RECENCY * recency;
 
-                let post = row_to_post(row, &self.instance_domain);
+                let post = row_to_post(row, &self.instance_domain, &self.media);
                 let mut candidate = Candidate::new(post, "local/network");
                 candidate.score = score;
                 candidate

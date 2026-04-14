@@ -127,6 +127,7 @@ mod tests {
                 display_name: "Test".into(),
                 url: "https://example.com/@test".into(),
                 avatar_url: None,
+                header_url: None,
                 emojis: vec![],
             },
             published_at: chrono::Utc::now(),

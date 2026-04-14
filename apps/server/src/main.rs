@@ -10,6 +10,7 @@ use tower::ServiceBuilder;
 use tracing_subscriber::EnvFilter;
 
 use server::state::AppStateInner;
+use sources::mastodon::MediaConfig;
 use state::cache::Cache;
 use state::feed_store::FeedStore;
 
@@ -62,9 +63,18 @@ async fn main() -> anyhow::Result<()> {
 
     let feed_store = FeedStore::new(Cache::new(redis_conn, "fediway"), FEED_STORE_TTL);
 
+    let media = MediaConfig::new(
+        args.instance
+            .media_host
+            .clone()
+            .unwrap_or_else(|| args.instance.instance_domain.clone()),
+        args.instance.s3_enabled,
+    );
+
     let app_state = AppStateInner::new(
         pool,
         feed_store,
+        media,
         args.orbit_model_name,
         args.instance.instance_domain,
         args.instance.mastodon_api_url,

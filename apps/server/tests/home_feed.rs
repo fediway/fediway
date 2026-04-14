@@ -7,6 +7,7 @@ use server::auth::Account;
 use server::feeds::HomeFeed;
 use server::state::AppStateInner;
 use sources::commonfeed::types::QueryFilters;
+use sources::mastodon::MediaConfig;
 use sqlx::PgPool;
 use state::cache::Cache;
 use state::feed_store::FeedStore;
@@ -82,9 +83,11 @@ async fn home_feed_surfaces_network_candidates(pool: PgPool) {
 
     let viewer = account_for(viewer_id, "viewer");
     let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
+    let media = MediaConfig::new("local.test".into(), false);
     let state = AppStateInner::new(
         pool,
         feed_store,
+        media,
         "nomic_v1.5_64d".into(),
         "local.test".into(),
         None,
@@ -109,9 +112,11 @@ async fn home_feed_cold_start_does_not_panic(pool: PgPool) {
     let viewer_id = insert_account(&pool, "viewer").await;
     let viewer = account_for(viewer_id, "viewer");
     let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
+    let media = MediaConfig::new("local.test".into(), false);
     let state = AppStateInner::new(
         pool,
         feed_store,
+        media,
         "nomic_v1.5_64d".into(),
         "local.test".into(),
         None,

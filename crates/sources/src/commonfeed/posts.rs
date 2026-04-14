@@ -103,6 +103,7 @@ pub fn post_from_result(result: PostResult, provider_domain: &str) -> Post {
             display_name: result.author.name,
             url: result.author.url,
             avatar_url: result.author.avatar.map(|a| a.sizes.large.url),
+            header_url: None,
             emojis: result
                 .author
                 .emojis

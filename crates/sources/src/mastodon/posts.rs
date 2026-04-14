@@ -4,6 +4,7 @@ use feed::candidate::Candidate;
 use feed::source::Source;
 use sqlx::PgPool;
 
+use crate::mastodon::paperclip::MediaConfig;
 use crate::mastodon::row::{StatusRow, row_to_post};
 
 const NATIVE_TAG_QUERY: &str = r"
@@ -20,7 +21,11 @@ const NATIVE_TAG_QUERY: &str = r"
         a.username,
         a.domain,
         a.display_name,
-        a.url AS account_url
+        a.url AS account_url,
+        a.avatar_file_name,
+        a.avatar_remote_url,
+        a.header_file_name,
+        a.header_remote_url
     FROM statuses s
     JOIN accounts a ON a.id = s.account_id
     JOIN statuses_tags st ON st.status_id = s.id
@@ -47,7 +52,11 @@ const FEDERATED_TAG_QUERY: &str = r"
         a.username,
         a.domain,
         a.display_name,
-        a.url AS account_url
+        a.url AS account_url,
+        a.avatar_file_name,
+        a.avatar_remote_url,
+        a.header_file_name,
+        a.header_remote_url
     FROM statuses s
     JOIN accounts a ON a.id = s.account_id
     JOIN statuses_tags st ON st.status_id = s.id
@@ -64,15 +73,17 @@ pub struct NativeTagSource {
     db: PgPool,
     tag: String,
     instance_domain: String,
+    media: MediaConfig,
 }
 
 impl NativeTagSource {
     #[must_use]
-    pub fn new(db: PgPool, tag: String, instance_domain: String) -> Self {
+    pub fn new(db: PgPool, tag: String, instance_domain: String, media: MediaConfig) -> Self {
         Self {
             db,
             tag,
             instance_domain,
+            media,
         }
     }
 }
@@ -94,7 +105,7 @@ impl Source<Post> for NativeTagSource {
             Ok(rows) => rows
                 .into_iter()
                 .map(|r| {
-                    let post = row_to_post(r, &self.instance_domain);
+                    let post = row_to_post(r, &self.instance_domain, &self.media);
                     Candidate::new(post, "local/tag/native")
                 })
                 .collect(),
@@ -110,15 +121,17 @@ pub struct FederatedTagSource {
     db: PgPool,
     tag: String,
     instance_domain: String,
+    media: MediaConfig,
 }
 
 impl FederatedTagSource {
     #[must_use]
-    pub fn new(db: PgPool, tag: String, instance_domain: String) -> Self {
+    pub fn new(db: PgPool, tag: String, instance_domain: String, media: MediaConfig) -> Self {
         Self {
             db,
             tag,
             instance_domain,
+            media,
         }
     }
 }
@@ -140,7 +153,7 @@ impl Source<Post> for FederatedTagSource {
             Ok(rows) => rows
                 .into_iter()
                 .map(|r| {
-                    let post = row_to_post(r, &self.instance_domain);
+                    let post = row_to_post(r, &self.instance_domain, &self.media);
                     Candidate::new(post, "local/tag/federated")
                 })
                 .collect(),

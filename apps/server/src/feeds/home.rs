@@ -67,6 +67,7 @@ impl HomeFeed {
                 state.pool.clone(),
                 account.id,
                 state.instance_domain.clone(),
+                state.media.clone(),
             )],
             NETWORK_POOL,
         );

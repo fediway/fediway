@@ -75,7 +75,12 @@ async fn native_source_returns_only_native_accounts(pool: PgPool) {
     seed_tagged(&pool, alice, "native post", tag).await;
     seed_tagged(&pool, bob, "federated post", tag).await;
 
-    let source = NativeTagSource::new(pool, "rust".into(), "local.test".into());
+    let source = NativeTagSource::new(
+        pool,
+        "rust".into(),
+        "local.test".into(),
+        common::test_media(),
+    );
     let candidates = source.collect(10).await;
 
     assert_eq!(candidates.len(), 1);
@@ -92,7 +97,12 @@ async fn federated_source_returns_only_non_native_accounts(pool: PgPool) {
     seed_tagged(&pool, alice, "native post", tag).await;
     seed_tagged(&pool, bob, "federated post", tag).await;
 
-    let source = FederatedTagSource::new(pool, "rust".into(), "local.test".into());
+    let source = FederatedTagSource::new(
+        pool,
+        "rust".into(),
+        "local.test".into(),
+        common::test_media(),
+    );
     let candidates = source.collect(10).await;
 
     assert_eq!(candidates.len(), 1);
@@ -111,7 +121,12 @@ async fn native_source_excludes_private_visibility(pool: PgPool) {
     let unlisted = insert_status(&pool, alice, "unlisted post", 1, None).await;
     link_tag(&pool, unlisted, tag).await;
 
-    let source = NativeTagSource::new(pool, "rust".into(), "local.test".into());
+    let source = NativeTagSource::new(
+        pool,
+        "rust".into(),
+        "local.test".into(),
+        common::test_media(),
+    );
     let candidates = source.collect(10).await;
 
     assert_eq!(candidates.len(), 1);
@@ -127,7 +142,12 @@ async fn native_source_excludes_reblogs(pool: PgPool) {
     let reblog = insert_status(&pool, alice, "a reblog", 0, Some(original)).await;
     link_tag(&pool, reblog, tag).await;
 
-    let source = NativeTagSource::new(pool, "rust".into(), "local.test".into());
+    let source = NativeTagSource::new(
+        pool,
+        "rust".into(),
+        "local.test".into(),
+        common::test_media(),
+    );
     let candidates = source.collect(10).await;
 
     assert_eq!(candidates.len(), 1);
@@ -143,7 +163,12 @@ async fn native_source_respects_limit(pool: PgPool) {
         seed_tagged(&pool, alice, &format!("post {i}"), tag).await;
     }
 
-    let source = NativeTagSource::new(pool, "rust".into(), "local.test".into());
+    let source = NativeTagSource::new(
+        pool,
+        "rust".into(),
+        "local.test".into(),
+        common::test_media(),
+    );
     let candidates = source.collect(2).await;
     assert_eq!(candidates.len(), 2);
 }
@@ -155,7 +180,12 @@ async fn native_source_empty_for_unknown_tag(pool: PgPool) {
     let tag = insert_tag(&pool, "rust").await;
     seed_tagged(&pool, alice, "post", tag).await;
 
-    let source = NativeTagSource::new(pool, "nonexistent".into(), "local.test".into());
+    let source = NativeTagSource::new(
+        pool,
+        "nonexistent".into(),
+        "local.test".into(),
+        common::test_media(),
+    );
     let candidates = source.collect(10).await;
     assert!(candidates.is_empty());
 }
@@ -167,7 +197,12 @@ async fn native_source_matches_tag_case_insensitively(pool: PgPool) {
     let tag = insert_tag(&pool, "Rust").await;
     seed_tagged(&pool, alice, "post", tag).await;
 
-    let source = NativeTagSource::new(pool, "RUST".into(), "local.test".into());
+    let source = NativeTagSource::new(
+        pool,
+        "RUST".into(),
+        "local.test".into(),
+        common::test_media(),
+    );
     let candidates = source.collect(10).await;
     assert_eq!(candidates.len(), 1);
 }
@@ -179,7 +214,12 @@ async fn native_source_sets_provider_fields_for_local_roundtrip(pool: PgPool) {
     let tag = insert_tag(&pool, "rust").await;
     let status_id = seed_tagged(&pool, alice, "post", tag).await;
 
-    let source = NativeTagSource::new(pool, "rust".into(), "local.test".into());
+    let source = NativeTagSource::new(
+        pool,
+        "rust".into(),
+        "local.test".into(),
+        common::test_media(),
+    );
     let candidates = source.collect(10).await;
 
     assert_eq!(candidates.len(), 1);
@@ -202,7 +242,12 @@ async fn native_source_orders_by_created_at_desc(pool: PgPool) {
         .unwrap();
     seed_tagged(&pool, alice, "new", tag).await;
 
-    let source = NativeTagSource::new(pool, "rust".into(), "local.test".into());
+    let source = NativeTagSource::new(
+        pool,
+        "rust".into(),
+        "local.test".into(),
+        common::test_media(),
+    );
     let candidates = source.collect(10).await;
 
     assert_eq!(candidates.len(), 2);

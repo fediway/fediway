@@ -21,4 +21,16 @@ pub struct InstanceConfig {
     /// e.g. `http://mastodon-web.mastodon.svc:3000`
     #[arg(long, env = "MASTODON_API_URL")]
     pub mastodon_api_url: Option<String>,
+
+    /// Host that serves Mastodon media (avatars, headers, attachments).
+    /// Defaults to `instance_domain` when unset. Set to your `S3_ALIAS_HOST`
+    /// or CDN host if media is served from a separate origin.
+    #[arg(long, env = "MEDIA_HOST")]
+    pub media_host: Option<String>,
+
+    /// Whether the Mastodon instance stores media in S3-compatible storage.
+    /// Affects URL construction: S3 mode drops the `/system` path prefix and
+    /// adds a `cache/` prefix for federated-account media.
+    #[arg(long, env = "S3_ENABLED", default_value_t = false)]
+    pub s3_enabled: bool,
 }

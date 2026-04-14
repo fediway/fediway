@@ -4,12 +4,17 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use serde::Serialize;
+use sources::mastodon::MediaConfig;
 use sqlx::PgPool;
 use state::cache::Cache;
 use state::feed_store::FeedStore;
 use tower::ServiceExt;
 
 use server::state::AppStateInner;
+
+pub fn test_media() -> MediaConfig {
+    MediaConfig::new("local.test".into(), false)
+}
 
 pub struct TestApp {
     router: axum::Router,
@@ -36,13 +41,17 @@ impl TestResponse {
 pub async fn setup_mastodon_schema(pool: &PgPool) {
     for stmt in [
         r"CREATE TABLE IF NOT EXISTS accounts (
-            id              BIGSERIAL PRIMARY KEY,
-            username        TEXT NOT NULL,
-            domain          TEXT,
-            display_name    TEXT NOT NULL DEFAULT '',
-            url             TEXT,
-            suspended_at    TIMESTAMP,
-            silenced_at     TIMESTAMP
+            id                  BIGSERIAL PRIMARY KEY,
+            username            TEXT NOT NULL,
+            domain              TEXT,
+            display_name        TEXT NOT NULL DEFAULT '',
+            url                 TEXT,
+            suspended_at        TIMESTAMP,
+            silenced_at         TIMESTAMP,
+            avatar_file_name    TEXT,
+            avatar_remote_url   TEXT,
+            header_file_name    TEXT,
+            header_remote_url   TEXT
         )",
         r"CREATE TABLE IF NOT EXISTS statuses (
             id                          BIGSERIAL PRIMARY KEY,
@@ -209,9 +218,11 @@ impl TestApp {
         setup_db(&pool).await;
 
         let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
+        let media = MediaConfig::new("test.example.com".into(), false);
         let state = AppStateInner::new(
             pool,
             feed_store,
+            media,
             "nomic_v1.5_64d".into(),
             "test.example.com".into(),
             mastodon_api_url,

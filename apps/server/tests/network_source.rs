@@ -192,7 +192,7 @@ async fn cold_start_returns_empty(pool: PgPool) {
     common::setup_mastodon_schema(&pool).await;
     let user = insert_account(&pool, "viewer").await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -213,7 +213,7 @@ async fn runs_full_pipeline_against_seeded_db(pool: PgPool) {
     let candidate = insert_status(&pool, alice, "recent").await;
     insert_status_stats(&pool, candidate, 5, 2).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -237,7 +237,7 @@ async fn direct_messages_excluded_from_candidates(pool: PgPool) {
     let dm = insert_status_with_visibility(&pool, alice, "secret-dm", 3).await;
     insert_status_stats(&pool, dm, 0, 0).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -257,7 +257,7 @@ async fn follower_only_posts_excluded_from_candidates(pool: PgPool) {
     let private = insert_status_with_visibility(&pool, alice, "follower-only", 2).await;
     insert_status_stats(&pool, private, 0, 0).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -278,7 +278,7 @@ async fn deleted_statuses_excluded_from_candidates(pool: PgPool) {
     insert_status_stats(&pool, deleted, 0, 0).await;
     mark_status_deleted(&pool, deleted).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -299,7 +299,7 @@ async fn suspended_account_posts_excluded(pool: PgPool) {
     insert_status_stats(&pool, post, 0, 0).await;
     mark_account_suspended(&pool, alice).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -320,7 +320,7 @@ async fn silenced_account_posts_excluded(pool: PgPool) {
     insert_status_stats(&pool, post, 0, 0).await;
     mark_account_silenced(&pool, alice).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -341,7 +341,7 @@ async fn blocked_account_posts_excluded(pool: PgPool) {
     insert_status_stats(&pool, post, 0, 0).await;
     insert_block(&pool, user, alice).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -362,7 +362,7 @@ async fn muted_account_posts_excluded(pool: PgPool) {
     insert_status_stats(&pool, post, 0, 0).await;
     insert_mute(&pool, user, alice).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -383,7 +383,7 @@ async fn domain_blocked_posts_excluded(pool: PgPool) {
     insert_status_stats(&pool, post, 0, 0).await;
     insert_domain_block(&pool, user, "spam.example").await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -413,7 +413,7 @@ async fn replies_to_others_excluded_self_threads_included(pool: PgPool) {
         insert_reply(&pool, alice, "reply-to-bob", alice_thread_root, bob).await;
     insert_status_stats(&pool, alice_reply_to_bob, 0, 0).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     let texts: Vec<&str> = candidates.iter().map(|c| c.item.text.as_str()).collect();
@@ -445,7 +445,7 @@ async fn reblogs_excluded_from_candidates(pool: PgPool) {
     let alice_reblog = insert_reblog(&pool, alice, "alice-reblog", bob_original).await;
     insert_status_stats(&pool, alice_reblog, 0, 0).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     assert!(
@@ -472,7 +472,7 @@ async fn network_engagement_boosts_score(pool: PgPool) {
     insert_status_stats(&pool, bare, 0, 0).await;
     insert_favourite(&pool, friend, liked).await;
 
-    let source = NetworkSource::new(pool, user, "local.test".into());
+    let source = NetworkSource::new(pool, user, "local.test".into(), common::test_media());
     let candidates = source.collect(20).await;
 
     let liked_score = candidates

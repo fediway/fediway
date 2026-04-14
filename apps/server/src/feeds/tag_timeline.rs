@@ -43,11 +43,13 @@ impl TagTimelineFeed {
             state.pool.clone(),
             hashtag.clone(),
             state.instance_domain.clone(),
+            state.media.clone(),
         );
         let federated = FederatedTagSource::new(
             state.pool.clone(),
             hashtag.clone(),
             state.instance_domain.clone(),
+            state.media.clone(),
         );
 
         let external_bindings = state::providers::find_sources(&state.pool, "timelines/tag").await;

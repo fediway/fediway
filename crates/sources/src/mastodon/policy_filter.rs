@@ -68,6 +68,7 @@ mod tests {
                 display_name: String::new(),
                 url: String::new(),
                 avatar_url: None,
+                header_url: None,
                 emojis: Vec::new(),
             },
             published_at: chrono::Utc::now(),
