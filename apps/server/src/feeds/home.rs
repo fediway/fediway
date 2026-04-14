@@ -22,7 +22,8 @@ use crate::state::AppState;
 const POOL_SIZE: usize = 300;
 const NETWORK_POOL: usize = 180;
 const RECOMMENDED_POOL: usize = 180;
-const TRENDING_POOL: usize = 300;
+const TRENDING_POOL_COLD: usize = 300;
+const TRENDING_POOL_WARM: usize = 60;
 
 pub struct HomeFeed {
     pipeline: Pipeline<Post>,
@@ -48,10 +49,12 @@ impl HomeFeed {
                 .increment(1);
         }
 
-        let (recommended_pool, trending_pool) = if user_vector.is_some() {
-            (RECOMMENDED_POOL, 0)
+        let has_vector = user_vector.is_some();
+        let recommended_pool = if has_vector { RECOMMENDED_POOL } else { 0 };
+        let trending_pool = if has_vector {
+            TRENDING_POOL_WARM
         } else {
-            (0, TRENDING_POOL)
+            TRENDING_POOL_COLD
         };
 
         #[allow(clippy::cast_precision_loss)]
@@ -72,6 +75,12 @@ impl HomeFeed {
             NETWORK_POOL,
         );
 
+        let trending = state::providers::find_sources(&state.pool, "trends/statuses").await;
+        let trending_sources = trending
+            .into_iter()
+            .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
+        builder = builder.group("trending", trending_sources, trending_pool);
+
         if let Some((vector, _)) = &user_vector {
             let bound = state::providers::find_sources(&state.pool, "timelines/home").await;
             let recommended = bound.into_iter().map(|b| {
@@ -84,13 +93,13 @@ impl HomeFeed {
                 .with_filters(filters.clone())
             });
             builder = builder.group("recommended", recommended, RECOMMENDED_POOL);
-        } else {
-            let trending = state::providers::find_sources(&state.pool, "trends/statuses").await;
-            let trending_sources = trending
-                .into_iter()
-                .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
-            builder = builder.group("trending", trending_sources, TRENDING_POOL);
         }
+
+        let trending_quota = if has_vector {
+            GroupQuota::new("trending").cap(0.10)
+        } else {
+            GroupQuota::new("trending")
+        };
 
         let pipeline = builder
             .filter(Dedup::new(|c: &Candidate<Post>| c.item.url.clone()))
@@ -101,7 +110,7 @@ impl HomeFeed {
             .sampler(QuotaSampler::new([
                 GroupQuota::new("network").min(12).cap(0.60),
                 GroupQuota::new("recommended").cap(0.40),
-                GroupQuota::new("trending"),
+                trending_quota,
             ]))
             .build();
 
