@@ -329,17 +329,17 @@ mod tests {
     }
 
     #[test]
-    fn missing_avatar_uses_default() {
+    fn missing_avatar_serializes_empty() {
         let status = Status::from(sample_post_minimal());
-        assert_eq!(status.account.avatar, MISSING_AVATAR);
-        assert_eq!(status.account.avatar_static, MISSING_AVATAR);
+        assert_eq!(status.account.avatar, "");
+        assert_eq!(status.account.avatar_static, "");
     }
 
     #[test]
-    fn header_always_has_default() {
+    fn missing_header_serializes_empty() {
         let status = Status::from(sample_post());
-        assert_eq!(status.account.header, MISSING_HEADER);
-        assert_eq!(status.account.header_static, MISSING_HEADER);
+        assert_eq!(status.account.header, "");
+        assert_eq!(status.account.header_static, "");
     }
 
     #[test]
