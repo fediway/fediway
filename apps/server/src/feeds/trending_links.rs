@@ -10,7 +10,8 @@ use sources::commonfeed::types::QueryFilters;
 use crate::feeds::trend_feed::TrendFeed;
 use crate::state::AppState;
 
-const POOL_SIZE: usize = 100;
+const FETCH_POOL: usize = 100;
+const MAX_RESULTS: usize = 7;
 
 pub struct TrendingLinksFeed {
     pipeline: Pipeline<Link>,
@@ -25,7 +26,7 @@ impl TrendingLinksFeed {
 
         let pipeline = Pipeline::builder()
             .name("trends/links")
-            .sources(sources, POOL_SIZE)
+            .sources(sources, FETCH_POOL)
             .score(Diversity::new(0.1, |link: &Link| {
                 link.provider_name.clone().unwrap_or_default()
             }))
@@ -39,7 +40,7 @@ impl Feed for TrendingLinksFeed {
     type Item = Link;
 
     async fn collect(&self) -> Vec<Candidate<Link>> {
-        self.pipeline.execute(POOL_SIZE, &()).await.items
+        self.pipeline.execute(MAX_RESULTS, &()).await.items
     }
 }
 
