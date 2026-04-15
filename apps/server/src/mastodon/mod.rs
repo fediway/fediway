@@ -6,4 +6,7 @@
 //! [`crate::routes::mastodon`] — shared glue lives here, not in either
 //! caller module.
 
+pub mod forward;
+pub mod resolve;
 pub mod statuses;
+pub mod translate;

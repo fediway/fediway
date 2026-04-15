@@ -2515,6 +2515,7 @@ dependencies = [
  "config",
  "dotenvy",
  "feed",
+ "futures",
  "hex",
  "hmac",
  "http-body-util",

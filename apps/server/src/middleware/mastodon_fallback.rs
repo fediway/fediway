@@ -1,6 +1,4 @@
 use std::error::Error;
-use std::sync::LazyLock;
-use std::time::Duration;
 
 use axum::body::Body;
 use axum::extract::Request;
@@ -10,52 +8,59 @@ use axum::response::{IntoResponse, Response};
 
 use crate::state::AppState;
 
-static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .connect_timeout(Duration::from_secs(5))
-        .redirect(reqwest::redirect::Policy::none())
-        .build()
-        .expect("http client")
-});
+const MAX_PROXY_BODY_BYTES: usize = 1_048_576;
 
-/// Middleware that proxies requests to Mastodon.
+/// Proxies unhandled Mastodon API calls to the upstream instance.
 ///
-/// - **GET**: runs the inner handler first; proxies to Mastodon on 404.
-/// - **Non-GET** (DELETE, PUT, POST): proxies to Mastodon immediately with body.
-/// - No-op if `MASTODON_API_URL` is not configured.
+/// The inner router runs first for every request; a 404 or 405 response
+/// triggers a proxy to Mastodon with the original method, headers, and body.
+/// No-op if `MASTODON_API_URL` is not configured.
 pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next: Next) -> Response {
-    let base_url = match state.mastodon_api_url.as_deref() {
-        Some(url) => url.to_string(),
-        None => return next.run(req).await,
+    let Some(base_url) = state.mastodon_api_url.clone() else {
+        return next.run(req).await;
     };
 
     let method = req.method().clone();
-    let path = req.uri().path_and_query().map(ToString::to_string);
     let headers = req.headers().clone();
-
-    if method != Method::GET {
-        let Some(path) = path else {
-            return next.run(req).await;
-        };
-        let body = axum::body::to_bytes(req.into_body(), 1_048_576).await.ok();
-        return proxy(&base_url, &path, &method, &headers, body.as_deref()).await;
-    }
-
-    let response = next.run(req).await;
-
-    if response.status() != StatusCode::NOT_FOUND {
-        return response;
-    }
-
-    let Some(path) = path else {
-        return response;
+    let Some(path) = req.uri().path_and_query().map(ToString::to_string) else {
+        return next.run(req).await;
     };
 
-    proxy(&base_url, &path, &method, &headers, None).await
+    let (buffered, forward_req) = if method == Method::GET {
+        (None, req)
+    } else {
+        let (parts, body) = req.into_parts();
+        let bytes = match axum::body::to_bytes(body, MAX_PROXY_BODY_BYTES).await {
+            Ok(b) => b,
+            Err(e) => {
+                tracing::warn!(error = %e, "request body too large or unreadable");
+                return StatusCode::PAYLOAD_TOO_LARGE.into_response();
+            }
+        };
+        let forward = Request::from_parts(parts, Body::from(bytes.clone()));
+        (Some(bytes), forward)
+    };
+
+    let response = next.run(forward_req).await;
+
+    let status = response.status();
+    if status != StatusCode::NOT_FOUND && status != StatusCode::METHOD_NOT_ALLOWED {
+        return response;
+    }
+
+    proxy(
+        &state.http_client,
+        &base_url,
+        &path,
+        &method,
+        &headers,
+        buffered.as_deref(),
+    )
+    .await
 }
 
 async fn proxy(
+    http: &reqwest::Client,
     base_url: &str,
     path: &str,
     method: &Method,
@@ -64,7 +69,7 @@ async fn proxy(
 ) -> Response {
     let url = format!("{base_url}{path}");
 
-    let mut req = HTTP_CLIENT.request(method.clone(), &url);
+    let mut req = http.request(method.clone(), &url);
 
     for (name, value) in headers {
         req = req.header(name, value);

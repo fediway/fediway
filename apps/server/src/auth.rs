@@ -5,11 +5,39 @@ use sqlx::PgPool;
 
 use crate::state::AppState;
 
+/// Opaque wrapper around an OAuth bearer token.
+///
+/// Any formatting via [`std::fmt::Debug`] yields `BearerToken(<redacted>)`,
+/// so the raw string can never reach logs through derived `Debug` on a
+/// containing type. Call [`BearerToken::as_str`] at the point where the
+/// token must be handed to an HTTP client.
+#[derive(Clone)]
+pub struct BearerToken(String);
+
+impl BearerToken {
+    #[must_use]
+    pub fn new(token: String) -> Self {
+        Self(token)
+    }
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Debug for BearerToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("BearerToken(<redacted>)")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Account {
     pub id: i64,
     pub username: String,
     pub chosen_languages: Vec<String>,
+    pub token: BearerToken,
 }
 
 impl FromRequestParts<AppState> for Account {
@@ -121,6 +149,7 @@ async fn resolve_account(db: &PgPool, token: &str) -> Result<Option<Account>, sq
         id: row.account_id,
         username: row.username,
         chosen_languages,
+        token: BearerToken::new(token.to_string()),
     }))
 }
 

@@ -288,6 +288,98 @@ async fn batch_map_posts_returns_consistent_ids(pool: PgPool) {
     assert_eq!(result2[&("test.provider".into(), 2)], id2);
 }
 
+#[sqlx::test]
+async fn set_mastodon_local_id_is_idempotent(pool: PgPool) {
+    let post = test_post("https://example.com/1", "@a@example.com", "one");
+    let snowflake = map(&pool, "p.example", 1, &post).await;
+
+    let first = state::statuses::set_mastodon_local_id(&pool, snowflake, 42)
+        .await
+        .unwrap();
+    assert!(first);
+
+    let second = state::statuses::set_mastodon_local_id(&pool, snowflake, 42)
+        .await
+        .unwrap();
+    assert!(!second);
+
+    let row = state::statuses::find_by_id(&pool, snowflake)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(row.mastodon_local_id, Some(42));
+}
+
+#[sqlx::test]
+async fn set_mastodon_local_id_refuses_to_overwrite(pool: PgPool) {
+    let post = test_post("https://example.com/1", "@a@example.com", "one");
+    let snowflake = map(&pool, "p.example", 1, &post).await;
+
+    assert!(
+        state::statuses::set_mastodon_local_id(&pool, snowflake, 100)
+            .await
+            .unwrap()
+    );
+    assert!(
+        !state::statuses::set_mastodon_local_id(&pool, snowflake, 200)
+            .await
+            .unwrap()
+    );
+
+    let row = state::statuses::find_by_id(&pool, snowflake)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(row.mastodon_local_id, Some(100));
+}
+
+#[sqlx::test]
+async fn reverse_map_returns_snowflakes_for_mastodon_ids(pool: PgPool) {
+    let p1 = test_post("https://example.com/1", "@a@example.com", "one");
+    let p2 = test_post("https://example.com/2", "@b@example.com", "two");
+    let s1 = map(&pool, "p.example", 1, &p1).await;
+    let s2 = map(&pool, "p.example", 2, &p2).await;
+    state::statuses::set_mastodon_local_id(&pool, s1, 1001)
+        .await
+        .unwrap();
+    state::statuses::set_mastodon_local_id(&pool, s2, 1002)
+        .await
+        .unwrap();
+
+    let result = state::statuses::reverse_map(&pool, &[1001, 1002, 9999])
+        .await
+        .unwrap();
+
+    assert_eq!(result.len(), 2);
+    assert_eq!(result[&1001], s1);
+    assert_eq!(result[&1002], s2);
+    assert!(!result.contains_key(&9999));
+}
+
+#[sqlx::test]
+async fn reverse_map_picks_min_snowflake_for_ambiguous_mastodon_id(pool: PgPool) {
+    let post = test_post("https://example.com/shared", "@a@example.com", "shared");
+    let from_a = map(&pool, "provider.a", 1, &post).await;
+    let from_b = map(&pool, "provider.b", 1, &post).await;
+    state::statuses::set_mastodon_local_id(&pool, from_a, 7777)
+        .await
+        .unwrap();
+    state::statuses::set_mastodon_local_id(&pool, from_b, 7777)
+        .await
+        .unwrap();
+
+    let result = state::statuses::reverse_map(&pool, &[7777]).await.unwrap();
+
+    assert_eq!(result[&7777], from_a.min(from_b));
+}
+
+#[sqlx::test]
+async fn reverse_map_empty_input_returns_empty_map(pool: PgPool) {
+    common::setup_db(&pool).await;
+    let result = state::statuses::reverse_map(&pool, &[]).await.unwrap();
+    assert!(result.is_empty());
+}
+
 // --- Descendants pagination ---
 
 async fn insert_provider(pool: &PgPool, domain: &str, base_url: &str) {
@@ -659,94 +751,4 @@ async fn delete_proxies_immediately_to_mastodon(pool: PgPool) {
     let received = received.lock().await;
     assert_eq!(received.as_ref().unwrap().0, "DELETE");
     assert_eq!(received.as_ref().unwrap().1, "12345");
-}
-
-#[sqlx::test]
-async fn post_proxies_with_body(pool: PgPool) {
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
-
-    let received_body = Arc::new(Mutex::new(None::<String>));
-    let received_clone = received_body.clone();
-
-    let mock_router = axum::Router::new().route(
-        "/api/v1/statuses",
-        axum::routing::post(move |body: String| {
-            let received = received_clone.clone();
-            async move {
-                *received.lock().await = Some(body);
-                axum::Json(serde_json::json!({"id": "new_status"}))
-            }
-        }),
-    );
-
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let port = listener.local_addr().unwrap().port();
-    tokio::spawn(async move {
-        axum::serve(listener, mock_router).await.unwrap();
-    });
-
-    common::setup_db(&pool).await;
-    let app =
-        common::TestApp::from_pool_with_mastodon(pool, Some(format!("http://127.0.0.1:{port}")))
-            .await;
-
-    let req = axum::http::Request::post("/api/v1/statuses")
-        .header("content-type", "application/json")
-        .header("authorization", "Bearer user_token")
-        .body(axum::body::Body::from(
-            serde_json::to_string(&serde_json::json!({"status": "Hello world"})).unwrap(),
-        ))
-        .unwrap();
-    let resp = app.raw_request(req).await;
-    assert_eq!(resp.status, StatusCode::OK);
-
-    let body = received_body.lock().await;
-    let parsed: serde_json::Value = serde_json::from_str(body.as_ref().unwrap()).unwrap();
-    assert_eq!(parsed["status"], "Hello world");
-}
-
-#[sqlx::test]
-async fn post_favourite_proxies_to_mastodon(pool: PgPool) {
-    use axum::extract::Path;
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
-
-    let received_id = Arc::new(Mutex::new(None::<String>));
-    let received_clone = received_id.clone();
-
-    let mock_router = axum::Router::new().route(
-        "/api/v1/statuses/{id}/favourite",
-        axum::routing::post(move |Path(id): Path<String>| {
-            let received = received_clone.clone();
-            async move {
-                *received.lock().await = Some(id);
-                axum::Json(serde_json::json!({"id": "1", "favourited": true}))
-            }
-        }),
-    );
-
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let port = listener.local_addr().unwrap().port();
-    tokio::spawn(async move {
-        axum::serve(listener, mock_router).await.unwrap();
-    });
-
-    common::setup_db(&pool).await;
-    let app =
-        common::TestApp::from_pool_with_mastodon(pool, Some(format!("http://127.0.0.1:{port}")))
-            .await;
-
-    let req = axum::http::Request::post("/api/v1/statuses/12345/favourite")
-        .header("authorization", "Bearer user_token")
-        .body(axum::body::Body::empty())
-        .unwrap();
-    let resp = app.raw_request(req).await;
-    assert_eq!(resp.status, StatusCode::OK);
-
-    let id = received_id.lock().await;
-    assert_eq!(id.as_deref(), Some("12345"));
-
-    let json = resp.json();
-    assert_eq!(json["favourited"], true);
 }

@@ -1,3 +1,7 @@
+mod create_report;
+mod create_status;
+mod engagements;
+mod error;
 mod extract;
 mod statuses;
 mod suggestions;
@@ -11,18 +15,36 @@ use crate::middleware::mastodon_fallback;
 use crate::state::AppState;
 
 pub fn router(state: AppState) -> Router<AppState> {
-    // All /api/v1/statuses/* routes go through the mastodon fallback middleware.
-    // Fediway handles GET /{id} and GET /{id}/context for CommonFeed statuses.
-    // Everything else (create, delete, favourite, reblog, etc.) proxies to Mastodon
-    // via the fallback handler → middleware intercepts 404 → proxies.
     let pf = statuses::proxy_fallback;
     let with_fallback = Router::new()
-        .route("/api/v1/statuses", post(pf))
+        .route("/api/v1/statuses", post(create_status::handle))
+        .route("/api/v1/reports", post(create_report::handle))
         .route(
             "/api/v1/statuses/{id}",
             get(statuses::detail).delete(pf).put(pf),
         )
         .route("/api/v1/statuses/{id}/context", get(statuses::context))
+        .route(
+            "/api/v1/statuses/{id}/favourite",
+            post(engagements::favourite),
+        )
+        .route(
+            "/api/v1/statuses/{id}/unfavourite",
+            post(engagements::unfavourite),
+        )
+        .route("/api/v1/statuses/{id}/reblog", post(engagements::reblog))
+        .route(
+            "/api/v1/statuses/{id}/unreblog",
+            post(engagements::unreblog),
+        )
+        .route(
+            "/api/v1/statuses/{id}/bookmark",
+            post(engagements::bookmark),
+        )
+        .route(
+            "/api/v1/statuses/{id}/unbookmark",
+            post(engagements::unbookmark),
+        )
         .route("/api/v1/statuses/{id}/{action}", post(pf).get(pf))
         .route_layer(axum::middleware::from_fn_with_state(
             state,

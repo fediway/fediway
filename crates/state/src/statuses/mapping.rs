@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, Utc};
 use sqlx::{FromRow, PgPool};
 
@@ -10,6 +12,7 @@ pub struct CachedStatus {
     pub post_uri: String,
     pub post_data: serde_json::Value,
     pub cached_at: DateTime<Utc>,
+    pub mastodon_local_id: Option<i64>,
 }
 
 impl CachedStatus {
@@ -96,7 +99,7 @@ pub async fn map_posts(
 
 pub async fn find_by_id(db: &PgPool, id: i64) -> Result<Option<CachedStatus>, sqlx::Error> {
     sqlx::query_as::<_, CachedStatus>(
-        "SELECT id, provider_domain, remote_id, post_url, post_uri, post_data, cached_at
+        "SELECT id, provider_domain, remote_id, post_url, post_uri, post_data, cached_at, mastodon_local_id
          FROM commonfeed_statuses
          WHERE id = $1",
     )
@@ -124,4 +127,56 @@ pub async fn delete(db: &PgPool, id: i64) -> Result<(), sqlx::Error> {
         .execute(db)
         .await?;
     Ok(())
+}
+
+pub async fn set_mastodon_local_id(
+    db: &PgPool,
+    id: i64,
+    mastodon_local_id: i64,
+) -> Result<bool, sqlx::Error> {
+    let rows = sqlx::query(
+        "UPDATE commonfeed_statuses
+         SET mastodon_local_id = $2
+         WHERE id = $1 AND mastodon_local_id IS NULL",
+    )
+    .bind(id)
+    .bind(mastodon_local_id)
+    .execute(db)
+    .await?;
+    Ok(rows.rows_affected() > 0)
+}
+
+pub async fn clear_mastodon_local_id(db: &PgPool, id: i64) -> Result<(), sqlx::Error> {
+    sqlx::query("UPDATE commonfeed_statuses SET mastodon_local_id = NULL WHERE id = $1")
+        .bind(id)
+        .execute(db)
+        .await?;
+    Ok(())
+}
+
+/// Returns a map from `mastodon_local_id` to the canonical snowflake.
+///
+/// When multiple providers indexed the same post, several snowflakes point
+/// at a single Mastodon id. `MIN(id)` picks a deterministic representative
+/// so callers that can't supply request context (nested `reblog`/`in_reply_to_id`
+/// rewriting) still get stable output across requests.
+pub async fn reverse_map(
+    db: &PgPool,
+    mastodon_ids: &[i64],
+) -> Result<HashMap<i64, i64>, sqlx::Error> {
+    if mastodon_ids.is_empty() {
+        return Ok(HashMap::new());
+    }
+
+    let rows = sqlx::query_as::<_, (i64, i64)>(
+        "SELECT mastodon_local_id, MIN(id)
+         FROM commonfeed_statuses
+         WHERE mastodon_local_id = ANY($1)
+         GROUP BY mastodon_local_id",
+    )
+    .bind(mastodon_ids)
+    .fetch_all(db)
+    .await?;
+
+    Ok(rows.into_iter().collect())
 }
