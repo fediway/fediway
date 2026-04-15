@@ -20,6 +20,7 @@ pub async fn hydrate(
     instance_domain: &str,
     media: &MediaConfig,
     cached: Vec<CachedPost>,
+    viewer_account_id: Option<i64>,
 ) -> Vec<Status> {
     let mut slots: Vec<Slot> = Vec::with_capacity(cached.len());
     let mut local_ids: Vec<i64> = Vec::new();
@@ -38,7 +39,7 @@ pub async fn hydrate(
     }
 
     let (local_statuses, remote_statuses) = tokio::join!(
-        fetch_by_ids(db, instance_domain, media, &local_ids),
+        fetch_by_ids(db, instance_domain, media, &local_ids, viewer_account_id),
         from_posts(db, instance_domain, remote_posts),
     );
 

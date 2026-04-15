@@ -152,6 +152,7 @@ impl HomeFeed {
             &state.instance_domain,
             &state.media,
             page.items,
+            Some(self.user_id),
         )
         .await;
 

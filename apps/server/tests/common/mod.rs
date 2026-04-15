@@ -1,3 +1,6 @@
+#[allow(dead_code)]
+pub mod mastodon;
+
 use std::time::Duration;
 
 use axum::body::Body;

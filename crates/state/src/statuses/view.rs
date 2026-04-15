@@ -16,8 +16,9 @@ pub async fn fetch_by_ids(
     instance_domain: &str,
     media: &MediaConfig,
     ids: &[i64],
+    viewer_account_id: Option<i64>,
 ) -> Vec<Status> {
-    let mut statuses = fetch_enriched(db, instance_domain, media, ids).await;
+    let mut statuses = fetch_enriched(db, instance_domain, media, ids, viewer_account_id).await;
     if statuses.is_empty() {
         return statuses;
     }
@@ -32,7 +33,7 @@ pub async fn fetch_by_ids(
     }
 
     let target_ids: Vec<i64> = quote_targets.values().copied().collect();
-    let parents = fetch_enriched(db, instance_domain, media, &target_ids).await;
+    let parents = fetch_enriched(db, instance_domain, media, &target_ids, viewer_account_id).await;
     let parent_by_id: HashMap<i64, Status> = parents
         .into_iter()
         .filter_map(|s| s.id.parse::<i64>().ok().map(|id| (id, s)))
@@ -61,6 +62,7 @@ async fn fetch_enriched(
     instance_domain: &str,
     media: &MediaConfig,
     ids: &[i64],
+    viewer_account_id: Option<i64>,
 ) -> Vec<Status> {
     if ids.is_empty() {
         return Vec::new();
@@ -73,12 +75,13 @@ async fn fetch_enriched(
 
     let resolved_ids: Vec<i64> = base.iter().map(|r| r.id).collect();
 
-    let (stats, media_map, tags, cards, mentions_map) = tokio::join!(
+    let (stats, media_map, tags, cards, mentions_map, viewer) = tokio::join!(
         fetch_stats(db, &resolved_ids),
         fetch_media(db, &resolved_ids),
         fetch_tags(db, &resolved_ids),
         fetch_cards(db, &resolved_ids),
         fetch_mentions(db, &resolved_ids),
+        fetch_viewer_state(db, viewer_account_id, &resolved_ids),
     );
 
     let shortcodes = scan_shortcodes(&base);
@@ -95,6 +98,7 @@ async fn fetch_enriched(
         cards: &cards,
         mentions: &mentions_map,
         emojis: &emojis,
+        viewer: &viewer,
     };
 
     base.into_iter()
@@ -109,6 +113,70 @@ struct Enrichment<'a> {
     cards: &'a HashMap<i64, CardRow>,
     mentions: &'a HashMap<i64, Vec<MentionRow>>,
     emojis: &'a HashMap<String, EmojiRow>,
+    viewer: &'a ViewerState,
+}
+
+#[derive(Default)]
+struct ViewerState {
+    favourited: HashSet<i64>,
+    bookmarked: HashSet<i64>,
+    reblogged: HashSet<i64>,
+}
+
+async fn fetch_viewer_state(db: &PgPool, viewer: Option<i64>, ids: &[i64]) -> ViewerState {
+    let Some(viewer) = viewer else {
+        return ViewerState::default();
+    };
+    if ids.is_empty() {
+        return ViewerState::default();
+    }
+
+    let (favourited, bookmarked, reblogged) = tokio::join!(
+        fetch_viewer_id_set(
+            db,
+            "SELECT status_id FROM favourites
+             WHERE account_id = $1 AND status_id = ANY($2::bigint[])",
+            viewer,
+            ids,
+        ),
+        fetch_viewer_id_set(
+            db,
+            "SELECT status_id FROM bookmarks
+             WHERE account_id = $1 AND status_id = ANY($2::bigint[])",
+            viewer,
+            ids,
+        ),
+        fetch_viewer_id_set(
+            db,
+            "SELECT reblog_of_id FROM statuses
+             WHERE account_id = $1
+               AND reblog_of_id = ANY($2::bigint[])
+               AND deleted_at IS NULL",
+            viewer,
+            ids,
+        ),
+    );
+
+    ViewerState {
+        favourited,
+        bookmarked,
+        reblogged,
+    }
+}
+
+async fn fetch_viewer_id_set(db: &PgPool, query: &str, viewer: i64, ids: &[i64]) -> HashSet<i64> {
+    match sqlx::query_scalar::<_, i64>(query)
+        .bind(viewer)
+        .bind(ids)
+        .fetch_all(db)
+        .await
+    {
+        Ok(rows) => rows.into_iter().collect(),
+        Err(e) => {
+            tracing::warn!(error = %e, "status view: viewer state query failed");
+            HashSet::new()
+        }
+    }
 }
 
 #[derive(FromRow)]
@@ -579,10 +647,10 @@ fn build_status(
         favourites_count: u64::try_from(stat.favourites).unwrap_or(0),
         replies_count: u64::try_from(stat.replies).unwrap_or(0),
         quotes_count: u64::try_from(stat.quotes).unwrap_or(0),
-        favourited: false,
-        reblogged: false,
+        favourited: enrich.viewer.favourited.contains(&status_id),
+        reblogged: enrich.viewer.reblogged.contains(&status_id),
         muted: false,
-        bookmarked: false,
+        bookmarked: enrich.viewer.bookmarked.contains(&status_id),
         pinned: false,
         quote: None,
         quote_approval: QuoteApproval::public(),

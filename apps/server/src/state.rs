@@ -30,10 +30,25 @@ impl AppStateInner {
         instance_domain: String,
         mastodon_api_url: Option<String>,
     ) -> AppState {
+        // Every outbound call this server makes represents a request that
+        // originated over HTTPS (we're always behind TLS termination in
+        // production). Setting `X-Forwarded-Proto: https` unconditionally
+        // tells proxy-aware backends — notably Mastodon, whose `force_ssl`
+        // middleware rejects plain-HTTP requests — to treat our forwarded
+        // calls as SSL, so they skip the redirect-to-HTTPS step that would
+        // otherwise break every engagement call against a local test
+        // instance and every production call against a LAN-reachable
+        // Mastodon. Backends that don't recognise the header ignore it.
+        let mut default_headers = reqwest::header::HeaderMap::new();
+        default_headers.insert(
+            "x-forwarded-proto",
+            reqwest::header::HeaderValue::from_static("https"),
+        );
         let http_client = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .connect_timeout(Duration::from_secs(5))
             .redirect(reqwest::redirect::Policy::none())
+            .default_headers(default_headers)
             .build()
             .expect("http client");
 

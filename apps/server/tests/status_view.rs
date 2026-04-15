@@ -1,5 +1,6 @@
 mod common;
 
+use sources::mastodon::CachedPost;
 use sqlx::PgPool;
 use state::statuses::fetch_by_ids;
 
@@ -297,7 +298,7 @@ async fn fetch_by_ids_populates_every_enrichment_dimension(pool: PgPool) {
     insert_quote(&pool, status_id, quoted, alice, bob).await;
 
     let media = common::test_media();
-    let statuses = fetch_by_ids(&pool, "local.test", &media, &[status_id]).await;
+    let statuses = fetch_by_ids(&pool, "local.test", &media, &[status_id], None).await;
 
     assert_eq!(statuses.len(), 1);
     let s = &statuses[0];
@@ -396,7 +397,7 @@ async fn fetch_by_ids_preserves_input_order_and_skips_missing(pool: PgPool) {
     let c = insert_status(&pool, alice, "third", "", None, 0, None, None).await;
 
     let media = common::test_media();
-    let out = fetch_by_ids(&pool, "local.test", &media, &[b, 9_999_999, a, c]).await;
+    let out = fetch_by_ids(&pool, "local.test", &media, &[b, 9_999_999, a, c], None).await;
     let texts: Vec<&str> = out
         .iter()
         .map(|s| s.text.as_deref().unwrap_or(""))
@@ -440,8 +441,335 @@ async fn fetch_by_ids_excludes_deleted_suspended_silenced_private(pool: PgPool) 
         "local.test",
         &media,
         &[alive, deleted, private, suspended_post, silenced_post],
+        None,
     )
     .await;
     assert_eq!(out.len(), 1);
     assert_eq!(out[0].text.as_deref(), Some("alive"));
+}
+
+#[sqlx::test]
+async fn fetch_by_ids_marks_favourited_for_viewer(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+
+    let author = insert_account(&pool, "author", None, "Author", "").await;
+    insert_account_stats(&pool, author, 1, 0, 0).await;
+    let viewer = insert_account(&pool, "viewer", None, "Viewer", "").await;
+    insert_account_stats(&pool, viewer, 0, 0, 0).await;
+
+    let favourited = insert_status(&pool, author, "favourited one", "", None, 0, None, None).await;
+    let untouched = insert_status(&pool, author, "nothing here", "", None, 0, None, None).await;
+
+    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
+        .bind(viewer)
+        .bind(favourited)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let media = common::test_media();
+    let out = fetch_by_ids(
+        &pool,
+        "local.test",
+        &media,
+        &[favourited, untouched],
+        Some(viewer),
+    )
+    .await;
+
+    let by_id: std::collections::HashMap<String, &mastodon::Status> =
+        out.iter().map(|s| (s.id.clone(), s)).collect();
+    assert!(by_id[&favourited.to_string()].favourited);
+    assert!(!by_id[&untouched.to_string()].favourited);
+}
+
+#[sqlx::test]
+async fn fetch_by_ids_marks_bookmarked_for_viewer(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+
+    let author = insert_account(&pool, "author", None, "Author", "").await;
+    insert_account_stats(&pool, author, 1, 0, 0).await;
+    let viewer = insert_account(&pool, "viewer", None, "Viewer", "").await;
+    insert_account_stats(&pool, viewer, 0, 0, 0).await;
+
+    let bookmarked = insert_status(&pool, author, "bookmarked", "", None, 0, None, None).await;
+    let untouched = insert_status(&pool, author, "nothing", "", None, 0, None, None).await;
+
+    sqlx::query("INSERT INTO bookmarks (account_id, status_id) VALUES ($1, $2)")
+        .bind(viewer)
+        .bind(bookmarked)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let media = common::test_media();
+    let out = fetch_by_ids(
+        &pool,
+        "local.test",
+        &media,
+        &[bookmarked, untouched],
+        Some(viewer),
+    )
+    .await;
+
+    let by_id: std::collections::HashMap<String, &mastodon::Status> =
+        out.iter().map(|s| (s.id.clone(), s)).collect();
+    assert!(by_id[&bookmarked.to_string()].bookmarked);
+    assert!(!by_id[&untouched.to_string()].bookmarked);
+}
+
+#[sqlx::test]
+async fn fetch_by_ids_marks_reblogged_for_viewer(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+
+    let author = insert_account(&pool, "author", None, "Author", "").await;
+    insert_account_stats(&pool, author, 1, 0, 0).await;
+    let viewer = insert_account(&pool, "viewer", None, "Viewer", "").await;
+    insert_account_stats(&pool, viewer, 1, 0, 0).await;
+
+    let original = insert_status(&pool, author, "the original", "", None, 0, None, None).await;
+    let untouched = insert_status(&pool, author, "nothing", "", None, 0, None, None).await;
+
+    sqlx::query(
+        "INSERT INTO statuses (account_id, text, visibility, reblog_of_id)
+         VALUES ($1, '', 0, $2)",
+    )
+    .bind(viewer)
+    .bind(original)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let media = common::test_media();
+    let out = fetch_by_ids(
+        &pool,
+        "local.test",
+        &media,
+        &[original, untouched],
+        Some(viewer),
+    )
+    .await;
+
+    let by_id: std::collections::HashMap<String, &mastodon::Status> =
+        out.iter().map(|s| (s.id.clone(), s)).collect();
+    assert!(by_id[&original.to_string()].reblogged);
+    assert!(!by_id[&untouched.to_string()].reblogged);
+}
+
+#[sqlx::test]
+async fn fetch_by_ids_anonymous_viewer_leaves_state_false(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+
+    let author = insert_account(&pool, "author", None, "Author", "").await;
+    insert_account_stats(&pool, author, 1, 0, 0).await;
+    let other = insert_account(&pool, "other", None, "Other", "").await;
+    insert_account_stats(&pool, other, 0, 0, 0).await;
+
+    let favourited_by_other =
+        insert_status(&pool, author, "popular", "", None, 0, None, None).await;
+
+    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
+        .bind(other)
+        .bind(favourited_by_other)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let media = common::test_media();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[favourited_by_other], None).await;
+
+    assert_eq!(out.len(), 1);
+    assert!(!out[0].favourited);
+    assert!(!out[0].bookmarked);
+    assert!(!out[0].reblogged);
+}
+
+#[sqlx::test]
+async fn hydrate_promotes_resolved_remote_to_fetch_by_ids(pool: PgPool) {
+    common::setup_db(&pool).await;
+    common::setup_mastodon_schema(&pool).await;
+
+    let author = insert_account(&pool, "remauthor", None, "Remote Author", "").await;
+    insert_account_stats(&pool, author, 1, 0, 0).await;
+    let viewer = insert_account(&pool, "remviewer", None, "Remote Viewer", "").await;
+    insert_account_stats(&pool, viewer, 0, 0, 0).await;
+
+    let mastodon_status_id =
+        insert_status(&pool, author, "resolved content", "", None, 0, None, None).await;
+    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
+        .bind(viewer)
+        .bind(mastodon_status_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let post_json = serde_json::json!({
+        "provider_id": 8_001_i64,
+        "provider_domain": "remote.example",
+        "uri": "https://remote.example/post/8001",
+        "url": "https://remote.example/post/8001",
+        "content": "<p>remote content</p>",
+        "text": "remote content",
+        "author": {
+            "handle": "@remauthor@remote.example",
+            "display_name": "Remote Author",
+            "url": "https://remote.example/@remauthor",
+            "emojis": []
+        },
+        "published_at": "2026-04-15T12:00:00Z",
+        "sensitive": false,
+        "media": [],
+        "engagement": { "replies": 0, "reposts": 0, "likes": 0 },
+        "tags": [],
+        "emojis": []
+    });
+
+    let snowflake = state::statuses::map_post(
+        &pool,
+        "remote.example",
+        8_001,
+        "https://remote.example/post/8001",
+        "https://remote.example/post/8001",
+        &post_json,
+    )
+    .await
+    .unwrap();
+    state::statuses::set_mastodon_local_id(&pool, snowflake, mastodon_status_id)
+        .await
+        .unwrap();
+
+    let post: ::common::types::Post = serde_json::from_value(post_json).unwrap();
+
+    let media = common::test_media();
+    let out = server::mastodon::statuses::hydrate(
+        &pool,
+        "local.test",
+        &media,
+        vec![CachedPost::Remote {
+            post: Box::new(post),
+        }],
+        Some(viewer),
+    )
+    .await;
+
+    assert_eq!(out.len(), 1);
+    assert_eq!(
+        out[0].id,
+        mastodon_status_id.to_string(),
+        "resolved remote must be served via fetch_by_ids with Mastodon's native id, not a snowflake-URL fallback"
+    );
+    assert!(
+        out[0].favourited,
+        "resolved remote must pick up viewer state through fetch_by_ids — Status::from_post hardcodes favourited=false"
+    );
+    assert_eq!(
+        out[0].text.as_deref(),
+        Some("resolved content"),
+        "content must come from Mastodon's statuses table, not the cached post_data"
+    );
+}
+
+#[sqlx::test]
+async fn hydrate_threads_viewer_state_through_to_local_statuses(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+
+    let author = insert_account(&pool, "author", None, "Author", "").await;
+    insert_account_stats(&pool, author, 1, 0, 0).await;
+    let viewer = insert_account(&pool, "viewer", None, "Viewer", "").await;
+    insert_account_stats(&pool, viewer, 0, 0, 0).await;
+
+    let status_id = insert_status(
+        &pool,
+        author,
+        "favourited via hydrate",
+        "",
+        None,
+        0,
+        None,
+        None,
+    )
+    .await;
+    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
+        .bind(viewer)
+        .bind(status_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let media = common::test_media();
+    let out = server::mastodon::statuses::hydrate(
+        &pool,
+        "local.test",
+        &media,
+        vec![CachedPost::Local { id: status_id }],
+        Some(viewer),
+    )
+    .await;
+
+    assert_eq!(out.len(), 1);
+    assert!(
+        out[0].favourited,
+        "hydrate must pass the viewer down to fetch_by_ids so per-user state reaches timeline responses"
+    );
+}
+
+#[sqlx::test]
+async fn hydrate_without_viewer_leaves_state_false(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+
+    let author = insert_account(&pool, "author", None, "Author", "").await;
+    insert_account_stats(&pool, author, 1, 0, 0).await;
+    let other = insert_account(&pool, "other", None, "Other", "").await;
+    insert_account_stats(&pool, other, 0, 0, 0).await;
+
+    let status_id = insert_status(&pool, author, "post", "", None, 0, None, None).await;
+    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
+        .bind(other)
+        .bind(status_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let media = common::test_media();
+    let out = server::mastodon::statuses::hydrate(
+        &pool,
+        "local.test",
+        &media,
+        vec![CachedPost::Local { id: status_id }],
+        None,
+    )
+    .await;
+
+    assert_eq!(out.len(), 1);
+    assert!(!out[0].favourited);
+}
+
+#[sqlx::test]
+async fn fetch_by_ids_viewer_sees_only_own_engagement(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+
+    let author = insert_account(&pool, "author", None, "Author", "").await;
+    insert_account_stats(&pool, author, 1, 0, 0).await;
+    let viewer = insert_account(&pool, "viewer", None, "Viewer", "").await;
+    insert_account_stats(&pool, viewer, 0, 0, 0).await;
+    let stranger = insert_account(&pool, "stranger", None, "Stranger", "").await;
+    insert_account_stats(&pool, stranger, 0, 0, 0).await;
+
+    let post = insert_status(&pool, author, "shared", "", None, 0, None, None).await;
+
+    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
+        .bind(stranger)
+        .bind(post)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let media = common::test_media();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[post], Some(viewer)).await;
+
+    assert_eq!(out.len(), 1);
+    assert!(
+        !out[0].favourited,
+        "stranger's favourite must not show as viewer's favourite"
+    );
 }

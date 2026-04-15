@@ -154,6 +154,38 @@ pub async fn clear_mastodon_local_id(db: &PgPool, id: i64) -> Result<(), sqlx::E
     Ok(())
 }
 
+/// Batch-resolves `(provider_domain, remote_id)` pairs to Mastodon local ids,
+/// returning only entries whose `mastodon_local_id` is populated. Used by
+/// `hydrate` to decide whether a CommonFeed post should be served from
+/// Mastodon's canonical DB row or from the cached `post_data` blob.
+pub async fn find_mastodon_ids_by_provider(
+    db: &PgPool,
+    pairs: &[(String, i64)],
+) -> Result<HashMap<(String, i64), i64>, sqlx::Error> {
+    if pairs.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let domains: Vec<&str> = pairs.iter().map(|(d, _)| d.as_str()).collect();
+    let remote_ids: Vec<i64> = pairs.iter().map(|(_, r)| *r).collect();
+
+    let rows = sqlx::query_as::<_, (String, i64, i64)>(
+        "SELECT cs.provider_domain, cs.remote_id, cs.mastodon_local_id
+         FROM commonfeed_statuses cs
+         JOIN UNNEST($1::text[], $2::bigint[]) AS t(d, r)
+             ON cs.provider_domain = t.d AND cs.remote_id = t.r
+         WHERE cs.mastodon_local_id IS NOT NULL",
+    )
+    .bind(&domains)
+    .bind(&remote_ids)
+    .fetch_all(db)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|(domain, remote_id, mastodon_local_id)| ((domain, remote_id), mastodon_local_id))
+        .collect())
+}
+
 /// Returns a map from `mastodon_local_id` to the canonical snowflake.
 ///
 /// When multiple providers indexed the same post, several snowflakes point

@@ -154,8 +154,14 @@ async fn apply(
 
         let mut value: Value = serde_json::from_slice(&forwarded.body)?;
         translate_response(&state.pool, &mut value).await?;
+        // Only pin the top-level id back to the caller's snowflake when the
+        // response is still "about" the status we forwarded. Mastodon's
+        // /reblog endpoint returns a freshly-created wrapper status with a
+        // new id — rewriting that wrapper id to the original's snowflake
+        // would attribute a brand-new post to the wrong handle.
         if let Some(snowflake) = hint_snowflake
             && let Some(id_field) = value.get_mut("id")
+            && id_field.as_str() == Some(forward_id.as_str())
         {
             *id_field = Value::String(snowflake.to_string());
         }
