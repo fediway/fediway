@@ -1,20 +1,10 @@
 use std::error::Error;
-use std::sync::LazyLock;
-use std::time::Duration;
 
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 
 use crate::state::AppState;
-
-static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .connect_timeout(Duration::from_secs(3))
-        .build()
-        .expect("http client")
-});
 
 pub async fn handle(State(state): State<AppState>) -> StatusCode {
     match sqlx::query("SELECT 1").execute(&state.pool).await {
@@ -34,7 +24,8 @@ pub async fn mastodon(State(state): State<AppState>) -> (StatusCode, Json<serde_
 
     let url = format!("{base_url}/api/v1/instance");
 
-    let result = HTTP_CLIENT
+    let result = state
+        .http_client
         .get(&url)
         .header("Host", &state.instance_domain)
         .send()

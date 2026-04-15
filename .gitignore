@@ -4,3 +4,4 @@
 *.swo
 *~
 .DS_Store
+/docker/mastodon-token/

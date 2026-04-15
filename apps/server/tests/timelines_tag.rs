@@ -243,6 +243,68 @@ async fn tag_timeline_excludes_private_visibility(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn tag_timeline_surfaces_favourited_state_for_authenticated_viewer(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+    common::setup_mastodon_fixture(&pool).await;
+
+    let author = insert_account(&pool, "author", None).await;
+    let tag = insert_tag(&pool, "rust").await;
+    let status_id = seed_tagged_public(
+        &pool,
+        author,
+        "https://test.example.com/users/author/statuses/1",
+        "hello rust",
+        tag,
+    )
+    .await;
+
+    let viewer = insert_account(&pool, "viewer", None).await;
+    let viewer_user_id: i64 = sqlx::query_scalar(
+        "INSERT INTO users (account_id, confirmed_at, approved, disabled)
+         VALUES ($1, NOW(), TRUE, FALSE) RETURNING id",
+    )
+    .bind(viewer)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    let token = format!("tagfeed_tok_{viewer_user_id}");
+    sqlx::query(
+        "INSERT INTO oauth_access_tokens (token, resource_owner_id, created_at, scopes)
+         VALUES ($1, $2, NOW(), 'read write follow')",
+    )
+    .bind(&token)
+    .bind(viewer_user_id)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
+        .bind(viewer)
+        .bind(status_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let app = common::TestApp::from_pool(pool).await;
+    let req = axum::http::Request::get("/api/v1/timelines/tag/rust")
+        .header("authorization", format!("Bearer {token}"))
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let resp = app.raw_request(req).await;
+
+    assert_eq!(resp.status, StatusCode::OK);
+    let arr = resp.json();
+    let arr = arr.as_array().unwrap();
+    assert_eq!(arr.len(), 1, "tagged status must appear in the timeline");
+    assert_eq!(arr[0]["id"], status_id.to_string());
+    assert_eq!(
+        arr[0]["favourited"], true,
+        "tag timeline must surface the authenticated viewer's favourited state — fetch_by_ids wiring must flow through TimelineFeed::serve"
+    );
+}
+
+#[sqlx::test]
 async fn tag_timeline_respects_limit_param(pool: PgPool) {
     common::setup_mastodon_schema(&pool).await;
     let alice = insert_account(&pool, "alice", None).await;

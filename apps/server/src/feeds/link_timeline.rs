@@ -18,6 +18,7 @@ const POOL_SIZE: usize = 100;
 
 pub struct LinkTimelineFeed {
     pipeline: Pipeline<Post>,
+    viewer_id: Option<i64>,
 }
 
 impl LinkTimelineFeed {
@@ -29,6 +30,7 @@ impl LinkTimelineFeed {
     ) -> Self {
         filters.link = Some(url);
 
+        let viewer_id = account.map(|a| a.id);
         let policy = match account {
             Some(a) => state::policy::load(&state.pool, a.id, &state.instance_domain).await,
             None => UserPolicy::default(),
@@ -48,7 +50,10 @@ impl LinkTimelineFeed {
             }))
             .build();
 
-        Self { pipeline }
+        Self {
+            pipeline,
+            viewer_id,
+        }
     }
 }
 
@@ -65,5 +70,9 @@ impl TimelineFeed for LinkTimelineFeed {
 
     fn path(&self) -> Cow<'static, str> {
         Cow::Borrowed("/api/v1/timelines/link")
+    }
+
+    fn viewer_id(&self) -> Option<i64> {
+        self.viewer_id
     }
 }

@@ -1,3 +1,6 @@
+#[allow(dead_code)]
+pub mod mastodon;
+
 use std::time::Duration;
 
 use axum::body::Body;
@@ -50,6 +53,8 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             uri                 TEXT NOT NULL DEFAULT '',
             suspended_at        TIMESTAMP,
             silenced_at         TIMESTAMP,
+            memorial            BOOLEAN NOT NULL DEFAULT FALSE,
+            moved_to_account_id BIGINT,
             avatar_file_name    TEXT,
             avatar_remote_url   TEXT,
             header_file_name    TEXT,
@@ -308,6 +313,7 @@ impl TestApp {
 
     pub async fn from_pool_with_mastodon(pool: PgPool, mastodon_api_url: Option<String>) -> Self {
         setup_db(&pool).await;
+        setup_mastodon_fixture(&pool).await;
 
         let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
         let media = MediaConfig::new("test.example.com".into(), false);

@@ -3,7 +3,7 @@ mod common;
 use std::time::Duration;
 
 use feed::Feed;
-use server::auth::Account;
+use server::auth::{Account, BearerToken};
 use server::feeds::HomeFeed;
 use server::state::AppStateInner;
 use sources::commonfeed::types::QueryFilters;
@@ -64,6 +64,7 @@ fn account_for(id: i64, username: &str) -> Account {
         id,
         username: username.into(),
         chosen_languages: Vec::new(),
+        token: BearerToken::new(String::new()),
     }
 }
 

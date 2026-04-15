@@ -1,12 +1,17 @@
-use std::sync::LazyLock;
 use std::time::Duration;
 
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, Method, StatusCode};
+use axum::response::{IntoResponse, Response};
 use common::types::Post;
 use mastodon::{Context, Status};
+use serde_json::Value;
 
+use crate::auth::Account;
+use crate::mastodon::forward::forward;
+use crate::mastodon::resolve::ResolveError;
+use crate::mastodon::translate::translate_response;
 use crate::state::AppState;
 
 const CACHE_TTL: Duration = Duration::from_secs(3600);
@@ -17,25 +22,83 @@ pub async fn proxy_fallback() -> StatusCode {
     StatusCode::NOT_FOUND
 }
 
-static HTTP_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .connect_timeout(Duration::from_secs(5))
-        .build()
-        .expect("http client")
-});
-
 /// `GET /api/v1/statuses/:id` — single status detail.
 pub async fn detail(
     State(state): State<AppState>,
+    account: Option<Account>,
     Path(id): Path<String>,
-) -> Result<Json<Status>, StatusCode> {
+    headers: HeaderMap,
+) -> Result<Response, StatusCode> {
     let snowflake: i64 = id.parse().map_err(|_| StatusCode::NOT_FOUND)?;
 
-    let row = state::statuses::find_by_id(&state.pool, snowflake)
+    let mut row = state::statuses::find_by_id(&state.pool, snowflake)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
+
+    // An authenticated viewer hitting a commonfeed recommendation for the
+    // first time triggers a one-shot resolve so the post-resolve proxy path
+    // below can surface fresh counters and per-user flags. Anonymous callers
+    // skip this: they have no per-user state to gain and shouldn't pay the
+    // federation round-trip.
+    if row.mastodon_local_id.is_none()
+        && let Some(account) = account.as_ref()
+    {
+        match state.resolver.resolve(snowflake, &account.token).await {
+            Ok(mastodon_id) => row.mastodon_local_id = Some(mastodon_id),
+            Err(ResolveError::NotFound | ResolveError::Forbidden) => {}
+            Err(e) => {
+                tracing::warn!(error = ?e, snowflake, "detail: first-view resolve failed");
+            }
+        }
+    }
+
+    // Once we know the Mastodon local id, let Mastodon serve: it has fresher
+    // engagement counters and per-user flags (favourited / bookmarked / muted)
+    // that the cached `post_data` can't provide.
+    if let (Some(mastodon_local_id), Some(base_url)) =
+        (row.mastodon_local_id, state.mastodon_api_url.as_deref())
+    {
+        let path = format!("/api/v1/statuses/{mastodon_local_id}");
+        match forward(
+            &state.http_client,
+            base_url,
+            Method::GET,
+            &path,
+            &headers,
+            None,
+        )
+        .await
+        {
+            Ok(forwarded) if forwarded.status.is_success() => {
+                match serde_json::from_slice::<Value>(&forwarded.body) {
+                    Ok(mut value) => {
+                        if translate_response(&state.pool, &mut value).await.is_ok() {
+                            if let Some(id_field) = value.get_mut("id") {
+                                *id_field = Value::String(snowflake.to_string());
+                            }
+                            return Ok((StatusCode::OK, Json(value)).into_response());
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            error = %e,
+                            snowflake,
+                            "detail: failed to parse mastodon response"
+                        );
+                    }
+                }
+            }
+            Ok(forwarded)
+                if forwarded.status == StatusCode::NOT_FOUND
+                    || forwarded.status == StatusCode::GONE =>
+            {
+                let _ = state::statuses::clear_mastodon_local_id(&state.pool, row.id).await;
+            }
+            Ok(forwarded) => return Ok(forwarded.into_response()),
+            Err(_) => {}
+        }
+    }
 
     let post_data = if row.is_stale(CACHE_TTL) {
         match refresh_from_provider(&state, &row).await {
@@ -52,14 +115,15 @@ pub async fn detail(
     })?;
 
     let status = Status::from_post(post, snowflake.to_string());
-    Ok(Json(status))
+    Ok(Json(status).into_response())
 }
 
 /// `GET /api/v1/statuses/:id/context` — ancestors and descendants.
 pub async fn context(
     State(state): State<AppState>,
     Path(id): Path<String>,
-) -> Result<Json<Context>, StatusCode> {
+    headers: HeaderMap,
+) -> Result<Response, StatusCode> {
     let snowflake: i64 = id.parse().map_err(|_| StatusCode::NOT_FOUND)?;
 
     let row = state::statuses::find_by_id(&state.pool, snowflake)
@@ -67,13 +131,78 @@ pub async fn context(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
 
+    // Once resolved, Mastodon's /context is the canonical reply tree; it
+    // fills gaps that our cached `reply_to` walk + provider-side descendants
+    // fetch can't cover.
+    if let (Some(mastodon_local_id), Some(base_url)) =
+        (row.mastodon_local_id, state.mastodon_api_url.as_deref())
+    {
+        let path = format!("/api/v1/statuses/{mastodon_local_id}/context");
+        match forward(
+            &state.http_client,
+            base_url,
+            Method::GET,
+            &path,
+            &headers,
+            None,
+        )
+        .await
+        {
+            Ok(forwarded) if forwarded.status.is_success() => {
+                match serde_json::from_slice::<Value>(&forwarded.body) {
+                    Ok(mut value) => {
+                        let mut translate_ok = true;
+                        for key in ["ancestors", "descendants"] {
+                            let Some(arr) = value.get_mut(key).and_then(Value::as_array_mut) else {
+                                continue;
+                            };
+                            for item in arr {
+                                if let Err(e) = translate_response(&state.pool, item).await {
+                                    tracing::warn!(
+                                        error = %e,
+                                        snowflake,
+                                        "context: reverse-map failed"
+                                    );
+                                    translate_ok = false;
+                                    break;
+                                }
+                            }
+                            if !translate_ok {
+                                break;
+                            }
+                        }
+                        if translate_ok {
+                            return Ok((StatusCode::OK, Json(value)).into_response());
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            error = %e,
+                            snowflake,
+                            "context: failed to parse mastodon response"
+                        );
+                    }
+                }
+            }
+            Ok(forwarded)
+                if forwarded.status == StatusCode::NOT_FOUND
+                    || forwarded.status == StatusCode::GONE =>
+            {
+                let _ = state::statuses::clear_mastodon_local_id(&state.pool, row.id).await;
+            }
+            Ok(forwarded) => return Ok(forwarded.into_response()),
+            Err(_) => {}
+        }
+    }
+
     let ancestors = build_ancestors(&state, &row.post_data).await;
     let descendants = fetch_descendants(&state, &row).await;
 
     Ok(Json(Context {
         ancestors,
         descendants,
-    }))
+    })
+    .into_response())
 }
 
 async fn build_ancestors(state: &AppState, post_data: &serde_json::Value) -> Vec<Status> {
@@ -124,7 +253,8 @@ async fn fetch_descendants(state: &AppState, row: &state::statuses::CachedStatus
     let mut cursor: Option<String> = None;
 
     for _ in 0..DESCENDANTS_MAX_PAGES {
-        let mut req = HTTP_CLIENT
+        let mut req = state
+            .http_client
             .get(&base_url)
             .bearer_auth(&provider.api_key)
             .query(&[("limit", &DESCENDANTS_PAGE_LIMIT.to_string())]);
@@ -186,7 +316,8 @@ async fn refresh_from_provider(
 
     let url = format!("{}/posts/{}", provider.base_url, row.remote_id);
 
-    let resp = HTTP_CLIENT
+    let resp = state
+        .http_client
         .get(&url)
         .bearer_auth(&provider.api_key)
         .send()
