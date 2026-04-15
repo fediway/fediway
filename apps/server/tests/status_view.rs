@@ -107,6 +107,7 @@ async fn insert_status_stats(
     .expect("insert status_stats");
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn insert_media_attachment(
     pool: &PgPool,
     status_id: i64,
