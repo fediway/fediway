@@ -316,13 +316,13 @@ impl TestApp {
         setup_mastodon_fixture(&pool).await;
 
         let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
-        let media = MediaConfig::new("test.example.com".into(), false);
+        let media = MediaConfig::new("example.com".into(), false);
         let state = AppStateInner::new(
             pool,
             feed_store,
             media,
             "nomic_v1.5_64d".into(),
-            "test.example.com".into(),
+            "example.com".into(),
             mastodon_api_url,
         );
         let router = server::routes::router(state);

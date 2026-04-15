@@ -52,7 +52,12 @@ impl AppStateInner {
             .build()
             .expect("http client");
 
-        let resolver = Resolver::new(pool.clone(), http_client.clone(), mastodon_api_url.clone());
+        let resolver = Resolver::new(
+            pool.clone(),
+            http_client.clone(),
+            mastodon_api_url.clone(),
+            instance_domain.clone(),
+        );
 
         Arc::new(Self {
             pool,

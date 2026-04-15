@@ -53,16 +53,23 @@ pub struct Resolver {
     pool: PgPool,
     http: reqwest::Client,
     mastodon_base: Option<Arc<str>>,
+    instance_domain: Arc<str>,
     flights: Mutex<HashMap<i64, FlightFuture>>,
 }
 
 impl Resolver {
     #[must_use]
-    pub fn new(pool: PgPool, http: reqwest::Client, mastodon_base: Option<String>) -> Arc<Self> {
+    pub fn new(
+        pool: PgPool,
+        http: reqwest::Client,
+        mastodon_base: Option<String>,
+        instance_domain: impl Into<Arc<str>>,
+    ) -> Arc<Self> {
         Arc::new(Self {
             pool,
             http,
             mastodon_base: mastodon_base.map(Arc::from),
+            instance_domain: instance_domain.into(),
             flights: Mutex::new(HashMap::new()),
         })
     }
@@ -154,6 +161,7 @@ impl Resolver {
             .http
             .get(&url)
             .bearer_auth(token.as_str())
+            .header(header::HOST, self.instance_domain.as_ref())
             .query(&[
                 ("q", row.post_uri.as_str()),
                 ("resolve", "true"),

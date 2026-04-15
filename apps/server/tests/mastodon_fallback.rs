@@ -21,13 +21,13 @@ use server::state::{AppState, AppStateInner};
 async fn test_state(pool: PgPool, mastodon_api_url: String) -> AppState {
     common::setup_db(&pool).await;
     let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
-    let media = MediaConfig::new("test.example.com".into(), false);
+    let media = MediaConfig::new("example.com".into(), false);
     AppStateInner::new(
         pool,
         feed_store,
         media,
         "nomic_v1.5_64d".into(),
-        "test.example.com".into(),
+        "example.com".into(),
         Some(mastodon_api_url),
     )
 }

@@ -98,7 +98,7 @@ async fn resolve_returns_cached_mapping_without_http(pool: PgPool) {
     );
     let base = serve(router).await;
 
-    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let resolver = Resolver::new(pool, http_client(), Some(base), "example.com");
     let result = resolver
         .resolve(snowflake, &BearerToken::new("tok".into()))
         .await
@@ -129,7 +129,7 @@ async fn resolve_fetches_and_persists_on_first_call(pool: PgPool) {
     );
     let base = serve(router).await;
 
-    let resolver = Resolver::new(pool.clone(), http_client(), Some(base));
+    let resolver = Resolver::new(pool.clone(), http_client(), Some(base), "example.com");
     let result = resolver
         .resolve(snowflake, &BearerToken::new("user_token".into()))
         .await
@@ -151,7 +151,12 @@ async fn resolve_fetches_and_persists_on_first_call(pool: PgPool) {
 #[sqlx::test]
 async fn resolve_missing_snowflake_returns_not_found(pool: PgPool) {
     common::setup_db(&pool).await;
-    let resolver = Resolver::new(pool, http_client(), Some("http://unused".into()));
+    let resolver = Resolver::new(
+        pool,
+        http_client(),
+        Some("http://unused".into()),
+        "example.com",
+    );
     let err = resolver
         .resolve(999, &BearerToken::new("tok".into()))
         .await
@@ -165,12 +170,46 @@ async fn resolve_empty_statuses_is_unresolvable(pool: PgPool) {
     let router = Router::new().route("/api/v2/search", get(|| async { ok_empty() }));
     let base = serve(router).await;
 
-    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let resolver = Resolver::new(pool, http_client(), Some(base), "example.com");
     let err = resolver
         .resolve(snowflake, &BearerToken::new("tok".into()))
         .await
         .unwrap_err();
     assert_eq!(err, ResolveError::Unresolvable);
+}
+
+#[sqlx::test]
+async fn resolve_sends_instance_domain_as_host_header(pool: PgPool) {
+    let snowflake = seed_cached_status(&pool, "https://example.com/host-check").await;
+
+    let captured = Arc::new(tokio::sync::Mutex::new(None::<String>));
+    let captured_clone = captured.clone();
+    let router = Router::new().route(
+        "/api/v2/search",
+        get(move |headers: HeaderMap| {
+            let captured = captured_clone.clone();
+            async move {
+                *captured.lock().await = headers
+                    .get("host")
+                    .and_then(|v| v.to_str().ok())
+                    .map(String::from);
+                ok_with_status_id("7777")
+            }
+        }),
+    );
+    let base = serve(router).await;
+
+    let resolver = Resolver::new(pool, http_client(), Some(base), "fediway.test");
+    resolver
+        .resolve(snowflake, &BearerToken::new("tok".into()))
+        .await
+        .expect("resolve should succeed");
+
+    assert_eq!(
+        captured.lock().await.as_deref(),
+        Some("fediway.test"),
+        "resolver must send instance_domain as Host to satisfy upstream HostAuthorization"
+    );
 }
 
 #[sqlx::test]
@@ -182,7 +221,7 @@ async fn resolve_401_is_forbidden(pool: PgPool) {
     );
     let base = serve(router).await;
 
-    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let resolver = Resolver::new(pool, http_client(), Some(base), "example.com");
     let err = resolver
         .resolve(snowflake, &BearerToken::new("tok".into()))
         .await
@@ -199,7 +238,7 @@ async fn resolve_422_is_blocked(pool: PgPool) {
     );
     let base = serve(router).await;
 
-    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let resolver = Resolver::new(pool, http_client(), Some(base), "example.com");
     let err = resolver
         .resolve(snowflake, &BearerToken::new("tok".into()))
         .await
@@ -220,7 +259,7 @@ async fn resolve_429_propagates_retry_after(pool: PgPool) {
     );
     let base = serve(router).await;
 
-    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let resolver = Resolver::new(pool, http_client(), Some(base), "example.com");
     let err = resolver
         .resolve(snowflake, &BearerToken::new("tok".into()))
         .await
@@ -237,7 +276,12 @@ async fn resolve_429_propagates_retry_after(pool: PgPool) {
 async fn resolve_unreachable_mastodon_returns_unreachable(pool: PgPool) {
     let snowflake = seed_cached_status(&pool, "https://example.com/1").await;
 
-    let resolver = Resolver::new(pool, http_client(), Some("http://127.0.0.1:1".into()));
+    let resolver = Resolver::new(
+        pool,
+        http_client(),
+        Some("http://127.0.0.1:1".into()),
+        "example.com",
+    );
     let err = resolver
         .resolve(snowflake, &BearerToken::new("tok".into()))
         .await
@@ -264,7 +308,7 @@ async fn resolve_coalesces_concurrent_callers(pool: PgPool) {
     );
     let base = serve(router).await;
 
-    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let resolver = Resolver::new(pool, http_client(), Some(base), "example.com");
 
     let mut handles = Vec::new();
     for _ in 0..10 {

@@ -11,6 +11,7 @@ use sqlx::PgPool;
 use server::auth::BearerToken;
 
 pub const MASTODON_BASE: &str = "http://localhost:3000";
+pub const MASTODON_HOST: &str = "example.com";
 
 /// Subset of Mastodon's `Status` entity relevant to integration tests.
 ///
@@ -62,6 +63,7 @@ pub fn http_client() -> reqwest::Client {
     // localhost is enough — no Mastodon env tweaks needed.
     let mut headers = HeaderMap::new();
     headers.insert("x-forwarded-proto", HeaderValue::from_static("https"));
+    headers.insert("host", HeaderValue::from_static(MASTODON_HOST));
     reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .connect_timeout(Duration::from_secs(3))

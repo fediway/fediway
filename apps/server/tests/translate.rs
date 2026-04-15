@@ -238,7 +238,7 @@ async fn translate_request_id_rewrites_snowflake_to_mastodon_id(pool: PgPool) {
 
     let router = Router::new().route("/api/v2/search", get(|| async { search_response("8888") }));
     let base = serve(router).await;
-    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let resolver = Resolver::new(pool, http_client(), Some(base), "example.com");
     let token = BearerToken::new("tok".into());
 
     let mut id = snowflake.to_string();
@@ -254,7 +254,7 @@ async fn translate_request_id_leaves_native_mastodon_id_alone(pool: PgPool) {
     common::setup_db(&pool).await;
     let router = Router::new().route("/api/v2/search", get(|| async { StatusCode::NOT_FOUND }));
     let base = serve(router).await;
-    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let resolver = Resolver::new(pool, http_client(), Some(base), "example.com");
     let token = BearerToken::new("tok".into());
 
     let mut id = "999999999999".to_string();
@@ -268,7 +268,12 @@ async fn translate_request_id_leaves_native_mastodon_id_alone(pool: PgPool) {
 #[sqlx::test]
 async fn translate_request_id_leaves_non_numeric_alone(pool: PgPool) {
     common::setup_db(&pool).await;
-    let resolver = Resolver::new(pool, http_client(), Some("http://unused".into()));
+    let resolver = Resolver::new(
+        pool,
+        http_client(),
+        Some("http://unused".into()),
+        "example.com",
+    );
     let token = BearerToken::new("tok".into());
 
     let mut id = "abc-xyz".to_string();
@@ -299,7 +304,7 @@ async fn translate_request_id_propagates_non_not_found_errors(pool: PgPool) {
         get(|| async { (StatusCode::UNPROCESSABLE_ENTITY, "blocked").into_response() }),
     );
     let base = serve(router).await;
-    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let resolver = Resolver::new(pool, http_client(), Some(base), "example.com");
     let token = BearerToken::new("tok".into());
 
     let mut id = snowflake.to_string();

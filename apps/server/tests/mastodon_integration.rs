@@ -27,7 +27,12 @@ mod resolver {
 
         let snowflake = seed_commonfeed(&pool, &created.uri).await;
 
-        let resolver = Resolver::new(pool.clone(), http, Some(MASTODON_BASE.into()));
+        let resolver = Resolver::new(
+            pool.clone(),
+            http,
+            Some(MASTODON_BASE.into()),
+            "example.com",
+        );
         let resolved = resolver
             .resolve(snowflake, &token)
             .await
@@ -63,6 +68,7 @@ mod engagement {
 
     fn authed(path: String, token: &server::auth::BearerToken) -> Request<Body> {
         Request::post(path)
+            .header("host", "example.com")
             .header("authorization", format!("Bearer {}", token.as_str()))
             .header("x-forwarded-proto", "https")
             .body(Body::empty())
@@ -291,6 +297,7 @@ mod reply {
             "visibility": "public",
         });
         let req = Request::post("/api/v1/statuses")
+            .header("host", "example.com")
             .header("authorization", format!("Bearer {}", token.as_str()))
             .header("x-forwarded-proto", "https")
             .header("content-type", "application/json")
@@ -339,6 +346,7 @@ mod reply {
             "visibility": "public",
         });
         let req = Request::post("/api/v1/statuses")
+            .header("host", "example.com")
             .header("authorization", format!("Bearer {}", token.as_str()))
             .header("x-forwarded-proto", "https")
             .header("content-type", "application/json")
@@ -393,6 +401,7 @@ mod report {
             "comment": "integration report",
         });
         let req = Request::post("/api/v1/reports")
+            .header("host", "example.com")
             .header("authorization", format!("Bearer {}", token.as_str()))
             .header("x-forwarded-proto", "https")
             .header("content-type", "application/json")
@@ -452,6 +461,7 @@ mod context {
         let resp = app
             .raw_request(
                 Request::get(format!("/api/v1/statuses/{parent_snowflake}/context"))
+                    .header("host", "example.com")
                     .header("authorization", format!("Bearer {}", token.as_str()))
                     .header("x-forwarded-proto", "https")
                     .body(Body::empty())
@@ -519,6 +529,7 @@ mod detail {
         let resp = app
             .raw_request(
                 Request::get(format!("/api/v1/statuses/{snowflake}"))
+                    .header("host", "example.com")
                     .header("authorization", format!("Bearer {}", token.as_str()))
                     .header("x-forwarded-proto", "https")
                     .body(Body::empty())
@@ -562,6 +573,7 @@ mod detail {
         let fav = app
             .raw_request(
                 Request::post(format!("/api/v1/statuses/{snowflake}/favourite"))
+                    .header("host", "example.com")
                     .header("authorization", format!("Bearer {}", token.as_str()))
                     .header("x-forwarded-proto", "https")
                     .body(Body::empty())
@@ -573,6 +585,7 @@ mod detail {
         let detail = app
             .raw_request(
                 Request::get(format!("/api/v1/statuses/{snowflake}"))
+                    .header("host", "example.com")
                     .header("authorization", format!("Bearer {}", token.as_str()))
                     .header("x-forwarded-proto", "https")
                     .body(Body::empty())
