@@ -7,6 +7,7 @@ use common::types::Post;
 use feed::Feed;
 use mastodon::Status;
 use serde::Deserialize;
+use sources::mastodon::CachedPost;
 
 use crate::mastodon::statuses;
 use crate::state::AppState;
@@ -21,6 +22,12 @@ pub trait TimelineFeed: Feed<Item = Post> {
 
     fn path(&self) -> Cow<'static, str>;
 
+    /// The authenticated viewer's Mastodon `accounts.id`, or `None` for
+    /// anonymous requests. Threaded all the way to `fetch_by_ids` so every
+    /// status in the response carries correct `favourited`/`bookmarked`/
+    /// `reblogged` state instead of hardcoded `false`.
+    fn viewer_id(&self) -> Option<i64>;
+
     fn serve(
         &self,
         state: &AppState,
@@ -32,8 +39,18 @@ pub trait TimelineFeed: Feed<Item = Post> {
                 .increment(1);
 
             let candidates = self.collect().await;
-            let posts: Vec<Post> = candidates.into_iter().map(|c| c.item).collect();
-            let built = statuses::from_posts(&state.pool, &state.instance_domain, posts).await;
+            let cached: Vec<CachedPost> = candidates
+                .into_iter()
+                .map(|c| CachedPost::from_post(c.item, &state.instance_domain))
+                .collect();
+            let built = statuses::hydrate(
+                &state.pool,
+                &state.instance_domain,
+                &state.media,
+                cached,
+                self.viewer_id(),
+            )
+            .await;
             let (page, headers) = statuses::paginate(
                 built,
                 params.limit.min(40),

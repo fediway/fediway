@@ -156,7 +156,7 @@ pub async fn clear_mastodon_local_id(db: &PgPool, id: i64) -> Result<(), sqlx::E
 
 /// Batch-resolves `(provider_domain, remote_id)` pairs to Mastodon local ids,
 /// returning only entries whose `mastodon_local_id` is populated. Used by
-/// `hydrate` to decide whether a CommonFeed post should be served from
+/// `hydrate` to decide whether a `CommonFeed` post should be served from
 /// Mastodon's canonical DB row or from the cached `post_data` blob.
 pub async fn find_mastodon_ids_by_provider(
     db: &PgPool,

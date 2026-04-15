@@ -22,6 +22,30 @@ pub async fn hydrate(
     cached: Vec<CachedPost>,
     viewer_account_id: Option<i64>,
 ) -> Vec<Status> {
+    // A CommonFeed post that has already been resolved into Mastodon's
+    // `statuses` table is functionally local: Mastodon holds the canonical
+    // content, counters, and per-user state. Serving it from the cached
+    // `post_data` blob would lose favourited/bookmarked/reblogged flags and
+    // return stale counters. Batch-lookup upfront lets the existing Local
+    // slot carry the Mastodon id through `fetch_by_ids`.
+    let provider_pairs: Vec<(String, i64)> = cached
+        .iter()
+        .filter_map(|item| match item {
+            CachedPost::Remote { post } => match (&post.provider_domain, post.provider_id) {
+                (Some(domain), Some(remote_id)) => Some((domain.clone(), remote_id)),
+                _ => None,
+            },
+            CachedPost::Local { .. } => None,
+        })
+        .collect();
+
+    let resolved_map = state::statuses::find_mastodon_ids_by_provider(db, &provider_pairs)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::warn!(error = %e, "hydrate: provider-to-local lookup failed");
+            std::collections::HashMap::new()
+        });
+
     let mut slots: Vec<Slot> = Vec::with_capacity(cached.len());
     let mut local_ids: Vec<i64> = Vec::new();
     let mut remote_posts: Vec<Post> = Vec::new();
@@ -32,8 +56,19 @@ pub async fn hydrate(
                 local_ids.push(id);
             }
             CachedPost::Remote { post } => {
-                slots.push(Slot::Remote(remote_posts.len()));
-                remote_posts.push(*post);
+                let promoted = match (&post.provider_domain, post.provider_id) {
+                    (Some(domain), Some(remote_id)) => {
+                        resolved_map.get(&(domain.clone(), remote_id)).copied()
+                    }
+                    _ => None,
+                };
+                if let Some(mastodon_id) = promoted {
+                    slots.push(Slot::Local(mastodon_id));
+                    local_ids.push(mastodon_id);
+                } else {
+                    slots.push(Slot::Remote(remote_posts.len()));
+                    remote_posts.push(*post);
+                }
             }
         }
     }

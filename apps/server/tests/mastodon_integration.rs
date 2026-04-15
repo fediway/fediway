@@ -484,6 +484,69 @@ mod detail {
 
     #[ignore = "requires running Mastodon (repos/fediway/docker-compose.integration.yaml)"]
     #[sqlx::test]
+    async fn detail_first_view_auto_resolves_and_surfaces_viewer_favourited(pool: PgPool) {
+        let token = load_token();
+        let http = http_client();
+
+        seed_local_auth(&pool, &token).await;
+        let created = create_status(&http, &token, "detail auto-resolve first view").await;
+
+        let fav = http
+            .post(format!(
+                "{MASTODON_BASE}/api/v1/statuses/{}/favourite",
+                created.id
+            ))
+            .bearer_auth(token.as_str())
+            .send()
+            .await
+            .unwrap();
+        assert!(fav.status().is_success());
+
+        let app =
+            common::TestApp::from_pool_with_mastodon(pool.clone(), Some(MASTODON_BASE.into()))
+                .await;
+        let snowflake = seed_commonfeed(&pool, &created.uri).await;
+
+        let pre = state::statuses::find_by_id(&pool, snowflake)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(
+            pre.mastodon_local_id.is_none(),
+            "precondition: cached row must start unresolved"
+        );
+
+        let resp = app
+            .raw_request(
+                Request::get(format!("/api/v1/statuses/{snowflake}"))
+                    .header("authorization", format!("Bearer {}", token.as_str()))
+                    .header("x-forwarded-proto", "https")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await;
+
+        assert_eq!(resp.status, StatusCode::OK);
+        let body = resp.json();
+        assert_eq!(body["id"], snowflake.to_string());
+        assert_eq!(
+            body["favourited"], true,
+            "authenticated first-view of an unresolved recommendation must auto-resolve so Mastodon's fresh per-user state can surface"
+        );
+        assert_eq!(body["favourites_count"], 1);
+
+        let post = state::statuses::find_by_id(&pool, snowflake)
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(
+            post.mastodon_local_id.is_some(),
+            "the auto-resolve side effect must persist the mapping for subsequent views"
+        );
+    }
+
+    #[ignore = "requires running Mastodon (repos/fediway/docker-compose.integration.yaml)"]
+    #[sqlx::test]
     async fn detail_post_resolve_returns_fresh_mastodon_counters(pool: PgPool) {
         let token = load_token();
         let http = http_client();

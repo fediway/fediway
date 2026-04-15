@@ -79,6 +79,52 @@ async fn translate_response_rewrites_in_reply_to_id(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn translate_response_rewrites_quote_status_id(pool: PgPool) {
+    common::setup_db(&pool).await;
+    let quoted_snowflake =
+        seed_with_mapping(&pool, "https://example.com/quoted", "p", 1, 4242).await;
+
+    let mut value = json!({
+        "id": "500",
+        "quote": {
+            "state": "accepted",
+            "quoted_status": {
+                "id": "4242",
+                "content": "<p>quoted</p>"
+            }
+        }
+    });
+
+    translate_response(&pool, &mut value).await.unwrap();
+
+    assert_eq!(
+        value["quote"]["quoted_status"]["id"],
+        quoted_snowflake.to_string(),
+        "nested quote.quoted_status.id must be rewritten to the snowflake when mapped"
+    );
+}
+
+#[sqlx::test]
+async fn translate_response_leaves_quote_alone_when_target_unknown(pool: PgPool) {
+    common::setup_db(&pool).await;
+
+    let mut value = json!({
+        "id": "500",
+        "quote": {
+            "state": "accepted",
+            "quoted_status": {
+                "id": "99999",
+                "content": "<p>unknown quote</p>"
+            }
+        }
+    });
+
+    translate_response(&pool, &mut value).await.unwrap();
+
+    assert_eq!(value["quote"]["quoted_status"]["id"], "99999");
+}
+
+#[sqlx::test]
 async fn translate_response_rewrites_reblog_ids(pool: PgPool) {
     common::setup_db(&pool).await;
     let inner_snowflake = seed_with_mapping(&pool, "https://example.com/inner", "p", 1, 111).await;

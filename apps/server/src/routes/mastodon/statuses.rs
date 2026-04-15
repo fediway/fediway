@@ -8,7 +8,9 @@ use common::types::Post;
 use mastodon::{Context, Status};
 use serde_json::Value;
 
+use crate::auth::Account;
 use crate::mastodon::forward::forward;
+use crate::mastodon::resolve::ResolveError;
 use crate::mastodon::translate::translate_response;
 use crate::state::AppState;
 
@@ -23,15 +25,33 @@ pub async fn proxy_fallback() -> StatusCode {
 /// `GET /api/v1/statuses/:id` — single status detail.
 pub async fn detail(
     State(state): State<AppState>,
+    account: Option<Account>,
     Path(id): Path<String>,
     headers: HeaderMap,
 ) -> Result<Response, StatusCode> {
     let snowflake: i64 = id.parse().map_err(|_| StatusCode::NOT_FOUND)?;
 
-    let row = state::statuses::find_by_id(&state.pool, snowflake)
+    let mut row = state::statuses::find_by_id(&state.pool, snowflake)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
+
+    // An authenticated viewer hitting a commonfeed recommendation for the
+    // first time triggers a one-shot resolve so the post-resolve proxy path
+    // below can surface fresh counters and per-user flags. Anonymous callers
+    // skip this: they have no per-user state to gain and shouldn't pay the
+    // federation round-trip.
+    if row.mastodon_local_id.is_none()
+        && let Some(account) = account.as_ref()
+    {
+        match state.resolver.resolve(snowflake, &account.token).await {
+            Ok(mastodon_id) => row.mastodon_local_id = Some(mastodon_id),
+            Err(ResolveError::NotFound | ResolveError::Forbidden) => {}
+            Err(e) => {
+                tracing::warn!(error = ?e, snowflake, "detail: first-view resolve failed");
+            }
+        }
+    }
 
     // Once we know the Mastodon local id, let Mastodon serve: it has fresher
     // engagement counters and per-user flags (favourited / bookmarked / muted)

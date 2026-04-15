@@ -62,6 +62,11 @@ fn collect_ids(value: &Value, out: &mut Vec<i64>) {
     {
         collect_ids(reblog, out);
     }
+    if let Some(quoted) = value.get("quote").and_then(|q| q.get("quoted_status"))
+        && !quoted.is_null()
+    {
+        collect_ids(quoted, out);
+    }
 }
 
 fn apply_map(value: &mut Value, map: &HashMap<i64, i64>) {
@@ -71,6 +76,13 @@ fn apply_map(value: &mut Value, map: &HashMap<i64, i64>) {
         && !reblog.is_null()
     {
         apply_map(reblog, map);
+    }
+    if let Some(quoted) = value
+        .get_mut("quote")
+        .and_then(|q| q.get_mut("quoted_status"))
+        && !quoted.is_null()
+    {
+        apply_map(quoted, map);
     }
 }
 

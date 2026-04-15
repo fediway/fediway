@@ -23,6 +23,7 @@ const EXTERNAL_PER_SOURCE_LIMIT: usize = 100;
 pub struct TagTimelineFeed {
     pipeline: Pipeline<Post>,
     hashtag: String,
+    viewer_id: Option<i64>,
 }
 
 impl TagTimelineFeed {
@@ -34,6 +35,7 @@ impl TagTimelineFeed {
     ) -> Self {
         filters.tag = Some(hashtag.clone());
 
+        let viewer_id = account.map(|a| a.id);
         let policy = match account {
             Some(a) => state::policy::load(&state.pool, a.id, &state.instance_domain).await,
             None => UserPolicy::default(),
@@ -83,7 +85,11 @@ impl TagTimelineFeed {
             ]))
             .build();
 
-        Self { pipeline, hashtag }
+        Self {
+            pipeline,
+            hashtag,
+            viewer_id,
+        }
     }
 }
 
@@ -100,5 +106,9 @@ impl TimelineFeed for TagTimelineFeed {
 
     fn path(&self) -> Cow<'static, str> {
         Cow::Owned(format!("/api/v1/timelines/tag/{}", self.hashtag))
+    }
+
+    fn viewer_id(&self) -> Option<i64> {
+        self.viewer_id
     }
 }
