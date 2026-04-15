@@ -9,6 +9,7 @@ use crate::auth::Account;
 use crate::mastodon::forward::forward;
 use crate::mastodon::resolve::ResolveError;
 use crate::mastodon::translate::translate_response;
+use crate::middleware::mastodon_fallback::NoFallback;
 use crate::routes::mastodon::error::EngagementError;
 use crate::state::AppState;
 
@@ -41,7 +42,7 @@ pub async fn favourite(
     path: Path<String>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<Response, EngagementError> {
+) -> Response {
     apply(state, account, path, headers, body, StatusAction::Favourite).await
 }
 
@@ -51,7 +52,7 @@ pub async fn unfavourite(
     path: Path<String>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<Response, EngagementError> {
+) -> Response {
     apply(
         state,
         account,
@@ -69,7 +70,7 @@ pub async fn reblog(
     path: Path<String>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<Response, EngagementError> {
+) -> Response {
     apply(state, account, path, headers, body, StatusAction::Reblog).await
 }
 
@@ -79,7 +80,7 @@ pub async fn unreblog(
     path: Path<String>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<Response, EngagementError> {
+) -> Response {
     apply(state, account, path, headers, body, StatusAction::Unreblog).await
 }
 
@@ -89,7 +90,7 @@ pub async fn bookmark(
     path: Path<String>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<Response, EngagementError> {
+) -> Response {
     apply(state, account, path, headers, body, StatusAction::Bookmark).await
 }
 
@@ -99,7 +100,7 @@ pub async fn unbookmark(
     path: Path<String>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<Response, EngagementError> {
+) -> Response {
     apply(
         state,
         account,
@@ -118,16 +119,21 @@ async fn apply(
     headers: HeaderMap,
     body: Bytes,
     action: StatusAction,
-) -> Result<Response, EngagementError> {
+) -> Response {
     let result: Result<Response, EngagementError> = async {
         let (forward_id, hint_snowflake): (String, Option<i64>) = match id.parse::<i64>() {
             Ok(snowflake) => match state.resolver.resolve(snowflake, &account.token).await {
                 Ok(mastodon_id) => (mastodon_id.to_string(), Some(snowflake)),
-                // Pass the original id through and let Mastodon be authoritative.
-                // Returning 404 here would double-proxy every native-timeline
-                // engagement via the fallback middleware.
-                Err(ResolveError::NotFound | ResolveError::Forbidden) => (id.clone(), None),
-                Err(e) => return Err(e.into()),
+                Err(ResolveError::NotFound) => (id.clone(), None),
+                Err(e) => {
+                    tracing::warn!(
+                        snowflake,
+                        action = action.segment(),
+                        error = ?e,
+                        "engagement: rejecting request, resolver could not produce mastodon id"
+                    );
+                    return Err(e.into());
+                }
             },
             Err(_) => (id.clone(), None),
         };
@@ -182,5 +188,10 @@ async fn apply(
     )
     .increment(1);
 
-    result
+    let mut response = match result {
+        Ok(r) => r,
+        Err(e) => e.into_response(),
+    };
+    response.extensions_mut().insert(NoFallback);
+    response
 }

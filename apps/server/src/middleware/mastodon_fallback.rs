@@ -10,11 +10,20 @@ use crate::state::AppState;
 
 const MAX_PROXY_BODY_BYTES: usize = 1_048_576;
 
+/// Marks a response as final — the fallback middleware will not proxy it
+/// to Mastodon even if it carries a 404/405 status. Handlers set this when
+/// they own the route and any error is a real terminal failure (e.g. the
+/// resolver refused to produce a mastodon id), distinguishing those cases
+/// from unhandled-route 404s emitted by [`statuses::proxy_fallback`].
+#[derive(Clone, Copy)]
+pub struct NoFallback;
+
 /// Proxies unhandled Mastodon API calls to the upstream instance.
 ///
 /// The inner router runs first for every request; a 404 or 405 response
 /// triggers a proxy to Mastodon with the original method, headers, and body.
-/// No-op if `MASTODON_API_URL` is not configured.
+/// No-op if `MASTODON_API_URL` is not configured. Handler-owned routes that
+/// want to emit a final 404 must attach [`NoFallback`] to their response.
 pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next: Next) -> Response {
     let Some(base_url) = state.mastodon_api_url.clone() else {
         return next.run(req).await;
@@ -42,6 +51,10 @@ pub async fn fallback(state: axum::extract::State<AppState>, req: Request, next:
     };
 
     let response = next.run(forward_req).await;
+
+    if response.extensions().get::<NoFallback>().is_some() {
+        return response;
+    }
 
     let status = response.status();
     if status != StatusCode::NOT_FOUND && status != StatusCode::METHOD_NOT_ALLOWED {

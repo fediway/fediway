@@ -160,9 +160,26 @@ async fn resolve_missing_snowflake_returns_not_found(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn resolve_empty_statuses_is_forbidden(pool: PgPool) {
+async fn resolve_empty_statuses_is_unresolvable(pool: PgPool) {
     let snowflake = seed_cached_status(&pool, "https://example.com/private").await;
     let router = Router::new().route("/api/v2/search", get(|| async { ok_empty() }));
+    let base = serve(router).await;
+
+    let resolver = Resolver::new(pool, http_client(), Some(base));
+    let err = resolver
+        .resolve(snowflake, &BearerToken::new("tok".into()))
+        .await
+        .unwrap_err();
+    assert_eq!(err, ResolveError::Unresolvable);
+}
+
+#[sqlx::test]
+async fn resolve_401_is_forbidden(pool: PgPool) {
+    let snowflake = seed_cached_status(&pool, "https://example.com/scope").await;
+    let router = Router::new().route(
+        "/api/v2/search",
+        get(|| async { (StatusCode::UNAUTHORIZED, "no scope").into_response() }),
+    );
     let base = serve(router).await;
 
     let resolver = Resolver::new(pool, http_client(), Some(base));

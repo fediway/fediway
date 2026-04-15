@@ -46,7 +46,7 @@ pub async fn detail(
     {
         match state.resolver.resolve(snowflake, &account.token).await {
             Ok(mastodon_id) => row.mastodon_local_id = Some(mastodon_id),
-            Err(ResolveError::NotFound | ResolveError::Forbidden) => {}
+            Err(ResolveError::NotFound | ResolveError::Forbidden | ResolveError::Unresolvable) => {}
             Err(e) => {
                 tracing::warn!(error = ?e, snowflake, "detail: first-view resolve failed");
             }

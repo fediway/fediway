@@ -9,6 +9,8 @@ use crate::mastodon::resolve::ResolveError;
 #[derive(Debug)]
 pub enum EngagementError {
     NotFound,
+    Unresolvable,
+    Forbidden,
     Blocked,
     RateLimited { retry_after: Option<Duration> },
     Upstream(StatusCode),
@@ -22,6 +24,8 @@ impl EngagementError {
     pub fn metric_outcome(&self) -> &'static str {
         match self {
             Self::NotFound => "not_found",
+            Self::Unresolvable => "unresolvable",
+            Self::Forbidden => "forbidden",
             Self::Blocked => "blocked",
             Self::RateLimited { .. } => "rate_limited",
             Self::Upstream(_) => "upstream",
@@ -35,7 +39,9 @@ impl EngagementError {
 impl From<ResolveError> for EngagementError {
     fn from(e: ResolveError) -> Self {
         match e {
-            ResolveError::NotFound | ResolveError::Forbidden => Self::NotFound,
+            ResolveError::NotFound => Self::NotFound,
+            ResolveError::Unresolvable => Self::Unresolvable,
+            ResolveError::Forbidden => Self::Forbidden,
             ResolveError::Blocked => Self::Blocked,
             ResolveError::Unreachable => Self::Unreachable,
             ResolveError::RateLimited { retry_after } => Self::RateLimited { retry_after },
@@ -68,8 +74,8 @@ impl From<serde_json::Error> for EngagementError {
 impl IntoResponse for EngagementError {
     fn into_response(self) -> Response {
         match self {
-            Self::NotFound => StatusCode::NOT_FOUND.into_response(),
-            Self::Blocked => StatusCode::FORBIDDEN.into_response(),
+            Self::NotFound | Self::Unresolvable => StatusCode::NOT_FOUND.into_response(),
+            Self::Forbidden | Self::Blocked => StatusCode::FORBIDDEN.into_response(),
             Self::Unreachable | Self::BadBody => StatusCode::BAD_GATEWAY.into_response(),
             Self::Db => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
             Self::Upstream(s) => s.into_response(),
@@ -97,8 +103,14 @@ mod tests {
     }
 
     #[test]
-    fn resolve_forbidden_maps_to_404_to_avoid_leaking_existence() {
+    fn resolve_forbidden_maps_to_403() {
         let err: EngagementError = ResolveError::Forbidden.into();
+        assert_eq!(err.into_response().status(), StatusCode::FORBIDDEN);
+    }
+
+    #[test]
+    fn resolve_unresolvable_maps_to_404() {
+        let err: EngagementError = ResolveError::Unresolvable.into();
         assert_eq!(err.into_response().status(), StatusCode::NOT_FOUND);
     }
 

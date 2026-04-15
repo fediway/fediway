@@ -15,10 +15,18 @@ const SEARCH_TIMEOUT: Duration = Duration::from_secs(8);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolveError {
     Unreachable,
+    /// Snowflake not present in `commonfeed_statuses` — safe for callers to
+    /// pass the original id through to Mastodon as a native local id.
     NotFound,
+    /// Snowflake is ours, search succeeded with zero matches. The post is
+    /// not federated to this instance; forwarding the snowflake to Mastodon
+    /// would 404, so callers must reject rather than proxy.
+    Unresolvable,
     Blocked,
     Forbidden,
-    RateLimited { retry_after: Option<Duration> },
+    RateLimited {
+        retry_after: Option<Duration>,
+    },
     Upstream(StatusCode),
     Db,
 }
@@ -29,6 +37,7 @@ impl ResolveError {
         match self {
             Self::Unreachable => "unreachable",
             Self::NotFound => "not_found",
+            Self::Unresolvable => "unresolvable",
             Self::Blocked => "blocked",
             Self::Forbidden => "forbidden",
             Self::RateLimited { .. } => "rate_limited",
@@ -164,6 +173,12 @@ impl Resolver {
 
         let status = resp.status();
         if !status.is_success() {
+            tracing::warn!(
+                snowflake,
+                post_uri = %row.post_uri,
+                status = status.as_u16(),
+                "resolver: mastodon search returned non-success"
+            );
             return Err(match status.as_u16() {
                 401 | 403 => ResolveError::Forbidden,
                 422 => ResolveError::Blocked,
@@ -191,7 +206,12 @@ impl Resolver {
         };
 
         let Some(first) = body.statuses.into_iter().next() else {
-            return Err(ResolveError::Forbidden);
+            tracing::warn!(
+                snowflake,
+                post_uri = %row.post_uri,
+                "resolver: mastodon search returned zero matches; post is not federated to this instance"
+            );
+            return Err(ResolveError::Unresolvable);
         };
 
         let mastodon_local_id: i64 = match first.id.parse() {

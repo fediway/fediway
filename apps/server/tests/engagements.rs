@@ -1,6 +1,7 @@
 mod common;
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use axum::Router;
 use axum::body::Body;
@@ -109,6 +110,116 @@ async fn favourite_without_auth_returns_401(pool: PgPool) {
     let resp = app.raw_request(req).await;
 
     assert_eq!(resp.status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test]
+async fn favourite_commonfeed_unmapped_returns_404_and_never_proxies_snowflake(pool: PgPool) {
+    common::setup_mastodon_fixture(&pool).await;
+    let user = common::TestUser::builder().insert(&pool).await;
+
+    let favourite_calls = Arc::new(AtomicUsize::new(0));
+    let counter = favourite_calls.clone();
+    let router = Router::new()
+        .route(
+            "/api/v2/search",
+            get(|| async {
+                axum::Json(json!({
+                    "accounts": [],
+                    "hashtags": [],
+                    "statuses": []
+                }))
+            }),
+        )
+        .route(
+            "/api/v1/statuses/{id}/favourite",
+            post(move |Path(_id): Path<String>| {
+                let counter = counter.clone();
+                async move {
+                    counter.fetch_add(1, Ordering::SeqCst);
+                    axum::Json(json!({ "id": "x", "favourited": true }))
+                }
+            }),
+        );
+    let base = serve(router).await;
+
+    let app = common::TestApp::from_pool_with_mastodon(pool.clone(), Some(base)).await;
+
+    let post = sample_post("https://example.com/unmapped", "@a@example.com");
+    let snowflake = state::statuses::map_post(
+        &pool,
+        "p",
+        42,
+        "https://example.com/unmapped",
+        "https://example.com/unmapped",
+        &post,
+    )
+    .await
+    .unwrap();
+
+    let req = Request::post(format!("/api/v1/statuses/{snowflake}/favourite"))
+        .header("authorization", format!("Bearer {}", user.token))
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.raw_request(req).await;
+
+    assert_eq!(resp.status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        favourite_calls.load(Ordering::SeqCst),
+        0,
+        "must not forward the fediway snowflake as if it were a mastodon id"
+    );
+}
+
+#[sqlx::test]
+async fn favourite_search_forbidden_returns_403_and_never_proxies_snowflake(pool: PgPool) {
+    common::setup_mastodon_fixture(&pool).await;
+    let user = common::TestUser::builder().insert(&pool).await;
+
+    let favourite_calls = Arc::new(AtomicUsize::new(0));
+    let counter = favourite_calls.clone();
+    let router = Router::new()
+        .route(
+            "/api/v2/search",
+            get(|| async { (StatusCode::UNAUTHORIZED, "no scope").into_response() }),
+        )
+        .route(
+            "/api/v1/statuses/{id}/favourite",
+            post(move |Path(_id): Path<String>| {
+                let counter = counter.clone();
+                async move {
+                    counter.fetch_add(1, Ordering::SeqCst);
+                    axum::Json(json!({ "id": "x", "favourited": true }))
+                }
+            }),
+        );
+    let base = serve(router).await;
+
+    let app = common::TestApp::from_pool_with_mastodon(pool.clone(), Some(base)).await;
+
+    let post = sample_post("https://example.com/forbidden", "@a@example.com");
+    let snowflake = state::statuses::map_post(
+        &pool,
+        "p",
+        43,
+        "https://example.com/forbidden",
+        "https://example.com/forbidden",
+        &post,
+    )
+    .await
+    .unwrap();
+
+    let req = Request::post(format!("/api/v1/statuses/{snowflake}/favourite"))
+        .header("authorization", format!("Bearer {}", user.token))
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.raw_request(req).await;
+
+    assert_eq!(resp.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        favourite_calls.load(Ordering::SeqCst),
+        0,
+        "must not forward the fediway snowflake when search is forbidden"
+    );
 }
 
 #[sqlx::test]
