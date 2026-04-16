@@ -1,8 +1,6 @@
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
-use std::time::Duration;
-
 use axum::extract::DefaultBodyLimit;
 use clap::Parser;
 use tokio::net::TcpListener;
@@ -12,9 +10,6 @@ use tracing_subscriber::EnvFilter;
 use server::state::AppStateInner;
 use sources::mastodon::MediaConfig;
 use state::cache::Cache;
-use state::feed_store::FeedStore;
-
-const FEED_STORE_TTL: Duration = Duration::from_secs(15 * 60);
 
 #[derive(Parser)]
 #[command(name = "fediway-server")]
@@ -28,7 +23,6 @@ struct Args {
     #[command(flatten)]
     instance: config::InstanceConfig,
 
-    /// Embedding model name for Orbit recommended requests
     #[arg(long, env = "ORBIT_MODEL_NAME", default_value = "bge_small_64d")]
     orbit_model_name: String,
 }
@@ -61,7 +55,7 @@ async fn main() -> anyhow::Result<()> {
         .expect("redis check failed");
     tracing::info!("redis ready");
 
-    let feed_store = FeedStore::new(Cache::new(redis_conn, "fediway"), FEED_STORE_TTL);
+    let cache = Cache::new(redis_conn, "fediway");
 
     let media = MediaConfig::new(
         args.instance
@@ -73,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app_state = AppStateInner::new(
         pool,
-        feed_store,
+        cache,
         media,
         args.orbit_model_name,
         args.instance.instance_domain,

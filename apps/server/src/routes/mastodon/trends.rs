@@ -4,7 +4,8 @@ use axum::response::IntoResponse;
 use serde::Deserialize;
 
 use crate::auth::Account;
-use crate::feeds::{TrendFeed, TrendingLinksFeed, TrendingStatusesFeed, TrendingTagsFeed};
+use crate::feeds::trend_feed;
+use crate::feeds::{TrendingLinksFeed, TrendingStatusesFeed, TrendingTagsFeed};
 use crate::routes::mastodon::extract::request_filters;
 use crate::state::AppState;
 
@@ -27,9 +28,13 @@ pub async fn statuses(
     Query(params): Query<Params>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let feed = TrendingStatusesFeed::new(&state, request_filters(account.as_ref(), &headers)).await;
-    Ok(feed
-        .serve(&state, params.offset.as_deref(), params.limit.min(40))
-        .await)
+    Ok(trend_feed::serve(
+        &state,
+        &feed,
+        params.offset.as_deref(),
+        params.limit.min(40),
+    )
+    .await)
 }
 
 pub async fn tags(
@@ -39,9 +44,13 @@ pub async fn tags(
     Query(params): Query<Params>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let feed = TrendingTagsFeed::new(&state, request_filters(account.as_ref(), &headers)).await;
-    Ok(feed
-        .serve(&state, params.offset.as_deref(), params.limit.min(40))
-        .await)
+    Ok(trend_feed::serve(
+        &state,
+        &feed,
+        params.offset.as_deref(),
+        params.limit.min(40),
+    )
+    .await)
 }
 
 pub async fn links(
@@ -51,7 +60,11 @@ pub async fn links(
     Query(params): Query<Params>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let feed = TrendingLinksFeed::new(&state, request_filters(account.as_ref(), &headers)).await;
-    Ok(feed
-        .serve(&state, params.offset.as_deref(), params.limit.min(40))
-        .await)
+    Ok(trend_feed::serve(
+        &state,
+        &feed,
+        params.offset.as_deref(),
+        params.limit.min(40),
+    )
+    .await)
 }

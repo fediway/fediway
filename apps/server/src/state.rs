@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use sources::mastodon::MediaConfig;
 use sqlx::PgPool;
-use state::feed_store::FeedStore;
+use state::cache::Cache;
 
 use crate::mastodon::resolve::Resolver;
 
@@ -14,7 +14,7 @@ pub struct AppStateInner {
     pub orbit_model_name: String,
     pub instance_domain: String,
     pub mastodon_api_url: Option<String>,
-    pub feed_store: FeedStore,
+    pub cache: Cache,
     pub media: MediaConfig,
     pub http_client: reqwest::Client,
     pub resolver: Arc<Resolver>,
@@ -24,21 +24,12 @@ impl AppStateInner {
     #[must_use]
     pub fn new(
         pool: PgPool,
-        feed_store: FeedStore,
+        cache: Cache,
         media: MediaConfig,
         orbit_model_name: String,
         instance_domain: String,
         mastodon_api_url: Option<String>,
     ) -> AppState {
-        // Every outbound call this server makes represents a request that
-        // originated over HTTPS (we're always behind TLS termination in
-        // production). Setting `X-Forwarded-Proto: https` unconditionally
-        // tells proxy-aware backends — notably Mastodon, whose `force_ssl`
-        // middleware rejects plain-HTTP requests — to treat our forwarded
-        // calls as SSL, so they skip the redirect-to-HTTPS step that would
-        // otherwise break every engagement call against a local test
-        // instance and every production call against a LAN-reachable
-        // Mastodon. Backends that don't recognise the header ignore it.
         let mut default_headers = reqwest::header::HeaderMap::new();
         default_headers.insert(
             "x-forwarded-proto",
@@ -64,7 +55,7 @@ impl AppStateInner {
             orbit_model_name,
             instance_domain,
             mastodon_api_url,
-            feed_store,
+            cache,
             media,
             http_client,
             resolver,

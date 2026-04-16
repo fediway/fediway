@@ -605,8 +605,8 @@ async fn mixed_pipeline_with_groups_dedup_and_quota() {
         )
         .score(ValueScorer)
         .sampler(QuotaSampler::new([
-            GroupQuota::new("local").min(2),
-            GroupQuota::new("remote").cap(0.75),
+            GroupQuota::new("local", 0.5),
+            GroupQuota::new("remote", 0.5),
         ]))
         .build();
 
@@ -623,13 +623,7 @@ async fn mixed_pipeline_with_groups_dedup_and_quota() {
     let local_count = result.items.iter().filter(|c| c.group == "local").count();
     assert!(
         local_count >= 2,
-        "local minimum of 2 must be honored, got {local_count}"
-    );
-
-    let remote_count = result.items.iter().filter(|c| c.group == "remote").count();
-    assert!(
-        remote_count <= 3,
-        "remote cap of 0.75 (= 3 of 4) must be honored, got {remote_count}"
+        "local weight of 0.5 should yield at least 2 of 4, got {local_count}"
     );
 }
 

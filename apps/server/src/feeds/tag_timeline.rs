@@ -79,9 +79,9 @@ impl TagTimelineFeed {
                 post.author.handle.clone()
             }))
             .sampler(QuotaSampler::new([
-                GroupQuota::new("native").min(3).cap(0.5),
-                GroupQuota::new("federated").cap(0.4),
-                GroupQuota::new("external").cap(0.7),
+                GroupQuota::new("native", 0.50),
+                GroupQuota::new("federated", 0.20),
+                GroupQuota::new("external", 0.30),
             ]))
             .build();
 

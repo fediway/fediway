@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use axum::Json;
 use axum::http::{HeaderMap, HeaderValue, header};
@@ -15,9 +15,11 @@ use sources::commonfeed::recommended::RecommendedSource;
 use sources::commonfeed::types::QueryFilters;
 use sources::mastodon::{CachedPost, NetworkSource, PolicyFilter};
 
-use crate::auth::Account;
+use crate::feeds::engine;
 use crate::feeds::timeline_feed::TimelineParams;
 use crate::state::AppState;
+
+const HOME_TTL: Duration = Duration::from_secs(15 * 60);
 
 const POOL_SIZE: usize = 300;
 const NETWORK_POOL: usize = 180;
@@ -28,14 +30,16 @@ const TRENDING_POOL_WARM: usize = 60;
 pub struct HomeFeed {
     pipeline: Pipeline<Post>,
     user_id: i64,
+    #[allow(dead_code)] // stored for future prefetch rebuild
+    filters: QueryFilters,
 }
 
 impl HomeFeed {
-    pub async fn new(state: &AppState, account: &Account, filters: QueryFilters) -> Self {
+    pub async fn new(state: &AppState, user_id: i64, filters: QueryFilters) -> Self {
         let vector_start = Instant::now();
         let (user_vector, policy) = tokio::join!(
-            state::orbit::load_vector(&state.pool, account.id),
-            state::policy::load(&state.pool, account.id, &state.instance_domain),
+            state::orbit::load_vector(&state.pool, user_id),
+            state::policy::load(&state.pool, user_id, &state.instance_domain),
         );
         metrics::histogram!("fediway_home_vector_load_duration_seconds")
             .record(vector_start.elapsed().as_secs_f64());
@@ -68,7 +72,7 @@ impl HomeFeed {
             "network",
             [NetworkSource::new(
                 state.pool.clone(),
-                account.id,
+                user_id,
                 state.instance_domain.clone(),
                 state.media.clone(),
             )],
@@ -95,28 +99,30 @@ impl HomeFeed {
             builder = builder.group("recommended", recommended, RECOMMENDED_POOL);
         }
 
-        let trending_quota = if has_vector {
-            GroupQuota::new("trending").cap(0.10)
-        } else {
-            GroupQuota::new("trending")
-        };
-
         let pipeline = builder
             .filter(Dedup::new(|c: &Candidate<Post>| c.item.url.clone()))
             .filter(PolicyFilter::new(policy))
             .score(Diversity::new(0.15, |post: &Post| {
                 post.author.handle.clone()
             }))
-            .sampler(QuotaSampler::new([
-                GroupQuota::new("network").min(12).cap(0.60),
-                GroupQuota::new("recommended").cap(0.40),
-                trending_quota,
-            ]))
+            .sampler(if has_vector {
+                QuotaSampler::new([
+                    GroupQuota::new("network", 0.60),
+                    GroupQuota::new("recommended", 0.30),
+                    GroupQuota::new("trending", 0.10),
+                ])
+            } else {
+                QuotaSampler::new([
+                    GroupQuota::new("network", 0.70),
+                    GroupQuota::new("trending", 0.30),
+                ])
+            })
             .build();
 
         Self {
             pipeline,
-            user_id: account.id,
+            user_id,
+            filters,
         }
     }
 
@@ -136,16 +142,24 @@ impl HomeFeed {
         // each pipeline run. We commandeer `max_id` as an opaque offset
         // into the cached scored list because Mastodon's API exposes no
         // other cursor field.
-        let page = state
-            .feed_store
-            .page(&cache_key, params.max_id.as_deref(), limit, || async {
-                self.collect()
-                    .await
-                    .into_iter()
-                    .map(|c| CachedPost::from_post(c.item, &state.instance_domain))
-                    .collect::<Vec<CachedPost>>()
-            })
-            .await;
+        let cached = if params.max_id.is_some() {
+            state.cache.get::<Vec<CachedPost>>(&cache_key).await
+        } else {
+            None
+        };
+        let items = if let Some(items) = cached {
+            items
+        } else {
+            let fresh: Vec<CachedPost> = self
+                .collect()
+                .await
+                .into_iter()
+                .map(|c| CachedPost::from_post(c.item, &state.instance_domain))
+                .collect();
+            state.cache.set(&cache_key, &fresh, HOME_TTL).await;
+            fresh
+        };
+        let page = engine::paginate(items, params.max_id.as_deref(), limit);
 
         let statuses = crate::mastodon::statuses::hydrate(
             &state.pool,

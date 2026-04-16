@@ -186,9 +186,7 @@ pub async fn enable_source(
     sqlx::query(
         "INSERT INTO commonfeed_sources (route, provider_domain, resource, algorithm)
          VALUES ($1, $2, $3, $4)
-         ON CONFLICT (route, provider_domain) DO UPDATE SET
-             resource = EXCLUDED.resource,
-             algorithm = EXCLUDED.algorithm,
+         ON CONFLICT (route, provider_domain, algorithm) DO UPDATE SET
              enabled = true",
     )
     .bind(route)
@@ -205,13 +203,15 @@ pub async fn disable_source(
     db: &PgPool,
     route: &str,
     provider_domain: &str,
+    algorithm: &str,
 ) -> Result<u64, sqlx::Error> {
     let result = sqlx::query(
         "UPDATE commonfeed_sources SET enabled = false
-         WHERE route = $1 AND provider_domain = $2",
+         WHERE route = $1 AND provider_domain = $2 AND algorithm = $3",
     )
     .bind(route)
     .bind(provider_domain)
+    .bind(algorithm)
     .execute(db)
     .await?;
     Ok(result.rows_affected())

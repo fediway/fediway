@@ -12,7 +12,6 @@ use http_body_util::BodyExt;
 use sources::mastodon::MediaConfig;
 use sqlx::PgPool;
 use state::cache::Cache;
-use state::feed_store::FeedStore;
 use tower::ServiceExt;
 
 use server::middleware::mastodon_fallback;
@@ -20,11 +19,11 @@ use server::state::{AppState, AppStateInner};
 
 async fn test_state(pool: PgPool, mastodon_api_url: String) -> AppState {
     common::setup_db(&pool).await;
-    let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
+    let cache = Cache::disabled();
     let media = MediaConfig::new("example.com".into(), false);
     AppStateInner::new(
         pool,
-        feed_store,
+        cache,
         media,
         "nomic_v1.5_64d".into(),
         "example.com".into(),

@@ -22,7 +22,7 @@ pub async fn home(
     Query(params): Query<TimelineParams>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let filters = request_filters(Some(&account), &headers);
-    let feed = HomeFeed::new(&state, &account, filters).await;
+    let feed = HomeFeed::new(&state, account.id, filters).await;
     Ok(feed.serve(&state, &params).await)
 }
 

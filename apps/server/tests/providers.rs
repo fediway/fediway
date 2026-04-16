@@ -173,9 +173,10 @@ async fn disable_source(pool: PgPool) {
     .await
     .unwrap();
 
-    let affected = state::providers::disable_source(&pool, "trends/statuses", "feeds.example.com")
-        .await
-        .unwrap();
+    let affected =
+        state::providers::disable_source(&pool, "trends/statuses", "feeds.example.com", "trending")
+            .await
+            .unwrap();
     assert_eq!(affected, 1);
 
     let sources = state::providers::find_sources(&pool, "trends/statuses").await;

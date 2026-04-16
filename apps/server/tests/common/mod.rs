@@ -10,7 +10,6 @@ use serde::Serialize;
 use sources::mastodon::MediaConfig;
 use sqlx::PgPool;
 use state::cache::Cache;
-use state::feed_store::FeedStore;
 use tower::ServiceExt;
 
 use server::state::AppStateInner;
@@ -315,11 +314,11 @@ impl TestApp {
         setup_db(&pool).await;
         setup_mastodon_fixture(&pool).await;
 
-        let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
+        let cache = Cache::disabled();
         let media = MediaConfig::new("example.com".into(), false);
         let state = AppStateInner::new(
             pool,
-            feed_store,
+            cache,
             media,
             "nomic_v1.5_64d".into(),
             "example.com".into(),

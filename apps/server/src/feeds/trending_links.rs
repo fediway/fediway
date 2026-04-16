@@ -1,6 +1,10 @@
+use std::future::Future;
+use std::pin::Pin;
+
 use common::types::Link;
 use feed::Feed;
 use feed::candidate::Candidate;
+use feed::filter::Dedup;
 use feed::pipeline::Pipeline;
 use feed::scorer::Diversity;
 use mastodon::PreviewCard;
@@ -15,6 +19,7 @@ const MAX_RESULTS: usize = 7;
 
 pub struct TrendingLinksFeed {
     pipeline: Pipeline<Link>,
+    filters: QueryFilters,
 }
 
 impl TrendingLinksFeed {
@@ -27,12 +32,13 @@ impl TrendingLinksFeed {
         let pipeline = Pipeline::builder()
             .name("trends/links")
             .sources(sources, FETCH_POOL)
+            .filter(Dedup::new(|c: &Candidate<Link>| c.item.url.clone()))
             .score(Diversity::new(0.1, |link: &Link| {
                 link.provider_name.clone().unwrap_or_default()
             }))
             .build();
 
-        Self { pipeline }
+        Self { pipeline, filters }
     }
 }
 
@@ -49,7 +55,27 @@ impl TrendFeed for TrendingLinksFeed {
     const RESOURCE: &'static str = "links";
     const PATH: &'static str = "/api/v1/trends/links";
 
+    fn cache_key(&self) -> String {
+        let mut langs = self.filters.language.clone();
+        langs.sort();
+        let lang = if langs.is_empty() {
+            "*".to_owned()
+        } else {
+            langs.join(",")
+        };
+        format!("trends:links:{lang}")
+    }
+
     async fn map(&self, _state: &AppState, items: Vec<Link>) -> Vec<PreviewCard> {
         items.into_iter().map(PreviewCard::from).collect()
+    }
+
+    fn rebuild(&self, state: &AppState) -> Pin<Box<dyn Future<Output = Vec<Link>> + Send>> {
+        let state = state.clone();
+        let filters = self.filters.clone();
+        Box::pin(async move {
+            let feed = TrendingLinksFeed::new(&state, filters).await;
+            feed.collect().await.into_iter().map(|c| c.item).collect()
+        })
     }
 }

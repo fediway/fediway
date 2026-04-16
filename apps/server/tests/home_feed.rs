@@ -1,16 +1,12 @@
 mod common;
 
-use std::time::Duration;
-
 use feed::Feed;
-use server::auth::{Account, BearerToken};
 use server::feeds::HomeFeed;
 use server::state::AppStateInner;
 use sources::commonfeed::types::QueryFilters;
 use sources::mastodon::MediaConfig;
 use sqlx::PgPool;
 use state::cache::Cache;
-use state::feed_store::FeedStore;
 
 async fn insert_account(pool: &PgPool, username: &str) -> i64 {
     sqlx::query_scalar::<_, i64>(
@@ -59,15 +55,6 @@ async fn insert_status_stats(pool: &PgPool, status_id: i64, favourites_count: i6
     .unwrap();
 }
 
-fn account_for(id: i64, username: &str) -> Account {
-    Account {
-        id,
-        username: username.into(),
-        chosen_languages: Vec::new(),
-        token: BearerToken::new(String::new()),
-    }
-}
-
 #[sqlx::test]
 async fn home_feed_surfaces_network_candidates(pool: PgPool) {
     common::setup_db(&pool).await;
@@ -82,19 +69,18 @@ async fn home_feed_surfaces_network_candidates(pool: PgPool) {
     let candidate = insert_status(&pool, alice_id, "fresh-network-post").await;
     insert_status_stats(&pool, candidate, 5).await;
 
-    let viewer = account_for(viewer_id, "viewer");
-    let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
+    let cache = Cache::disabled();
     let media = MediaConfig::new("local.test".into(), false);
     let state = AppStateInner::new(
         pool,
-        feed_store,
+        cache,
         media,
         "nomic_v1.5_64d".into(),
         "local.test".into(),
         None,
     );
 
-    let feed = HomeFeed::new(&state, &viewer, QueryFilters::default()).await;
+    let feed = HomeFeed::new(&state, viewer_id, QueryFilters::default()).await;
     let candidates = feed.collect().await;
 
     assert!(
@@ -111,18 +97,17 @@ async fn home_feed_cold_start_does_not_panic(pool: PgPool) {
     common::setup_mastodon_schema(&pool).await;
 
     let viewer_id = insert_account(&pool, "viewer").await;
-    let viewer = account_for(viewer_id, "viewer");
-    let feed_store = FeedStore::new(Cache::disabled(), Duration::from_secs(60));
+    let cache = Cache::disabled();
     let media = MediaConfig::new("local.test".into(), false);
     let state = AppStateInner::new(
         pool,
-        feed_store,
+        cache,
         media,
         "nomic_v1.5_64d".into(),
         "local.test".into(),
         None,
     );
 
-    let feed = HomeFeed::new(&state, &viewer, QueryFilters::default()).await;
+    let feed = HomeFeed::new(&state, viewer_id, QueryFilters::default()).await;
     let _ = feed.collect().await;
 }

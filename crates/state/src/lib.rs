@@ -1,6 +1,5 @@
 pub mod cache;
 pub mod db;
-pub mod feed_store;
 pub mod orbit;
 pub mod policy;
 pub mod providers;

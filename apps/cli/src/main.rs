@@ -37,6 +37,8 @@ enum Command {
         route: String,
         /// Provider domain
         provider: String,
+        /// Capability (e.g. posts/trending)
+        capability: String,
     },
 }
 
@@ -120,15 +122,20 @@ async fn main() -> Result<()> {
             state::providers::enable_source(&db, &route, &domain, resource, algorithm).await?;
             println!("Enabled {route} ← {domain} ({capability})");
         }
-        Command::Disable { route, provider } => {
+        Command::Disable {
+            route,
+            provider,
+            capability,
+        } => {
+            let (_, algorithm) = parse_capability(&capability)?;
             let db = state::db::connect(&cli.db).await?;
             state::db::check(&db).await?;
             let domain = provider::resolve_domain(&db, &provider).await?;
-            let rows = state::providers::disable_source(&db, &route, &domain).await?;
+            let rows = state::providers::disable_source(&db, &route, &domain, algorithm).await?;
             if rows == 0 {
-                anyhow::bail!("No source found for {route} from {domain}");
+                anyhow::bail!("No source found for {route} from {domain} ({capability})");
             }
-            println!("Disabled {route} ← {domain}");
+            println!("Disabled {route} ← {domain} ({capability})");
         }
     }
 

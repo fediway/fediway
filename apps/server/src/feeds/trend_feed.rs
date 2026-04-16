@@ -1,99 +1,89 @@
-use std::time::Instant;
+use std::future::Future;
+use std::pin::Pin;
+use std::time::{Duration, Instant};
 
 use axum::Json;
 use axum::http::{HeaderMap, HeaderValue, header};
 use feed::Feed;
-use feed::cursor::{Cursor, Offset};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
+use crate::feeds::engine;
 use crate::state::AppState;
 
-/// Supertrait for the three `/api/v1/trends/*` endpoints.
-///
-/// Bundles the shared serve lifecycle as a default method so trends
-/// handlers collapse to "construct feed + delegate". Timeline endpoints
-/// (`home`, `tag`, `link`) use Mastodon keyset pagination instead and
-/// are not served by this trait.
-pub trait TrendFeed: Feed {
-    type Response: serde::Serialize + Send;
+const TTL: Duration = Duration::from_secs(60);
+
+pub trait TrendFeed: Feed + Send {
+    type Response: Serialize + Send;
 
     const RESOURCE: &'static str;
     const PATH: &'static str;
+
+    fn cache_key(&self) -> String;
 
     fn map(
         &self,
         state: &AppState,
         items: Vec<Self::Item>,
-    ) -> impl std::future::Future<Output = Vec<Self::Response>> + Send;
+    ) -> impl Future<Output = Vec<Self::Response>> + Send;
 
-    fn serve(
-        &self,
-        state: &AppState,
-        cursor: Option<&str>,
-        limit: usize,
-    ) -> impl std::future::Future<Output = (HeaderMap, Json<Vec<Self::Response>>)> + Send {
-        async move {
-            let start = Instant::now();
-            metrics::counter!("fediway_trends_requests_total", "resource" => Self::RESOURCE)
-                .increment(1);
+    fn rebuild(&self, state: &AppState) -> Pin<Box<dyn Future<Output = Vec<Self::Item>> + Send>>;
+}
 
-            let candidates = self.collect().await;
-            let page = Offset::parse(cursor).paginate(candidates, limit);
-            let items: Vec<Self::Item> = page.items.into_iter().map(|c| c.item).collect();
-            let mapped = self.map(state, items).await;
+pub async fn serve<F>(
+    state: &AppState,
+    feed: &F,
+    cursor: Option<&str>,
+    limit: usize,
+) -> (HeaderMap, Json<Vec<F::Response>>)
+where
+    F: TrendFeed,
+    F::Item: Serialize + DeserializeOwned,
+{
+    let start = Instant::now();
+    metrics::counter!("fediway_trends_requests_total", "resource" => F::RESOURCE).increment(1);
 
-            #[allow(clippy::cast_precision_loss)]
-            metrics::histogram!("fediway_trends_results", "resource" => Self::RESOURCE)
-                .record(mapped.len() as f64);
+    let key = feed.cache_key();
+    let (items, from_cache) = if let Some(cached) = state.cache.get::<Vec<F::Item>>(&key).await {
+        (cached, true)
+    } else {
+        let fresh: Vec<F::Item> = feed.collect().await.into_iter().map(|c| c.item).collect();
+        state.cache.set(&key, &fresh, TTL).await;
+        (fresh, false)
+    };
 
-            let mut headers = HeaderMap::new();
-            if let Some((key, value)) =
-                link_header(&state.instance_domain, Self::PATH, page.cursor.as_ref())
-            {
-                headers.insert(key, value);
-            }
+    if from_cache {
+        let cache = state.cache.clone();
+        let key = key.clone();
+        let rebuild = feed.rebuild(state);
+        tokio::spawn(async move {
+            let items = rebuild.await;
+            cache.set(&key, &items, TTL).await;
+        });
+    }
 
-            metrics::histogram!("fediway_trends_duration_seconds", "resource" => Self::RESOURCE)
-                .record(start.elapsed().as_secs_f64());
+    let page = engine::paginate(items, cursor, limit);
+    let next_cursor = page.cursor;
+    let mapped = feed.map(state, page.items).await;
 
-            (headers, Json(mapped))
+    #[allow(clippy::cast_precision_loss)]
+    metrics::histogram!("fediway_trends_results", "resource" => F::RESOURCE)
+        .record(mapped.len() as f64);
+
+    let mut headers = HeaderMap::new();
+    if let Some(c) = &next_cursor {
+        let link = format!(
+            "<https://{}{}?offset={c}>; rel=\"next\"",
+            state.instance_domain,
+            F::PATH
+        );
+        if let Ok(value) = HeaderValue::from_str(&link) {
+            headers.insert(header::LINK, value);
         }
     }
-}
 
-fn link_header(
-    domain: &str,
-    path: &str,
-    cursor: Option<&String>,
-) -> Option<(header::HeaderName, HeaderValue)> {
-    let cursor = cursor?;
-    let value = format!("<https://{domain}{path}?offset={cursor}>; rel=\"next\"");
-    HeaderValue::from_str(&value)
-        .ok()
-        .map(|v| (header::LINK, v))
-}
+    metrics::histogram!("fediway_trends_duration_seconds", "resource" => F::RESOURCE)
+        .record(start.elapsed().as_secs_f64());
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn link_header_returns_absolute_url() {
-        let cursor = Some("abc123".to_string());
-        let (key, value) = link_header(
-            "mastodon.social",
-            "/api/v1/trends/statuses",
-            cursor.as_ref(),
-        )
-        .unwrap();
-        assert_eq!(key, header::LINK);
-        assert_eq!(
-            value.to_str().unwrap(),
-            r#"<https://mastodon.social/api/v1/trends/statuses?offset=abc123>; rel="next""#,
-        );
-    }
-
-    #[test]
-    fn link_header_returns_none_without_cursor() {
-        assert!(link_header("mastodon.social", "/api/v1/trends/statuses", None).is_none());
-    }
+    (headers, Json(mapped))
 }
