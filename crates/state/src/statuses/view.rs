@@ -621,7 +621,11 @@ fn build_status(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| url.clone());
 
-    let content = format_content(&row.text, &mention_list, &tag_list, instance_domain);
+    let content = if row.domain.is_none() {
+        format_content(&row.text, &mention_list, &tag_list, instance_domain)
+    } else {
+        sanitize_html(&row.text)
+    };
 
     Status {
         id: status_id.to_string(),

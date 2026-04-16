@@ -773,3 +773,57 @@ async fn fetch_by_ids_viewer_sees_only_own_engagement(pool: PgPool) {
         "stranger's favourite must not show as viewer's favourite"
     );
 }
+
+#[sqlx::test]
+async fn fetch_by_ids_sanitizes_federated_html_without_double_encoding(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+
+    let remote = insert_account(&pool, "user", Some("remote.example"), "User", "").await;
+    insert_account_stats(&pool, remote, 1, 0, 0).await;
+
+    let html = r#"<p>Hello <a href="https://remote.example/tags/rust" class="mention hashtag">#<span>rust</span></a></p>"#;
+    let id = insert_status(&pool, remote, html, "", None, 0, None, None).await;
+    insert_status_stats(&pool, id, 0, 0, 0, 0).await;
+
+    let media = common::test_media();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[id], None).await;
+
+    assert_eq!(out.len(), 1);
+    assert!(
+        out[0].content.contains("<p>"),
+        "federated HTML must pass through as real tags, not escaped as &lt;p&gt;"
+    );
+    assert!(
+        !out[0].content.contains("&lt;p&gt;"),
+        "federated HTML must not be double-encoded"
+    );
+    assert!(
+        out[0].content.contains(r#"rel="nofollow noopener""#),
+        "links must be sanitized with rel attributes"
+    );
+}
+
+#[sqlx::test]
+async fn fetch_by_ids_formats_local_plain_text_into_html(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+
+    let local = insert_account(&pool, "alice", None, "Alice", "").await;
+    insert_account_stats(&pool, local, 1, 0, 0).await;
+
+    let id = insert_status(&pool, local, "hello world", "", None, 0, None, None).await;
+    insert_status_stats(&pool, id, 0, 0, 0, 0).await;
+
+    let media = common::test_media();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[id], None).await;
+
+    assert_eq!(out.len(), 1);
+    assert!(
+        out[0].content.contains("<p>"),
+        "local plain text must be wrapped in paragraph tags"
+    );
+    assert_eq!(
+        out[0].content.contains("&lt;"),
+        false,
+        "plain text input has no HTML to escape"
+    );
+}
