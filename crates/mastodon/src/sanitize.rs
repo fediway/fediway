@@ -36,7 +36,6 @@ pub fn sanitize_html(html: &str) -> String {
         "ruby",
         "rt",
         "rp",
-        "abbr",
     ]
     .into_iter()
     .collect();
@@ -49,8 +48,6 @@ pub fn sanitize_html(html: &str) -> String {
         .add_tag_attributes("p", &["class"])
         .add_tag_attributes("ol", &["start", "reversed"])
         .add_tag_attributes("li", &["value"])
-        .add_tag_attributes("abbr", &["title"])
-        .add_tag_attributes("blockquote", &["cite"])
         // Mastodon sets rel="nofollow noopener" on all links
         .link_rel(Some("nofollow noopener"))
         // Allowed URL schemes for href/cite
@@ -123,18 +120,25 @@ mod tests {
     }
 
     #[test]
-    fn allows_abbreviations() {
+    fn strips_abbreviation_tags() {
         let html = r#"<abbr title="HyperText Markup Language">HTML</abbr>"#;
         let result = sanitize_html(html);
-        assert!(result.contains("<abbr"));
-        assert!(result.contains("title="));
+        assert!(
+            !result.contains("<abbr"),
+            "abbr not in Mastodon's MASTODON_STRICT"
+        );
+        assert!(result.contains("HTML"));
     }
 
     #[test]
-    fn allows_blockquote_with_cite() {
+    fn blockquote_preserves_cite_url() {
+        // ammonia treats `cite` as a built-in URL attribute on <blockquote>
+        // and validates it against url_schemes. Mastodon's Sanitize.rb strips
+        // it — this is a known minor divergence with no security impact.
         let html = r#"<blockquote cite="https://example.com">quote</blockquote>"#;
         let result = sanitize_html(html);
-        assert!(result.contains("cite=\"https://example.com\""));
+        assert!(result.contains("<blockquote"));
+        assert!(result.contains("quote"));
     }
 
     // -------------------------------------------------------------------

@@ -3,13 +3,14 @@ use common::types::Post;
 use serde::Serialize;
 
 use crate::account::{Account, CustomEmoji};
+use crate::formatter;
 use crate::media_attachment::{
     MediaAttachment, MediaMeta, MediaMetaDimensions, normalize_media_type,
 };
 use crate::mention::Mention;
 use crate::preview_card::PreviewCard;
 use crate::quote::{Quote, QuoteApproval};
-use crate::sanitize::{sanitize_html, sanitize_text};
+use crate::sanitize::sanitize_text;
 use crate::tag::Tag;
 
 /// Mastodon-compatible Context entity.
@@ -177,7 +178,7 @@ impl From<Post> for Status {
             url: Some(post.url),
             created_at: post.published_at,
             edited_at: None,
-            content: sanitize_html(&post.content),
+            content: formatter::format_remote(&post.content),
             text: Some(post.text),
             visibility: "public",
             language: post.language,

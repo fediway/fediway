@@ -1,4 +1,5 @@
 mod account;
+pub mod formatter;
 mod media_attachment;
 mod mention;
 mod preview_card;

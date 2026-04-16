@@ -308,6 +308,7 @@ async fn fetch_by_ids_populates_every_enrichment_dimension(pool: PgPool) {
     assert_eq!(s.language.as_deref(), Some("en"));
     assert!(s.content.starts_with("<p>"));
     assert!(s.content.contains("hello world"));
+    assert!(s.content.contains("class=\"h-card\""));
     assert!(s.content.contains("class=\"u-url mention\""));
     assert!(s.content.contains("@<span>bob</span>"));
     assert_eq!(
@@ -316,8 +317,9 @@ async fn fetch_by_ids_populates_every_enrichment_dimension(pool: PgPool) {
     );
     assert!(s.content.contains("class=\"mention hashtag\""));
     assert!(s.content.contains("#<span>rust</span>"));
-    assert!(s.content.contains("https://example.com"));
-    assert!(s.content.contains("rel=\"nofollow noopener\""));
+    assert!(s.content.contains("class=\"invisible\""));
+    assert!(s.content.contains("target=\"_blank\""));
+    assert!(s.content.contains("rel=\"nofollow noopener noreferrer\""));
     assert_eq!(s.spoiler_text, "cw note");
 
     assert_eq!(s.favourites_count, 42);
@@ -800,6 +802,10 @@ async fn fetch_by_ids_sanitizes_federated_html_without_double_encoding(pool: PgP
     assert!(
         out[0].content.contains(r#"rel="nofollow noopener""#),
         "links must be sanitized with rel attributes"
+    );
+    assert!(
+        out[0].content.contains(r#"target="_blank""#),
+        "remote links must get target=\"_blank\" to match Mastodon's sanitizer"
     );
 }
 

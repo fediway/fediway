@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, NaiveDateTime, Utc};
 use common::paperclip::MediaConfig;
+use mastodon::formatter;
 use mastodon::sanitize::{sanitize_html, sanitize_text};
 use mastodon::{
     Account, CustomEmoji, Field, MediaAttachment, MediaMeta, MediaMetaDimensions, Mention,
@@ -622,9 +623,9 @@ fn build_status(
         .unwrap_or_else(|| url.clone());
 
     let content = if row.domain.is_none() {
-        format_content(&row.text, &mention_list, &tag_list, instance_domain)
+        formatter::format_local(&row.text, &mention_list, &tag_list, instance_domain)
     } else {
-        sanitize_html(&row.text)
+        formatter::format_remote(&row.text)
     };
 
     Status {
@@ -950,142 +951,4 @@ fn file_meta_dimensions(meta: Option<&serde_json::Value>) -> (Option<u32>, Optio
         .and_then(serde_json::Value::as_u64)
         .and_then(|n| u32::try_from(n).ok());
     (width, height)
-}
-
-fn format_content(text: &str, mentions: &[Mention], tags: &[Tag], instance_domain: &str) -> String {
-    let mut spans: Vec<(usize, usize, String)> = Vec::new();
-
-    for m in url_regex().find_iter(text) {
-        let url = m.as_str();
-        spans.push((
-            m.start(),
-            m.end(),
-            format!(
-                "<a href=\"{url}\" rel=\"nofollow noopener\">{url}</a>",
-                url = escape_attr(url)
-            ),
-        ));
-    }
-
-    for mention in mentions {
-        let anchor = mention_anchor(mention);
-        if let Some(domain) = mention.acct.split('@').nth(1) {
-            let needle = format!("@{}@{domain}", mention.username);
-            push_word_matches(text, &needle, &anchor, &mut spans);
-        }
-        let needle = format!("@{}", mention.username);
-        push_word_matches(text, &needle, &anchor, &mut spans);
-    }
-
-    for tag in tags {
-        let needle = format!("#{}", tag.name);
-        let anchor = tag_anchor(tag, instance_domain);
-        push_word_matches(text, &needle, &anchor, &mut spans);
-    }
-
-    spans.sort_by_key(|(start, end, _)| (*start, std::cmp::Reverse(*end)));
-    let mut non_overlapping: Vec<(usize, usize, String)> = Vec::with_capacity(spans.len());
-    for span in spans {
-        if non_overlapping.last().is_none_or(|last| span.0 >= last.1) {
-            non_overlapping.push(span);
-        }
-    }
-
-    let mut out = String::with_capacity(text.len() + 32);
-    let mut cursor = 0;
-    for (start, end, anchor) in non_overlapping {
-        out.push_str(&escape_text(&text[cursor..start]));
-        out.push_str(&anchor);
-        cursor = end;
-    }
-    out.push_str(&escape_text(&text[cursor..]));
-
-    let paragraphs: Vec<String> = out
-        .split("\n\n")
-        .filter(|p| !p.is_empty())
-        .map(|p| format!("<p>{}</p>", p.replace('\n', "<br />")))
-        .collect();
-    if paragraphs.is_empty() {
-        "<p></p>".to_owned()
-    } else {
-        paragraphs.join("")
-    }
-}
-
-fn push_word_matches(
-    text: &str,
-    needle: &str,
-    anchor: &str,
-    spans: &mut Vec<(usize, usize, String)>,
-) {
-    if needle.len() < 2 {
-        return;
-    }
-    let mut search_from = 0;
-    while let Some(rel) = text[search_from..].find(needle) {
-        let start = search_from + rel;
-        let end = start + needle.len();
-        let preceded_by_word = start > 0
-            && text[..start]
-                .chars()
-                .next_back()
-                .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '@' || c == '#');
-        let followed_by_word = text[end..]
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_alphanumeric() || c == '_' || c == '@');
-        if !preceded_by_word && !followed_by_word {
-            spans.push((start, end, anchor.to_owned()));
-        }
-        search_from = end;
-    }
-}
-
-fn mention_anchor(m: &Mention) -> String {
-    format!(
-        "<a href=\"{url}\" class=\"u-url mention\">@<span>{user}</span></a>",
-        url = escape_attr(&m.url),
-        user = escape_text(&m.username),
-    )
-}
-
-fn tag_anchor(t: &Tag, instance_domain: &str) -> String {
-    format!(
-        "<a href=\"https://{instance_domain}/tags/{name}\" class=\"mention hashtag\" rel=\"tag\">#<span>{display}</span></a>",
-        name = escape_attr(&t.name),
-        display = escape_text(&t.name),
-    )
-}
-
-fn url_regex() -> &'static Regex {
-    use std::sync::OnceLock;
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r"https?://[^\s<>\x22\]]+").expect("valid regex"))
-}
-
-fn escape_text(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            _ => out.push(c),
-        }
-    }
-    out
-}
-
-fn escape_attr(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            _ => out.push(c),
-        }
-    }
-    out
 }
