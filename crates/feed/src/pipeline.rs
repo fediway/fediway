@@ -84,7 +84,7 @@ impl<Item: Send + Sync + 'static, Ctx: Send + Sync + 'static> Pipeline<Item, Ctx
             observe::scorer_applied(self.name, scorer.name(), scorer_start.elapsed());
         }
 
-        let items = self.sampler.sample(candidates, limit);
+        let items = crate::sampler::sample(&*self.sampler, candidates, limit);
 
         observe::executed(self.name, collected, filtered, items.len(), start.elapsed());
 

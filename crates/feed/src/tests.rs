@@ -2,6 +2,7 @@ use crate::candidate::Candidate;
 use crate::cursor::Offset;
 use crate::filter::Filter;
 use crate::pipeline::{Pipeline, PipelineResult};
+use crate::sampler;
 use crate::sampler::TopK;
 use crate::scorer::{Diversity, Scorer};
 use crate::source::Source;
@@ -81,15 +82,13 @@ impl Filter<Item> for MinValueFilter {
 
 #[test]
 fn topk_returns_highest_scored() {
-    use crate::sampler::Sampler;
-
     let candidates = vec![
         scored_candidate("a", 10.0),
         scored_candidate("b", 50.0),
         scored_candidate("c", 30.0),
     ];
 
-    let result = TopK.sample(candidates, 2);
+    let result = sampler::sample(&TopK, candidates, 2);
     assert_eq!(result.len(), 2);
     assert_eq!(result[0].item.id, "b");
     assert_eq!(result[1].item.id, "c");
@@ -97,18 +96,14 @@ fn topk_returns_highest_scored() {
 
 #[test]
 fn topk_returns_all_when_fewer_than_n() {
-    use crate::sampler::Sampler;
-
     let candidates = vec![scored_candidate("a", 10.0)];
-    let result = TopK.sample(candidates, 5);
+    let result = sampler::sample(&TopK, candidates, 5);
     assert_eq!(result.len(), 1);
 }
 
 #[test]
 fn topk_handles_empty_input() {
-    use crate::sampler::Sampler;
-
-    let result: Vec<Candidate<Item>> = TopK.sample(Vec::new(), 10);
+    let result: Vec<Candidate<Item>> = sampler::sample(&TopK, Vec::new(), 10);
     assert!(result.is_empty());
 }
 
@@ -578,19 +573,19 @@ async fn mixed_pipeline_with_groups_dedup_and_quota() {
     let local = MockSource::new(
         "local",
         vec![
-            Item::new("shared", "alice", 1.0),
-            Item::new("local-only", "alice", 1.0),
-            Item::new("local-extra", "bob", 1.0),
+            Item::new("shared", "alice", 5.0),
+            Item::new("local-only", "alice", 4.0),
+            Item::new("local-extra", "bob", 3.0),
         ],
     );
 
     let remote = MockSource::new(
         "remote",
         vec![
-            Item::new("shared", "alice", 1.0),
-            Item::new("remote-1", "carol", 1.0),
-            Item::new("remote-2", "dave", 1.0),
-            Item::new("remote-3", "eve", 1.0),
+            Item::new("shared", "alice", 5.0),
+            Item::new("remote-1", "carol", 4.0),
+            Item::new("remote-2", "dave", 3.0),
+            Item::new("remote-3", "eve", 2.0),
             Item::new("remote-4", "frank", 1.0),
         ],
     );

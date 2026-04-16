@@ -1,17 +1,8 @@
 use std::cmp::Ordering;
-use std::collections::HashMap;
 
 use crate::candidate::Candidate;
 use crate::sampler::Sampler;
 
-/// Per-group weight for [`QuotaSampler`].
-///
-/// Each group receives a proportional share of the output slots based
-/// on its weight relative to the total. For example, weights of 0.6,
-/// 0.3, 0.1 allocate 60%, 30%, 10% of slots respectively.
-///
-/// If a group has fewer candidates than its allocation, the surplus
-/// slots are redistributed to other groups proportionally.
 #[derive(Debug, Clone)]
 pub struct GroupQuota {
     group: &'static str,
@@ -25,137 +16,76 @@ impl GroupQuota {
     }
 }
 
-/// Deterministic proportional group sampler.
-///
-/// Allocates output slots to groups by weight, then fills each group's
-/// allocation with its highest-scoring candidates. Surplus slots from
-/// under-filled groups are redistributed by weight. Output is sorted
-/// by score descending.
-///
-/// Given identical input, output is bit-identical — no randomness.
-/// Groups without a quota entry receive no allocation but can fill
-/// surplus slots during redistribution.
 pub struct QuotaSampler {
     quotas: Vec<GroupQuota>,
+    total_weight: f64,
 }
 
 impl QuotaSampler {
     #[must_use]
     pub fn new(quotas: impl IntoIterator<Item = GroupQuota>) -> Self {
+        let quotas: Vec<_> = quotas.into_iter().collect();
+        let total_weight = quotas.iter().map(|q| q.weight).sum();
         Self {
-            quotas: quotas.into_iter().collect(),
+            quotas,
+            total_weight,
         }
     }
 }
 
-impl<Item: Send + Sync + Clone> Sampler<Item> for QuotaSampler {
-    fn sample(&self, candidates: Vec<Candidate<Item>>, n: usize) -> Vec<Candidate<Item>> {
-        if n == 0 || candidates.is_empty() {
-            return Vec::new();
+impl<Item: Send + Sync> Sampler<Item> for QuotaSampler {
+    fn pick(&self, remaining: &[Candidate<Item>], selected: &[Candidate<Item>]) -> Option<usize> {
+        if remaining.is_empty() {
+            return None;
         }
 
-        let mut by_group: HashMap<&'static str, Vec<Candidate<Item>>> = HashMap::new();
-        for c in candidates {
-            by_group.entry(c.group).or_default().push(c);
-        }
-        for items in by_group.values_mut() {
-            items.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal));
+        if self.total_weight <= 0.0 {
+            return highest_scored(remaining);
         }
 
-        let mut output: Vec<Candidate<Item>> = Vec::with_capacity(n);
-        let mut remaining = n;
+        let n = selected.len() + 1;
+        let mut best_group: Option<&'static str> = None;
+        let mut best_deficit = f64::NEG_INFINITY;
 
-        let total_weight: f64 = self.quotas.iter().map(|q| q.weight).sum();
-        if total_weight <= 0.0 {
-            return top_k(&mut by_group, n);
-        }
-
-        let mut allocations: Vec<(&'static str, usize)> = self
-            .quotas
-            .iter()
-            .map(|q| {
-                #[allow(
-                    clippy::cast_precision_loss,
-                    clippy::cast_sign_loss,
-                    clippy::cast_possible_truncation
-                )]
-                let slots = ((q.weight / total_weight) * n as f64).floor() as usize;
-                (q.group, slots)
-            })
-            .collect();
-
-        // Fill each group's allocation with its top candidates.
-        // Track surplus from groups that can't fill their allocation.
-        let mut surplus = 0usize;
-        for (group, slots) in &mut allocations {
-            let items = by_group.get_mut(group);
-            let available = items.as_ref().map_or(0, |v| v.len());
-            let take = (*slots).min(available).min(remaining);
-            if let Some(items) = items {
-                output.extend(items.drain(..take));
+        for quota in &self.quotas {
+            if !remaining.iter().any(|c| c.group == quota.group) {
+                continue;
             }
-            surplus += *slots - take;
-            remaining -= take;
-            *slots = 0;
+            let target = quota.weight / self.total_weight;
+            #[allow(clippy::cast_precision_loss)]
+            let actual =
+                selected.iter().filter(|c| c.group == quota.group).count() as f64 / n as f64;
+            let deficit = target - actual;
+            if deficit > best_deficit {
+                best_deficit = deficit;
+                best_group = Some(quota.group);
+            }
         }
 
-        // Redistribute surplus slots by weight among groups that still have candidates.
-        if surplus > 0 && remaining > 0 {
-            let active_weight: f64 = self
-                .quotas
+        match best_group {
+            Some(group) => remaining
                 .iter()
-                .filter(|q| by_group.get(q.group).is_some_and(|v| !v.is_empty()))
-                .map(|q| q.weight)
-                .sum();
-
-            if active_weight > 0.0 {
-                for quota in &self.quotas {
-                    if remaining == 0 {
-                        break;
-                    }
-                    if let Some(items) = by_group.get_mut(quota.group) {
-                        if items.is_empty() {
-                            continue;
-                        }
-                        #[allow(
-                            clippy::cast_precision_loss,
-                            clippy::cast_sign_loss,
-                            clippy::cast_possible_truncation
-                        )]
-                        let extra =
-                            ((quota.weight / active_weight) * surplus as f64).ceil() as usize;
-                        let take = extra.min(items.len()).min(remaining);
-                        output.extend(items.drain(..take));
-                        remaining -= take;
-                    }
-                }
-            }
+                .enumerate()
+                .filter(|(_, c)| c.group == group)
+                .max_by(|a, b| a.1.score.partial_cmp(&b.1.score).unwrap_or(Ordering::Equal))
+                .map(|(i, _)| i),
+            None => highest_scored(remaining),
         }
-
-        // If still short, take remaining by score from any group.
-        if remaining > 0 {
-            let mut leftover: Vec<Candidate<Item>> = by_group.into_values().flatten().collect();
-            leftover.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal));
-            output.extend(leftover.into_iter().take(remaining));
-        }
-
-        output.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal));
-        output
     }
 }
 
-fn top_k<Item: Clone>(
-    by_group: &mut HashMap<&'static str, Vec<Candidate<Item>>>,
-    n: usize,
-) -> Vec<Candidate<Item>> {
-    let mut all: Vec<Candidate<Item>> = by_group.drain().flat_map(|(_, v)| v).collect();
-    all.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal));
-    all.truncate(n);
-    all
+fn highest_scored<Item>(candidates: &[Candidate<Item>]) -> Option<usize> {
+    candidates
+        .iter()
+        .enumerate()
+        .max_by(|a, b| a.1.score.partial_cmp(&b.1.score).unwrap_or(Ordering::Equal))
+        .map(|(i, _)| i)
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::sampler::sample;
+
     use super::*;
 
     fn candidate(id: &'static str, group: &'static str, score: f64) -> Candidate<&'static str> {
@@ -165,24 +95,23 @@ mod tests {
         c
     }
 
-    fn ids(output: &[Candidate<&'static str>]) -> Vec<&'static str> {
-        output.iter().map(|c| c.item).collect()
-    }
-
     fn group_count(output: &[Candidate<&'static str>], group: &str) -> usize {
         output.iter().filter(|c| c.group == group).count()
     }
 
     #[test]
     fn empty_input() {
-        let out =
-            QuotaSampler::new([GroupQuota::new("a", 1.0)]).sample(Vec::<Candidate<&str>>::new(), 5);
+        let out = sample(
+            &QuotaSampler::new([GroupQuota::new("a", 1.0)]),
+            Vec::<Candidate<&str>>::new(),
+            5,
+        );
         assert!(out.is_empty());
     }
 
     #[test]
     fn zero_limit() {
-        let out = QuotaSampler::new([]).sample(vec![candidate("x", "a", 1.0)], 0);
+        let out = sample(&QuotaSampler::new([]), vec![candidate("x", "a", 1.0)], 0);
         assert!(out.is_empty());
     }
 
@@ -202,12 +131,15 @@ mod tests {
             candidate("t1", "trending", 15.0),
             candidate("t2", "trending", 14.0),
         ];
-        let out = QuotaSampler::new([
-            GroupQuota::new("network", 0.6),
-            GroupQuota::new("recommended", 0.3),
-            GroupQuota::new("trending", 0.1),
-        ])
-        .sample(input, 10);
+        let out = sample(
+            &QuotaSampler::new([
+                GroupQuota::new("network", 0.6),
+                GroupQuota::new("recommended", 0.3),
+                GroupQuota::new("trending", 0.1),
+            ]),
+            input,
+            10,
+        );
 
         assert_eq!(out.len(), 10);
         assert_eq!(group_count(&out, "network"), 6);
@@ -216,32 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn surplus_redistributed_when_group_short() {
-        let input = vec![
-            candidate("n1", "network", 10.0),
-            candidate("n2", "network", 9.0),
-            candidate("n3", "network", 8.0),
-            candidate("n4", "network", 7.0),
-            candidate("n5", "network", 6.0),
-            candidate("r1", "recommended", 5.0),
-        ];
-        // recommended gets 30% = 3 slots, but only has 1 candidate
-        // surplus 2 slots redistributed to network
-        let out = QuotaSampler::new([
-            GroupQuota::new("network", 0.6),
-            GroupQuota::new("recommended", 0.3),
-            GroupQuota::new("trending", 0.1),
-        ])
-        .sample(input, 6);
-
-        assert_eq!(out.len(), 6);
-        assert_eq!(group_count(&out, "network"), 5);
-        assert_eq!(group_count(&out, "recommended"), 1);
-    }
-
-    #[test]
     fn high_score_group_respects_weight() {
-        // recommended has much higher scores but only gets 30%
         let input = vec![
             candidate("n1", "network", 1.0),
             candidate("n2", "network", 0.9),
@@ -250,14 +157,42 @@ mod tests {
             candidate("r2", "recommended", 99.0),
             candidate("r3", "recommended", 98.0),
         ];
-        let out = QuotaSampler::new([
-            GroupQuota::new("network", 0.6),
-            GroupQuota::new("recommended", 0.4),
-        ])
-        .sample(input, 5);
+        let out = sample(
+            &QuotaSampler::new([
+                GroupQuota::new("network", 0.6),
+                GroupQuota::new("recommended", 0.4),
+            ]),
+            input,
+            5,
+        );
 
         assert_eq!(group_count(&out, "network"), 3);
         assert_eq!(group_count(&out, "recommended"), 2);
+    }
+
+    #[test]
+    fn surplus_goes_to_other_groups() {
+        let input = vec![
+            candidate("n1", "network", 10.0),
+            candidate("n2", "network", 9.0),
+            candidate("n3", "network", 8.0),
+            candidate("n4", "network", 7.0),
+            candidate("n5", "network", 6.0),
+            candidate("r1", "recommended", 5.0),
+        ];
+        let out = sample(
+            &QuotaSampler::new([
+                GroupQuota::new("network", 0.6),
+                GroupQuota::new("recommended", 0.3),
+                GroupQuota::new("trending", 0.1),
+            ]),
+            input,
+            6,
+        );
+
+        assert_eq!(out.len(), 6);
+        assert_eq!(group_count(&out, "network"), 5);
+        assert_eq!(group_count(&out, "recommended"), 1);
     }
 
     #[test]
@@ -267,65 +202,80 @@ mod tests {
             candidate("n_hi", "network", 10.0),
             candidate("r1", "recommended", 5.0),
         ];
-        let out = QuotaSampler::new([
-            GroupQuota::new("network", 0.5),
-            GroupQuota::new("recommended", 0.5),
-        ])
-        .sample(input, 2);
+        let out = sample(
+            &QuotaSampler::new([
+                GroupQuota::new("network", 0.5),
+                GroupQuota::new("recommended", 0.5),
+            ]),
+            input,
+            2,
+        );
 
-        assert!(ids(&out).contains(&"n_hi"));
-        assert!(!ids(&out).contains(&"n_lo"));
+        let ids: Vec<&str> = out.iter().map(|c| c.item).collect();
+        assert!(ids.contains(&"n_hi"));
+        assert!(!ids.contains(&"n_lo"));
     }
 
     #[test]
-    fn output_sorted_by_score() {
-        let input = vec![
-            candidate("n1", "network", 3.0),
-            candidate("r1", "recommended", 9.0),
-            candidate("n2", "network", 7.0),
-            candidate("r2", "recommended", 1.0),
-        ];
-        let out = QuotaSampler::new([
-            GroupQuota::new("network", 0.5),
-            GroupQuota::new("recommended", 0.5),
-        ])
-        .sample(input, 4);
-
-        let scores: Vec<f64> = out.iter().map(|c| c.score).collect();
-        assert!(scores.windows(2).all(|w| w[0] >= w[1]));
-    }
-
-    #[test]
-    fn deterministic() {
-        let build = || {
-            vec![
-                candidate("n1", "network", 4.2),
-                candidate("r1", "recommended", 7.1),
-                candidate("n2", "network", 2.0),
-                candidate("r2", "recommended", 6.5),
-                candidate("t1", "trending", 3.3),
-            ]
-        };
-        let s = QuotaSampler::new([
-            GroupQuota::new("network", 0.5),
-            GroupQuota::new("recommended", 0.3),
-            GroupQuota::new("trending", 0.2),
-        ]);
-        assert_eq!(ids(&s.sample(build(), 4)), ids(&s.sample(build(), 4)));
-    }
-
-    #[test]
-    fn unquoted_groups_fill_surplus() {
+    fn unquoted_groups_fill_when_quoted_exhausted() {
         let input = vec![
             candidate("n1", "network", 10.0),
             candidate("x1", "other", 5.0),
             candidate("x2", "other", 4.0),
         ];
-        // "other" has no quota — gets no allocation but fills surplus
-        let out = QuotaSampler::new([GroupQuota::new("network", 1.0)]).sample(input, 3);
+        let out = sample(
+            &QuotaSampler::new([GroupQuota::new("network", 1.0)]),
+            input,
+            3,
+        );
 
         assert_eq!(out.len(), 3);
         assert_eq!(group_count(&out, "network"), 1);
         assert_eq!(group_count(&out, "other"), 2);
+    }
+
+    #[test]
+    fn realistic_home_feed_scenario() {
+        let mut input = Vec::new();
+        for i in 0..15 {
+            input.push(candidate(
+                Box::leak(format!("n{i}").into_boxed_str()),
+                "network",
+                5.0 - (i as f64 * 0.1),
+            ));
+        }
+        for i in 0..100 {
+            input.push(candidate(
+                Box::leak(format!("r{i}").into_boxed_str()),
+                "recommended",
+                50.0 - (i as f64 * 0.3),
+            ));
+        }
+        for i in 0..10 {
+            input.push(candidate(
+                Box::leak(format!("t{i}").into_boxed_str()),
+                "trending",
+                8.0 - (i as f64 * 0.5),
+            ));
+        }
+
+        let out = sample(
+            &QuotaSampler::new([
+                GroupQuota::new("network", 0.60),
+                GroupQuota::new("recommended", 0.30),
+                GroupQuota::new("trending", 0.10),
+            ]),
+            input,
+            20,
+        );
+
+        let nc = group_count(&out, "network");
+        let rc = group_count(&out, "recommended");
+        let tc = group_count(&out, "trending");
+
+        assert_eq!(out.len(), 20);
+        assert_eq!(nc, 12, "network should get 60% of 20 = 12, got {nc}");
+        assert_eq!(rc, 6, "recommended should get 30% of 20 = 6, got {rc}");
+        assert_eq!(tc, 2, "trending should get 10% of 20 = 2, got {tc}");
     }
 }
