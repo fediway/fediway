@@ -11,6 +11,30 @@ use common::mastodon::{
 };
 use server::mastodon::resolve::Resolver;
 
+/// Proves the test Mastodon enforces `LOCAL_DOMAIN`-based HostAuthorization.
+/// If this fails, every integration test that relies on HostAuthorization to
+/// catch wrong-Host regressions is silently unarmed.
+#[ignore = "requires running Mastodon (repos/fediway/docker-compose.integration.yaml)"]
+#[tokio::test]
+async fn mastodon_rejects_unknown_host_header() {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .unwrap();
+    let resp = client
+        .get(format!("{MASTODON_BASE}/api/v1/instance"))
+        .header("x-forwarded-proto", "https")
+        .header("host", "not-our-instance.invalid")
+        .send()
+        .await
+        .expect("mastodon unreachable");
+    assert_eq!(
+        resp.status().as_u16(),
+        403,
+        "test Mastodon must reject unknown Host — otherwise integration Host-correctness checks are unarmed"
+    );
+}
+
 mod resolver {
     use super::*;
 
