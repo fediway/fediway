@@ -21,6 +21,8 @@ use crate::state::AppState;
 
 const HOME_TTL: Duration = Duration::from_secs(15 * 60);
 
+const RELOAD_BYPASSES_SEEN: &[&str] = &["network"];
+
 const POOL_SIZE: usize = 300;
 const NETWORK_POOL: usize = 180;
 const RECOMMENDED_POOL: usize = 180;
@@ -140,10 +142,18 @@ impl HomeFeed {
         // remote posts get promoted to Mastodon local IDs. See `feeds::seen`.
         let pool = self.load_pool(state).await;
         let seen_set = seen::load(&state.cache, self.user_id).await;
+        let is_reload = params.max_id.is_none();
 
-        let mut chosen: Vec<(String, CachedPost)> = pool
+        let keep = |uri: &str, group: &str| {
+            if is_reload && RELOAD_BYPASSES_SEEN.contains(&group) {
+                return true;
+            }
+            !seen_set.contains(uri)
+        };
+
+        let mut chosen: Vec<(String, String, CachedPost)> = pool
             .into_iter()
-            .filter(|(id, _)| !seen_set.contains(id))
+            .filter(|(uri, group, _)| keep(uri, group))
             .take(limit)
             .collect();
 
@@ -153,12 +163,13 @@ impl HomeFeed {
                 .rebuild_pool(state)
                 .await
                 .into_iter()
-                .filter(|(id, _)| !seen_set.contains(id))
+                .filter(|(uri, group, _)| keep(uri, group))
                 .take(limit)
                 .collect();
         }
 
-        let (served, cached_posts): (Vec<String>, Vec<CachedPost>) = chosen.into_iter().unzip();
+        let (served, cached_posts): (Vec<String>, Vec<CachedPost>) =
+            chosen.into_iter().map(|(uri, _, post)| (uri, post)).unzip();
 
         let statuses = crate::mastodon::statuses::hydrate(
             &state.pool,
@@ -189,10 +200,10 @@ impl HomeFeed {
         (headers, Json(statuses))
     }
 
-    async fn load_pool(&self, state: &AppState) -> Vec<(String, CachedPost)> {
+    async fn load_pool(&self, state: &AppState) -> Vec<(String, String, CachedPost)> {
         if let Some(pool) = state
             .cache
-            .get::<Vec<(String, CachedPost)>>(&self.cache_key())
+            .get::<Vec<(String, String, CachedPost)>>(&self.cache_key())
             .await
             && !pool.is_empty()
         {
@@ -201,14 +212,19 @@ impl HomeFeed {
         self.rebuild_pool(state).await
     }
 
-    async fn rebuild_pool(&self, state: &AppState) -> Vec<(String, CachedPost)> {
+    async fn rebuild_pool(&self, state: &AppState) -> Vec<(String, String, CachedPost)> {
         let pool: Vec<_> = self
             .collect()
             .await
             .into_iter()
             .map(|c| {
-                let id = c.item.uri.clone().unwrap_or_else(|| c.item.url.clone());
-                (id, CachedPost::from_post(c.item, &state.instance_domain))
+                let uri = c.item.uri.clone().unwrap_or_else(|| c.item.url.clone());
+                let group = c.group.to_owned();
+                (
+                    uri,
+                    group,
+                    CachedPost::from_post(c.item, &state.instance_domain),
+                )
             })
             .collect();
         state.cache.set(&self.cache_key(), &pool, HOME_TTL).await;
