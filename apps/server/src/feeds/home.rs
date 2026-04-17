@@ -141,11 +141,24 @@ impl HomeFeed {
         let pool = self.load_pool(state).await;
         let seen_set = seen::load(&state.cache, self.user_id).await;
 
-        let (served, cached_posts): (Vec<String>, Vec<CachedPost>) = pool
+        let mut chosen: Vec<(String, CachedPost)> = pool
             .into_iter()
             .filter(|(id, _)| !seen_set.contains(id))
             .take(limit)
-            .unzip();
+            .collect();
+
+        if chosen.is_empty() {
+            metrics::counter!("fediway_home_pool_rebuilt_total").increment(1);
+            chosen = self
+                .rebuild_pool(state)
+                .await
+                .into_iter()
+                .filter(|(id, _)| !seen_set.contains(id))
+                .take(limit)
+                .collect();
+        }
+
+        let (served, cached_posts): (Vec<String>, Vec<CachedPost>) = chosen.into_iter().unzip();
 
         let statuses = crate::mastodon::statuses::hydrate(
             &state.pool,
@@ -177,12 +190,18 @@ impl HomeFeed {
     }
 
     async fn load_pool(&self, state: &AppState) -> Vec<(String, CachedPost)> {
-        let key = format!("home:{}", self.user_id);
-        if let Some(pool) = state.cache.get::<Vec<(String, CachedPost)>>(&key).await
+        if let Some(pool) = state
+            .cache
+            .get::<Vec<(String, CachedPost)>>(&self.cache_key())
+            .await
             && !pool.is_empty()
         {
             return pool;
         }
+        self.rebuild_pool(state).await
+    }
+
+    async fn rebuild_pool(&self, state: &AppState) -> Vec<(String, CachedPost)> {
         let pool: Vec<_> = self
             .collect()
             .await
@@ -192,8 +211,12 @@ impl HomeFeed {
                 (id, CachedPost::from_post(c.item, &state.instance_domain))
             })
             .collect();
-        state.cache.set(&key, &pool, HOME_TTL).await;
+        state.cache.set(&self.cache_key(), &pool, HOME_TTL).await;
         pool
+    }
+
+    fn cache_key(&self) -> String {
+        format!("home:{}", self.user_id)
     }
 }
 
