@@ -1,6 +1,7 @@
 pub mod engine;
 pub mod home;
 pub mod link_timeline;
+pub mod seen;
 pub mod tag_timeline;
 pub mod timeline_feed;
 pub mod trend_feed;

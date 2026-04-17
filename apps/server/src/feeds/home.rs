@@ -15,7 +15,7 @@ use sources::commonfeed::recommended::RecommendedSource;
 use sources::commonfeed::types::QueryFilters;
 use sources::mastodon::{CachedPost, NetworkSource, PolicyFilter};
 
-use crate::feeds::engine;
+use crate::feeds::seen;
 use crate::feeds::timeline_feed::TimelineParams;
 use crate::state::AppState;
 
@@ -30,8 +30,6 @@ const TRENDING_POOL_WARM: usize = 60;
 pub struct HomeFeed {
     pipeline: Pipeline<Post>,
     user_id: i64,
-    #[allow(dead_code)] // stored for future prefetch rebuild
-    filters: QueryFilters,
 }
 
 impl HomeFeed {
@@ -100,7 +98,9 @@ impl HomeFeed {
         }
 
         let pipeline = builder
-            .filter(Dedup::new(|c: &Candidate<Post>| c.item.url.clone()))
+            .filter(Dedup::new(|c: &Candidate<Post>| {
+                c.item.uri.clone().unwrap_or_else(|| c.item.url.clone())
+            }))
             .filter(PolicyFilter::new(policy))
             .score(Diversity::new(0.15, |post: &Post| {
                 post.author.handle.clone()
@@ -119,11 +119,7 @@ impl HomeFeed {
             })
             .build();
 
-        Self {
-            pipeline,
-            user_id,
-            filters,
-        }
+        Self { pipeline, user_id }
     }
 
     pub async fn serve(
@@ -134,47 +130,39 @@ impl HomeFeed {
         let start = Instant::now();
         metrics::counter!("fediway_home_requests_total").increment(1);
 
-        let cache_key = format!("home:{}", self.user_id);
         let limit = params.limit.clamp(1, 40);
 
-        // The home feed is ranked, not chronological, so `min_id` and
-        // `since_id` have no meaning here — the entire ordering is rebuilt
-        // each pipeline run. We commandeer `max_id` as an opaque offset
-        // into the cached scored list because Mastodon's API exposes no
-        // other cursor field.
-        let cached = if params.max_id.is_some() {
-            state.cache.get::<Vec<CachedPost>>(&cache_key).await
-        } else {
-            None
-        };
-        let items = if let Some(items) = cached {
-            items
-        } else {
-            let fresh: Vec<CachedPost> = self
-                .collect()
-                .await
-                .into_iter()
-                .map(|c| CachedPost::from_post(c.item, &state.instance_domain))
-                .collect();
-            state.cache.set(&cache_key, &fresh, HOME_TTL).await;
-            fresh
-        };
-        let page = engine::paginate(items, params.max_id.as_deref(), limit);
+        // The home feed is ranked, not chronological. The server tracks
+        // per-user seen identifiers and filters them from the ranked pool,
+        // so `max_id`/`min_id`/`since_id` are ignored — any request means
+        // "give me the next unseen slice." The ActivityPub URI (with URL
+        // fallback) is the stable identity; snowflake IDs shift when
+        // remote posts get promoted to Mastodon local IDs. See `feeds::seen`.
+        let pool = self.load_pool(state).await;
+        let seen_set = seen::load(&state.cache, self.user_id).await;
+
+        let (served, cached_posts): (Vec<String>, Vec<CachedPost>) = pool
+            .into_iter()
+            .filter(|(id, _)| !seen_set.contains(id))
+            .take(limit)
+            .unzip();
 
         let statuses = crate::mastodon::statuses::hydrate(
             &state.pool,
             &state.instance_domain,
             &state.media,
-            page.items,
+            cached_posts,
             Some(self.user_id),
         )
         .await;
 
+        seen::extend(&state.cache, self.user_id, &served).await;
+
         let mut headers = HeaderMap::new();
-        if let Some(next) = &page.cursor {
+        if let Some(last) = statuses.last() {
             let link = format!(
-                "<https://{}/api/v1/timelines/home?max_id={next}>; rel=\"next\"",
-                state.instance_domain
+                "<https://{}/api/v1/timelines/home?max_id={}>; rel=\"next\"",
+                state.instance_domain, last.id,
             );
             if let Ok(value) = HeaderValue::from_str(&link) {
                 headers.insert(header::LINK, value);
@@ -186,6 +174,26 @@ impl HomeFeed {
         metrics::histogram!("fediway_home_duration_seconds").record(start.elapsed().as_secs_f64());
 
         (headers, Json(statuses))
+    }
+
+    async fn load_pool(&self, state: &AppState) -> Vec<(String, CachedPost)> {
+        let key = format!("home:{}", self.user_id);
+        if let Some(pool) = state.cache.get::<Vec<(String, CachedPost)>>(&key).await
+            && !pool.is_empty()
+        {
+            return pool;
+        }
+        let pool: Vec<_> = self
+            .collect()
+            .await
+            .into_iter()
+            .map(|c| {
+                let id = c.item.uri.clone().unwrap_or_else(|| c.item.url.clone());
+                (id, CachedPost::from_post(c.item, &state.instance_domain))
+            })
+            .collect();
+        state.cache.set(&key, &pool, HOME_TTL).await;
+        pool
     }
 }
 
