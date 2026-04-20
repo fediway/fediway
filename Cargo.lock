@@ -451,6 +451,7 @@ dependencies = [
  "chrono",
  "serde",
  "serde_json",
+ "sqlx",
  "thiserror 2.0.18",
 ]
 
@@ -2883,6 +2884,7 @@ dependencies = [
  "chrono",
  "common",
  "config",
+ "log",
  "mastodon",
  "redis",
  "regex",

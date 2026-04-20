@@ -38,4 +38,11 @@ pub struct DatabaseConfig {
     /// Maximum time in seconds for a single SQL statement. Enforced by Postgres.
     #[arg(long, env = "DB_STATEMENT_TIMEOUT", default_value_t = 30)]
     pub db_statement_timeout_secs: u64,
+
+    /// Postgres `sslmode`. One of `disable`, `allow`, `prefer`, `require`,
+    /// `verify-ca`, `verify-full`. Production deployments must set
+    /// `verify-full`; `disable` is forbidden outside single-machine
+    /// docker-compose.
+    #[arg(long, env = "DB_SSL_MODE", default_value = "prefer")]
+    pub db_ssl_mode: String,
 }

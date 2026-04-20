@@ -37,7 +37,7 @@ pub async fn translate_request_id(
 /// `reblog` field (Mastodon only nests reblogs one level, but the recursion
 /// is harmless if that invariant ever loosens). A single batched
 /// `reverse_map` query covers all lookups per response.
-pub async fn translate_response(pool: &PgPool, value: &mut Value) -> Result<(), sqlx::Error> {
+pub async fn translate_response(pool: &PgPool, value: &mut Value) -> Result<(), state::Error> {
     let mut ids = Vec::with_capacity(4);
     collect_ids(value, &mut ids);
 

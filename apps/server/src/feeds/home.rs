@@ -2,6 +2,7 @@ use std::time::{Duration, Instant};
 
 use axum::Json;
 use axum::http::{HeaderMap, HeaderValue, header};
+use common::ids::AccountId;
 use common::types::Post;
 use feed::Feed;
 use feed::candidate::Candidate;
@@ -14,6 +15,7 @@ use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::recommended::RecommendedSource;
 use sources::commonfeed::types::QueryFilters;
 use sources::mastodon::{CachedPost, NetworkSource, PolicyFilter};
+use state::policy::UserPolicy;
 
 use crate::feeds::seen;
 use crate::feeds::timeline_feed::TimelineParams;
@@ -37,10 +39,19 @@ pub struct HomeFeed {
 impl HomeFeed {
     pub async fn new(state: &AppState, user_id: i64, filters: QueryFilters) -> Self {
         let vector_start = Instant::now();
+        let account = AccountId(user_id);
         let (user_vector, policy) = tokio::join!(
-            state::orbit::load_vector(&state.pool, user_id),
-            state::policy::load(&state.pool, user_id, &state.instance_domain),
+            state::orbit::load_vector(&state.pool, account),
+            state::policy::load(&state.pool, account, &state.instance_domain),
         );
+        let user_vector = user_vector.unwrap_or_else(|err| {
+            tracing::error!(error = %err, user_id, "home: failed to load orbit vector");
+            None
+        });
+        let policy = policy.unwrap_or_else(|err| {
+            tracing::error!(error = %err, user_id, "home: failed to load policy");
+            UserPolicy::default()
+        });
         metrics::histogram!("fediway_home_vector_load_duration_seconds")
             .record(vector_start.elapsed().as_secs_f64());
 
@@ -79,14 +90,24 @@ impl HomeFeed {
             NETWORK_POOL,
         );
 
-        let trending = state::providers::find_sources(&state.pool, "trends/statuses").await;
+        let trending = state::providers::find_sources(&state.pool, "trends/statuses")
+            .await
+            .unwrap_or_else(|err| {
+                tracing::error!(error = %err, route = "trends/statuses", "failed to load sources");
+                Vec::new()
+            });
         let trending_sources = trending
             .into_iter()
             .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));
         builder = builder.group("trending", trending_sources, trending_pool);
 
         if let Some((vector, _)) = &user_vector {
-            let bound = state::providers::find_sources(&state.pool, "timelines/home").await;
+            let bound = state::providers::find_sources(&state.pool, "timelines/home")
+                .await
+                .unwrap_or_else(|err| {
+                    tracing::error!(error = %err, route = "timelines/home", "failed to load sources");
+                    Vec::new()
+                });
             let recommended = bound.into_iter().map(|b| {
                 RecommendedSource::new(
                     b.provider,

@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use common::ids::AccountId;
 use common::types::Post;
 use feed::Feed;
 use feed::candidate::Candidate;
@@ -32,11 +33,21 @@ impl LinkTimelineFeed {
 
         let viewer_id = account.map(|a| a.id);
         let policy = match account {
-            Some(a) => state::policy::load(&state.pool, a.id, &state.instance_domain).await,
+            Some(a) => state::policy::load(&state.pool, AccountId(a.id), &state.instance_domain)
+                .await
+                .unwrap_or_else(|err| {
+                    tracing::error!(error = %err, user_id = a.id, "link_timeline: failed to load policy");
+                    UserPolicy::default()
+                }),
             None => UserPolicy::default(),
         };
 
-        let bound = state::providers::find_sources(&state.pool, "timelines/link").await;
+        let bound = state::providers::find_sources(&state.pool, "timelines/link")
+            .await
+            .unwrap_or_else(|err| {
+                tracing::error!(error = %err, route = "timelines/link", "failed to load sources");
+                Vec::new()
+            });
         let sources = bound
             .into_iter()
             .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));

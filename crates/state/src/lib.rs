@@ -1,10 +1,13 @@
 pub mod cache;
 pub mod db;
+mod error;
 pub mod orbit;
 pub mod policy;
 pub mod providers;
 pub mod redis;
 pub mod statuses;
+
+pub use error::Error;
 
 use ::redis::aio::ConnectionManager;
 use config::{DatabaseConfig, RedisConfig};

@@ -14,6 +14,7 @@ fn db_config_defaults() {
         db_idle_timeout_secs: 600,
         db_max_lifetime_secs: 1800,
         db_statement_timeout_secs: 30,
+        db_ssl_mode: "prefer".to_string(),
     };
     assert_eq!(config.db_host, "localhost");
     assert_eq!(config.db_port, 5432);

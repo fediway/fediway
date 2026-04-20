@@ -61,7 +61,9 @@ async fn upsert_provider_is_idempotent(pool: PgPool) {
 #[sqlx::test]
 async fn find_sources_returns_empty_when_no_providers(pool: PgPool) {
     common::setup_db(&pool).await;
-    let sources = state::providers::find_sources(&pool, "trends/statuses").await;
+    let sources = state::providers::find_sources(&pool, "trends/statuses")
+        .await
+        .unwrap();
     assert!(sources.is_empty());
 }
 
@@ -118,7 +120,9 @@ async fn enable_source_and_find(pool: PgPool) {
     .await
     .unwrap();
 
-    let sources = state::providers::find_sources(&pool, "trends/statuses").await;
+    let sources = state::providers::find_sources(&pool, "trends/statuses")
+        .await
+        .unwrap();
     assert_eq!(sources.len(), 1);
     assert_eq!(sources[0].provider.domain, "feeds.example.com");
     assert_eq!(sources[0].algorithm, "trending");
@@ -179,6 +183,8 @@ async fn disable_source(pool: PgPool) {
             .unwrap();
     assert_eq!(affected, 1);
 
-    let sources = state::providers::find_sources(&pool, "trends/statuses").await;
+    let sources = state::providers::find_sources(&pool, "trends/statuses")
+        .await
+        .unwrap();
     assert!(sources.is_empty());
 }

@@ -1,0 +1,97 @@
+name: Mastodon integration
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_TEST_DEBUG: 1
+  RUSTC_WRAPPER: sccache
+  SCCACHE_GHA_ENABLED: "true"
+
+jobs:
+  integration:
+    name: Mastodon integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: fediway
+          POSTGRES_PASSWORD: fediway
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+          --health-start-period 5s
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: fediway
+      DB_PASS: fediway
+      DATABASE_URL: postgres://fediway:fediway@localhost:5432/postgres
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev mold
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@nextest
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: mastodon-integration
+          save-if: ${{ github.event_name == 'schedule' }}
+          cache-on-failure: true
+
+      - name: Start Mastodon stack
+        run: docker compose -f docker-compose.integration.yaml up -d
+
+      - name: Wait for mastodon-web healthy and bootstrap completed
+        run: |
+          for i in $(seq 1 90); do
+            web_id=$(docker compose -f docker-compose.integration.yaml ps -q mastodon-web)
+            bootstrap_id=$(docker compose -f docker-compose.integration.yaml ps -q mastodon-bootstrap)
+            web_health=$(docker inspect --format='{{.State.Health.Status}}' "$web_id" 2>/dev/null || echo "starting")
+            bootstrap_status=$(docker inspect --format='{{.State.Status}}' "$bootstrap_id" 2>/dev/null || echo "starting")
+            echo "[$i] mastodon-web=$web_health mastodon-bootstrap=$bootstrap_status"
+            if [ "$web_health" = "healthy" ] && [ "$bootstrap_status" = "exited" ]; then
+              echo "All services ready"
+              break
+            fi
+            if [ "$i" -eq 90 ]; then
+              echo "Timeout waiting for services"
+              docker compose -f docker-compose.integration.yaml logs --no-color
+              exit 1
+            fi
+            sleep 10
+          done
+
+      - name: Verify bootstrap token file
+        run: test -s docker/mastodon-token/mastodon_token
+
+      - name: Run Mastodon integration tests
+        env:
+          RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
+        run: cargo nextest run --workspace --locked --run-ignored only --profile ci
+
+      - name: Dump Mastodon logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.integration.yaml logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.integration.yaml down -v

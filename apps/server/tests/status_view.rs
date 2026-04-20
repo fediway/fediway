@@ -1,5 +1,6 @@
 mod common;
 
+use ::common::ids::{AccountId, StatusId};
 use sources::mastodon::CachedPost;
 use sqlx::PgPool;
 use state::statuses::fetch_by_ids;
@@ -298,7 +299,9 @@ async fn fetch_by_ids_populates_every_enrichment_dimension(pool: PgPool) {
     insert_quote(&pool, status_id, quoted, alice, bob).await;
 
     let media = common::test_media();
-    let statuses = fetch_by_ids(&pool, "local.test", &media, &[status_id], None).await;
+    let statuses = fetch_by_ids(&pool, "local.test", &media, &[StatusId(status_id)], None)
+        .await
+        .unwrap();
 
     assert_eq!(statuses.len(), 1);
     let s = &statuses[0];
@@ -399,7 +402,15 @@ async fn fetch_by_ids_preserves_input_order_and_skips_missing(pool: PgPool) {
     let c = insert_status(&pool, alice, "third", "", None, 0, None, None).await;
 
     let media = common::test_media();
-    let out = fetch_by_ids(&pool, "local.test", &media, &[b, 9_999_999, a, c], None).await;
+    let out = fetch_by_ids(
+        &pool,
+        "local.test",
+        &media,
+        &[StatusId(b), StatusId(9_999_999), StatusId(a), StatusId(c)],
+        None,
+    )
+    .await
+    .unwrap();
     let texts: Vec<&str> = out
         .iter()
         .map(|s| s.text.as_deref().unwrap_or(""))
@@ -442,10 +453,17 @@ async fn fetch_by_ids_excludes_deleted_suspended_silenced_private(pool: PgPool) 
         &pool,
         "local.test",
         &media,
-        &[alive, deleted, private, suspended_post, silenced_post],
+        &[
+            StatusId(alive),
+            StatusId(deleted),
+            StatusId(private),
+            StatusId(suspended_post),
+            StatusId(silenced_post),
+        ],
         None,
     )
-    .await;
+    .await
+    .unwrap();
     assert_eq!(out.len(), 1);
     assert_eq!(out[0].text.as_deref(), Some("alive"));
 }
@@ -474,10 +492,11 @@ async fn fetch_by_ids_marks_favourited_for_viewer(pool: PgPool) {
         &pool,
         "local.test",
         &media,
-        &[favourited, untouched],
-        Some(viewer),
+        &[StatusId(favourited), StatusId(untouched)],
+        Some(AccountId(viewer)),
     )
-    .await;
+    .await
+    .unwrap();
 
     let by_id: std::collections::HashMap<String, &mastodon::Status> =
         out.iter().map(|s| (s.id.clone(), s)).collect();
@@ -509,10 +528,11 @@ async fn fetch_by_ids_marks_bookmarked_for_viewer(pool: PgPool) {
         &pool,
         "local.test",
         &media,
-        &[bookmarked, untouched],
-        Some(viewer),
+        &[StatusId(bookmarked), StatusId(untouched)],
+        Some(AccountId(viewer)),
     )
-    .await;
+    .await
+    .unwrap();
 
     let by_id: std::collections::HashMap<String, &mastodon::Status> =
         out.iter().map(|s| (s.id.clone(), s)).collect();
@@ -547,10 +567,11 @@ async fn fetch_by_ids_marks_reblogged_for_viewer(pool: PgPool) {
         &pool,
         "local.test",
         &media,
-        &[original, untouched],
-        Some(viewer),
+        &[StatusId(original), StatusId(untouched)],
+        Some(AccountId(viewer)),
     )
-    .await;
+    .await
+    .unwrap();
 
     let by_id: std::collections::HashMap<String, &mastodon::Status> =
         out.iter().map(|s| (s.id.clone(), s)).collect();
@@ -578,7 +599,15 @@ async fn fetch_by_ids_anonymous_viewer_leaves_state_false(pool: PgPool) {
         .unwrap();
 
     let media = common::test_media();
-    let out = fetch_by_ids(&pool, "local.test", &media, &[favourited_by_other], None).await;
+    let out = fetch_by_ids(
+        &pool,
+        "local.test",
+        &media,
+        &[StatusId(favourited_by_other)],
+        None,
+    )
+    .await
+    .unwrap();
 
     assert_eq!(out.len(), 1);
     assert!(!out[0].favourited);
@@ -767,7 +796,15 @@ async fn fetch_by_ids_viewer_sees_only_own_engagement(pool: PgPool) {
         .unwrap();
 
     let media = common::test_media();
-    let out = fetch_by_ids(&pool, "local.test", &media, &[post], Some(viewer)).await;
+    let out = fetch_by_ids(
+        &pool,
+        "local.test",
+        &media,
+        &[StatusId(post)],
+        Some(AccountId(viewer)),
+    )
+    .await
+    .unwrap();
 
     assert_eq!(out.len(), 1);
     assert!(
@@ -788,7 +825,9 @@ async fn fetch_by_ids_sanitizes_federated_html_without_double_encoding(pool: PgP
     insert_status_stats(&pool, id, 0, 0, 0, 0).await;
 
     let media = common::test_media();
-    let out = fetch_by_ids(&pool, "local.test", &media, &[id], None).await;
+    let out = fetch_by_ids(&pool, "local.test", &media, &[StatusId(id)], None)
+        .await
+        .unwrap();
 
     assert_eq!(out.len(), 1);
     assert!(
@@ -820,16 +859,17 @@ async fn fetch_by_ids_formats_local_plain_text_into_html(pool: PgPool) {
     insert_status_stats(&pool, id, 0, 0, 0, 0).await;
 
     let media = common::test_media();
-    let out = fetch_by_ids(&pool, "local.test", &media, &[id], None).await;
+    let out = fetch_by_ids(&pool, "local.test", &media, &[StatusId(id)], None)
+        .await
+        .unwrap();
 
     assert_eq!(out.len(), 1);
     assert!(
         out[0].content.contains("<p>"),
         "local plain text must be wrapped in paragraph tags"
     );
-    assert_eq!(
-        out[0].content.contains("&lt;"),
-        false,
+    assert!(
+        !out[0].content.contains("&lt;"),
         "plain text input has no HTML to escape"
     );
 }

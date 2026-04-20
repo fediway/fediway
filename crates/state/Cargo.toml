@@ -11,6 +11,7 @@ common.workspace = true
 config.workspace = true
 mastodon.workspace = true
 chrono.workspace = true
+log = "0.4"
 sqlx = { workspace = true, features = ["json", "chrono"] }
 serde.workspace = true
 serde_json.workspace = true

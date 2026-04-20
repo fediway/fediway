@@ -222,18 +222,16 @@ pub async fn register(
 pub async fn status(db: &PgPool, domain: &str) -> Result<()> {
     let wk = sync_provider(db, domain).await?;
 
-    let Some((api_key, current_status)) =
-        state::providers::find_registration(db, &wk.domain).await?
-    else {
+    let Some(registration) = state::providers::find_registration(db, &wk.domain).await? else {
         anyhow::bail!("Not registered yet. Run `provider register {domain}` first.");
     };
 
-    if current_status.as_deref() == Some("approved") {
+    if registration.status.as_deref() == Some("approved") {
         println!("Already approved.");
         return Ok(());
     }
 
-    let Some(api_key) = api_key else {
+    let Some(api_key) = registration.api_key else {
         anyhow::bail!("Not registered yet. Run `provider register {domain}` first.");
     };
 

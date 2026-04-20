@@ -64,6 +64,13 @@ impl From<sqlx::Error> for EngagementError {
     }
 }
 
+impl From<state::Error> for EngagementError {
+    fn from(e: state::Error) -> Self {
+        tracing::warn!(error = %e, "engagement: db error");
+        Self::Db
+    }
+}
+
 impl From<serde_json::Error> for EngagementError {
     fn from(e: serde_json::Error) -> Self {
         tracing::warn!(error = %e, "engagement: failed to parse mastodon response");

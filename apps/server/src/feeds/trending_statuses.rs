@@ -23,7 +23,12 @@ pub struct TrendingStatusesFeed {
 
 impl TrendingStatusesFeed {
     pub async fn new(state: &AppState, filters: QueryFilters) -> Self {
-        let bound = state::providers::find_sources(&state.pool, "trends/statuses").await;
+        let bound = state::providers::find_sources(&state.pool, "trends/statuses")
+            .await
+            .unwrap_or_else(|err| {
+                tracing::error!(error = %err, route = "trends/statuses", "failed to load sources");
+                Vec::new()
+            });
         let sources = bound
             .into_iter()
             .map(|b| PostsSource::new(b.provider, b.algorithm).with_filters(filters.clone()));

@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use axum::http::{HeaderMap, HeaderValue, header};
+use common::ids::{AccountId, StatusId};
 use common::paperclip::MediaConfig;
 use common::types::Post;
 use mastodon::Status;
@@ -47,13 +48,13 @@ pub async fn hydrate(
         });
 
     let mut slots: Vec<Slot> = Vec::with_capacity(cached.len());
-    let mut local_ids: Vec<i64> = Vec::new();
+    let mut local_ids: Vec<StatusId> = Vec::new();
     let mut remote_posts: Vec<Post> = Vec::new();
     for item in cached {
         match item {
             CachedPost::Local { id } => {
                 slots.push(Slot::Local(id));
-                local_ids.push(id);
+                local_ids.push(StatusId(id));
             }
             CachedPost::Remote { post } => {
                 let promoted = match (&post.provider_domain, post.provider_id) {
@@ -64,7 +65,7 @@ pub async fn hydrate(
                 };
                 if let Some(mastodon_id) = promoted {
                     slots.push(Slot::Local(mastodon_id));
-                    local_ids.push(mastodon_id);
+                    local_ids.push(StatusId(mastodon_id));
                 } else {
                     slots.push(Slot::Remote(remote_posts.len()));
                     remote_posts.push(*post);
@@ -74,13 +75,23 @@ pub async fn hydrate(
     }
 
     let (local_statuses, remote_statuses) = tokio::join!(
-        fetch_by_ids(db, instance_domain, media, &local_ids, viewer_account_id),
+        fetch_by_ids(
+            db,
+            instance_domain,
+            media,
+            &local_ids,
+            viewer_account_id.map(AccountId)
+        ),
         from_posts(db, instance_domain, remote_posts),
     );
+    let local_statuses = local_statuses.unwrap_or_else(|err| {
+        tracing::error!(error = %err, "hydrate: failed to fetch local statuses");
+        Vec::new()
+    });
 
-    let local_by_id: HashMap<i64, Status> = local_statuses
+    let local_by_id: HashMap<StatusId, Status> = local_statuses
         .into_iter()
-        .filter_map(|s| s.id.parse::<i64>().ok().map(|id| (id, s)))
+        .filter_map(|s| s.id.parse::<i64>().ok().map(|id| (StatusId(id), s)))
         .collect();
     let mut remote_by_idx: HashMap<usize, Status> =
         remote_statuses.into_iter().enumerate().collect();
@@ -88,7 +99,7 @@ pub async fn hydrate(
     slots
         .into_iter()
         .filter_map(|slot| match slot {
-            Slot::Local(id) => local_by_id.get(&id).cloned(),
+            Slot::Local(id) => local_by_id.get(&StatusId(id)).cloned(),
             Slot::Remote(idx) => remote_by_idx.remove(&idx),
         })
         .collect()
