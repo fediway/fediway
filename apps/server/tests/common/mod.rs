@@ -40,6 +40,7 @@ impl TestResponse {
 
 /// Subset of the Mastodon schema covering only the columns and indexes
 /// fediway's local sources query. Mirror real Mastodon when adding more.
+#[allow(clippy::too_many_lines)]
 pub async fn setup_mastodon_schema(pool: &PgPool) {
     for stmt in [
         r"CREATE TABLE IF NOT EXISTS accounts (

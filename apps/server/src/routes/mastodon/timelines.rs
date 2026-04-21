@@ -1,6 +1,7 @@
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
+use common::ids::AccountId;
 use serde::Deserialize;
 
 use crate::auth::Account;
@@ -22,7 +23,7 @@ pub async fn home(
     Query(params): Query<TimelineParams>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let filters = request_filters(Some(&account), &headers);
-    let feed = HomeFeed::new(&state, account.id, filters).await;
+    let feed = HomeFeed::new(&state, AccountId(account.id), filters).await;
     Ok(feed.serve(&state, &params).await)
 }
 

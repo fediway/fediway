@@ -679,7 +679,7 @@ async fn hydrate_promotes_resolved_remote_to_fetch_by_ids(pool: PgPool) {
         vec![CachedPost::Remote {
             post: Box::new(post),
         }],
-        Some(viewer),
+        Some(AccountId(viewer)),
     )
     .await;
 
@@ -733,7 +733,7 @@ async fn hydrate_threads_viewer_state_through_to_local_statuses(pool: PgPool) {
         "local.test",
         &media,
         vec![CachedPost::Local { id: status_id }],
-        Some(viewer),
+        Some(AccountId(viewer)),
     )
     .await;
 

@@ -37,19 +37,19 @@ pub struct HomeFeed {
 }
 
 impl HomeFeed {
-    pub async fn new(state: &AppState, user_id: i64, filters: QueryFilters) -> Self {
+    #[allow(clippy::too_many_lines)]
+    pub async fn new(state: &AppState, account: AccountId, filters: QueryFilters) -> Self {
         let vector_start = Instant::now();
-        let account = AccountId(user_id);
         let (user_vector, policy) = tokio::join!(
             state::orbit::load_vector(&state.pool, account),
             state::policy::load(&state.pool, account, &state.instance_domain),
         );
         let user_vector = user_vector.unwrap_or_else(|err| {
-            tracing::error!(error = %err, user_id, "home: failed to load orbit vector");
+            tracing::error!(error = %err, account = ?account, "home: failed to load orbit vector");
             None
         });
         let policy = policy.unwrap_or_else(|err| {
-            tracing::error!(error = %err, user_id, "home: failed to load policy");
+            tracing::error!(error = %err, account = ?account, "home: failed to load policy");
             UserPolicy::default()
         });
         metrics::histogram!("fediway_home_vector_load_duration_seconds")
@@ -83,7 +83,7 @@ impl HomeFeed {
             "network",
             [NetworkSource::new(
                 state.pool.clone(),
-                user_id,
+                account.0,
                 state.instance_domain.clone(),
                 state.media.clone(),
             )],
@@ -142,7 +142,10 @@ impl HomeFeed {
             })
             .build();
 
-        Self { pipeline, user_id }
+        Self {
+            pipeline,
+            user_id: account.0,
+        }
     }
 
     pub async fn serve(
@@ -197,7 +200,7 @@ impl HomeFeed {
             &state.instance_domain,
             &state.media,
             cached_posts,
-            Some(self.user_id),
+            Some(AccountId(self.user_id)),
         )
         .await;
 

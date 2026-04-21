@@ -3,6 +3,7 @@ use std::time::Instant;
 
 use axum::Json;
 use axum::http::HeaderMap;
+use common::ids::AccountId;
 use common::types::Post;
 use feed::Feed;
 use mastodon::Status;
@@ -48,7 +49,7 @@ pub trait TimelineFeed: Feed<Item = Post> {
                 &state.instance_domain,
                 &state.media,
                 cached,
-                self.viewer_id(),
+                self.viewer_id().map(AccountId),
             )
             .await;
             let (page, headers) = statuses::paginate(

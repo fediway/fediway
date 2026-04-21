@@ -21,7 +21,7 @@ pub async fn hydrate(
     instance_domain: &str,
     media: &MediaConfig,
     cached: Vec<CachedPost>,
-    viewer_account_id: Option<i64>,
+    viewer: Option<AccountId>,
 ) -> Vec<Status> {
     // A CommonFeed post that has already been resolved into Mastodon's
     // `statuses` table is functionally local: Mastodon holds the canonical
@@ -75,13 +75,7 @@ pub async fn hydrate(
     }
 
     let (local_statuses, remote_statuses) = tokio::join!(
-        fetch_by_ids(
-            db,
-            instance_domain,
-            media,
-            &local_ids,
-            viewer_account_id.map(AccountId)
-        ),
+        fetch_by_ids(db, instance_domain, media, &local_ids, viewer),
         from_posts(db, instance_domain, remote_posts),
     );
     let local_statuses = local_statuses.unwrap_or_else(|err| {

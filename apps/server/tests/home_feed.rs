@@ -1,5 +1,6 @@
 mod common;
 
+use ::common::ids::AccountId;
 use feed::Feed;
 use server::feeds::HomeFeed;
 use server::state::AppStateInner;
@@ -80,7 +81,7 @@ async fn home_feed_surfaces_network_candidates(pool: PgPool) {
         None,
     );
 
-    let feed = HomeFeed::new(&state, viewer_id, QueryFilters::default()).await;
+    let feed = HomeFeed::new(&state, AccountId(viewer_id), QueryFilters::default()).await;
     let candidates = feed.collect().await;
 
     assert!(
@@ -108,6 +109,6 @@ async fn home_feed_cold_start_does_not_panic(pool: PgPool) {
         None,
     );
 
-    let feed = HomeFeed::new(&state, viewer_id, QueryFilters::default()).await;
+    let feed = HomeFeed::new(&state, AccountId(viewer_id), QueryFilters::default()).await;
     let _ = feed.collect().await;
 }
