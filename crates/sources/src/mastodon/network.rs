@@ -121,6 +121,8 @@ const CANDIDATE_QUERY: &str = r"
         a.avatar_remote_url,
         a.header_file_name,
         a.header_remote_url,
+        a.avatar_storage_schema_version,
+        a.header_storage_schema_version,
         ROW_NUMBER() OVER (
           PARTITION BY s.account_id
           ORDER BY
@@ -151,7 +153,8 @@ const CANDIDATE_QUERY: &str = r"
     SELECT
       id, account_id, uri, url, text, spoiler_text, sensitive, language,
       created_at, username, domain, display_name, account_url,
-      avatar_file_name, avatar_remote_url, header_file_name, header_remote_url
+      avatar_file_name, avatar_remote_url, header_file_name, header_remote_url,
+      avatar_storage_schema_version, header_storage_schema_version
     FROM ranked
     WHERE rn <= $2
     ORDER BY created_at DESC

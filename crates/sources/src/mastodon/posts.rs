@@ -26,7 +26,9 @@ const NATIVE_TAG_QUERY: &str = r"
         a.avatar_file_name,
         a.avatar_remote_url,
         a.header_file_name,
-        a.header_remote_url
+        a.header_remote_url,
+        a.avatar_storage_schema_version,
+        a.header_storage_schema_version
     FROM statuses s
     JOIN accounts a ON a.id = s.account_id
     JOIN statuses_tags st ON st.status_id = s.id
@@ -57,7 +59,9 @@ const FEDERATED_TAG_QUERY: &str = r"
         a.avatar_file_name,
         a.avatar_remote_url,
         a.header_file_name,
-        a.header_remote_url
+        a.header_remote_url,
+        a.avatar_storage_schema_version,
+        a.header_storage_schema_version
     FROM statuses s
     JOIN accounts a ON a.id = s.account_id
     JOIN statuses_tags st ON st.status_id = s.id

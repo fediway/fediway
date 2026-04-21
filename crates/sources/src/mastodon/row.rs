@@ -23,6 +23,8 @@ pub(crate) struct StatusRow {
     pub avatar_remote_url: Option<String>,
     pub header_file_name: Option<String>,
     pub header_remote_url: Option<String>,
+    pub avatar_storage_schema_version: Option<i32>,
+    pub header_storage_schema_version: Option<i32>,
 }
 
 pub(crate) fn row_to_post(row: StatusRow, instance_domain: &str, media: &MediaConfig) -> Post {
@@ -35,18 +37,20 @@ pub(crate) fn row_to_post(row: StatusRow, instance_domain: &str, media: &MediaCo
         .unwrap_or_else(|| format!("https://{}/@{}", instance_domain, row.username));
     let url = row.url.clone().unwrap_or_else(|| row.uri.clone());
     let content_warning = row.spoiler_text.filter(|s| !s.is_empty());
-    let is_local = row.domain.is_none();
+    let is_remote = row.domain.is_some();
+    let avatar_cached = is_remote && row.avatar_storage_schema_version.unwrap_or(0) >= 1;
+    let header_cached = is_remote && row.header_storage_schema_version.unwrap_or(0) >= 1;
     let avatar_url = media.avatar_url(
         row.account_id,
         row.avatar_file_name.as_deref(),
         row.avatar_remote_url.as_deref(),
-        is_local,
+        avatar_cached,
     );
     let header_url = media.header_url(
         row.account_id,
         row.header_file_name.as_deref(),
         row.header_remote_url.as_deref(),
-        is_local,
+        header_cached,
     );
 
     Post {
@@ -109,6 +113,8 @@ mod tests {
             avatar_remote_url: None,
             header_file_name: None,
             header_remote_url: None,
+            avatar_storage_schema_version: None,
+            header_storage_schema_version: None,
         }
     }
 
@@ -135,6 +141,8 @@ mod tests {
             avatar_remote_url: None,
             header_file_name: None,
             header_remote_url: None,
+            avatar_storage_schema_version: None,
+            header_storage_schema_version: None,
         }
     }
 
