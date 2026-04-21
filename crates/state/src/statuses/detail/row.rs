@@ -44,6 +44,8 @@ pub(super) struct BaseRow {
     pub(super) locked: bool,
     pub(super) actor_type: Option<String>,
     pub(super) fields: Option<Json<Vec<FieldRow>>>,
+    pub(super) avatar_storage_schema_version: Option<i32>,
+    pub(super) header_storage_schema_version: Option<i32>,
     pub(super) statuses_count: i64,
     pub(super) following_count: i64,
     pub(super) followers_count: i64,
@@ -78,7 +80,7 @@ pub(super) struct MediaRow {
     pub(super) file_file_name: Option<String>,
     pub(super) file_meta: Option<serde_json::Value>,
     pub(super) thumbnail_file_name: Option<String>,
-    pub(super) account_is_local: bool,
+    pub(super) file_storage_schema_version: Option<i32>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
@@ -122,6 +124,7 @@ pub(super) struct CardRow {
     pub(super) height: i32,
     pub(super) embed_url: String,
     pub(super) blurhash: Option<String>,
+    pub(super) image_storage_schema_version: Option<i32>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, sqlx::Type)]
@@ -160,6 +163,7 @@ pub(super) struct EmojiRow {
     pub(super) domain: Option<String>,
     pub(super) image_file_name: Option<String>,
     pub(super) image_remote_url: Option<String>,
+    pub(super) image_storage_schema_version: Option<i32>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -306,7 +310,9 @@ pub(super) fn build_account(
     media: &MediaConfig,
     emojis: &HashMap<String, EmojiRow>,
 ) -> Account {
-    let is_local = row.domain.is_none();
+    let is_remote = row.domain.is_some();
+    let avatar_cached = is_remote && row.avatar_storage_schema_version.unwrap_or(0) >= 1;
+    let header_cached = is_remote && row.header_storage_schema_version.unwrap_or(0) >= 1;
     let acct = match &row.domain {
         Some(d) => format!("{}@{}", row.username, d),
         None => row.username.clone(),
@@ -326,13 +332,13 @@ pub(super) fn build_account(
         row.account_id,
         row.avatar_file_name.as_deref(),
         row.avatar_remote_url.as_deref(),
-        is_local,
+        avatar_cached,
     );
     let header = media.header_url(
         row.account_id,
         row.header_file_name.as_deref(),
         non_empty(&row.header_remote_url),
-        is_local,
+        header_cached,
     );
 
     let bot = matches!(row.actor_type.as_deref(), Some("Service" | "Application"));
@@ -389,18 +395,15 @@ pub(super) fn build_account(
 }
 
 pub(super) fn build_media_attachment(row: &MediaRow, media: &MediaConfig) -> MediaAttachment {
+    let cached = !row.remote_url.is_empty() && row.file_storage_schema_version.unwrap_or(0) >= 1;
     let url = media.media_attachment_url(
         row.id,
         row.file_file_name.as_deref(),
         non_empty(&row.remote_url),
-        row.account_is_local,
+        cached,
     );
     let preview_url = media
-        .media_thumbnail_url(
-            row.id,
-            row.thumbnail_file_name.as_deref(),
-            row.account_is_local,
-        )
+        .media_thumbnail_url(row.id, row.thumbnail_file_name.as_deref(), cached)
         .or_else(|| url.clone());
     let (width, height) = file_meta_dimensions(row.file_meta.as_ref());
     let meta = match (width, height) {
@@ -424,7 +427,8 @@ pub(super) fn build_media_attachment(row: &MediaRow, media: &MediaConfig) -> Med
 }
 
 pub(super) fn build_card(row: &CardRow, media: &MediaConfig) -> PreviewCard {
-    let image = media.preview_card_image_url(row.id, row.image_file_name.as_deref());
+    let cached = row.image_storage_schema_version.unwrap_or(0) >= 1;
+    let image = media.preview_card_image_url(row.id, row.image_file_name.as_deref(), cached);
     PreviewCard {
         url: row.url.clone(),
         title: sanitize_text(&row.title),
@@ -490,12 +494,13 @@ pub(super) fn build_emojis(
             let Some(emoji) = emojis.get(shortcode) else {
                 continue;
             };
-            let is_local = emoji.domain.is_none();
+            let cached =
+                emoji.domain.is_some() && emoji.image_storage_schema_version.unwrap_or(0) >= 1;
             let Some(url) = media.custom_emoji_url(
                 emoji.id,
                 emoji.image_file_name.as_deref(),
                 emoji.image_remote_url.as_deref(),
-                is_local,
+                cached,
             ) else {
                 continue;
             };

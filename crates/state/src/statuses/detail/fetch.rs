@@ -339,7 +339,7 @@ async fn fetch_emojis(
 ) -> Result<HashMap<String, EmojiRow>, crate::Error> {
     let codes: Vec<&str> = shortcodes.iter().map(String::as_str).collect();
     let query = r"
-        SELECT id, shortcode, domain, image_file_name, image_remote_url
+        SELECT id, shortcode, domain, image_file_name, image_remote_url, image_storage_schema_version
         FROM custom_emojis
         WHERE disabled = FALSE AND shortcode = ANY($1::text[])
         ORDER BY domain IS NOT NULL, shortcode

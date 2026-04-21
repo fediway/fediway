@@ -28,6 +28,8 @@ pub(super) const BASE_QUERY: &str = r"
         a.locked,
         a.actor_type,
         a.fields,
+        a.avatar_storage_schema_version,
+        a.header_storage_schema_version,
         COALESCE(ast.statuses_count, 0)::bigint  AS statuses_count,
         COALESCE(ast.following_count, 0)::bigint AS following_count,
         COALESCE(ast.followers_count, 0)::bigint AS followers_count,
@@ -55,10 +57,9 @@ pub(super) const MEDIA_QUERY: &str = r"
         ma.file_file_name,
         ma.file_meta,
         ma.thumbnail_file_name,
-        (a.domain IS NULL) AS account_is_local
+        ma.file_storage_schema_version
     FROM media_attachments ma
     JOIN statuses s ON s.id = ma.status_id
-    JOIN accounts a ON a.id = s.account_id
     WHERE ma.status_id = ANY($1::bigint[])
     ORDER BY
         ma.status_id,
@@ -84,7 +85,8 @@ pub(super) const CARD_QUERY: &str = r"
         pc.width,
         pc.height,
         pc.embed_url,
-        pc.blurhash
+        pc.blurhash,
+        pc.image_storage_schema_version
     FROM preview_cards_statuses pcs
     JOIN preview_cards pc ON pc.id = pcs.preview_card_id
     WHERE pcs.status_id = ANY($1::bigint[])

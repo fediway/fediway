@@ -16,9 +16,9 @@ impl MediaConfig {
         account_id: i64,
         file_name: Option<&str>,
         remote_url: Option<&str>,
-        is_local: bool,
+        cached: bool,
     ) -> String {
-        self.attachment_url("avatars", account_id, file_name, remote_url, is_local)
+        self.attachment_url("avatars", account_id, file_name, remote_url, cached)
     }
 
     #[must_use]
@@ -27,9 +27,9 @@ impl MediaConfig {
         account_id: i64,
         file_name: Option<&str>,
         remote_url: Option<&str>,
-        is_local: bool,
+        cached: bool,
     ) -> String {
-        self.attachment_url("headers", account_id, file_name, remote_url, is_local)
+        self.attachment_url("headers", account_id, file_name, remote_url, cached)
     }
 
     #[must_use]
@@ -38,7 +38,7 @@ impl MediaConfig {
         media_id: i64,
         file_name: Option<&str>,
         remote_url: Option<&str>,
-        is_local: bool,
+        cached: bool,
     ) -> Option<String> {
         if let Some(name) = file_name {
             return Some(self.build_file_url(
@@ -46,7 +46,7 @@ impl MediaConfig {
                 "files",
                 media_id,
                 name,
-                is_local,
+                cached,
                 "original",
             ));
         }
@@ -58,7 +58,7 @@ impl MediaConfig {
         &self,
         media_id: i64,
         thumbnail_file_name: Option<&str>,
-        is_local: bool,
+        cached: bool,
     ) -> Option<String> {
         thumbnail_file_name.map(|name| {
             self.build_file_url(
@@ -66,16 +66,27 @@ impl MediaConfig {
                 "files",
                 media_id,
                 name,
-                is_local,
+                cached,
                 "small",
             )
         })
     }
 
+    /// Mastodon prepends `cache/` to S3 URLs when an attachment's
+    /// `{attachment}_storage_schema_version >= 1` AND its instance's `local?`
+    /// returns false. `PreviewCard#local?` is hardcoded `false`, so for cards
+    /// the version column is the sole discriminator. For other classes,
+    /// `cached` is computed from both columns at the call site.
+    /// See `mastodon/config/initializers/paperclip.rb` `:prefix_url`.
     #[must_use]
-    pub fn preview_card_image_url(&self, card_id: i64, file_name: Option<&str>) -> Option<String> {
+    pub fn preview_card_image_url(
+        &self,
+        card_id: i64,
+        file_name: Option<&str>,
+        cached: bool,
+    ) -> Option<String> {
         file_name.map(|name| {
-            self.build_file_url("preview_cards", "images", card_id, name, true, "original")
+            self.build_file_url("preview_cards", "images", card_id, name, cached, "original")
         })
     }
 
@@ -85,7 +96,7 @@ impl MediaConfig {
         emoji_id: i64,
         file_name: Option<&str>,
         remote_url: Option<&str>,
-        is_local: bool,
+        cached: bool,
     ) -> Option<String> {
         if let Some(name) = file_name {
             return Some(self.build_file_url(
@@ -93,7 +104,7 @@ impl MediaConfig {
                 "images",
                 emoji_id,
                 name,
-                is_local,
+                cached,
                 "original",
             ));
         }
@@ -106,12 +117,11 @@ impl MediaConfig {
         account_id: i64,
         file_name: Option<&str>,
         remote_url: Option<&str>,
-        is_local: bool,
+        cached: bool,
     ) -> String {
         if let Some(name) = file_name {
-            return self.build_file_url(
-                "accounts", attachment, account_id, name, is_local, "original",
-            );
+            return self
+                .build_file_url("accounts", attachment, account_id, name, cached, "original");
         }
         if let Some(remote) = remote_url {
             return remote.to_string();
@@ -125,12 +135,12 @@ impl MediaConfig {
         attachment: &str,
         id: i64,
         file_name: &str,
-        is_local: bool,
+        cached: bool,
         style: &str,
     ) -> String {
         let partition = id_partition(id);
         if self.s3_enabled {
-            let cache_prefix = if is_local { "" } else { "cache/" };
+            let cache_prefix = if cached { "cache/" } else { "" };
             format!(
                 "https://{}/{cache_prefix}{class}/{attachment}/{partition}/{style}/{file_name}",
                 self.host
@@ -184,15 +194,6 @@ mod tests {
 
     #[test]
     fn avatar_url_local_account_local_mode() {
-        let url = local_config().avatar_url(42, Some("abc.jpg"), None, true);
-        assert_eq!(
-            url,
-            "https://mastodon.example/system/accounts/avatars/000/000/042/original/abc.jpg"
-        );
-    }
-
-    #[test]
-    fn avatar_url_remote_account_local_mode_uses_local_path_when_cached() {
         let url = local_config().avatar_url(42, Some("abc.jpg"), None, false);
         assert_eq!(
             url,
@@ -201,8 +202,17 @@ mod tests {
     }
 
     #[test]
+    fn avatar_url_remote_account_local_mode_uses_local_path_when_cached() {
+        let url = local_config().avatar_url(42, Some("abc.jpg"), None, true);
+        assert_eq!(
+            url,
+            "https://mastodon.example/system/accounts/avatars/000/000/042/original/abc.jpg"
+        );
+    }
+
+    #[test]
     fn avatar_url_local_account_s3_mode_no_cache_prefix() {
-        let url = s3_config().avatar_url(42, Some("abc.jpg"), None, true);
+        let url = s3_config().avatar_url(42, Some("abc.jpg"), None, false);
         assert_eq!(
             url,
             "https://cdn.example/accounts/avatars/000/000/042/original/abc.jpg"
@@ -211,7 +221,7 @@ mod tests {
 
     #[test]
     fn avatar_url_remote_account_s3_mode_uses_cache_prefix() {
-        let url = s3_config().avatar_url(42, Some("abc.jpg"), None, false);
+        let url = s3_config().avatar_url(42, Some("abc.jpg"), None, true);
         assert_eq!(
             url,
             "https://cdn.example/cache/accounts/avatars/000/000/042/original/abc.jpg"
@@ -224,20 +234,20 @@ mod tests {
             42,
             None,
             Some("https://other.example/avatars/abc.jpg"),
-            false,
+            true,
         );
         assert_eq!(url, "https://other.example/avatars/abc.jpg");
     }
 
     #[test]
     fn avatar_url_falls_back_to_missing_when_no_data() {
-        let url = local_config().avatar_url(42, None, None, true);
+        let url = local_config().avatar_url(42, None, None, false);
         assert_eq!(url, "https://mastodon.example/avatars/original/missing.png");
     }
 
     #[test]
     fn header_url_uses_headers_segment() {
-        let url = local_config().header_url(42, Some("hdr.jpg"), None, true);
+        let url = local_config().header_url(42, Some("hdr.jpg"), None, false);
         assert_eq!(
             url,
             "https://mastodon.example/system/accounts/headers/000/000/042/original/hdr.jpg"
@@ -246,13 +256,13 @@ mod tests {
 
     #[test]
     fn header_url_falls_back_to_missing() {
-        let url = local_config().header_url(42, None, None, true);
+        let url = local_config().header_url(42, None, None, false);
         assert_eq!(url, "https://mastodon.example/headers/original/missing.png");
     }
 
     #[test]
     fn media_attachment_url_local_status_local_mode() {
-        let url = local_config().media_attachment_url(7, Some("photo.jpg"), None, true);
+        let url = local_config().media_attachment_url(7, Some("photo.jpg"), None, false);
         assert_eq!(
             url.as_deref(),
             Some(
@@ -263,7 +273,7 @@ mod tests {
 
     #[test]
     fn media_attachment_url_remote_status_s3_mode_uses_cache_prefix() {
-        let url = s3_config().media_attachment_url(7, Some("photo.jpg"), None, false);
+        let url = s3_config().media_attachment_url(7, Some("photo.jpg"), None, true);
         assert_eq!(
             url.as_deref(),
             Some(
@@ -278,20 +288,20 @@ mod tests {
             7,
             None,
             Some("https://other.example/photo.jpg"),
-            false,
+            true,
         );
         assert_eq!(url.as_deref(), Some("https://other.example/photo.jpg"));
     }
 
     #[test]
     fn media_attachment_url_none_when_no_data() {
-        let url = local_config().media_attachment_url(7, None, None, true);
+        let url = local_config().media_attachment_url(7, None, None, false);
         assert_eq!(url, None);
     }
 
     #[test]
     fn media_thumbnail_url_uses_small_style() {
-        let url = local_config().media_thumbnail_url(7, Some("thumb.jpg"), true);
+        let url = local_config().media_thumbnail_url(7, Some("thumb.jpg"), false);
         assert_eq!(
             url.as_deref(),
             Some(
@@ -302,13 +312,13 @@ mod tests {
 
     #[test]
     fn media_thumbnail_url_none_when_missing() {
-        let url = local_config().media_thumbnail_url(7, None, true);
+        let url = local_config().media_thumbnail_url(7, None, false);
         assert_eq!(url, None);
     }
 
     #[test]
-    fn preview_card_image_url_uses_preview_cards_class() {
-        let url = local_config().preview_card_image_url(99, Some("og.jpg"));
+    fn preview_card_image_url_local_fs_has_no_cache_prefix() {
+        let url = local_config().preview_card_image_url(99, Some("og.jpg"), true);
         assert_eq!(
             url.as_deref(),
             Some(
@@ -318,8 +328,17 @@ mod tests {
     }
 
     #[test]
-    fn preview_card_image_url_s3_mode_never_uses_cache_prefix() {
-        let url = s3_config().preview_card_image_url(99, Some("og.jpg"));
+    fn preview_card_image_url_s3_cached_adds_cache_prefix() {
+        let url = s3_config().preview_card_image_url(99, Some("og.jpg"), true);
+        assert_eq!(
+            url.as_deref(),
+            Some("https://cdn.example/cache/preview_cards/images/000/000/099/original/og.jpg")
+        );
+    }
+
+    #[test]
+    fn preview_card_image_url_s3_uncached_no_cache_prefix() {
+        let url = s3_config().preview_card_image_url(99, Some("og.jpg"), false);
         assert_eq!(
             url.as_deref(),
             Some("https://cdn.example/preview_cards/images/000/000/099/original/og.jpg")
@@ -328,13 +347,13 @@ mod tests {
 
     #[test]
     fn preview_card_image_url_none_when_missing() {
-        let url = local_config().preview_card_image_url(99, None);
+        let url = local_config().preview_card_image_url(99, None, true);
         assert_eq!(url, None);
     }
 
     #[test]
     fn custom_emoji_url_local_emoji() {
-        let url = local_config().custom_emoji_url(5, Some("party.png"), None, true);
+        let url = local_config().custom_emoji_url(5, Some("party.png"), None, false);
         assert_eq!(
             url.as_deref(),
             Some(
@@ -345,7 +364,7 @@ mod tests {
 
     #[test]
     fn custom_emoji_url_federated_emoji_s3_mode_uses_cache_prefix() {
-        let url = s3_config().custom_emoji_url(5, Some("party.png"), None, false);
+        let url = s3_config().custom_emoji_url(5, Some("party.png"), None, true);
         assert_eq!(
             url.as_deref(),
             Some("https://cdn.example/cache/custom_emojis/images/000/000/005/original/party.png")
@@ -354,12 +373,8 @@ mod tests {
 
     #[test]
     fn custom_emoji_url_falls_back_to_remote() {
-        let url = local_config().custom_emoji_url(
-            5,
-            None,
-            Some("https://other.example/emoji.png"),
-            false,
-        );
+        let url =
+            local_config().custom_emoji_url(5, None, Some("https://other.example/emoji.png"), true);
         assert_eq!(url.as_deref(), Some("https://other.example/emoji.png"));
     }
 }
