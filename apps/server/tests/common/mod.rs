@@ -64,8 +64,10 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             discoverable        BOOLEAN,
             indexable           BOOLEAN NOT NULL DEFAULT FALSE,
             locked              BOOLEAN NOT NULL DEFAULT FALSE,
-            actor_type          TEXT,
-            fields              JSONB
+            actor_type                      TEXT,
+            fields                          JSONB,
+            avatar_storage_schema_version   INTEGER,
+            header_storage_schema_version   INTEGER
         )",
         r"CREATE TABLE IF NOT EXISTS account_stats (
             id                  BIGSERIAL PRIMARY KEY,
@@ -106,9 +108,10 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             blurhash                TEXT,
             file_file_name          TEXT,
             file_meta               JSON,
-            thumbnail_file_name     TEXT,
-            created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
-            updated_at              TIMESTAMP NOT NULL DEFAULT NOW()
+            thumbnail_file_name             TEXT,
+            file_storage_schema_version     INTEGER,
+            created_at                      TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at                      TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS preview_cards (
             id                  BIGSERIAL PRIMARY KEY,
@@ -125,11 +128,12 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             image_description   TEXT NOT NULL DEFAULT '',
             width               INTEGER NOT NULL DEFAULT 0,
             height              INTEGER NOT NULL DEFAULT 0,
-            embed_url           TEXT NOT NULL DEFAULT '',
-            blurhash            TEXT,
-            language            TEXT,
-            created_at          TIMESTAMP NOT NULL DEFAULT NOW(),
-            updated_at          TIMESTAMP NOT NULL DEFAULT NOW()
+            embed_url                       TEXT NOT NULL DEFAULT '',
+            blurhash                        TEXT,
+            language                        TEXT,
+            image_storage_schema_version    INTEGER,
+            created_at                      TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at                      TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS preview_cards_statuses (
             preview_card_id     BIGINT NOT NULL,
@@ -142,10 +146,11 @@ pub async fn setup_mastodon_schema(pool: &PgPool) {
             domain                  TEXT,
             image_file_name         TEXT,
             image_remote_url        TEXT,
-            disabled                BOOLEAN NOT NULL DEFAULT FALSE,
-            visible_in_picker       BOOLEAN NOT NULL DEFAULT TRUE,
-            created_at              TIMESTAMP NOT NULL DEFAULT NOW(),
-            updated_at              TIMESTAMP NOT NULL DEFAULT NOW()
+            disabled                        BOOLEAN NOT NULL DEFAULT FALSE,
+            visible_in_picker               BOOLEAN NOT NULL DEFAULT TRUE,
+            image_storage_schema_version    INTEGER,
+            created_at                      TIMESTAMP NOT NULL DEFAULT NOW(),
+            updated_at                      TIMESTAMP NOT NULL DEFAULT NOW()
         )",
         r"CREATE TABLE IF NOT EXISTS quotes (
             id                  BIGSERIAL PRIMARY KEY,
