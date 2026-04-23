@@ -14,7 +14,7 @@ use mastodon::Status;
 use sources::commonfeed::posts::PostsSource;
 use sources::commonfeed::recommended::RecommendedSource;
 use sources::commonfeed::types::QueryFilters;
-use sources::mastodon::{CachedPost, NetworkSource, PolicyFilter};
+use sources::mastodon::{FeedItem, NetworkSource, PolicyFilter};
 use state::policy::UserPolicy;
 
 use crate::feeds::seen;
@@ -175,7 +175,7 @@ impl HomeFeed {
             !seen_set.contains(uri)
         };
 
-        let mut chosen: Vec<(String, String, CachedPost)> = pool
+        let mut chosen: Vec<(String, String, FeedItem)> = pool
             .into_iter()
             .filter(|(uri, group, _)| keep(uri, group))
             .take(limit)
@@ -192,7 +192,7 @@ impl HomeFeed {
                 .collect();
         }
 
-        let (served, cached_posts): (Vec<String>, Vec<CachedPost>) =
+        let (served, cached_posts): (Vec<String>, Vec<FeedItem>) =
             chosen.into_iter().map(|(uri, _, post)| (uri, post)).unzip();
 
         let statuses = match crate::mastodon::statuses::to_statuses(
@@ -232,10 +232,10 @@ impl HomeFeed {
         (headers, Json(statuses))
     }
 
-    async fn load_pool(&self, state: &AppState) -> Vec<(String, String, CachedPost)> {
+    async fn load_pool(&self, state: &AppState) -> Vec<(String, String, FeedItem)> {
         if let Some(pool) = state
             .cache
-            .get::<Vec<(String, String, CachedPost)>>(&self.cache_key())
+            .get::<Vec<(String, String, FeedItem)>>(&self.cache_key())
             .await
             && !pool.is_empty()
         {
@@ -244,7 +244,7 @@ impl HomeFeed {
         self.rebuild_pool(state).await
     }
 
-    async fn rebuild_pool(&self, state: &AppState) -> Vec<(String, String, CachedPost)> {
+    async fn rebuild_pool(&self, state: &AppState) -> Vec<(String, String, FeedItem)> {
         let pool: Vec<_> = self
             .collect()
             .await
@@ -255,7 +255,7 @@ impl HomeFeed {
                 (
                     uri,
                     group,
-                    CachedPost::from_post(c.item, &state.instance_domain),
+                    FeedItem::from_post(c.item, &state.instance_domain),
                 )
             })
             .collect();

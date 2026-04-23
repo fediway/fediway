@@ -7,7 +7,7 @@ use common::ids::{AccountId, StatusId};
 use common::paperclip::MediaConfig;
 use common::types::Post;
 use mastodon::Status;
-use sources::mastodon::CachedPost;
+use sources::mastodon::FeedItem;
 use sqlx::PgPool;
 use state::statuses::{PostMapping, fetch_by_ids};
 
@@ -20,7 +20,7 @@ pub async fn to_statuses(
     db: &PgPool,
     instance_domain: &str,
     media: &MediaConfig,
-    items: Vec<CachedPost>,
+    items: Vec<FeedItem>,
     viewer: Option<AccountId>,
 ) -> Result<Vec<Status>, state::Error> {
     // A CommonFeed post already resolved into Mastodon's `statuses` table is
@@ -32,11 +32,11 @@ pub async fn to_statuses(
     let provider_pairs: Vec<(String, i64)> = items
         .iter()
         .filter_map(|item| match item {
-            CachedPost::Remote { post } => match (&post.provider_domain, post.provider_id) {
+            FeedItem::Remote { post } => match (&post.provider_domain, post.provider_id) {
                 (Some(domain), Some(remote_id)) => Some((domain.clone(), remote_id)),
                 _ => None,
             },
-            CachedPost::Local { .. } => None,
+            FeedItem::Local { .. } => None,
         })
         .collect();
 
@@ -47,11 +47,11 @@ pub async fn to_statuses(
     let mut remote_posts: Vec<Post> = Vec::new();
     for item in items {
         match item {
-            CachedPost::Local { id } => {
-                refs.push(ItemRef::Local(StatusId(id)));
-                local_ids.push(StatusId(id));
+            FeedItem::Local { id } => {
+                refs.push(ItemRef::Local(id));
+                local_ids.push(id);
             }
-            CachedPost::Remote { post } => {
+            FeedItem::Remote { post } => {
                 let promoted = match (&post.provider_domain, post.provider_id) {
                     (Some(domain), Some(remote_id)) => {
                         resolved_map.get(&(domain.clone(), remote_id)).copied()

@@ -8,7 +8,7 @@ use common::types::Post;
 use feed::Feed;
 use mastodon::Status;
 use serde::Deserialize;
-use sources::mastodon::CachedPost;
+use sources::mastodon::FeedItem;
 
 use crate::mastodon::statuses;
 use crate::state::AppState;
@@ -40,9 +40,9 @@ pub trait TimelineFeed: Feed<Item = Post> {
                 .increment(1);
 
             let candidates = self.collect().await;
-            let cached: Vec<CachedPost> = candidates
+            let cached: Vec<FeedItem> = candidates
                 .into_iter()
-                .map(|c| CachedPost::from_post(c.item, &state.instance_domain))
+                .map(|c| FeedItem::from_post(c.item, &state.instance_domain))
                 .collect();
             let built = match statuses::to_statuses(
                 &state.pool,

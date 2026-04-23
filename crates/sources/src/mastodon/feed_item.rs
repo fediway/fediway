@@ -1,18 +1,21 @@
+use common::ids::StatusId;
 use common::types::Post;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
-pub enum CachedPost {
-    Local { id: i64 },
+pub enum FeedItem {
+    Local { id: StatusId },
     Remote { post: Box<Post> },
 }
 
-impl CachedPost {
+impl FeedItem {
     #[must_use]
     pub fn from_post(post: Post, instance_domain: &str) -> Self {
         match (&post.provider_domain, post.provider_id) {
-            (Some(domain), Some(id)) if domain == instance_domain => Self::Local { id },
+            (Some(domain), Some(id)) if domain == instance_domain => {
+                Self::Local { id: StatusId(id) }
+            }
             _ => Self::Remote {
                 post: Box::new(post),
             },
@@ -59,9 +62,9 @@ mod tests {
     #[test]
     fn local_when_provider_domain_matches_and_id_present() {
         let p = post(Some("local.test"), Some(42));
-        match CachedPost::from_post(p, "local.test") {
-            CachedPost::Local { id } => assert_eq!(id, 42),
-            CachedPost::Remote { .. } => panic!("expected Local"),
+        match FeedItem::from_post(p, "local.test") {
+            FeedItem::Local { id } => assert_eq!(id, StatusId(42)),
+            FeedItem::Remote { .. } => panic!("expected Local"),
         }
     }
 
@@ -69,8 +72,8 @@ mod tests {
     fn remote_when_provider_domain_differs() {
         let p = post(Some("other.example"), Some(42));
         assert!(matches!(
-            CachedPost::from_post(p, "local.test"),
-            CachedPost::Remote { .. }
+            FeedItem::from_post(p, "local.test"),
+            FeedItem::Remote { .. }
         ));
     }
 
@@ -78,8 +81,8 @@ mod tests {
     fn remote_when_provider_id_missing() {
         let p = post(Some("local.test"), None);
         assert!(matches!(
-            CachedPost::from_post(p, "local.test"),
-            CachedPost::Remote { .. }
+            FeedItem::from_post(p, "local.test"),
+            FeedItem::Remote { .. }
         ));
     }
 
@@ -87,8 +90,8 @@ mod tests {
     fn remote_when_provider_domain_missing() {
         let p = post(None, Some(42));
         assert!(matches!(
-            CachedPost::from_post(p, "local.test"),
-            CachedPost::Remote { .. }
+            FeedItem::from_post(p, "local.test"),
+            FeedItem::Remote { .. }
         ));
     }
 }

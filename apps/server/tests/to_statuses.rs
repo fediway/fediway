@@ -1,7 +1,7 @@
 mod common;
 
-use ::common::ids::AccountId;
-use sources::mastodon::CachedPost;
+use ::common::ids::{AccountId, StatusId};
+use sources::mastodon::FeedItem;
 use sqlx::PgPool;
 
 async fn insert_account(pool: &PgPool, username: &str, display_name: &str) -> i64 {
@@ -115,7 +115,7 @@ async fn to_statuses_promotes_resolved_remote_to_fetch_by_ids(pool: PgPool) {
         &pool,
         "local.test",
         &media,
-        vec![CachedPost::Remote {
+        vec![FeedItem::Remote {
             post: Box::new(post),
         }],
         Some(AccountId(viewer)),
@@ -162,7 +162,9 @@ async fn to_statuses_threads_viewer_state_through_to_local_statuses(pool: PgPool
         &pool,
         "local.test",
         &media,
-        vec![CachedPost::Local { id: status_id }],
+        vec![FeedItem::Local {
+            id: StatusId(status_id),
+        }],
         Some(AccountId(viewer)),
     )
     .await
@@ -197,7 +199,9 @@ async fn to_statuses_without_viewer_leaves_state_false(pool: PgPool) {
         &pool,
         "local.test",
         &media,
-        vec![CachedPost::Local { id: status_id }],
+        vec![FeedItem::Local {
+            id: StatusId(status_id),
+        }],
         None,
     )
     .await
