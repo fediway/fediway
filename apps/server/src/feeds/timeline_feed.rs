@@ -44,14 +44,23 @@ pub trait TimelineFeed: Feed<Item = Post> {
                 .into_iter()
                 .map(|c| CachedPost::from_post(c.item, &state.instance_domain))
                 .collect();
-            let built = statuses::hydrate(
+            let built = match statuses::to_statuses(
                 &state.pool,
                 &state.instance_domain,
                 &state.media,
                 cached,
                 self.viewer_id().map(AccountId),
             )
-            .await;
+            .await
+            {
+                Ok(s) => s,
+                Err(e) => {
+                    metrics::counter!("fediway_timelines_errors_total", "resource" => Self::RESOURCE)
+                        .increment(1);
+                    tracing::error!(resource = Self::RESOURCE, error = %e, "timeline: to_statuses failed");
+                    Vec::new()
+                }
+            };
             let (page, headers) = statuses::paginate(
                 built,
                 params.limit.min(40),

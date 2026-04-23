@@ -56,7 +56,7 @@ async fn insert_status(pool: &PgPool, account_id: i64, text: &str) -> i64 {
 }
 
 #[sqlx::test]
-async fn hydrate_promotes_resolved_remote_to_fetch_by_ids(pool: PgPool) {
+async fn to_statuses_promotes_resolved_remote_to_fetch_by_ids(pool: PgPool) {
     common::setup_db(&pool).await;
     common::setup_mastodon_schema(&pool).await;
 
@@ -111,7 +111,7 @@ async fn hydrate_promotes_resolved_remote_to_fetch_by_ids(pool: PgPool) {
     let post: ::common::types::Post = serde_json::from_value(post_json).unwrap();
 
     let media = common::test_media();
-    let out = server::mastodon::statuses::hydrate(
+    let out = server::mastodon::statuses::to_statuses(
         &pool,
         "local.test",
         &media,
@@ -120,7 +120,8 @@ async fn hydrate_promotes_resolved_remote_to_fetch_by_ids(pool: PgPool) {
         }],
         Some(AccountId(viewer)),
     )
-    .await;
+    .await
+    .expect("to_statuses should succeed");
 
     assert_eq!(out.len(), 1);
     assert_eq!(
@@ -140,7 +141,7 @@ async fn hydrate_promotes_resolved_remote_to_fetch_by_ids(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn hydrate_threads_viewer_state_through_to_local_statuses(pool: PgPool) {
+async fn to_statuses_threads_viewer_state_through_to_local_statuses(pool: PgPool) {
     common::setup_mastodon_schema(&pool).await;
 
     let author = insert_account(&pool, "author", "Author").await;
@@ -148,7 +149,7 @@ async fn hydrate_threads_viewer_state_through_to_local_statuses(pool: PgPool) {
     let viewer = insert_account(&pool, "viewer", "Viewer").await;
     insert_account_stats(&pool, viewer, 0, 0, 0).await;
 
-    let status_id = insert_status(&pool, author, "favourited via hydrate").await;
+    let status_id = insert_status(&pool, author, "favourited via to_statuses").await;
     sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
         .bind(viewer)
         .bind(status_id)
@@ -157,24 +158,25 @@ async fn hydrate_threads_viewer_state_through_to_local_statuses(pool: PgPool) {
         .unwrap();
 
     let media = common::test_media();
-    let out = server::mastodon::statuses::hydrate(
+    let out = server::mastodon::statuses::to_statuses(
         &pool,
         "local.test",
         &media,
         vec![CachedPost::Local { id: status_id }],
         Some(AccountId(viewer)),
     )
-    .await;
+    .await
+    .expect("to_statuses should succeed");
 
     assert_eq!(out.len(), 1);
     assert!(
         out[0].favourited,
-        "hydrate must pass the viewer down to fetch_by_ids so per-user state reaches timeline responses"
+        "to_statuses must pass the viewer down to fetch_by_ids so per-user state reaches timeline responses"
     );
 }
 
 #[sqlx::test]
-async fn hydrate_without_viewer_leaves_state_false(pool: PgPool) {
+async fn to_statuses_without_viewer_leaves_state_false(pool: PgPool) {
     common::setup_mastodon_schema(&pool).await;
 
     let author = insert_account(&pool, "author", "Author").await;
@@ -191,14 +193,15 @@ async fn hydrate_without_viewer_leaves_state_false(pool: PgPool) {
         .unwrap();
 
     let media = common::test_media();
-    let out = server::mastodon::statuses::hydrate(
+    let out = server::mastodon::statuses::to_statuses(
         &pool,
         "local.test",
         &media,
         vec![CachedPost::Local { id: status_id }],
         None,
     )
-    .await;
+    .await
+    .expect("to_statuses should succeed");
 
     assert_eq!(out.len(), 1);
     assert!(!out[0].favourited);

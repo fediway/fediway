@@ -195,14 +195,22 @@ impl HomeFeed {
         let (served, cached_posts): (Vec<String>, Vec<CachedPost>) =
             chosen.into_iter().map(|(uri, _, post)| (uri, post)).unzip();
 
-        let statuses = crate::mastodon::statuses::hydrate(
+        let statuses = match crate::mastodon::statuses::to_statuses(
             &state.pool,
             &state.instance_domain,
             &state.media,
             cached_posts,
             Some(AccountId(self.user_id)),
         )
-        .await;
+        .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                metrics::counter!("fediway_home_errors_total").increment(1);
+                tracing::error!(error = %e, "home feed: to_statuses failed");
+                Vec::new()
+            }
+        };
 
         seen::extend(&state.cache, self.user_id, &served).await;
 

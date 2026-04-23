@@ -11,25 +11,25 @@ use sources::mastodon::CachedPost;
 use sqlx::PgPool;
 use state::statuses::{PostMapping, fetch_by_ids};
 
-enum Slot {
-    Local(i64),
+enum ItemRef {
+    Local(StatusId),
     Remote(usize),
 }
 
-pub async fn hydrate(
+pub async fn to_statuses(
     db: &PgPool,
     instance_domain: &str,
     media: &MediaConfig,
-    cached: Vec<CachedPost>,
+    items: Vec<CachedPost>,
     viewer: Option<AccountId>,
-) -> Vec<Status> {
-    // A CommonFeed post that has already been resolved into Mastodon's
-    // `statuses` table is functionally local: Mastodon holds the canonical
-    // content, counters, and per-user state. Serving it from the cached
-    // `post_data` blob would lose favourited/bookmarked/reblogged flags and
-    // return stale counters. Batch-lookup upfront lets the existing Local
-    // slot carry the Mastodon id through `fetch_by_ids`.
-    let provider_pairs: Vec<(String, i64)> = cached
+) -> Result<Vec<Status>, state::Error> {
+    // A CommonFeed post already resolved into Mastodon's `statuses` table is
+    // functionally local: Mastodon holds canonical content, counters, and
+    // per-user state. Serving it from the cached `post_data` blob would lose
+    // favourited/bookmarked/reblogged flags and return stale counters. The
+    // upfront batch lookup lets the existing Local branch carry the Mastodon
+    // id through `fetch_by_ids`.
+    let provider_pairs: Vec<(String, i64)> = items
         .iter()
         .filter_map(|item| match item {
             CachedPost::Remote { post } => match (&post.provider_domain, post.provider_id) {
@@ -40,20 +40,15 @@ pub async fn hydrate(
         })
         .collect();
 
-    let resolved_map = state::statuses::find_mastodon_ids_by_provider(db, &provider_pairs)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::warn!(error = %e, "hydrate: provider-to-local lookup failed");
-            std::collections::HashMap::new()
-        });
+    let resolved_map = state::statuses::find_mastodon_ids_by_provider(db, &provider_pairs).await?;
 
-    let mut slots: Vec<Slot> = Vec::with_capacity(cached.len());
+    let mut refs: Vec<ItemRef> = Vec::with_capacity(items.len());
     let mut local_ids: Vec<StatusId> = Vec::new();
     let mut remote_posts: Vec<Post> = Vec::new();
-    for item in cached {
+    for item in items {
         match item {
             CachedPost::Local { id } => {
-                slots.push(Slot::Local(id));
+                refs.push(ItemRef::Local(StatusId(id)));
                 local_ids.push(StatusId(id));
             }
             CachedPost::Remote { post } => {
@@ -64,24 +59,21 @@ pub async fn hydrate(
                     _ => None,
                 };
                 if let Some(mastodon_id) = promoted {
-                    slots.push(Slot::Local(mastodon_id));
+                    refs.push(ItemRef::Local(StatusId(mastodon_id)));
                     local_ids.push(StatusId(mastodon_id));
                 } else {
-                    slots.push(Slot::Remote(remote_posts.len()));
+                    refs.push(ItemRef::Remote(remote_posts.len()));
                     remote_posts.push(*post);
                 }
             }
         }
     }
 
-    let (local_statuses, remote_statuses) = tokio::join!(
+    let (local_result, remote_statuses) = tokio::join!(
         fetch_by_ids(db, instance_domain, media, &local_ids, viewer),
         from_posts(db, instance_domain, remote_posts),
     );
-    let local_statuses = local_statuses.unwrap_or_else(|err| {
-        tracing::error!(error = %err, "hydrate: failed to fetch local statuses");
-        Vec::new()
-    });
+    let local_statuses = local_result?;
 
     let local_by_id: HashMap<StatusId, Status> = local_statuses
         .into_iter()
@@ -90,13 +82,13 @@ pub async fn hydrate(
     let mut remote_by_idx: HashMap<usize, Status> =
         remote_statuses.into_iter().enumerate().collect();
 
-    slots
+    Ok(refs
         .into_iter()
-        .filter_map(|slot| match slot {
-            Slot::Local(id) => local_by_id.get(&StatusId(id)).cloned(),
-            Slot::Remote(idx) => remote_by_idx.remove(&idx),
+        .filter_map(|r| match r {
+            ItemRef::Local(id) => local_by_id.get(&id).cloned(),
+            ItemRef::Remote(idx) => remote_by_idx.remove(&idx),
         })
-        .collect()
+        .collect())
 }
 
 /// Posts are resolved to Mastodon status IDs by provenance:
