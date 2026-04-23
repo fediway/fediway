@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
+use common::ids::StatusId;
 use sqlx::{Executor, FromRow, Postgres};
 
 #[derive(Debug, FromRow)]
@@ -202,14 +203,14 @@ pub async fn clear_mastodon_local_id(
 pub async fn find_mastodon_ids_by_provider(
     e: impl Executor<'_, Database = Postgres>,
     pairs: &[(String, i64)],
-) -> Result<HashMap<(String, i64), i64>, crate::Error> {
+) -> Result<HashMap<(String, i64), StatusId>, crate::Error> {
     if pairs.is_empty() {
         return Ok(HashMap::new());
     }
     let domains: Vec<&str> = pairs.iter().map(|(d, _)| d.as_str()).collect();
     let remote_ids: Vec<i64> = pairs.iter().map(|(_, r)| *r).collect();
 
-    let rows = sqlx::query_as::<_, (String, i64, i64)>(
+    let rows = sqlx::query_as::<_, (String, i64, StatusId)>(
         "SELECT cs.provider_domain, cs.remote_id, cs.mastodon_local_id
          FROM commonfeed_statuses cs
          JOIN UNNEST($1::text[], $2::bigint[]) AS t(d, r)

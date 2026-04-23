@@ -59,8 +59,8 @@ pub async fn to_statuses(
                     _ => None,
                 };
                 if let Some(mastodon_id) = promoted {
-                    refs.push(ItemRef::Local(StatusId(mastodon_id)));
-                    local_ids.push(StatusId(mastodon_id));
+                    refs.push(ItemRef::Local(mastodon_id));
+                    local_ids.push(mastodon_id);
                 } else {
                     refs.push(ItemRef::Remote(remote_posts.len()));
                     remote_posts.push(*post);
