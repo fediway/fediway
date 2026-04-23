@@ -1,7 +1,6 @@
 mod common;
 
 use ::common::ids::{AccountId, StatusId};
-use sources::mastodon::CachedPost;
 use sqlx::PgPool;
 use state::statuses::fetch_by_ids;
 
@@ -616,166 +615,6 @@ async fn fetch_by_ids_anonymous_viewer_leaves_state_false(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn hydrate_promotes_resolved_remote_to_fetch_by_ids(pool: PgPool) {
-    common::setup_db(&pool).await;
-    common::setup_mastodon_schema(&pool).await;
-
-    let author = insert_account(&pool, "remauthor", None, "Remote Author", "").await;
-    insert_account_stats(&pool, author, 1, 0, 0).await;
-    let viewer = insert_account(&pool, "remviewer", None, "Remote Viewer", "").await;
-    insert_account_stats(&pool, viewer, 0, 0, 0).await;
-
-    let mastodon_status_id =
-        insert_status(&pool, author, "resolved content", "", None, 0, None, None).await;
-    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
-        .bind(viewer)
-        .bind(mastodon_status_id)
-        .execute(&pool)
-        .await
-        .unwrap();
-
-    let post_json = serde_json::json!({
-        "provider_id": 8_001_i64,
-        "provider_domain": "remote.example",
-        "uri": "https://remote.example/post/8001",
-        "url": "https://remote.example/post/8001",
-        "content": "<p>remote content</p>",
-        "text": "remote content",
-        "author": {
-            "handle": "@remauthor@remote.example",
-            "display_name": "Remote Author",
-            "url": "https://remote.example/@remauthor",
-            "emojis": []
-        },
-        "published_at": "2026-04-15T12:00:00Z",
-        "sensitive": false,
-        "media": [],
-        "engagement": { "replies": 0, "reposts": 0, "likes": 0 },
-        "tags": [],
-        "emojis": []
-    });
-
-    let snowflake = state::statuses::map_post(
-        &pool,
-        "remote.example",
-        8_001,
-        "https://remote.example/post/8001",
-        "https://remote.example/post/8001",
-        &post_json,
-    )
-    .await
-    .unwrap();
-    state::statuses::set_mastodon_local_id(&pool, snowflake, mastodon_status_id)
-        .await
-        .unwrap();
-
-    let post: ::common::types::Post = serde_json::from_value(post_json).unwrap();
-
-    let media = common::test_media();
-    let out = server::mastodon::statuses::hydrate(
-        &pool,
-        "local.test",
-        &media,
-        vec![CachedPost::Remote {
-            post: Box::new(post),
-        }],
-        Some(AccountId(viewer)),
-    )
-    .await;
-
-    assert_eq!(out.len(), 1);
-    assert_eq!(
-        out[0].id,
-        mastodon_status_id.to_string(),
-        "resolved remote must be served via fetch_by_ids with Mastodon's native id, not a snowflake-URL fallback"
-    );
-    assert!(
-        out[0].favourited,
-        "resolved remote must pick up viewer state through fetch_by_ids — Status::from_post hardcodes favourited=false"
-    );
-    assert_eq!(
-        out[0].text.as_deref(),
-        Some("resolved content"),
-        "content must come from Mastodon's statuses table, not the cached post_data"
-    );
-}
-
-#[sqlx::test]
-async fn hydrate_threads_viewer_state_through_to_local_statuses(pool: PgPool) {
-    common::setup_mastodon_schema(&pool).await;
-
-    let author = insert_account(&pool, "author", None, "Author", "").await;
-    insert_account_stats(&pool, author, 1, 0, 0).await;
-    let viewer = insert_account(&pool, "viewer", None, "Viewer", "").await;
-    insert_account_stats(&pool, viewer, 0, 0, 0).await;
-
-    let status_id = insert_status(
-        &pool,
-        author,
-        "favourited via hydrate",
-        "",
-        None,
-        0,
-        None,
-        None,
-    )
-    .await;
-    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
-        .bind(viewer)
-        .bind(status_id)
-        .execute(&pool)
-        .await
-        .unwrap();
-
-    let media = common::test_media();
-    let out = server::mastodon::statuses::hydrate(
-        &pool,
-        "local.test",
-        &media,
-        vec![CachedPost::Local { id: status_id }],
-        Some(AccountId(viewer)),
-    )
-    .await;
-
-    assert_eq!(out.len(), 1);
-    assert!(
-        out[0].favourited,
-        "hydrate must pass the viewer down to fetch_by_ids so per-user state reaches timeline responses"
-    );
-}
-
-#[sqlx::test]
-async fn hydrate_without_viewer_leaves_state_false(pool: PgPool) {
-    common::setup_mastodon_schema(&pool).await;
-
-    let author = insert_account(&pool, "author", None, "Author", "").await;
-    insert_account_stats(&pool, author, 1, 0, 0).await;
-    let other = insert_account(&pool, "other", None, "Other", "").await;
-    insert_account_stats(&pool, other, 0, 0, 0).await;
-
-    let status_id = insert_status(&pool, author, "post", "", None, 0, None, None).await;
-    sqlx::query("INSERT INTO favourites (account_id, status_id) VALUES ($1, $2)")
-        .bind(other)
-        .bind(status_id)
-        .execute(&pool)
-        .await
-        .unwrap();
-
-    let media = common::test_media();
-    let out = server::mastodon::statuses::hydrate(
-        &pool,
-        "local.test",
-        &media,
-        vec![CachedPost::Local { id: status_id }],
-        None,
-    )
-    .await;
-
-    assert_eq!(out.len(), 1);
-    assert!(!out[0].favourited);
-}
-
-#[sqlx::test]
 async fn fetch_by_ids_viewer_sees_only_own_engagement(pool: PgPool) {
     common::setup_mastodon_schema(&pool).await;
 
@@ -871,5 +710,204 @@ async fn fetch_by_ids_formats_local_plain_text_into_html(pool: PgPool) {
     assert!(
         !out[0].content.contains("&lt;"),
         "plain text input has no HTML to escape"
+    );
+}
+
+#[sqlx::test]
+async fn avatar_url_has_cache_prefix_for_remote_account_with_schema_version_1(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+    let alice = insert_account(&pool, "alice", Some("remote.example"), "Alice", "").await;
+    sqlx::query("UPDATE accounts SET avatar_file_name = $1, avatar_storage_schema_version = 1 WHERE id = $2")
+        .bind("avatar.jpg")
+        .bind(alice)
+        .execute(&pool)
+        .await
+        .expect("update avatar version");
+    let status_id = insert_status(&pool, alice, "hello", "", None, 0, None, None).await;
+
+    let media = common::test_media_s3();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[StatusId(status_id)], None)
+        .await
+        .unwrap();
+
+    assert_eq!(out.len(), 1);
+    assert!(
+        out[0].account.avatar.contains("/cache/accounts/avatars/"),
+        "remote account + schema_version=1 must produce cache-prefixed URL, got: {}",
+        out[0].account.avatar
+    );
+}
+
+#[sqlx::test]
+async fn avatar_url_has_no_cache_prefix_when_schema_version_null(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+    let alice = insert_account(&pool, "alice", Some("remote.example"), "Alice", "").await;
+    sqlx::query("UPDATE accounts SET avatar_file_name = $1 WHERE id = $2")
+        .bind("avatar.jpg")
+        .bind(alice)
+        .execute(&pool)
+        .await
+        .expect("update avatar file_name");
+    let status_id = insert_status(&pool, alice, "hello", "", None, 0, None, None).await;
+
+    let media = common::test_media_s3();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[StatusId(status_id)], None)
+        .await
+        .unwrap();
+
+    let avatar = &out[0].account.avatar;
+    assert!(
+        !avatar.contains("/cache/"),
+        "NULL schema_version must NOT produce cache prefix, got: {avatar}"
+    );
+}
+
+#[sqlx::test]
+async fn avatar_url_has_no_cache_prefix_for_local_account_even_with_version_1(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+    let alice = insert_account(&pool, "alice", None, "Alice", "").await;
+    sqlx::query("UPDATE accounts SET avatar_file_name = $1, avatar_storage_schema_version = 1 WHERE id = $2")
+        .bind("avatar.jpg")
+        .bind(alice)
+        .execute(&pool)
+        .await
+        .expect("update avatar version");
+    let status_id = insert_status(&pool, alice, "hello", "", None, 0, None, None).await;
+
+    let media = common::test_media_s3();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[StatusId(status_id)], None)
+        .await
+        .unwrap();
+
+    let avatar = &out[0].account.avatar;
+    assert!(
+        !avatar.contains("/cache/"),
+        "local account (domain NULL) must NOT produce cache prefix regardless of version, got: {avatar}"
+    );
+}
+
+#[sqlx::test]
+async fn preview_card_url_has_cache_prefix_with_schema_version_1(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+    let alice = insert_account(&pool, "alice", None, "Alice", "").await;
+    let status_id = insert_status(&pool, alice, "hello", "", None, 0, None, None).await;
+    let card_id = insert_preview_card(
+        &pool,
+        status_id,
+        "https://example.com",
+        "Title",
+        "desc",
+        "author",
+        "provider",
+        "og.jpg",
+    )
+    .await;
+    sqlx::query("UPDATE preview_cards SET image_storage_schema_version = 1 WHERE id = $1")
+        .bind(card_id)
+        .execute(&pool)
+        .await
+        .expect("update card version");
+
+    let media = common::test_media_s3();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[StatusId(status_id)], None)
+        .await
+        .unwrap();
+
+    let card_url = out[0]
+        .card
+        .as_ref()
+        .and_then(|c| c.image.as_deref())
+        .expect("card has image");
+    assert!(
+        card_url.contains("/cache/preview_cards/images/"),
+        "preview_card + schema_version=1 must produce cache-prefixed URL, got: {card_url}"
+    );
+}
+
+#[sqlx::test]
+async fn preview_card_url_has_no_cache_prefix_when_schema_version_null(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+    let alice = insert_account(&pool, "alice", None, "Alice", "").await;
+    let status_id = insert_status(&pool, alice, "hello", "", None, 0, None, None).await;
+    insert_preview_card(
+        &pool,
+        status_id,
+        "https://example.com",
+        "Title",
+        "desc",
+        "author",
+        "provider",
+        "og.jpg",
+    )
+    .await;
+
+    let media = common::test_media_s3();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[StatusId(status_id)], None)
+        .await
+        .unwrap();
+
+    let card_url = out[0]
+        .card
+        .as_ref()
+        .and_then(|c| c.image.as_deref())
+        .expect("card has image");
+    assert!(
+        !card_url.contains("/cache/"),
+        "NULL schema_version must NOT produce cache prefix on preview card, got: {card_url}"
+    );
+}
+
+#[sqlx::test]
+async fn media_attachment_url_has_cache_prefix_when_remote_and_version_1(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+    let alice = insert_account(&pool, "alice", None, "Alice", "").await;
+    let status_id = insert_status(&pool, alice, "hello", "", None, 0, None, None).await;
+    let media_id =
+        insert_media_attachment(&pool, status_id, alice, 0, "photo.jpg", "desc", 800, 600).await;
+    sqlx::query("UPDATE media_attachments SET remote_url = $1, file_storage_schema_version = 1 WHERE id = $2")
+        .bind("https://remote.example/photo.jpg")
+        .bind(media_id)
+        .execute(&pool)
+        .await
+        .expect("update media version");
+    set_ordered_media(&pool, status_id, &[media_id]).await;
+
+    let media = common::test_media_s3();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[StatusId(status_id)], None)
+        .await
+        .unwrap();
+
+    assert_eq!(out[0].media_attachments.len(), 1);
+    let url = out[0].media_attachments[0].url.as_deref().unwrap_or("");
+    assert!(
+        url.contains("/cache/media_attachments/files/"),
+        "remote media + schema_version=1 must produce cache-prefixed URL, got: {url}"
+    );
+}
+
+#[sqlx::test]
+async fn media_attachment_url_has_no_cache_prefix_when_local(pool: PgPool) {
+    common::setup_mastodon_schema(&pool).await;
+    let alice = insert_account(&pool, "alice", None, "Alice", "").await;
+    let status_id = insert_status(&pool, alice, "hello", "", None, 0, None, None).await;
+    let media_id =
+        insert_media_attachment(&pool, status_id, alice, 0, "photo.jpg", "desc", 800, 600).await;
+    sqlx::query("UPDATE media_attachments SET file_storage_schema_version = 1 WHERE id = $1")
+        .bind(media_id)
+        .execute(&pool)
+        .await
+        .expect("update media version");
+    set_ordered_media(&pool, status_id, &[media_id]).await;
+
+    let media = common::test_media_s3();
+    let out = fetch_by_ids(&pool, "local.test", &media, &[StatusId(status_id)], None)
+        .await
+        .unwrap();
+
+    assert_eq!(out[0].media_attachments.len(), 1);
+    let url = out[0].media_attachments[0].url.as_deref().unwrap_or("");
+    assert!(
+        !url.contains("/cache/"),
+        "local media (empty remote_url) must NOT produce cache prefix regardless of version, got: {url}"
     );
 }

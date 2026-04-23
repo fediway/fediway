@@ -2530,6 +2530,7 @@ dependencies = [
  "sources",
  "sqlx",
  "state",
+ "test_support",
  "tikv-jemallocator",
  "tokio",
  "tower",
@@ -2891,6 +2892,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "test_support",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -2984,6 +2986,14 @@ dependencies = [
  "futf",
  "mac",
  "utf-8",
+]
+
+[[package]]
+name = "test_support"
+version = "0.0.0"
+dependencies = [
+ "common",
+ "sqlx",
 ]
 
 [[package]]

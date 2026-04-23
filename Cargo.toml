@@ -10,6 +10,7 @@ members = [
     "crates/sources",
     "crates/state",
     "crates/mastodon",
+    "crates/test_support",
 ]
 
 [workspace.package]
@@ -35,6 +36,7 @@ feed = { path = "crates/feed" }
 sources = { path = "crates/sources" }
 state = { path = "crates/state" }
 mastodon = { path = "crates/mastodon" }
+test_support = { path = "crates/test_support" }
 # Async
 tokio = { version = "1", default-features = false }
 futures = "0.3"

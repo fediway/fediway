@@ -14,6 +14,7 @@ path = "src/main.rs"
 [dev-dependencies]
 chrono.workspace = true
 http-body-util = "0.1"
+test_support.workspace = true
 
 [lints]
 workspace = true

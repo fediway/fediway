@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
         );
     }
 
-    init_cursors(&pool, args.orbit.orbit_replay_hours).await;
+    init_cursors(&pool, args.orbit.orbit_replay_hours).await?;
 
     let tei_client = TeiClient::new(&args.tei);
     let template = EmbeddingTemplate::new();
@@ -123,7 +123,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn init_cursors(pool: &PgPool, replay_hours: u64) {
+async fn init_cursors(pool: &PgPool, replay_hours: u64) -> anyhow::Result<()> {
     let kinds = [
         EngagementKind::Like,
         EngagementKind::Repost,
@@ -132,15 +132,16 @@ async fn init_cursors(pool: &PgPool, replay_hours: u64) {
     ];
 
     for kind in kinds {
-        let cursor = poll::load_cursor(pool, kind.as_str()).await;
-        if cursor == 0 {
-            let start = poll::init_cursor(pool, kind, replay_hours).await;
+        if poll::load_cursor(pool, kind.as_str()).await?.is_none() {
+            let start = poll::init_cursor(pool, kind, replay_hours).await?;
             if start > 0 {
                 poll::save_cursor(pool, kind.as_str(), start).await;
                 tracing::info!(source = kind.as_str(), cursor = start, "initialized cursor");
             }
         }
     }
+
+    Ok(())
 }
 
 #[allow(clippy::too_many_lines, clippy::cast_precision_loss)]
@@ -156,12 +157,25 @@ async fn poll_cycle(
     let batch_size = args.orbit.orbit_batch_size;
     let domain = &args.instance_domain;
 
-    let (likes_cursor, reposts_cursor, replies_cursor, bookmarks_cursor) = tokio::join!(
+    let cursors = tokio::try_join!(
         poll::load_cursor(pool, EngagementKind::Like.as_str()),
         poll::load_cursor(pool, EngagementKind::Repost.as_str()),
         poll::load_cursor(pool, EngagementKind::Reply.as_str()),
         poll::load_cursor(pool, EngagementKind::Bookmark.as_str()),
     );
+    let (likes_cursor, reposts_cursor, replies_cursor, bookmarks_cursor) = match cursors {
+        Ok((l, r, rp, b)) => (
+            l.unwrap_or(0),
+            r.unwrap_or(0),
+            rp.unwrap_or(0),
+            b.unwrap_or(0),
+        ),
+        Err(e) => {
+            metrics::counter!("fediway_orbit_cursor_load_errors_total").increment(1);
+            tracing::warn!(error = %e, "failed to load cursors, skipping cycle");
+            return;
+        }
+    };
 
     let poll_start = std::time::Instant::now();
     let (likes, reposts, replies, bookmarks) = tokio::join!(
@@ -245,7 +259,7 @@ async fn poll_cycle(
     metrics::counter!("fediway_orbit_texts_embedded_total").increment(embeddings.len() as u64);
     tracing::info!(unique_texts = embeddings.len(), "computed embeddings");
 
-    vector::process_engagements(
+    if let Err(e) = vector::process_engagements(
         pool,
         &engagements,
         &embeddings,
@@ -253,7 +267,12 @@ async fn poll_cycle(
         args.orbit.orbit_alpha as f32,
         args.orbit.orbit_dims,
     )
-    .await;
+    .await
+    {
+        metrics::counter!("fediway_orbit_vector_process_errors_total").increment(1);
+        tracing::warn!(error = %e, "failed to process engagements, skipping cursor advance");
+        return;
+    }
 
     // Advance cursors only to the last engagement per source that had a
     // successful embedding. Engagements whose TEI batch failed remain ahead

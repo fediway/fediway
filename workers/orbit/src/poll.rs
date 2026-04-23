@@ -35,6 +35,11 @@ impl EngagementRow {
     }
 }
 
+#[tracing::instrument(
+    skip(db),
+    name = "db.orbit.poll.favourites",
+    fields(cursor, batch_size)
+)]
 pub async fn poll_favourites(
     db: &PgPool,
     cursor: i64,
@@ -83,6 +88,7 @@ pub async fn poll_favourites(
         .collect())
 }
 
+#[tracing::instrument(skip(db), name = "db.orbit.poll.reblogs", fields(cursor, batch_size))]
 pub async fn poll_reblogs(
     db: &PgPool,
     cursor: i64,
@@ -132,6 +138,7 @@ pub async fn poll_reblogs(
         .collect())
 }
 
+#[tracing::instrument(skip(db), name = "db.orbit.poll.replies", fields(cursor, batch_size))]
 pub async fn poll_replies(
     db: &PgPool,
     cursor: i64,
@@ -182,6 +189,7 @@ pub async fn poll_replies(
         .collect())
 }
 
+#[tracing::instrument(skip(db), name = "db.orbit.poll.bookmarks", fields(cursor, batch_size))]
 pub async fn poll_bookmarks(
     db: &PgPool,
     cursor: i64,
@@ -230,16 +238,15 @@ pub async fn poll_bookmarks(
         .collect())
 }
 
-pub async fn load_cursor(db: &PgPool, source: &str) -> i64 {
+#[tracing::instrument(skip(db), name = "db.orbit.poll.load_cursor", fields(source))]
+pub async fn load_cursor(db: &PgPool, source: &str) -> Result<Option<i64>, sqlx::Error> {
     sqlx::query_scalar::<_, i64>("SELECT last_id FROM orbit_cursors WHERE source_name = $1")
         .bind(source)
         .fetch_optional(db)
         .await
-        .ok()
-        .flatten()
-        .unwrap_or(0)
 }
 
+#[tracing::instrument(skip(db), name = "db.orbit.poll.save_cursor", fields(source, last_id))]
 pub async fn save_cursor(db: &PgPool, source: &str, last_id: i64) {
     if let Err(e) = sqlx::query(
         "INSERT INTO orbit_cursors (source_name, last_id, updated_at)
@@ -261,9 +268,14 @@ pub async fn save_cursor(db: &PgPool, source: &str, last_id: i64) {
 /// Initialize cursor for first startup by finding the start of the replay window.
 /// Returns the ID just before the first engagement within the last `replay_hours`,
 /// so the first poll picks up all recent activity without replaying years of history.
-pub async fn init_cursor(db: &PgPool, kind: EngagementKind, replay_hours: u64) -> i64 {
+#[tracing::instrument(skip(db), name = "db.orbit.poll.init_cursor", fields(?kind, replay_hours))]
+pub async fn init_cursor(
+    db: &PgPool,
+    kind: EngagementKind,
+    replay_hours: u64,
+) -> Result<i64, sqlx::Error> {
     if replay_hours == 0 {
-        return 0;
+        return Ok(0);
     }
 
     // Table name can't be parameterized in SQL, but the match on EngagementKind
@@ -287,5 +299,4 @@ pub async fn init_cursor(db: &PgPool, kind: EngagementKind, replay_hours: u64) -
         .bind(hours)
         .fetch_one(db)
         .await
-        .unwrap_or(0)
 }

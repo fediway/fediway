@@ -20,3 +20,7 @@ regex = "1"
 thiserror.workspace = true
 tokio = { workspace = true, features = ["macros"] }
 tracing.workspace = true
+
+[dev-dependencies]
+test_support.workspace = true
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

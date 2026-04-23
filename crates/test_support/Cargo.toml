@@ -1,0 +1,11 @@
+[package]
+name = "test_support"
+version.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+common.workspace = true
+sqlx.workspace = true

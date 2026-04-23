@@ -33,7 +33,11 @@ struct UserState {
     engagement_count: i64,
 }
 
-async fn batch_load_vectors(db: &PgPool, account_ids: &[i64]) -> HashMap<i64, UserState> {
+#[tracing::instrument(skip(db, account_ids), name = "db.orbit.vector.batch_load", fields(ids_len = account_ids.len()))]
+async fn batch_load_vectors(
+    db: &PgPool,
+    account_ids: &[i64],
+) -> Result<HashMap<i64, UserState>, sqlx::Error> {
     #[derive(sqlx::FromRow)]
     struct Row {
         account_id: i64,
@@ -48,10 +52,10 @@ async fn batch_load_vectors(db: &PgPool, account_ids: &[i64]) -> HashMap<i64, Us
     )
     .bind(account_ids)
     .fetch_all(db)
-    .await
-    .unwrap_or_default();
+    .await?;
 
-    rows.into_iter()
+    Ok(rows
+        .into_iter()
         .map(|r| {
             (
                 r.account_id,
@@ -61,9 +65,14 @@ async fn batch_load_vectors(db: &PgPool, account_ids: &[i64]) -> HashMap<i64, Us
                 },
             )
         })
-        .collect()
+        .collect())
 }
 
+#[tracing::instrument(
+    skip(db, vector),
+    name = "db.orbit.vector.upsert",
+    fields(account_id, engagement_count)
+)]
 async fn upsert_vector(db: &PgPool, account_id: i64, vector: &[f32], engagement_count: i64) {
     if let Err(e) = sqlx::query(
         "INSERT INTO orbit_user_vectors (account_id, vector, engagement_count, updated_at)
@@ -84,6 +93,11 @@ async fn upsert_vector(db: &PgPool, account_id: i64, vector: &[f32], engagement_
     }
 }
 
+#[tracing::instrument(
+    skip(db, engagements, embeddings, template),
+    name = "db.orbit.vector.process_engagements",
+    fields(engagements_len = engagements.len())
+)]
 pub async fn process_engagements(
     db: &PgPool,
     engagements: &[RawEngagement],
@@ -91,7 +105,7 @@ pub async fn process_engagements(
     template: &EmbeddingTemplate,
     alpha: f32,
     dims: usize,
-) {
+) -> Result<(), sqlx::Error> {
     let mut by_account: HashMap<i64, Vec<&RawEngagement>> = HashMap::new();
     for e in engagements {
         by_account.entry(e.account_id).or_default().push(e);
@@ -104,7 +118,7 @@ pub async fn process_engagements(
     }
 
     let account_ids: Vec<i64> = by_account.keys().copied().collect();
-    let mut states = batch_load_vectors(db, &account_ids).await;
+    let mut states = batch_load_vectors(db, &account_ids).await?;
 
     let found = states.len() as u64;
     let miss = account_ids.len() as u64 - found;
@@ -142,6 +156,8 @@ pub async fn process_engagements(
         metrics::counter!("fediway_orbit_vectors_updated_total").increment(updated_count);
         tracing::info!(vectors_updated = updated_count, "EMA update complete");
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
